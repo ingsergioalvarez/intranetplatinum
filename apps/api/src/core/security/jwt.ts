@@ -7,6 +7,8 @@ interface AccessTokenPayload {
   email: string;
   rol: AuthUser['rol'];
   permisos: string[];
+  /** Debe cambiar contraseña (solo se incluye cuando es true). */
+  dcp?: true;
 }
 
 export function signAccessToken(user: AuthUser): string {
@@ -15,6 +17,7 @@ export function signAccessToken(user: AuthUser): string {
     email: user.email,
     rol: user.rol,
     permisos: user.permisos,
+    ...(user.debeCambiarPassword ? { dcp: true as const } : {}),
   };
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.JWT_ACCESS_EXPIRES as SignOptions['expiresIn'],
@@ -29,5 +32,6 @@ export function verifyAccessToken(token: string): AuthUser {
     email: payload.email,
     rol: payload.rol,
     permisos: payload.permisos ?? [],
+    debeCambiarPassword: payload.dcp === true,
   };
 }

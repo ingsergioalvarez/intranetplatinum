@@ -2,13 +2,23 @@ import { createBrowserRouter } from 'react-router-dom';
 import { PERMISOS } from '@platinum/shared';
 import { AppShell } from '../components/layout/AppShell';
 import { ProtectedRoute } from '../core/auth/ProtectedRoute';
+import { CambiarPasswordPage } from '../modules/auth/CambiarPasswordPage';
 import { LoginPage } from '../modules/auth/LoginPage';
 import { InicioPage } from '../modules/inicio/InicioPage';
 import { UiShowcasePage } from '../modules/dev/UiShowcasePage';
+import { UsuariosPage } from '../modules/usuarios/UsuariosPage';
 import { NotFoundPage, PendientePage } from '../modules/shared/PendientePage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  {
+    path: '/cambiar-password',
+    element: (
+      <ProtectedRoute allowTemporaryPassword>
+        <CambiarPasswordPage />
+      </ProtectedRoute>
+    ),
+  },
   {
     path: '/',
     element: (
@@ -38,7 +48,7 @@ export const router = createBrowserRouter([
         path: 'usuarios',
         element: (
           <ProtectedRoute permiso={PERMISOS.USUARIOS_VER}>
-            <PendientePage title="Usuarios" tareas="F1-07 a F1-10" />
+            <UsuariosPage />
           </ProtectedRoute>
         ),
       },

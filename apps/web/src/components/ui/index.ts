@@ -12,3 +12,5 @@ export { Pagination } from './Pagination';
 export { Toaster } from './Toast';
 export { toast } from './toastStore';
 export { PhotoUploader, type PhotoUploaderProps } from './PhotoUploader';
+export { PasswordInput } from './PasswordInput';
+export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';

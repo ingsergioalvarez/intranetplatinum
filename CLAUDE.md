@@ -31,20 +31,25 @@ Intranet para Platinum Agency (seguridad física intramuros). Uso principal en *
   - `BaseService` (logging/auditoría) → `CrudService<TEntity, TCreate, TUpdate>` (getById con 404, list, create, update, deactivate, restore).
   - `BaseRepository` abstracto, independiente del ORM; `softDelete`/`restore` (D-006).
   - `HttpError` (`badRequest`, `unauthorized`, `forbidden`, `notFound`, `conflict`, `tooMany`).
-  - Middlewares: `validate({ body, query, params })` con zod, `authenticate`, `requireRoles(...)`, `requirePermission('x.y')`, `uploadImages` (multer en memoria).
+  - Middlewares: `validate({ body, query, params })` con zod, `authenticate` (403 `PASSWORD_CHANGE_REQUIRED` si hay contraseña temporal; `authenticateAllowingTemporaryPassword` solo para cambiarla), `requireRoles(...)`, `requirePermission('x.y')`, `rateLimit({ windowMin, max })`, `uploadImages` (multer en memoria).
+  - Auditoría: inyectar `AuditLogger` (`PrismaAuditLogger` en producción) y llamar `audit.registrar({ usuarioId: actorId, accion: '<modulo>.<accion>', entidad, entidadId, datos, ip, userAgent })`; nunca rompe la operación. `requestContext(req)` da ip/userAgent.
+  - Seguridad: `hashPassword`/`verifyPassword`/`generateTemporaryPassword`, `generateOpaqueToken`/`hashToken` (tokens guardados como SHA-256).
+  - Los módulos exportan una fábrica `create<Modulo>Module({ repo, audit })` para inyectar dobles en memoria en pruebas (ver `test/usuarios.test.ts`, `test/helpers/memoryAudit.ts`).
   - Respuestas siempre `{ ok, data }` / `{ ok:false, error:{ code, message, details } }`.
 - Config tipada en `apps/api/src/config/env.ts` (zod). No leer `process.env` directo en módulos.
 - Base de datos: Prisma 7 (`apps/api/prisma/schema.prisma`, cliente generado en `src/generated/prisma`, ignorado en git). Acceso con `getPrisma()` de `core/data/prisma.ts` solo dentro de repositorios.
-  - MySQL vive en otra máquina (D-008): **no hay BD local**. Para cambios de esquema: editar `schema.prisma` → `npx prisma validate` → generar SQL con `npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script -o prisma/migrations/<AAAAMMDDHHMMSS>_<nombre>/migration.sql` (D-011). Se aplica en el servidor con `npm run db:deploy -w @platinum/api`.
+  - MySQL: servidor en otra máquina (D-008) y MySQL 8 local de pruebas en la PC de desarrollo (`apps/api/.env`, no versionado). Para cambios de esquema: editar `schema.prisma` → `npx prisma validate` → generar SQL con `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script -o prisma/migrations/<AAAAMMDDHHMMSS>_<nombre>/migration.sql` (contra una BD al día; D-011) → `npm run db:deploy -w @platinum/api` → `npm run db:generate -w @platinum/api`.
   - Permisos y roles salen de `@platinum/shared` (`PERMISOS`, `PERMISOS_POR_ROL`); el seed los sincroniza.
 - Pruebas: Vitest + supertest en `apps/api/test/`. `npm test` desde la raíz.
 - Frontend (`apps/web/src/`):
   - Pantallas por módulo en `modules/<modulo>/`; rutas en `app/router.tsx` (envolver con `ProtectedRoute permiso={...}`); menú en `components/layout/navItems.ts` (filtra por permiso).
   - `core/api`: instancia única `api` (`ApiClient`: token, cookies, `{ ok, data }`, `ApiError` con `fieldErrors`), `queryClient`. Servicios de módulo extienden `CrudService<T>(api, '/recurso')` y usan `service.keys` para TanStack Query.
   - `core/auth`: `useAuthStore` (sesión en memoria; `clear()` = sesión expirada, `logout()` = cierre voluntario), `hasPermission`, `ProtectedRoute`.
-  - Librería UI en `components/ui` (importar desde el barrel): `Button`, `Input`/`Select`/`Textarea`, `FormField` (inyecta id/invalid), `Card`, `Badge`, `Modal` (bottom-sheet en celular), `DataTable` (tabla en escritorio, tarjetas en celular; columnas con `mobile: 'title'|'subtitle'|'field'|'hidden'`), `Pagination`, `toast`, `PhotoUploader`, `EmptyState`, `Spinner`. `PageHeader` está en `components/layout/AppShell`.
+  - Librería UI en `components/ui` (importar desde el barrel): `Button`, `Input`/`Select`/`Textarea`, `PasswordInput`, `FormField` (inyecta id/invalid), `ConfirmDialog`, `Card`, `Badge`, `Modal` (bottom-sheet en celular), `DataTable` (tabla en escritorio, tarjetas en celular; columnas con `mobile: 'title'|'subtitle'|'field'|'hidden'`), `Pagination`, `toast`, `PhotoUploader`, `EmptyState`, `Spinner`. `PageHeader` está en `components/layout/AppShell`.
+  - Formularios: validar en cliente con el esquema de `@platinum/shared` y `erroresDeCampos` (`core/forms/fieldErrors`); errores del servidor por campo con `ApiError.fieldErrors` (400 y 409). Fechas con `formatFechaHora` (`core/format/fechas`).
   - Tailwind 4: tema en `src/index.css` (`brand-*`, `platinum-*`). Usar `pb-safe`/`pt-safe` para áreas seguras del celular.
-  - Catálogo visual en `/ui` (solo desarrollo). Login demo por rol solo en desarrollo hasta F1-03.
+  - Catálogo visual en `/ui` (solo desarrollo).
+  - Sesión: `authService` (`core/auth/AuthService.ts`) hace login/refresh/logout contra `/api/auth/*`; `main.tsx` llama `restore()` al arrancar. `ProtectedRoute` acepta `permiso` y `roles`.
   - Verificación visual: capturas a 360px y 1440px con Edge headless (`playwright-core`, channel `msedge`) instalado fuera del repo.
 
 ## Convenciones

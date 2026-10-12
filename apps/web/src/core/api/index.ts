@@ -7,7 +7,7 @@ export { ApiClient } from './ApiClient';
 export { ApiError } from './ApiError';
 export { CrudService, type ListParams } from './CrudService';
 
-/** Instancia única del cliente HTTP. `refreshSession` se conecta en F1-04. */
+/** Instancia única del cliente HTTP. El refresh de sesión lo conecta `core/auth/AuthService`. */
 export const api = new ApiClient({
   baseUrl: import.meta.env.VITE_API_URL ?? '/api',
   getAccessToken: () => useAuthStore.getState().accessToken,

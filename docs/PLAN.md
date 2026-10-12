@@ -33,10 +33,10 @@
 | A-02 | Componentes reutilizables orientados a objetos                                                             | Usuario 2026-10-12 | F0-03, F0-05, F0-06 | Terminado (base) |
 | A-03 | Arquitectura modular                                                                                       | Usuario 2026-10-12 | F0-01, F0-03        | Terminado (base) |
 | A-04 | Uso escritorio y celular (prioridad móvil)                                                                 | Usuario 2026-10-12 | F0-06, F0-07, F4-01 | En progreso      |
-| A-05 | Login                                                                                                      | Usuario 2026-10-12 | F1-01..F1-04        | Pendiente        |
+| A-05 | Login                                                                                                      | Usuario 2026-10-12 | F1-01..F1-04        | Terminado        |
 | A-06 | Recuperación de contraseña                                                                                 | Usuario 2026-10-12 | F1-05, F1-06        | Pendiente        |
-| A-07 | Modal para gestionar accesos de usuario                                                                    | Usuario 2026-10-12 | F1-07..F1-10        | Pendiente        |
-| A-08 | Dar de baja usuarios                                                                                       | Usuario 2026-10-12 | F1-09               | Pendiente        |
+| A-07 | Modal para gestionar accesos de usuario                                                                    | Usuario 2026-10-12 | F1-07..F1-11        | Terminado        |
+| A-08 | Dar de baja usuarios                                                                                       | Usuario 2026-10-12 | F1-09               | Terminado        |
 | A-09 | Tabla clientes con datos generales                                                                         | Usuario 2026-10-12 | F2-01, F2-02        | Pendiente        |
 | A-10 | Datos de contacto y responsables (1..N) por cliente                                                        | Usuario 2026-10-12 | F2-03               | Pendiente        |
 | A-11 | Guardias intramuros generan reportes (iluminación, cámaras, casetas, escritorios, daños al inmueble, etc.) | Usuario 2026-10-12 | F3-01..F3-04        | Pendiente        |
@@ -75,22 +75,23 @@
 | F0-06 | Librería UI: Button, Input, Select, Modal/BottomSheet, DataTable/CardList, Card, Badge, Toast, FormField, PhotoUploader (stub)         | A-02, A-04 | Componentes documentados en página `/ui`                                     | [x]    |
 | F0-07 | Layout responsive: AppShell, BottomNav (móvil), Sidebar (escritorio)                                                                   | A-04       | Se ve correcto en 360px y 1440px                                             | [x]    |
 | F0-08 | Scripts dev (concurrently), README de arranque                                                                                         | A-01       | `npm run dev` levanta api + web                                              | [x]    |
-| F0-09 | Aplicar migraciones y seed en el servidor MySQL (otra máquina, D-008)                                                                  | A-01       | `npm run db:deploy` y `npm run db:seed` crean tablas y usuario admin         | [!]    |
+| F0-09 | Aplicar migraciones y seed en el servidor MySQL (otra máquina, D-008)                                                                  | A-01       | `npm run db:deploy` y `npm run db:seed` crean tablas y usuario admin         | [x]    |
 
 ### Fase 1 — Autenticación y usuarios
 
-| ID    | Tarea                                                                                        | Alcance    | Criterio de aceptación                 | Estado |
-| ----- | -------------------------------------------------------------------------------------------- | ---------- | -------------------------------------- | ------ |
-| F1-01 | Tablas: roles, permisos, rol_permiso, usuarios, refresh_tokens, password_resets, auditoria   | A-05, P-02 | Migración aplicada                     | [ ]    |
-| F1-02 | API login / refresh / logout (JWT + cookie httpOnly, bcrypt, rate-limit, bloqueo 5 intentos) | A-05       | Tests de login OK/KO                   | [ ]    |
-| F1-03 | Pantalla `/login` mobile-first                                                               | A-05       | Login funcional en celular             | [ ]    |
-| F1-04 | `AuthService` front + refresh automático + guard de rutas por rol                            | A-05       | Sesión persiste y expira correctamente | [ ]    |
-| F1-05 | API forgot/reset password (token hasheado, expira 30 min, revoca sesiones) + correo          | A-06       | Correo recibido y contraseña cambiada  | [ ]    |
-| F1-06 | Pantallas `/recuperar` y `/restablecer/:token`                                               | A-06       | Flujo completo en móvil                | [ ]    |
-| F1-07 | API CRUD usuarios + filtros + paginación                                                     | A-07       | Endpoints protegidos por permiso       | [ ]    |
-| F1-08 | Pantalla usuarios (DataTable/CardList) + **modal** alta/edición + asignar rol                | A-07       | Alta y edición desde modal             | [ ]    |
-| F1-09 | Baja lógica / reactivación (revoca tokens inmediatamente)                                    | A-08       | Usuario dado de baja no puede entrar   | [ ]    |
-| F1-10 | Forzar reset de contraseña desde modal + registro en auditoría                               | A-07, P-03 | Acciones visibles en auditoría         | [ ]    |
+| ID    | Tarea                                                                                               | Alcance     | Criterio de aceptación                                   | Estado |
+| ----- | --------------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------- | ------ |
+| F1-01 | Tablas: roles, permisos, rol_permiso, usuarios, refresh_tokens, password_resets, auditoria          | A-05, P-02  | Migración aplicada                                       | [x]    |
+| F1-02 | API login / refresh / logout (JWT + cookie httpOnly, bcrypt, rate-limit, bloqueo 5 intentos)        | A-05        | Tests de login OK/KO                                     | [x]    |
+| F1-03 | Pantalla `/login` mobile-first                                                                      | A-05        | Login funcional en celular                               | [x]    |
+| F1-04 | `AuthService` front + refresh automático + guard de rutas por rol                                   | A-05        | Sesión persiste y expira correctamente                   | [x]    |
+| F1-05 | API forgot/reset password (token hasheado, expira 30 min, revoca sesiones) + correo                 | A-06        | Correo recibido y contraseña cambiada                    | [ ]    |
+| F1-06 | Pantallas `/recuperar` y `/restablecer/:token`                                                      | A-06        | Flujo completo en móvil                                  | [ ]    |
+| F1-07 | API CRUD usuarios + filtros + paginación                                                            | A-07        | Endpoints protegidos por permiso                         | [x]    |
+| F1-08 | Pantalla usuarios (DataTable/CardList) + **modal** alta/edición + asignar rol                       | A-07        | Alta y edición desde modal                               | [x]    |
+| F1-09 | Baja lógica / reactivación (revoca tokens inmediatamente)                                           | A-08        | Usuario dado de baja no puede entrar                     | [x]    |
+| F1-10 | Forzar reset de contraseña desde modal + registro en auditoría                                      | A-07, P-03  | Acciones visibles en auditoría                           | [x]    |
+| F1-11 | Cambio de contraseña propio y obligatorio tras contraseña temporal (bloqueo de API hasta cambiarla) | A-07, D-012 | Usuario con contraseña temporal debe cambiarla al entrar | [x]    |
 
 ### Fase 2 — Clientes
 

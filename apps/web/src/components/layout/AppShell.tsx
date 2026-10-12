@@ -1,7 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { LogOut, ShieldCheck } from 'lucide-react';
+import { Link, NavLink, Outlet } from 'react-router-dom';
+import { KeyRound, LogOut, ShieldCheck } from 'lucide-react';
 import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, useAuthStore } from '../../core/auth/authStore';
+import { authService } from '../../core/auth/AuthService';
 import { cn } from '../ui';
 import { navItems } from './navItems';
 
@@ -24,7 +25,6 @@ function Brand({ className }: { className?: string }) {
 function Sidebar() {
   const items = useVisibleNav();
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-brand-900 text-white md:flex">
@@ -51,9 +51,15 @@ function Sidebar() {
         <div className="border-t border-brand-800 p-4">
           <p className="truncate text-sm font-medium">{user.nombre}</p>
           <p className="truncate text-xs text-brand-200">{ROL_DESCRIPCIONES[user.rol]}</p>
-          <button
-            onClick={logout}
+          <Link
+            to="/cambiar-password"
             className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white"
+          >
+            <KeyRound className="size-4" /> Cambiar contraseña
+          </Link>
+          <button
+            onClick={() => void authService.logout()}
+            className="mt-2 flex items-center gap-2 text-sm text-brand-200 hover:text-white"
           >
             <LogOut className="size-4" /> Cerrar sesión
           </button>
@@ -65,19 +71,27 @@ function Sidebar() {
 
 function Topbar() {
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
   return (
     <header className="pt-safe sticky top-0 z-30 bg-brand-900 text-white md:hidden">
       <div className="flex h-14 items-center justify-between px-4">
         <Brand className="text-base" />
         {user && (
-          <button
-            onClick={logout}
-            className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
-            aria-label="Cerrar sesión"
-          >
-            <LogOut className="size-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/cambiar-password"
+              className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
+              aria-label="Cambiar contraseña"
+            >
+              <KeyRound className="size-5" />
+            </Link>
+            <button
+              onClick={() => void authService.logout()}
+              className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="size-5" />
+            </button>
+          </div>
         )}
       </div>
     </header>

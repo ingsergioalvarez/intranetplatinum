@@ -5,6 +5,8 @@ export interface AuthUser {
   email: string;
   rol: Rol;
   permisos: string[];
+  /** Contraseña temporal pendiente de cambiar (D-012). */
+  debeCambiarPassword?: boolean;
 }
 
 export interface ValidatedRequestData {

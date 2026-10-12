@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PERMISOS, PERMISOS_POR_ROL, PERMISO_DESCRIPCIONES, ROLES } from '@platinum/shared';
 import { getPrisma, parseDatabaseUrl } from '../src/core/data/prisma';
+
+// Independiente del .env de cada máquina: simula que no hay DATABASE_URL.
+vi.mock('../src/config/env', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../src/config/env')>();
+  return { ...mod, env: { ...mod.env, DATABASE_URL: undefined } };
+});
 
 describe('capa de datos (sin BD)', () => {
   it('parseDatabaseUrl interpreta la URL de MySQL', () => {

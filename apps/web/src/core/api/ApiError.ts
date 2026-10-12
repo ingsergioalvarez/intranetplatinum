@@ -28,11 +28,16 @@ export class ApiError extends Error {
     return this.code === 'VALIDATION_ERROR';
   }
 
-  /** Errores de validación por campo: `{ email: 'Correo inválido' }`. */
+  /**
+   * Errores por campo: `{ email: 'Correo inválido' }`. Vienen en validaciones (400)
+   * y en conflictos con campo identificado (409, p. ej. correo duplicado).
+   */
   get fieldErrors(): Record<string, string> {
-    if (!this.isValidation || !Array.isArray(this.details)) return {};
+    if (!Array.isArray(this.details)) return {};
     return Object.fromEntries(
-      (this.details as { path: string; message: string }[]).map((d) => [d.path, d.message]),
+      (this.details as { path?: string; message?: string }[])
+        .filter((d) => d?.path && d.message)
+        .map((d) => [d.path!, d.message!]),
     );
   }
 }

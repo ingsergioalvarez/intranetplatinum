@@ -28,7 +28,7 @@ cp apps/web/.env.example apps/web/.env
 npm run dev                                  # API :4000 + Web :5173
 ```
 
-Abrir http://localhost:5173. Mientras no exista el login real (F1-03), en desarrollo la pantalla de acceso ofrece **sesiones demo** por rol. El catálogo de componentes está en `/ui`.
+Abrir http://localhost:5173 e iniciar sesión con el administrador creado por el seed (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` de `apps/api/.env`). Requiere la BD con migraciones y seed aplicados (`npm run db:deploy -w @platinum/api` y `npm run db:seed -w @platinum/api`). El catálogo de componentes está en `/ui` (solo desarrollo).
 
 Para probar desde el celular en la misma red, usar la dirección "Network" que muestra Vite (ej. `http://192.168.x.x:5173`).
 

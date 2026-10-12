@@ -3,3 +3,5 @@ export * from './constants/permisos';
 export * from './constants/reportes';
 export * from './types/api';
 export * from './schemas/pagination';
+export * from './schemas/auth';
+export * from './schemas/usuarios';

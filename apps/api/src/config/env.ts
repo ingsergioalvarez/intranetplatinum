@@ -18,6 +18,8 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32).default(DEV_SECRET),
   JWT_ACCESS_EXPIRES: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().default(7),
+  LOGIN_MAX_INTENTOS: z.coerce.number().int().min(1).default(5),
+  LOGIN_BLOQUEO_MIN: z.coerce.number().int().min(1).default(15),
   PASSWORD_RESET_EXPIRES_MIN: z.coerce.number().int().default(30),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().default(587),

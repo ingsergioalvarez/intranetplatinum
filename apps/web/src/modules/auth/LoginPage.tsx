@@ -1,51 +1,113 @@
+import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ShieldCheck } from 'lucide-react';
-import { PERMISOS_POR_ROL, ROLES, type Rol } from '@platinum/shared';
+import { useMutation } from '@tanstack/react-query';
+import { LockKeyhole } from 'lucide-react';
+import { loginSchema, type LoginInput } from '@platinum/shared';
+import { ApiError } from '../../core/api';
 import { useAuthStore } from '../../core/auth/authStore';
-import { Button, Card, CardBody } from '../../components/ui';
+import { authService } from '../../core/auth/AuthService';
+import { FullScreenSpinner } from '../../core/auth/ProtectedRoute';
+import { Button, FormField, Input, PasswordInput } from '../../components/ui';
+import { AuthLayout, FormAlert } from './AuthLayout';
+import { erroresDeCampos } from '../../core/forms/fieldErrors';
 
-/**
- * Placeholder de login. El formulario real con la API se implementa en F1-03.
- * En desarrollo permite entrar con una sesión de demostración para revisar el layout.
- */
+type FieldErrors = Partial<Record<keyof LoginInput, string>>;
+
+/** Mensaje general según el código del backend; los de validación van por campo. */
+function mensajeDeError(error: unknown): string {
+  if (!(error instanceof ApiError)) return 'Ocurrió un error inesperado. Intenta de nuevo.';
+  switch (error.code) {
+    case 'INVALID_CREDENTIALS':
+    case 'ACCOUNT_LOCKED':
+    case 'USER_INACTIVE':
+    case 'TOO_MANY_REQUESTS':
+    case 'NETWORK_ERROR':
+      return error.message;
+    default:
+      return 'No se pudo iniciar sesión. Intenta de nuevo.';
+  }
+}
+
 export function LoginPage() {
-  const { user, setSession } = useAuthStore();
+  const { user, restoring } = useAuthStore();
   const navigate = useNavigate();
   const from = (useLocation().state as { from?: string } | null)?.from ?? '/';
 
+  const [form, setForm] = useState<LoginInput>({ email: '', password: '' });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const login = useMutation({
+    mutationFn: (input: LoginInput) => authService.login(input),
+    onSuccess: () => navigate(from, { replace: true }),
+    onError: (error) => {
+      if (error instanceof ApiError && error.isValidation) setFieldErrors(error.fieldErrors);
+    },
+  });
+
+  if (restoring) return <FullScreenSpinner />;
   if (user) return <Navigate to={from} replace />;
 
-  const demo = (rol: Rol) => {
-    setSession(
-      { id: 0, nombre: `Demo ${rol}`, email: `${rol}@demo.local`, rol, permisos: PERMISOS_POR_ROL[rol] },
-      'demo-token',
-    );
-    navigate(from, { replace: true });
+  const onChange = (campo: keyof LoginInput) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((f) => ({ ...f, [campo]: e.target.value }));
+    setFieldErrors((errs) => ({ ...errs, [campo]: undefined }));
+    if (login.isError) login.reset();
   };
 
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const parsed = loginSchema.safeParse(form);
+    if (!parsed.success) return setFieldErrors(erroresDeCampos(parsed.error));
+    login.mutate(parsed.data);
+  };
+
+  const errorGeneral = login.isError && !(login.error instanceof ApiError && login.error.isValidation);
+  const bloqueada = login.error instanceof ApiError && login.error.code === 'ACCOUNT_LOCKED';
+
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-brand-900 px-4">
-      <Card className="w-full max-w-sm">
-        <CardBody className="space-y-6 p-6">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <ShieldCheck className="size-10 text-brand-700" />
-            <h1 className="text-xl font-bold">Platinum Intranet</h1>
-            <p className="text-sm text-slate-500">El inicio de sesión se habilita en la tarea F1-03.</p>
-          </div>
-          {import.meta.env.DEV && (
-            <div className="space-y-2">
-              <p className="text-center text-xs font-medium uppercase tracking-wide text-slate-400">
-                Sesión demo (solo desarrollo)
-              </p>
-              {(Object.values(ROLES) as Rol[]).map((rol) => (
-                <Button key={rol} variant="secondary" fullWidth onClick={() => demo(rol)}>
-                  Entrar como {rol}
-                </Button>
-              ))}
-            </div>
-          )}
-        </CardBody>
-      </Card>
-    </div>
+    <AuthLayout
+      title="Iniciar sesión"
+      subtitle="Entra con tu correo y contraseña."
+      footer="¿Problemas para entrar? Contacta a tu supervisor o al administrador."
+    >
+      <form onSubmit={onSubmit} noValidate className="space-y-4">
+        {errorGeneral && (
+          <FormAlert
+            tone={bloqueada ? 'warning' : 'error'}
+            icon={bloqueada ? <LockKeyhole className="size-4" /> : undefined}
+          >
+            {mensajeDeError(login.error)}
+          </FormAlert>
+        )}
+
+        <FormField label="Correo" error={fieldErrors.email}>
+          <Input
+            type="email"
+            name="email"
+            inputMode="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="tu@correo.com"
+            value={form.email}
+            onChange={onChange('email')}
+            autoFocus
+          />
+        </FormField>
+
+        <FormField label="Contraseña" error={fieldErrors.password}>
+          <PasswordInput
+            name="password"
+            autoComplete="current-password"
+            value={form.password}
+            onChange={onChange('password')}
+          />
+        </FormField>
+
+        <Button type="submit" size="lg" fullWidth loading={login.isPending}>
+          {login.isPending ? 'Entrando…' : 'Entrar'}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

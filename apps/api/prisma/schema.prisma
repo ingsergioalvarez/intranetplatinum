@@ -49,25 +49,85 @@ model RolPermiso {
 }
 
 model Usuario {
-  id               Int       @id @default(autoincrement())
-  nombre           String    @db.VarChar(120)
-  email            String    @unique @db.VarChar(160)
-  telefono         String?   @db.VarChar(30)
-  passwordHash     String    @map("password_hash") @db.VarChar(255)
-  rolId            Int       @map("rol_id")
+  id                  Int             @id @default(autoincrement())
+  nombre              String          @db.VarChar(120)
+  email               String          @unique @db.VarChar(160)
+  telefono            String?         @db.VarChar(30)
+  passwordHash        String          @map("password_hash") @db.VarChar(255)
+  rolId               Int             @map("rol_id")
   // Relación con clientes se agrega en F2-01.
-  clienteId        Int?      @map("cliente_id")
-  activo           Boolean   @default(true)
-  intentosFallidos Int       @default(0) @map("intentos_fallidos")
-  bloqueadoHasta   DateTime? @map("bloqueado_hasta")
-  ultimoAcceso     DateTime? @map("ultimo_acceso")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  deletedAt        DateTime? @map("deleted_at")
-  rol              Rol       @relation(fields: [rolId], references: [id])
+  clienteId           Int?            @map("cliente_id")
+  activo              Boolean         @default(true)
+  // Contraseña temporal (alta o reset por admin): debe cambiarla al entrar (D-012).
+  debeCambiarPassword Boolean         @default(false) @map("debe_cambiar_password")
+  intentosFallidos    Int             @default(0) @map("intentos_fallidos")
+  bloqueadoHasta      DateTime?       @map("bloqueado_hasta")
+  ultimoAcceso        DateTime?       @map("ultimo_acceso")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  deletedAt           DateTime?       @map("deleted_at")
+  rol                 Rol             @relation(fields: [rolId], references: [id])
+  refreshTokens       RefreshToken[]
+  passwordResets      PasswordReset[]
+  auditoria           Auditoria[]
 
   @@index([rolId])
   @@index([clienteId])
   @@index([activo, deletedAt])
   @@map("usuarios")
+}
+
+// ============================================================
+// Sesiones, recuperación de contraseña y auditoría (F1-01)
+// Los tokens se guardan hasheados (SHA-256 hex), nunca en claro.
+// ============================================================
+
+model RefreshToken {
+  id         Int       @id @default(autoincrement())
+  usuarioId  Int       @map("usuario_id")
+  tokenHash  String    @unique @map("token_hash") @db.Char(64)
+  userAgent  String?   @map("user_agent") @db.VarChar(255)
+  ip         String?   @db.VarChar(45)
+  expiraEn   DateTime  @map("expira_en")
+  // null = vigente. Se llena al cerrar sesión, rotar el token o dar de baja al usuario (F1-09).
+  revocadoEn DateTime? @map("revocado_en")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, revocadoEn])
+  @@index([expiraEn])
+  @@map("refresh_tokens")
+}
+
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  usuarioId Int       @map("usuario_id")
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  expiraEn  DateTime  @map("expira_en")
+  usadoEn   DateTime? @map("usado_en")
+  createdAt DateTime  @default(now()) @map("created_at")
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("password_resets")
+}
+
+model Auditoria {
+  id        BigInt   @id @default(autoincrement())
+  // null = acción del sistema o intento anónimo (p. ej. login fallido de un correo inexistente).
+  usuarioId Int?     @map("usuario_id")
+  accion    String   @db.VarChar(60)
+  entidad   String?  @db.VarChar(60)
+  entidadId String?  @map("entidad_id") @db.VarChar(40)
+  datos     Json?    @map("datos_json")
+  ip        String?  @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.VarChar(255)
+  fecha     DateTime @default(now())
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId, fecha])
+  @@index([entidad, entidadId])
+  @@index([accion, fecha])
+  @@index([fecha])
+  @@map("auditoria")
 }

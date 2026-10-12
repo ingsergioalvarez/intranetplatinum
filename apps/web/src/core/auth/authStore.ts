@@ -1,17 +1,11 @@
 import { create } from 'zustand';
-import type { Permiso, Rol } from '@platinum/shared';
+import type { Permiso, Rol, SessionUser } from '@platinum/shared';
 
-export interface SessionUser {
-  id: number;
-  nombre: string;
-  email: string;
-  rol: Rol;
-  permisos: Permiso[];
-}
+export type { SessionUser };
 
 interface AuthState {
   user: SessionUser | null;
-  /** El access token vive solo en memoria; el refresh token va en cookie httpOnly (F1-02). */
+  /** El access token vive solo en memoria; el refresh token va en cookie httpOnly. */
   accessToken: string | null;
   /** true mientras se intenta restaurar la sesión al abrir la app. */
   restoring: boolean;
@@ -42,4 +36,9 @@ export function hasPermission(user: SessionUser | null, permiso?: Permiso) {
   if (!user) return false;
   if (!permiso || user.rol === 'admin') return true;
   return user.permisos.includes(permiso);
+}
+
+export function hasRole(user: SessionUser | null, roles?: Rol[]) {
+  if (!user) return false;
+  return !roles?.length || roles.includes(user.rol);
 }

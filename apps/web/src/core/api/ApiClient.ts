@@ -14,7 +14,7 @@ interface RequestOptions {
 export interface ApiClientConfig {
   baseUrl: string;
   getAccessToken: () => string | null;
-  /** Intenta renovar la sesión; devuelve true si lo logró (F1-04). */
+  /** Intenta renovar la sesión; devuelve true si lo logró. */
   refreshSession?: () => Promise<boolean>;
   onUnauthorized?: () => void;
 }
@@ -28,7 +28,7 @@ export class ApiClient {
 
   constructor(private readonly config: ApiClientConfig) {}
 
-  /** Permite conectar el refresh de sesión después de crear la instancia (F1-04). */
+  /** Permite conectar el refresh de sesión después de crear la instancia (lo hace `AuthService`). */
   setRefreshSession(fn: () => Promise<boolean>) {
     this.config.refreshSession = fn;
   }
