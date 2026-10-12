@@ -32,4 +32,4 @@
 - Uso principal será en celular por guardias intramuros.
 - TypeScript 5.9 (D-009), Prisma 7.10 + override `mariadb` 3.5.4 (D-010), migraciones sin BD (D-011).
 - `npm audit`: 4 alertas solo en el CLI de Prisma (desarrollo), aceptadas en D-010.
-- Git: `1c0ff3b` (F0-00..02), `f61001d` (F0-03), `ee39650` (F0-04), Fase 0 web en el siguiente commit.
+- Git: repositorio remoto https://github.com/ingsergioalvarez/intranetplatinum (rama `main`). Commits: `1c0ff3b` (F0-00..02), `f61001d` (F0-03), `ee39650` (F0-04), `c0644dd` (F0-05..08).
