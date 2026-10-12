@@ -34,5 +34,10 @@
     "typescript": "~5.9",
     "typescript-eslint": "^8.71.1"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "@prisma/adapter-mariadb": {
+      "mariadb": "3.5.4"
+    }
+  }
 }

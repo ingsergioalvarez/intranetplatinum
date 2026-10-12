@@ -64,17 +64,18 @@
 
 ### Fase 0 — Base del proyecto
 
-| ID    | Tarea                                                                                                                                  | Alcance    | Criterio de aceptación                             | Estado |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------- | ------ |
-| F0-00 | Estructura de trazabilidad: PLAN, CHANGELOG, ESTADO, DECISIONES, `.claude/`, CLAUDE.md                                                 | A-16       | Archivos creados y protocolo de sesión documentado | [x]    |
-| F0-01 | Monorepo (npm workspaces): `apps/api`, `apps/web`, `packages/shared`                                                                   | A-01, A-03 | `npm install` en raíz funciona                     | [x]    |
-| F0-02 | Configuración TS, ESLint, Prettier, `.env.example`, `.gitignore`, git init                                                             | A-01       | Lint pasa en ambos apps                            | [x]    |
-| F0-03 | Backend core: `BaseController`, `BaseService`, `BaseRepository`, `HttpError`, middlewares (errores, validate zod, auth, roles, upload) | A-02, A-03 | Módulo de ejemplo `health` usa las clases base     | [x]    |
-| F0-04 | Conexión MySQL + ORM + primera migración + seeds (roles, admin)                                                                        | A-01       | `migrate` y `seed` crean tablas y usuario admin    | [ ]    |
-| F0-05 | Frontend core: `ApiClient`, `CrudService`, manejo de errores, router con rutas protegidas                                              | A-02       | Llamada a `/api/health` desde web                  | [ ]    |
-| F0-06 | Librería UI: Button, Input, Select, Modal/BottomSheet, DataTable/CardList, Card, Badge, Toast, FormField, PhotoUploader (stub)         | A-02, A-04 | Componentes documentados en página `/ui`           | [ ]    |
-| F0-07 | Layout responsive: AppShell, BottomNav (móvil), Sidebar (escritorio)                                                                   | A-04       | Se ve correcto en 360px y 1440px                   | [ ]    |
-| F0-08 | Scripts dev (concurrently), README de arranque                                                                                         | A-01       | `npm run dev` levanta api + web                    | [ ]    |
+| ID    | Tarea                                                                                                                                  | Alcance    | Criterio de aceptación                                                       | Estado |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------- | ------ |
+| F0-00 | Estructura de trazabilidad: PLAN, CHANGELOG, ESTADO, DECISIONES, `.claude/`, CLAUDE.md                                                 | A-16       | Archivos creados y protocolo de sesión documentado                           | [x]    |
+| F0-01 | Monorepo (npm workspaces): `apps/api`, `apps/web`, `packages/shared`                                                                   | A-01, A-03 | `npm install` en raíz funciona                                               | [x]    |
+| F0-02 | Configuración TS, ESLint, Prettier, `.env.example`, `.gitignore`, git init                                                             | A-01       | Lint pasa en ambos apps                                                      | [x]    |
+| F0-03 | Backend core: `BaseController`, `BaseService`, `BaseRepository`, `HttpError`, middlewares (errores, validate zod, auth, roles, upload) | A-02, A-03 | Módulo de ejemplo `health` usa las clases base                               | [x]    |
+| F0-04 | Prisma 7 + adaptador MySQL, esquema inicial (roles, permisos, usuarios), migración SQL generada sin BD y seed (roles, permisos, admin) | A-01       | `prisma validate` OK, migración SQL generada, pruebas de capa de datos pasan | [x]    |
+| F0-05 | Frontend core: `ApiClient`, `CrudService`, manejo de errores, router con rutas protegidas                                              | A-02       | Llamada a `/api/health` desde web                                            | [ ]    |
+| F0-06 | Librería UI: Button, Input, Select, Modal/BottomSheet, DataTable/CardList, Card, Badge, Toast, FormField, PhotoUploader (stub)         | A-02, A-04 | Componentes documentados en página `/ui`                                     | [ ]    |
+| F0-07 | Layout responsive: AppShell, BottomNav (móvil), Sidebar (escritorio)                                                                   | A-04       | Se ve correcto en 360px y 1440px                                             | [ ]    |
+| F0-08 | Scripts dev (concurrently), README de arranque                                                                                         | A-01       | `npm run dev` levanta api + web                                              | [ ]    |
+| F0-09 | Aplicar migraciones y seed en el servidor MySQL (otra máquina, D-008)                                                                  | A-01       | `npm run db:deploy` y `npm run db:seed` crean tablas y usuario admin         | [!]    |
 
 ### Fase 1 — Autenticación y usuarios
 

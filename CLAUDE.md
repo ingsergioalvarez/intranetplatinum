@@ -34,6 +34,9 @@ Intranet para Platinum Agency (seguridad física intramuros). Uso principal en *
   - Middlewares: `validate({ body, query, params })` con zod, `authenticate`, `requireRoles(...)`, `requirePermission('x.y')`, `uploadImages` (multer en memoria).
   - Respuestas siempre `{ ok, data }` / `{ ok:false, error:{ code, message, details } }`.
 - Config tipada en `apps/api/src/config/env.ts` (zod). No leer `process.env` directo en módulos.
+- Base de datos: Prisma 7 (`apps/api/prisma/schema.prisma`, cliente generado en `src/generated/prisma`, ignorado en git). Acceso con `getPrisma()` de `core/data/prisma.ts` solo dentro de repositorios.
+  - MySQL vive en otra máquina (D-008): **no hay BD local**. Para cambios de esquema: editar `schema.prisma` → `npx prisma validate` → generar SQL con `npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script -o prisma/migrations/<AAAAMMDDHHMMSS>_<nombre>/migration.sql` (D-011). Se aplica en el servidor con `npm run db:deploy -w @platinum/api`.
+  - Permisos y roles salen de `@platinum/shared` (`PERMISOS`, `PERMISOS_POR_ROL`); el seed los sincroniza.
 - Pruebas: Vitest + supertest en `apps/api/test/`. `npm test` desde la raíz.
 - Frontend por módulos en `apps/web/src/modules/<modulo>/`; componentes genéricos en `src/components/ui/`; servicios OOP (`ApiClient`, `CrudService`) en `src/core/`.
 

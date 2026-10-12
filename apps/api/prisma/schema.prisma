@@ -1,0 +1,73 @@
+// Esquema de la Intranet Platinum Agency (MySQL 8).
+// Convención: tablas snake_case plural (@@map), campos camelCase en código y snake_case en BD (@map).
+// Borrado lógico con `deleted_at` (D-006).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ============================================================
+// Seguridad: roles, permisos y usuarios (F0-04)
+// ============================================================
+
+model Rol {
+  id          Int          @id @default(autoincrement())
+  clave       String       @unique @db.VarChar(30)
+  nombre      String       @db.VarChar(60)
+  descripcion String?      @db.VarChar(255)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  permisos    RolPermiso[]
+  usuarios    Usuario[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id          Int          @id @default(autoincrement())
+  clave       String       @unique @db.VarChar(60)
+  descripcion String       @db.VarChar(255)
+  roles       RolPermiso[]
+
+  @@map("permisos")
+}
+
+model RolPermiso {
+  rolId     Int     @map("rol_id")
+  permisoId Int     @map("permiso_id")
+  rol       Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso   Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+  @@index([permisoId])
+  @@map("rol_permiso")
+}
+
+model Usuario {
+  id               Int       @id @default(autoincrement())
+  nombre           String    @db.VarChar(120)
+  email            String    @unique @db.VarChar(160)
+  telefono         String?   @db.VarChar(30)
+  passwordHash     String    @map("password_hash") @db.VarChar(255)
+  rolId            Int       @map("rol_id")
+  // Relación con clientes se agrega en F2-01.
+  clienteId        Int?      @map("cliente_id")
+  activo           Boolean   @default(true)
+  intentosFallidos Int       @default(0) @map("intentos_fallidos")
+  bloqueadoHasta   DateTime? @map("bloqueado_hasta")
+  ultimoAcceso     DateTime? @map("ultimo_acceso")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  rol              Rol       @relation(fields: [rolId], references: [id])
+
+  @@index([rolId])
+  @@index([clienteId])
+  @@index([activo, deletedAt])
+  @@map("usuarios")
+}

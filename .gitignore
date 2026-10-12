@@ -8,3 +8,6 @@ coverage/
 uploads/
 *.log
 .DS_Store
+
+# Prisma (código generado)
+apps/api/src/generated/

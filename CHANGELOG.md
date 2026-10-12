@@ -5,6 +5,36 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-12 #5
+
+#### Añadido
+
+- Prisma 7.10 con adaptador `@prisma/adapter-mariadb` para MySQL (F0-04, D-004, D-010).
+- `apps/api/prisma.config.ts` y `prisma/schema.prisma` con modelos `Rol`, `Permiso`, `RolPermiso`, `Usuario` (tablas `roles`, `permisos`, `rol_permiso`, `usuarios`; baja lógica, bloqueo por intentos).
+- Migración inicial `20261012000000_init_seguridad` generada sin BD (D-011).
+- `prisma/seed.ts` idempotente: permisos, roles, matriz rol-permiso y administrador inicial (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, bcrypt 12).
+- `core/data/prisma.ts`: cliente compartido perezoso (`getPrisma`), error claro si falta `DATABASE_URL`.
+- `@platinum/shared`: catálogo `PERMISOS`, descripciones y `PERMISOS_POR_ROL` (matriz del PLAN §5).
+- Scripts `db:generate`, `db:migrate`, `db:deploy`, `db:seed`, `db:status`, `db:studio`; `postinstall` genera el cliente.
+- Pruebas de capa de datos y catálogo de permisos (`test/prisma.test.ts`).
+- Tarea nueva **F0-09** (bloqueada): aplicar migración y seed en el servidor MySQL.
+
+#### Seguridad
+
+- Override de `mariadb` a 3.5.4 (vulnerabilidades altas en 3.4.5); `lodash` actualizado con `npm audit fix`.
+
+#### Decisiones
+
+- D-004 aceptada (Prisma), D-010 (versiones Prisma/mariadb), D-011 (migraciones sin BD).
+
+#### Verificado
+
+- `prisma validate` OK; `npm test` 14/14; `typecheck` y `lint` sin errores.
+
+#### Tareas
+
+- F0-04 terminada; F0-09 creada como bloqueada (D-008).
+
 ### Sesión 2026-10-12 #4
 
 #### Añadido
