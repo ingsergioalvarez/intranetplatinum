@@ -27,24 +27,24 @@
 
 ## 2. Matriz de alcances (requerimientos del cliente)
 
-| ID   | Alcance                                                                                                    | Origen             | Tareas              | Estado      |
-| ---- | ---------------------------------------------------------------------------------------------------------- | ------------------ | ------------------- | ----------- |
-| A-01 | Arquitectura React + Node + MySQL                                                                          | Usuario 2026-10-12 | F0-01..F0-08        | En progreso |
-| A-02 | Componentes reutilizables orientados a objetos                                                             | Usuario 2026-10-12 | F0-03, F0-05, F0-06 | En progreso |
-| A-03 | Arquitectura modular                                                                                       | Usuario 2026-10-12 | F0-01, F0-03        | En progreso |
-| A-04 | Uso escritorio y celular (prioridad móvil)                                                                 | Usuario 2026-10-12 | F0-06, F0-07, F4-01 | Pendiente   |
-| A-05 | Login                                                                                                      | Usuario 2026-10-12 | F1-01..F1-04        | Pendiente   |
-| A-06 | Recuperación de contraseña                                                                                 | Usuario 2026-10-12 | F1-05, F1-06        | Pendiente   |
-| A-07 | Modal para gestionar accesos de usuario                                                                    | Usuario 2026-10-12 | F1-07..F1-10        | Pendiente   |
-| A-08 | Dar de baja usuarios                                                                                       | Usuario 2026-10-12 | F1-09               | Pendiente   |
-| A-09 | Tabla clientes con datos generales                                                                         | Usuario 2026-10-12 | F2-01, F2-02        | Pendiente   |
-| A-10 | Datos de contacto y responsables (1..N) por cliente                                                        | Usuario 2026-10-12 | F2-03               | Pendiente   |
-| A-11 | Guardias intramuros generan reportes (iluminación, cámaras, casetas, escritorios, daños al inmueble, etc.) | Usuario 2026-10-12 | F3-01..F3-04        | Pendiente   |
-| A-12 | Catálogo extensible de tipos de incidencia ("miles de cosas")                                              | Usuario 2026-10-12 | F3-01               | Pendiente   |
-| A-13 | Evidencia con fotografías, fecha y comentarios                                                             | Usuario 2026-10-12 | F3-03, F3-05        | Pendiente   |
-| A-14 | Seguimiento de reportes                                                                                    | Usuario 2026-10-12 | F3-05, F3-06        | Pendiente   |
-| A-15 | Notificación a clientes                                                                                    | Usuario 2026-10-12 | F3-07, F3-08        | Pendiente   |
-| A-16 | Plan trazable, changelog y memoria de sesión                                                               | Usuario 2026-10-12 | F0-00               | Terminado   |
+| ID   | Alcance                                                                                                    | Origen             | Tareas              | Estado           |
+| ---- | ---------------------------------------------------------------------------------------------------------- | ------------------ | ------------------- | ---------------- |
+| A-01 | Arquitectura React + Node + MySQL                                                                          | Usuario 2026-10-12 | F0-01..F0-08        | En progreso      |
+| A-02 | Componentes reutilizables orientados a objetos                                                             | Usuario 2026-10-12 | F0-03, F0-05, F0-06 | Terminado (base) |
+| A-03 | Arquitectura modular                                                                                       | Usuario 2026-10-12 | F0-01, F0-03        | Terminado (base) |
+| A-04 | Uso escritorio y celular (prioridad móvil)                                                                 | Usuario 2026-10-12 | F0-06, F0-07, F4-01 | En progreso      |
+| A-05 | Login                                                                                                      | Usuario 2026-10-12 | F1-01..F1-04        | Pendiente        |
+| A-06 | Recuperación de contraseña                                                                                 | Usuario 2026-10-12 | F1-05, F1-06        | Pendiente        |
+| A-07 | Modal para gestionar accesos de usuario                                                                    | Usuario 2026-10-12 | F1-07..F1-10        | Pendiente        |
+| A-08 | Dar de baja usuarios                                                                                       | Usuario 2026-10-12 | F1-09               | Pendiente        |
+| A-09 | Tabla clientes con datos generales                                                                         | Usuario 2026-10-12 | F2-01, F2-02        | Pendiente        |
+| A-10 | Datos de contacto y responsables (1..N) por cliente                                                        | Usuario 2026-10-12 | F2-03               | Pendiente        |
+| A-11 | Guardias intramuros generan reportes (iluminación, cámaras, casetas, escritorios, daños al inmueble, etc.) | Usuario 2026-10-12 | F3-01..F3-04        | Pendiente        |
+| A-12 | Catálogo extensible de tipos de incidencia ("miles de cosas")                                              | Usuario 2026-10-12 | F3-01               | Pendiente        |
+| A-13 | Evidencia con fotografías, fecha y comentarios                                                             | Usuario 2026-10-12 | F3-03, F3-05        | Pendiente        |
+| A-14 | Seguimiento de reportes                                                                                    | Usuario 2026-10-12 | F3-05, F3-06        | Pendiente        |
+| A-15 | Notificación a clientes                                                                                    | Usuario 2026-10-12 | F3-07, F3-08        | Pendiente        |
+| A-16 | Plan trazable, changelog y memoria de sesión                                                               | Usuario 2026-10-12 | F0-00               | Terminado        |
 
 ### Alcances propuestos (sugeridos, sin confirmar)
 
@@ -71,10 +71,10 @@
 | F0-02 | Configuración TS, ESLint, Prettier, `.env.example`, `.gitignore`, git init                                                             | A-01       | Lint pasa en ambos apps                                                      | [x]    |
 | F0-03 | Backend core: `BaseController`, `BaseService`, `BaseRepository`, `HttpError`, middlewares (errores, validate zod, auth, roles, upload) | A-02, A-03 | Módulo de ejemplo `health` usa las clases base                               | [x]    |
 | F0-04 | Prisma 7 + adaptador MySQL, esquema inicial (roles, permisos, usuarios), migración SQL generada sin BD y seed (roles, permisos, admin) | A-01       | `prisma validate` OK, migración SQL generada, pruebas de capa de datos pasan | [x]    |
-| F0-05 | Frontend core: `ApiClient`, `CrudService`, manejo de errores, router con rutas protegidas                                              | A-02       | Llamada a `/api/health` desde web                                            | [ ]    |
-| F0-06 | Librería UI: Button, Input, Select, Modal/BottomSheet, DataTable/CardList, Card, Badge, Toast, FormField, PhotoUploader (stub)         | A-02, A-04 | Componentes documentados en página `/ui`                                     | [ ]    |
-| F0-07 | Layout responsive: AppShell, BottomNav (móvil), Sidebar (escritorio)                                                                   | A-04       | Se ve correcto en 360px y 1440px                                             | [ ]    |
-| F0-08 | Scripts dev (concurrently), README de arranque                                                                                         | A-01       | `npm run dev` levanta api + web                                              | [ ]    |
+| F0-05 | Frontend core: `ApiClient`, `CrudService`, manejo de errores, router con rutas protegidas                                              | A-02       | Llamada a `/api/health` desde web                                            | [x]    |
+| F0-06 | Librería UI: Button, Input, Select, Modal/BottomSheet, DataTable/CardList, Card, Badge, Toast, FormField, PhotoUploader (stub)         | A-02, A-04 | Componentes documentados en página `/ui`                                     | [x]    |
+| F0-07 | Layout responsive: AppShell, BottomNav (móvil), Sidebar (escritorio)                                                                   | A-04       | Se ve correcto en 360px y 1440px                                             | [x]    |
+| F0-08 | Scripts dev (concurrently), README de arranque                                                                                         | A-01       | `npm run dev` levanta api + web                                              | [x]    |
 | F0-09 | Aplicar migraciones y seed en el servidor MySQL (otra máquina, D-008)                                                                  | A-01       | `npm run db:deploy` y `npm run db:seed` crean tablas y usuario admin         | [!]    |
 
 ### Fase 1 — Autenticación y usuarios

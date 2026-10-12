@@ -38,7 +38,14 @@ Intranet para Platinum Agency (seguridad física intramuros). Uso principal en *
   - MySQL vive en otra máquina (D-008): **no hay BD local**. Para cambios de esquema: editar `schema.prisma` → `npx prisma validate` → generar SQL con `npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script -o prisma/migrations/<AAAAMMDDHHMMSS>_<nombre>/migration.sql` (D-011). Se aplica en el servidor con `npm run db:deploy -w @platinum/api`.
   - Permisos y roles salen de `@platinum/shared` (`PERMISOS`, `PERMISOS_POR_ROL`); el seed los sincroniza.
 - Pruebas: Vitest + supertest en `apps/api/test/`. `npm test` desde la raíz.
-- Frontend por módulos en `apps/web/src/modules/<modulo>/`; componentes genéricos en `src/components/ui/`; servicios OOP (`ApiClient`, `CrudService`) en `src/core/`.
+- Frontend (`apps/web/src/`):
+  - Pantallas por módulo en `modules/<modulo>/`; rutas en `app/router.tsx` (envolver con `ProtectedRoute permiso={...}`); menú en `components/layout/navItems.ts` (filtra por permiso).
+  - `core/api`: instancia única `api` (`ApiClient`: token, cookies, `{ ok, data }`, `ApiError` con `fieldErrors`), `queryClient`. Servicios de módulo extienden `CrudService<T>(api, '/recurso')` y usan `service.keys` para TanStack Query.
+  - `core/auth`: `useAuthStore` (sesión en memoria; `clear()` = sesión expirada, `logout()` = cierre voluntario), `hasPermission`, `ProtectedRoute`.
+  - Librería UI en `components/ui` (importar desde el barrel): `Button`, `Input`/`Select`/`Textarea`, `FormField` (inyecta id/invalid), `Card`, `Badge`, `Modal` (bottom-sheet en celular), `DataTable` (tabla en escritorio, tarjetas en celular; columnas con `mobile: 'title'|'subtitle'|'field'|'hidden'`), `Pagination`, `toast`, `PhotoUploader`, `EmptyState`, `Spinner`. `PageHeader` está en `components/layout/AppShell`.
+  - Tailwind 4: tema en `src/index.css` (`brand-*`, `platinum-*`). Usar `pb-safe`/`pt-safe` para áreas seguras del celular.
+  - Catálogo visual en `/ui` (solo desarrollo). Login demo por rol solo en desarrollo hasta F1-03.
+  - Verificación visual: capturas a 360px y 1440px con Edge headless (`playwright-core`, channel `msedge`) instalado fuera del repo.
 
 ## Convenciones
 

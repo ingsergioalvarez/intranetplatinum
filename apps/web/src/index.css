@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+/* Tema Platinum: azul marino institucional + acento platino. */
+@theme {
+  --color-brand-50: #eef3fb;
+  --color-brand-100: #d9e3f5;
+  --color-brand-200: #b3c6ea;
+  --color-brand-300: #84a1d9;
+  --color-brand-400: #5a7cc4;
+  --color-brand-500: #3d5fa9;
+  --color-brand-600: #2e4a8c;
+  --color-brand-700: #253b70;
+  --color-brand-800: #1b2b52;
+  --color-brand-900: #121d38;
+  --color-brand-950: #0b1224;
+
+  --color-platinum-100: #f4f5f7;
+  --color-platinum-200: #e5e7eb;
+  --color-platinum-300: #cfd3da;
+  --color-platinum-400: #a9afba;
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
