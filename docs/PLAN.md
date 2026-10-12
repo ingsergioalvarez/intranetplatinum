@@ -30,7 +30,7 @@
 | ID   | Alcance                                                                                                    | Origen             | Tareas              | Estado      |
 | ---- | ---------------------------------------------------------------------------------------------------------- | ------------------ | ------------------- | ----------- |
 | A-01 | Arquitectura React + Node + MySQL                                                                          | Usuario 2026-10-12 | F0-01..F0-08        | En progreso |
-| A-02 | Componentes reutilizables orientados a objetos                                                             | Usuario 2026-10-12 | F0-03, F0-05, F0-06 | Pendiente   |
+| A-02 | Componentes reutilizables orientados a objetos                                                             | Usuario 2026-10-12 | F0-03, F0-05, F0-06 | En progreso |
 | A-03 | Arquitectura modular                                                                                       | Usuario 2026-10-12 | F0-01, F0-03        | En progreso |
 | A-04 | Uso escritorio y celular (prioridad móvil)                                                                 | Usuario 2026-10-12 | F0-06, F0-07, F4-01 | Pendiente   |
 | A-05 | Login                                                                                                      | Usuario 2026-10-12 | F1-01..F1-04        | Pendiente   |
@@ -69,7 +69,7 @@
 | F0-00 | Estructura de trazabilidad: PLAN, CHANGELOG, ESTADO, DECISIONES, `.claude/`, CLAUDE.md                                                 | A-16       | Archivos creados y protocolo de sesión documentado | [x]    |
 | F0-01 | Monorepo (npm workspaces): `apps/api`, `apps/web`, `packages/shared`                                                                   | A-01, A-03 | `npm install` en raíz funciona                     | [x]    |
 | F0-02 | Configuración TS, ESLint, Prettier, `.env.example`, `.gitignore`, git init                                                             | A-01       | Lint pasa en ambos apps                            | [x]    |
-| F0-03 | Backend core: `BaseController`, `BaseService`, `BaseRepository`, `HttpError`, middlewares (errores, validate zod, auth, roles, upload) | A-02, A-03 | Módulo de ejemplo `health` usa las clases base     | [ ]    |
+| F0-03 | Backend core: `BaseController`, `BaseService`, `BaseRepository`, `HttpError`, middlewares (errores, validate zod, auth, roles, upload) | A-02, A-03 | Módulo de ejemplo `health` usa las clases base     | [x]    |
 | F0-04 | Conexión MySQL + ORM + primera migración + seeds (roles, admin)                                                                        | A-01       | `migrate` y `seed` crean tablas y usuario admin    | [ ]    |
 | F0-05 | Frontend core: `ApiClient`, `CrudService`, manejo de errores, router con rutas protegidas                                              | A-02       | Llamada a `/api/health` desde web                  | [ ]    |
 | F0-06 | Librería UI: Button, Input, Select, Modal/BottomSheet, DataTable/CardList, Card, Badge, Toast, FormField, PhotoUploader (stub)         | A-02, A-04 | Componentes documentados en página `/ui`           | [ ]    |

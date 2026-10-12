@@ -5,6 +5,30 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-12 #4
+
+#### Añadido
+
+- Núcleo del backend `apps/api/src/core/` (F0-03, A-02, A-03):
+  - `HttpError` con fábricas por código HTTP.
+  - `BaseController`, `BaseService`, `CrudService` genérico y `BaseRepository` abstracto (independiente del ORM, con baja lógica).
+  - Middlewares: `errorHandler` + `notFoundHandler` (formato de error estándar; maneja zod, multer y JSON inválido), `validate` (zod → `req.validated`), `authenticate` (JWT Bearer), `requireRoles`, `requirePermission`, `uploadImages` (jpeg/png/webp/heic, límite por `MAX_UPLOAD_MB`).
+  - `security/jwt.ts`: `signAccessToken` / `verifyAccessToken`.
+  - Contrato `AppModule` y registro de módulos en `src/modules/index.ts`.
+- `config/env.ts`: variables de entorno validadas con zod; carga `.env` nativa de Node; exige secretos JWT reales en producción.
+- `app.ts` con helmet, CORS (con credenciales hacia `APP_URL`), cookie-parser, límite JSON 1 MB.
+- Módulo `health` reescrito con las clases base: `GET /api/health` y `GET /api/health/me` (protegida).
+- `@platinum/shared`: `paginationQuerySchema`, `idParamSchema`, tipo `ApiError`; `HealthStatus` con versión y uptime.
+- Pruebas Vitest + supertest (`apps/api/test/core.test.ts`, 9 casos): health, 404, 401/403, validación, CRUD genérico con baja lógica, upload, JSON inválido. Script `npm test`.
+
+#### Verificado
+
+- `npm test` 9/9, `typecheck` y `lint` sin errores; servidor real responde health y 401 en `/me`; cabeceras helmet presentes.
+
+#### Tareas
+
+- F0-03 terminada.
+
 ### Sesión 2026-10-12 #3
 
 #### Añadido

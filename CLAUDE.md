@@ -25,7 +25,16 @@ Intranet para Platinum Agency (seguridad física intramuros). Uso principal en *
 
 - Monorepo npm workspaces: `apps/api` (Node + Express + TS), `apps/web` (React + Vite + TS + Tailwind, PWA), `packages/shared` (tipos y esquemas zod).
 - MySQL 8. ORM según D-004.
-- Backend por módulos verticales en `apps/api/src/modules/<modulo>/` con `routes`, `controller`, `service`, `repository`, `schemas`. Las clases extienden `BaseController` / `BaseService` / `BaseRepository` de `src/core/`.
+- Backend por módulos verticales en `apps/api/src/modules/<modulo>/` con `index.ts` (router + export `AppModule`), `*.controller.ts`, `*.service.ts`, `*.repository.ts`, `*.schemas.ts`. Registrar el módulo en `src/modules/index.ts`.
+- Núcleo en `apps/api/src/core/` (importar desde `../../core`):
+  - `BaseController`: handlers como propiedades flecha; helpers `ok/created/paginated/noContent`, `body/query/params` (leen `req.validated`), `currentUser`.
+  - `BaseService` (logging/auditoría) → `CrudService<TEntity, TCreate, TUpdate>` (getById con 404, list, create, update, deactivate, restore).
+  - `BaseRepository` abstracto, independiente del ORM; `softDelete`/`restore` (D-006).
+  - `HttpError` (`badRequest`, `unauthorized`, `forbidden`, `notFound`, `conflict`, `tooMany`).
+  - Middlewares: `validate({ body, query, params })` con zod, `authenticate`, `requireRoles(...)`, `requirePermission('x.y')`, `uploadImages` (multer en memoria).
+  - Respuestas siempre `{ ok, data }` / `{ ok:false, error:{ code, message, details } }`.
+- Config tipada en `apps/api/src/config/env.ts` (zod). No leer `process.env` directo en módulos.
+- Pruebas: Vitest + supertest en `apps/api/test/`. `npm test` desde la raíz.
 - Frontend por módulos en `apps/web/src/modules/<modulo>/`; componentes genéricos en `src/components/ui/`; servicios OOP (`ApiClient`, `CrudService`) en `src/core/`.
 
 ## Convenciones

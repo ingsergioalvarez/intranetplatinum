@@ -1,7 +1,6 @@
+import { env } from './config/env';
 import { createApp } from './app';
 
-const PORT = Number(process.env.PORT ?? 4000);
-
-createApp().listen(PORT, () => {
-  console.log(`[api] escuchando en http://localhost:${PORT}`);
+createApp().listen(env.PORT, () => {
+  console.log(`[api] escuchando en http://localhost:${env.PORT} (${env.NODE_ENV})`);
 });

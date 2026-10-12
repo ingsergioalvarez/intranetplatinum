@@ -1,7 +1,13 @@
+export interface ApiError {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
 export interface ApiResponse<T> {
   ok: boolean;
   data?: T;
-  error?: { code: string; message: string; details?: unknown };
+  error?: ApiError;
 }
 
 export interface Paginated<T> {
@@ -14,5 +20,7 @@ export interface Paginated<T> {
 export interface HealthStatus {
   status: 'ok';
   service: string;
+  version: string;
+  uptimeSeconds: number;
   timestamp: string;
 }
