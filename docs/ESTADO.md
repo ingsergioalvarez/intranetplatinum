@@ -2,29 +2,26 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-10-12
-**Fase actual:** Fase 1 — Autenticación y usuarios
-**Última tarea terminada:** F1-11 — cambio de contraseña propio/obligatorio (antes F1-07..F1-10 gestión de usuarios; F1-01..F1-04 login)
+**Última actualización:** 2026-10-13
+**Fase actual:** Fase 3 — Reportes terminada salvo envío de correos (F3-07/F3-08, esperan SMTP) → siguiente: **Fase 4 — PWA**
+**Última tarea terminada:** F3-10 — avisos en la app (antes F3-09 reglas de aviso por cliente y prioridad)
 **Tarea en progreso:** ninguna
 
 ## Siguiente paso
 
-1. **F1-05 / F1-06**: recuperación de contraseña por correo — único pendiente de la Fase 1; **necesita datos SMTP**. Tabla `password_resets` lista; reutilizar `generateOpaqueToken`/`hashToken`; agregar enlace "¿Olvidaste tu contraseña?" en `LoginPage`.
-2. Si aún no hay SMTP: arrancar **Fase 2 — Clientes** (F2-01 tablas clientes/contactos/sitios).
+1. **F4-01 PWA instalable** (manifest, íconos, service worker): ícono en la pantalla del celular, pantalla completa, actualizaciones automáticas. El usuario preguntó si es un APK: se explicó que la PWA se instala desde el navegador y funciona en Android e iPhone; si se requiere Play Store, se empaqueta después.
+2. **F4-02 Cola offline de reportes** según D-001 (pendiente: ¿hay señal en los inmuebles?).
+3. Cuando el usuario configure el correo: **F1-05/F1-06** (recuperar contraseña) y **F3-07/F3-08** (enviar los correos en cola de `notificaciones`, marcar reporte "notificado", bitácora y reenvío).
 
-Hecho en Fase 1:
-
-- Login (F1-02..F1-04): cookie httpOnly `platinum_rt` (path `/api/auth`) con refresh rotativo; bloqueo tras 5 intentos (15 min); 30 logins/15 min por IP; la web restaura la sesión al abrir.
-- Usuarios (F1-07..F1-10): `/api/usuarios` (lista con `q`/`rol`/`estado`, alta, edición, `/baja`, `/reactivar`, `/reset-password`), protegido por permisos y auditado. Reglas: no cambiar el propio rol, no darse de baja, no dejar el sistema sin admin activo. Pantalla `/usuarios` con modal (bottom-sheet en celular).
-- Contraseñas temporales (D-012, F1-11): alta y reset generan una contraseña temporal mostrada una vez; el usuario debe cambiarla en `/cambiar-password` (la API responde 403 hasta hacerlo).
+Avisos (D-016): cada cliente tiene destino por defecto (solo supervisor / solo cliente / ambos) y excepciones por prioridad (`PUT /api/clientes/:id/avisos`, tarjeta "Avisos de reportes" en la ficha). Supervisores (permiso `reportes.estatus`) reciben avisos en la campanita; el guardia recibe aviso cuando su reporte cambia de estatus o le comentan; los correos al cliente quedan en cola.
 
 ## Bloqueos / pendientes del usuario
 
 - **F0-09** terminada (2026-10-12): MySQL 8.0.46 local de pruebas en esta PC, BD `platinum_intranet` con migración `init_seguridad` y seed (15 permisos, 4 roles, admin). Cada PC necesita su propio `apps/api/.env` (no está en git).
-- Pendiente de commit: F1-01..F1-11 están sin commit (el usuario avisa cuándo hacerlo).
-- BD local con 2 usuarios guardia de prueba (`guardia.*@platinum.local`) creados por las pruebas de navegador.
-- **F1-05** (recuperar contraseña) necesita datos SMTP para enviar correos reales.
-- D-001, D-002, D-003 sin respuesta (ver [DECISIONES.md](DECISIONES.md)); no bloquean la Fase 1.
+- Pendiente de commit: Fases 2 y 3 sin commit; lo anterior está en `acf5d09` (sin push). El usuario avisa cuándo hacer commit/push.
+- BD local con datos de prueba creados por las pruebas automáticas (usuarios `guardia.*`, `g.*@platinum.local`, clientes "Plaza …", "Corporativo …", "Hotel …", "Rep Plaza …" y sus reportes; fotos en `apps/api/uploads/`, ignorada por git).
+- **SMTP**: el usuario avisará cuando esté configurado (F1-05/F1-06, F3-07/F3-08).
+- D-001 (señal en inmuebles) y D-002 (portal de clientes) siguen sin respuesta.
 
 ## Cómo levantar
 

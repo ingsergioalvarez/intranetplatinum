@@ -7,7 +7,13 @@ import { LoginPage } from '../modules/auth/LoginPage';
 import { InicioPage } from '../modules/inicio/InicioPage';
 import { UiShowcasePage } from '../modules/dev/UiShowcasePage';
 import { UsuariosPage } from '../modules/usuarios/UsuariosPage';
-import { NotFoundPage, PendientePage } from '../modules/shared/PendientePage';
+import { ClienteDetallePage } from '../modules/clientes/ClienteDetallePage';
+import { ClientesPage } from '../modules/clientes/ClientesPage';
+import { CategoriasPage } from '../modules/catalogos/CategoriasPage';
+import { NuevoReportePage } from '../modules/reportes/NuevoReportePage';
+import { ReporteDetallePage } from '../modules/reportes/ReporteDetallePage';
+import { ReportesPage } from '../modules/reportes/ReportesPage';
+import { NotFoundPage } from '../modules/shared/PendientePage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -32,7 +38,25 @@ export const router = createBrowserRouter([
         path: 'reportes',
         element: (
           <ProtectedRoute permiso={PERMISOS.REPORTES_CREAR}>
-            <PendientePage title="Reportes" tareas="F3-01 a F3-08" />
+            <ReportesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'reportes/nuevo',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.REPORTES_CREAR}>
+            <NuevoReportePage />
+          </ProtectedRoute>
+        ),
+      },
+      // El servidor decide si puede verlo (todos / sus sitios).
+      { path: 'reportes/:id', element: <ReporteDetallePage /> },
+      {
+        path: 'catalogos/categorias',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.CATALOGOS_ADMINISTRAR}>
+            <CategoriasPage />
           </ProtectedRoute>
         ),
       },
@@ -40,7 +64,15 @@ export const router = createBrowserRouter([
         path: 'clientes',
         element: (
           <ProtectedRoute permiso={PERMISOS.CLIENTES_VER}>
-            <PendientePage title="Clientes" tareas="F2-01 a F2-05" />
+            <ClientesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'clientes/:id',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.CLIENTES_VER}>
+            <ClienteDetallePage />
           </ProtectedRoute>
         ),
       },

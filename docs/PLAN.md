@@ -37,26 +37,26 @@
 | A-06 | Recuperación de contraseña                                                                                 | Usuario 2026-10-12 | F1-05, F1-06        | Pendiente        |
 | A-07 | Modal para gestionar accesos de usuario                                                                    | Usuario 2026-10-12 | F1-07..F1-11        | Terminado        |
 | A-08 | Dar de baja usuarios                                                                                       | Usuario 2026-10-12 | F1-09               | Terminado        |
-| A-09 | Tabla clientes con datos generales                                                                         | Usuario 2026-10-12 | F2-01, F2-02        | Pendiente        |
-| A-10 | Datos de contacto y responsables (1..N) por cliente                                                        | Usuario 2026-10-12 | F2-03               | Pendiente        |
-| A-11 | Guardias intramuros generan reportes (iluminación, cámaras, casetas, escritorios, daños al inmueble, etc.) | Usuario 2026-10-12 | F3-01..F3-04        | Pendiente        |
-| A-12 | Catálogo extensible de tipos de incidencia ("miles de cosas")                                              | Usuario 2026-10-12 | F3-01               | Pendiente        |
-| A-13 | Evidencia con fotografías, fecha y comentarios                                                             | Usuario 2026-10-12 | F3-03, F3-05        | Pendiente        |
-| A-14 | Seguimiento de reportes                                                                                    | Usuario 2026-10-12 | F3-05, F3-06        | Pendiente        |
-| A-15 | Notificación a clientes                                                                                    | Usuario 2026-10-12 | F3-07, F3-08        | Pendiente        |
+| A-09 | Tabla clientes con datos generales                                                                         | Usuario 2026-10-12 | F2-01, F2-02        | Terminado        |
+| A-10 | Datos de contacto y responsables (1..N) por cliente                                                        | Usuario 2026-10-12 | F2-03               | Terminado        |
+| A-11 | Guardias intramuros generan reportes (iluminación, cámaras, casetas, escritorios, daños al inmueble, etc.) | Usuario 2026-10-12 | F3-01..F3-04        | Terminado        |
+| A-12 | Catálogo extensible de tipos de incidencia ("miles de cosas")                                              | Usuario 2026-10-12 | F3-01               | Terminado        |
+| A-13 | Evidencia con fotografías, fecha y comentarios                                                             | Usuario 2026-10-12 | F3-03, F3-05        | Terminado        |
+| A-14 | Seguimiento de reportes                                                                                    | Usuario 2026-10-12 | F3-05, F3-06        | Terminado        |
+| A-15 | Notificación a clientes                                                                                    | Usuario 2026-10-12 | F3-07..F3-10        | Pendiente        |
 | A-16 | Plan trazable, changelog y memoria de sesión                                                               | Usuario 2026-10-12 | F0-00               | Terminado        |
 
 ### Alcances propuestos (sugeridos, sin confirmar)
 
-| ID   | Alcance                                                | Estado                               |
-| ---- | ------------------------------------------------------ | ------------------------------------ |
-| P-01 | Sitios/inmuebles por cliente y asignación de guardias  | Incluido en F2 (necesario para A-11) |
-| P-02 | Roles y permisos (admin, supervisor, guardia, cliente) | Incluido en F1                       |
-| P-03 | Auditoría de acciones                                  | Incluido en F1                       |
-| P-04 | Modo offline para guardias                             | Fase 4 (ver D-001)                   |
-| P-05 | Portal de clientes                                     | Fase 5 (ver D-002)                   |
-| P-06 | Aprobación de supervisor antes de notificar            | Por decidir (D-003)                  |
-| P-07 | WhatsApp, dashboard, PDF, SLA                          | Fase 5                               |
+| ID   | Alcance                                                | Estado                         |
+| ---- | ------------------------------------------------------ | ------------------------------ |
+| P-01 | Sitios/inmuebles por cliente y asignación de guardias  | Terminado en F2 (F2-04, F2-05) |
+| P-02 | Roles y permisos (admin, supervisor, guardia, cliente) | Incluido en F1                 |
+| P-03 | Auditoría de acciones                                  | Incluido en F1                 |
+| P-04 | Modo offline para guardias                             | Fase 4 (ver D-001)             |
+| P-05 | Portal de clientes                                     | Fase 5 (ver D-002)             |
+| P-06 | Aprobación de supervisor antes de notificar            | Descartado (D-003, D-016)      |
+| P-07 | WhatsApp, dashboard, PDF, SLA                          | Fase 5                         |
 
 ---
 
@@ -97,24 +97,26 @@
 
 | ID    | Tarea                                                                         | Alcance          | Criterio de aceptación       | Estado |
 | ----- | ----------------------------------------------------------------------------- | ---------------- | ---------------------------- | ------ |
-| F2-01 | Tablas: clientes, cliente_contactos, sitios, sitio_guardia                    | A-09, A-10, P-01 | Migración aplicada           | [ ]    |
-| F2-02 | API + pantalla CRUD clientes (datos generales)                                | A-09             | Alta/edición/baja de cliente | [ ]    |
-| F2-03 | Contactos/responsables 1..N (flags `es_responsable`, `recibe_notificaciones`) | A-10             | Varios contactos por cliente | [ ]    |
-| F2-04 | Sitios por cliente                                                            | P-01             | Varios sitios por cliente    | [ ]    |
-| F2-05 | Asignación de guardias a sitios (turno, vigencia)                             | P-01             | Guardia ve solo sus sitios   | [ ]    |
+| F2-01 | Tablas: clientes, cliente_contactos, sitios, sitio_guardia                    | A-09, A-10, P-01 | Migración aplicada           | [x]    |
+| F2-02 | API + pantalla CRUD clientes (datos generales)                                | A-09             | Alta/edición/baja de cliente | [x]    |
+| F2-03 | Contactos/responsables 1..N (flags `es_responsable`, `recibe_notificaciones`) | A-10             | Varios contactos por cliente | [x]    |
+| F2-04 | Sitios por cliente                                                            | P-01             | Varios sitios por cliente    | [x]    |
+| F2-05 | Asignación de guardias a sitios (turno, vigencia)                             | P-01             | Guardia ve solo sus sitios   | [x]    |
 
 ### Fase 3 — Reportes de guardias
 
-| ID    | Tarea                                                                                                                                         | Alcance    | Criterio de aceptación             | Estado |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------- | ------ |
-| F3-01 | Tabla + CRUD `categorias_reporte` jerárquica (seed: Iluminación, Cámaras, Casetas, Mobiliario/Escritorios, Daño al inmueble, Seguridad, Otro) | A-11, A-12 | Admin agrega categorías sin código | [ ]    |
-| F3-02 | Tablas: reportes, reporte_evidencias, reporte_seguimientos, notificaciones; folio `PLT-AAAA-NNNNNN`                                           | A-11       | Migración aplicada                 | [ ]    |
-| F3-03 | Upload de fotos (multer, validación tipo/tamaño, compresión en cliente, almacenamiento abstracto `StorageService`)                            | A-13       | Fotos visibles en reporte          | [ ]    |
-| F3-04 | Wizard móvil "Nuevo reporte": sitio → categoría → prioridad → fotos (cámara) → descripción → enviar; fecha servidor + GPS opcional            | A-11, A-13 | Guardia crea reporte desde celular | [ ]    |
-| F3-05 | Seguimiento: línea de tiempo con comentarios, fotos y cambios de estatus                                                                      | A-13, A-14 | Historial completo por reporte     | [ ]    |
-| F3-06 | Listado/filtros de reportes por estatus, cliente, sitio, fechas, categoría                                                                    | A-14       | Filtros funcionales en móvil       | [ ]    |
-| F3-07 | Notificación por correo a contactos con `recibe_notificaciones` (plantilla con folio, fotos, enlace)                                          | A-15       | Contacto recibe correo             | [ ]    |
-| F3-08 | Registro de notificaciones (enviado/error) y reenvío                                                                                          | A-15       | Bitácora visible                   | [ ]    |
+| ID    | Tarea                                                                                                                                         | Alcance     | Criterio de aceptación                      | Estado |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------- | ------ |
+| F3-01 | Tabla + CRUD `categorias_reporte` jerárquica (seed: Iluminación, Cámaras, Casetas, Mobiliario/Escritorios, Daño al inmueble, Seguridad, Otro) | A-11, A-12  | Admin agrega categorías sin código          | [x]    |
+| F3-02 | Tablas: reportes, reporte_evidencias, reporte_seguimientos, notificaciones; folio `PLT-AAAA-NNNNNN`                                           | A-11        | Migración aplicada                          | [x]    |
+| F3-03 | Upload de fotos (multer, validación tipo/tamaño, compresión en cliente, almacenamiento abstracto `StorageService`)                            | A-13        | Fotos visibles en reporte                   | [x]    |
+| F3-04 | Wizard móvil "Nuevo reporte": sitio → categoría → prioridad → fotos (cámara) → descripción → enviar; fecha servidor + GPS opcional            | A-11, A-13  | Guardia crea reporte desde celular          | [x]    |
+| F3-05 | Seguimiento: línea de tiempo con comentarios, fotos y cambios de estatus                                                                      | A-13, A-14  | Historial completo por reporte              | [x]    |
+| F3-06 | Listado/filtros de reportes por estatus, cliente, sitio, fechas, categoría                                                                    | A-14        | Filtros funcionales en móvil                | [x]    |
+| F3-07 | Notificación por correo a contactos con `recibe_notificaciones` (plantilla con folio, fotos, enlace)                                          | A-15        | Contacto recibe correo                      | [!]    |
+| F3-08 | Registro de notificaciones (enviado/error) y reenvío                                                                                          | A-15        | Bitácora visible                            | [!]    |
+| F3-09 | Reglas de aviso por cliente y prioridad (solo supervisor / solo cliente / ambos)                                                              | A-15, D-016 | Configurable desde la ficha del cliente     | [x]    |
+| F3-10 | Avisos dentro de la app (campanita) para supervisores y guardias; cola de correos al cliente                                                  | A-15, D-016 | Supervisor ve avisos sin correo configurado | [x]    |
 
 ### Fase 4 — PWA y endurecimiento
 
@@ -151,13 +153,14 @@ clientes(id, razon_social, nombre_comercial, rfc, giro, direccion_fiscal, telefo
          estatus, notas, created_at, updated_at, deleted_at)
 cliente_contactos(id, cliente_id, nombre, puesto, telefono, celular, email, es_responsable,
                   recibe_notificaciones, prioridad)
-sitios(id, cliente_id, nombre, direccion, lat, lng, activo)
-sitio_guardia(sitio_id, usuario_id, turno, desde, hasta)
+sitios(id, cliente_id, nombre, direccion, referencias, lat, lng, deleted_at)            -- D-014
+sitio_guardia(id, sitio_id, usuario_id, turno, desde, hasta)                          -- historial
 
-categorias_reporte(id, padre_id?, nombre, icono, activo)
+categorias_reporte(id, padre_id?, nombre, icono, orden, activo)
 reportes(id, folio, sitio_id, cliente_id, categoria_id, creado_por, titulo, descripcion,
-         ubicacion_detalle, prioridad, estatus, lat, lng, fecha_detectado, created_at, cerrado_en)
-reporte_evidencias(id, reporte_id, seguimiento_id?, url, mime, tamano, tomada_en, subida_por, created_at)
+         ubicacion_detalle, prioridad, estatus, lat, lng, created_at, cerrado_en)   -- D-015
+folios_reporte(anio, ultimo)
+reporte_evidencias(id, reporte_id, seguimiento_id?, archivo, mime, tamano, subida_por, created_at)
 reporte_seguimientos(id, reporte_id, usuario_id, comentario, estatus_anterior, estatus_nuevo, created_at)
 notificaciones(id, reporte_id, contacto_id, canal, enviado_en, estado, error)
 ```

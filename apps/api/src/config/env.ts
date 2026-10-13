@@ -12,6 +12,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().default(4000),
   APP_URL: z.string().default('http://localhost:5173'),
+  // Zona del negocio: define qué es "hoy" para vigencias (asignaciones, reportes).
+  APP_TIMEZONE: z.string().default('America/Mexico_City'),
   // Opcional hasta conectar MySQL en la otra máquina (D-008).
   DATABASE_URL: z.string().optional(),
   JWT_ACCESS_SECRET: z.string().min(32).default(DEV_SECRET),
@@ -29,6 +31,8 @@ const envSchema = z.object({
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   UPLOADS_DIR: z.string().default('./uploads'),
   MAX_UPLOAD_MB: z.coerce.number().default(10),
+  // Vigencia de los enlaces firmados a fotos de evidencia.
+  ARCHIVOS_URL_TTL_MIN: z.coerce.number().int().min(1).default(60),
 });
 
 const parsed = envSchema.safeParse(process.env);

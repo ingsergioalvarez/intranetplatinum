@@ -41,3 +41,8 @@ export class ApiError extends Error {
     );
   }
 }
+
+/** Mensaje para mostrar al usuario a partir de cualquier error. */
+export function mensajeDeError(error: unknown): string {
+  return error instanceof ApiError ? error.message : 'Ocurrió un error inesperado. Intenta de nuevo.';
+}

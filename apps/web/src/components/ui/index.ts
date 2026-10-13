@@ -14,3 +14,5 @@ export { toast } from './toastStore';
 export { PhotoUploader, type PhotoUploaderProps } from './PhotoUploader';
 export { PasswordInput } from './PasswordInput';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
+export { Checkbox } from './Checkbox';
+export { FormModal } from './FormModal';

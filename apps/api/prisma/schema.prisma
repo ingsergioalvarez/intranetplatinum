@@ -49,27 +49,33 @@ model RolPermiso {
 }
 
 model Usuario {
-  id                  Int             @id @default(autoincrement())
-  nombre              String          @db.VarChar(120)
-  email               String          @unique @db.VarChar(160)
-  telefono            String?         @db.VarChar(30)
-  passwordHash        String          @map("password_hash") @db.VarChar(255)
-  rolId               Int             @map("rol_id")
-  // Relación con clientes se agrega en F2-01.
-  clienteId           Int?            @map("cliente_id")
-  activo              Boolean         @default(true)
+  id                  Int                  @id @default(autoincrement())
+  nombre              String               @db.VarChar(120)
+  email               String               @unique @db.VarChar(160)
+  telefono            String?              @db.VarChar(30)
+  passwordHash        String               @map("password_hash") @db.VarChar(255)
+  rolId               Int                  @map("rol_id")
+  // Usuario de rol cliente: a qué cliente pertenece (portal F5-01).
+  clienteId           Int?                 @map("cliente_id")
+  activo              Boolean              @default(true)
   // Contraseña temporal (alta o reset por admin): debe cambiarla al entrar (D-012).
-  debeCambiarPassword Boolean         @default(false) @map("debe_cambiar_password")
-  intentosFallidos    Int             @default(0) @map("intentos_fallidos")
-  bloqueadoHasta      DateTime?       @map("bloqueado_hasta")
-  ultimoAcceso        DateTime?       @map("ultimo_acceso")
-  createdAt           DateTime        @default(now()) @map("created_at")
-  updatedAt           DateTime        @updatedAt @map("updated_at")
-  deletedAt           DateTime?       @map("deleted_at")
-  rol                 Rol             @relation(fields: [rolId], references: [id])
+  debeCambiarPassword Boolean              @default(false) @map("debe_cambiar_password")
+  intentosFallidos    Int                  @default(0) @map("intentos_fallidos")
+  bloqueadoHasta      DateTime?            @map("bloqueado_hasta")
+  ultimoAcceso        DateTime?            @map("ultimo_acceso")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  deletedAt           DateTime?            @map("deleted_at")
+  rol                 Rol                  @relation(fields: [rolId], references: [id])
+  cliente             Cliente?             @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  asignaciones        SitioGuardia[]
   refreshTokens       RefreshToken[]
   passwordResets      PasswordReset[]
   auditoria           Auditoria[]
+  reportes            Reporte[]
+  reporteSeguimientos ReporteSeguimiento[]
+  reporteEvidencias   ReporteEvidencia[]
+  avisos              Aviso[]
 
   @@index([rolId])
   @@index([clienteId])
@@ -130,4 +136,303 @@ model Auditoria {
   @@index([accion, fecha])
   @@index([fecha])
   @@map("auditoria")
+}
+
+// ============================================================
+// Clientes, contactos, sitios y asignación de guardias (F2-01)
+// ============================================================
+
+enum EstatusCliente {
+  activo
+  suspendido
+}
+
+model Cliente {
+  id              Int                 @id @default(autoincrement())
+  razonSocial     String              @map("razon_social") @db.VarChar(200)
+  nombreComercial String              @map("nombre_comercial") @db.VarChar(150)
+  rfc             String?             @unique @db.VarChar(13)
+  giro            String?             @db.VarChar(100)
+  direccionFiscal String?             @map("direccion_fiscal") @db.VarChar(300)
+  telefono        String?             @db.VarChar(30)
+  email           String?             @db.VarChar(160)
+  logoUrl         String?             @map("logo_url") @db.VarChar(500)
+  // suspendido = servicio en pausa; la baja definitiva usa deleted_at (D-006).
+  estatus         EstatusCliente      @default(activo)
+  // A quién se avisa de sus reportes si no hay regla para la prioridad (D-016).
+  avisoPorDefecto DestinoAviso        @default(supervisor) @map("aviso_por_defecto")
+  notas           String?             @db.Text
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  deletedAt       DateTime?           @map("deleted_at")
+  contactos       ClienteContacto[]
+  sitios          Sitio[]
+  usuarios        Usuario[]
+  reportes        Reporte[]
+  reglasAviso     ClienteReglaAviso[]
+
+  @@index([deletedAt, estatus])
+  @@index([nombreComercial])
+  @@map("clientes")
+}
+
+model ClienteContacto {
+  id                   Int            @id @default(autoincrement())
+  clienteId            Int            @map("cliente_id")
+  nombre               String         @db.VarChar(120)
+  puesto               String?        @db.VarChar(100)
+  telefono             String?        @db.VarChar(30)
+  celular              String?        @db.VarChar(30)
+  email                String?        @db.VarChar(160)
+  esResponsable        Boolean        @default(false) @map("es_responsable")
+  recibeNotificaciones Boolean        @default(false) @map("recibe_notificaciones")
+  // Orden de aparición / escalamiento (menor = primero).
+  prioridad            Int            @default(0)
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  // Baja lógica: el historial de notificaciones (F3-08) lo sigue referenciando.
+  deletedAt            DateTime?      @map("deleted_at")
+  cliente              Cliente        @relation(fields: [clienteId], references: [id])
+  notificaciones       Notificacion[]
+
+  @@index([clienteId, deletedAt])
+  @@map("cliente_contactos")
+}
+
+model Sitio {
+  id           Int            @id @default(autoincrement())
+  clienteId    Int            @map("cliente_id")
+  nombre       String         @db.VarChar(150)
+  direccion    String?        @db.VarChar(300)
+  referencias  String?        @db.VarChar(300)
+  lat          Decimal?       @db.Decimal(10, 7)
+  lng          Decimal?       @db.Decimal(10, 7)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  // Baja lógica: los reportes (F3) siguen referenciando el sitio.
+  deletedAt    DateTime?      @map("deleted_at")
+  cliente      Cliente        @relation(fields: [clienteId], references: [id])
+  asignaciones SitioGuardia[]
+  reportes     Reporte[]
+
+  @@index([clienteId, deletedAt])
+  @@map("sitios")
+}
+
+enum TurnoGuardia {
+  diurno
+  nocturno
+  t24x24   @map("24x24")
+  mixto
+}
+
+/// Asignación de un guardia a un sitio con vigencia. Historial: no se borra; se termina con `hasta`.
+model SitioGuardia {
+  id        Int          @id @default(autoincrement())
+  sitioId   Int          @map("sitio_id")
+  usuarioId Int          @map("usuario_id")
+  turno     TurnoGuardia
+  desde     DateTime     @db.Date
+  // null = vigente sin fecha de término.
+  hasta     DateTime?    @db.Date
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  sitio     Sitio        @relation(fields: [sitioId], references: [id])
+  usuario   Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@index([sitioId, hasta])
+  @@index([usuarioId, hasta])
+  @@map("sitio_guardia")
+}
+
+// ============================================================
+// Reportes de guardias (F3-01, F3-02)
+// ============================================================
+
+/// Catálogo jerárquico (2 niveles) de tipos de incidencia. Se desactiva, no se borra.
+model CategoriaReporte {
+  id        Int                @id @default(autoincrement())
+  padreId   Int?               @map("padre_id")
+  nombre    String             @db.VarChar(80)
+  // Nombre de ícono de lucide (p. ej. "lightbulb").
+  icono     String?            @db.VarChar(40)
+  orden     Int                @default(0)
+  activo    Boolean            @default(true)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+  padre     CategoriaReporte?  @relation("CategoriaHijas", fields: [padreId], references: [id])
+  hijas     CategoriaReporte[] @relation("CategoriaHijas")
+  reportes  Reporte[]
+
+  @@index([padreId, activo])
+  @@map("categorias_reporte")
+}
+
+enum PrioridadReporte {
+  baja
+  media
+  alta
+  critica
+}
+
+enum EstatusReporte {
+  abierto
+  notificado
+  en_proceso
+  resuelto
+  cerrado
+}
+
+/// Consecutivo de folios por año: PLT-AAAA-NNNNNN.
+model FolioReporte {
+  anio   Int @id
+  ultimo Int @default(0)
+
+  @@map("folios_reporte")
+}
+
+model Reporte {
+  id               Int                  @id @default(autoincrement())
+  folio            String               @unique @db.VarChar(20)
+  sitioId          Int                  @map("sitio_id")
+  // Copia del cliente del sitio al crear (filtros y notificaciones sin join).
+  clienteId        Int                  @map("cliente_id")
+  categoriaId      Int                  @map("categoria_id")
+  creadoPorId      Int                  @map("creado_por")
+  titulo           String               @db.VarChar(150)
+  descripcion      String               @db.Text
+  ubicacionDetalle String?              @map("ubicacion_detalle") @db.VarChar(200)
+  prioridad        PrioridadReporte
+  estatus          EstatusReporte       @default(abierto)
+  // GPS opcional del dispositivo al enviar.
+  lat              Decimal?             @db.Decimal(10, 7)
+  lng              Decimal?             @db.Decimal(10, 7)
+  // Fecha del servidor (D-007).
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  cerradoEn        DateTime?            @map("cerrado_en")
+  sitio            Sitio                @relation(fields: [sitioId], references: [id])
+  cliente          Cliente              @relation(fields: [clienteId], references: [id])
+  categoria        CategoriaReporte     @relation(fields: [categoriaId], references: [id])
+  creadoPor        Usuario              @relation(fields: [creadoPorId], references: [id])
+  evidencias       ReporteEvidencia[]
+  seguimientos     ReporteSeguimiento[]
+  notificaciones   Notificacion[]
+  avisos           Aviso[]
+
+  @@index([estatus, createdAt])
+  @@index([clienteId, createdAt])
+  @@index([sitioId, createdAt])
+  @@index([categoriaId])
+  @@index([creadoPorId, createdAt])
+  @@map("reportes")
+}
+
+model ReporteSeguimiento {
+  id              Int                @id @default(autoincrement())
+  reporteId       Int                @map("reporte_id")
+  usuarioId       Int                @map("usuario_id")
+  comentario      String?            @db.Text
+  estatusAnterior EstatusReporte?    @map("estatus_anterior")
+  estatusNuevo    EstatusReporte?    @map("estatus_nuevo")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  reporte         Reporte            @relation(fields: [reporteId], references: [id])
+  usuario         Usuario            @relation(fields: [usuarioId], references: [id])
+  evidencias      ReporteEvidencia[]
+
+  @@index([reporteId, createdAt])
+  @@map("reporte_seguimientos")
+}
+
+/// Foto de evidencia. `archivo` es la clave en el StorageService (no una URL pública).
+model ReporteEvidencia {
+  id            Int                 @id @default(autoincrement())
+  reporteId     Int                 @map("reporte_id")
+  // null = foto del reporte original; con valor = foto de un seguimiento.
+  seguimientoId Int?                @map("seguimiento_id")
+  archivo       String              @db.VarChar(300)
+  mime          String              @db.VarChar(40)
+  tamano        Int
+  subidaPorId   Int                 @map("subida_por")
+  // Fecha del servidor al recibir la foto (D-007).
+  createdAt     DateTime            @default(now()) @map("created_at")
+  reporte       Reporte             @relation(fields: [reporteId], references: [id])
+  seguimiento   ReporteSeguimiento? @relation(fields: [seguimientoId], references: [id])
+  subidaPor     Usuario             @relation(fields: [subidaPorId], references: [id])
+
+  @@index([reporteId])
+  @@index([seguimientoId])
+  @@map("reporte_evidencias")
+}
+
+enum CanalNotificacion {
+  email
+  whatsapp
+}
+
+enum EstadoNotificacion {
+  pendiente
+  enviado
+  error
+}
+
+/// Bitácora de avisos a contactos del cliente (F3-07, F3-08).
+model Notificacion {
+  id         Int                @id @default(autoincrement())
+  reporteId  Int                @map("reporte_id")
+  contactoId Int                @map("contacto_id")
+  canal      CanalNotificacion  @default(email)
+  estado     EstadoNotificacion @default(pendiente)
+  enviadoEn  DateTime?          @map("enviado_en")
+  error      String?            @db.Text
+  createdAt  DateTime           @default(now()) @map("created_at")
+  reporte    Reporte            @relation(fields: [reporteId], references: [id])
+  contacto   ClienteContacto    @relation(fields: [contactoId], references: [id])
+
+  @@index([reporteId])
+  @@index([estado, createdAt])
+  @@map("notificaciones")
+}
+
+// ============================================================
+// Reglas de aviso y avisos en la app (F3-09, F3-10, D-016)
+// ============================================================
+
+enum DestinoAviso {
+  supervisor
+  cliente
+  ambos
+}
+
+/// Excepción por prioridad a la regla por defecto del cliente.
+model ClienteReglaAviso {
+  clienteId Int              @map("cliente_id")
+  prioridad PrioridadReporte
+  destino   DestinoAviso
+  cliente   Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@id([clienteId, prioridad])
+  @@map("cliente_reglas_aviso")
+}
+
+enum TipoAviso {
+  reporte_nuevo
+  reporte_estatus
+  reporte_comentario
+}
+
+/// Aviso dentro de la app (campanita) para un usuario.
+model Aviso {
+  id        Int       @id @default(autoincrement())
+  usuarioId Int       @map("usuario_id")
+  reporteId Int?      @map("reporte_id")
+  tipo      TipoAviso
+  mensaje   String    @db.VarChar(255)
+  leidoEn   DateTime? @map("leido_en")
+  createdAt DateTime  @default(now()) @map("created_at")
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  reporte   Reporte?  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, leidoEn, createdAt])
+  @@map("avisos")
 }

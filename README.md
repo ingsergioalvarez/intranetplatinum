@@ -17,9 +17,28 @@ Intranet para Platinum Agency (seguridad física intramuros). Uso principal en *
 ## Requisitos
 
 - Node.js 20 o superior (desarrollado con Node 24) y npm 10+.
-- Acceso a un servidor MySQL 8 (corre en otra máquina, ver D-008). No es necesario para desarrollar la web ni correr las pruebas.
+- MySQL 8: local para pruebas o el servidor de la otra máquina (D-008). No es necesario para correr las pruebas automáticas.
 
-## Arranque rápido
+## Cómo arrancar la app (día a día)
+
+Con MySQL encendido (servicio `MySQL80` en Windows), desde la carpeta raíz del proyecto:
+
+```bash
+npm run dev
+```
+
+- Web: http://localhost:5173 (desde el celular en la misma red: la dirección "Network" que muestra la terminal).
+- API: http://localhost:4000/api/health
+- Para detenerla: `Ctrl + C` en la terminal donde corre.
+
+Si acabas de bajar cambios (`git pull`) o es otra PC, antes de `npm run dev`:
+
+```bash
+npm install                              # dependencias y cliente Prisma
+npm run db:deploy -w @platinum/api       # aplica migraciones nuevas
+```
+
+## Arranque rápido (primera vez en una PC)
 
 ```bash
 npm install                                  # instala todo y genera el cliente Prisma

@@ -12,6 +12,7 @@ import {
 } from '@platinum/shared';
 import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { formatFechaHora } from '../../core/format/fechas';
+import { useDebounced } from '../../core/hooks/useDebounced';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
   Badge,
@@ -40,16 +41,6 @@ const estadoFiltro: { value: EstadoUsuarioFiltro; label: string }[] = [
   { value: 'baja', label: 'De baja' },
   { value: 'todos', label: 'Todos' },
 ];
-
-/** Texto de búsqueda con espera para no consultar en cada tecla. */
-function useDebounced<T>(value: T, ms = 300) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return debounced;
-}
 
 /** Gestión de usuarios (F1-08): lista con filtros y modal de alta/edición. */
 export function UsuariosPage() {

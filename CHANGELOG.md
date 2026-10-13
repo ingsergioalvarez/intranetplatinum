@@ -5,6 +5,97 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-13 #10
+
+#### Añadido
+
+- **F3-09** Reglas de aviso por cliente y prioridad (solo supervisor / solo cliente / ambos): columna `clientes.aviso_por_defecto`, tabla `cliente_reglas_aviso`, `PUT /api/clientes/:id/avisos`, tarjeta "Avisos de reportes" en la ficha con advertencia si ningún contacto puede recibir correo.
+- **F3-10** Avisos en la app: tabla `avisos`, `/api/avisos` (bandeja, marcar leído, marcar todo) y campanita con contador en escritorio y celular. Al crear un reporte se avisa según la regla; el guardia recibe avisos de cambios de estatus y comentarios; los correos al cliente se encolan en `notificaciones` (pendiente).
+- `NotificadorReportes` inyectable en `ReportesService`; `resolverDestino` compartido.
+
+#### Decisiones
+
+- D-003 resuelta (sin aprobación manual) y D-016 (a quién se avisa). P-06 descartada.
+
+#### Verificado
+
+- `npm test` 91/91, `lint`, `typecheck`, `format:check`, `build`.
+- Edge headless contra MySQL: avisos (11), reportes (17), clientes (17), usuarios (22), login (11). En BD solo el reporte crítico encoló correo al cliente.
+
+#### Tareas
+
+- F3-09, F3-10 terminadas.
+
+### Sesión 2026-10-13 #9
+
+#### Añadido
+
+- **F3-01** Categorías de reporte jerárquicas (2 niveles) con catálogo inicial en el seed (7 principales, 19 subcategorías), API `/api/categorias` y pantalla `/catalogos/categorias` (menú "Catálogos").
+- **F3-02** Tablas `reportes`, `reporte_seguimientos`, `reporte_evidencias`, `notificaciones` y `folios_reporte` (migración `20261013020000_reportes`); folio `PLT-AAAA-NNNNNN` consecutivo y atómico.
+- **F3-03** Fotos: compresión en el dispositivo, validación por firma de bytes, `StorageService` (disco local) y descarga con URL firmada en `/api/archivos/*`.
+- **F3-04** Wizard móvil `/reportes/nuevo` (sitio → categoría → prioridad → fotos → detalle, GPS opcional) y botón "Nuevo reporte" en el inicio del guardia.
+- **F3-05** Detalle `/reportes/:id` con galería, línea de tiempo y seguimiento (comentario, fotos, cambio de estatus con transiciones válidas).
+- **F3-06** Listado `/reportes` con búsqueda por folio/título y filtros por estatus, prioridad, categoría, cliente, fechas (zona CDMX) y "solo míos".
+- Permiso `reportes.estatus` (admin y supervisor). Núcleo: `tienePermiso`, `inicioDelDia`, `detectarImagen`, `firmarArchivo`/`verificarFirma`, `ARCHIVOS_URL_TTL_MIN`. Web: `formularioConFotos`, `Galeria`, badges de estatus/prioridad.
+- README: sección "Cómo arrancar la app (día a día)".
+
+#### Cambiado
+
+- Helpers de esquemas compartidos (`textoOpcional`, `coordenada`, `fechaSchema`) movidos a `schemas/comunes.ts`.
+
+#### Corregido
+
+- Errores del wizard que seguían visibles tras corregir el campo; botón "Filtros" sin nombre accesible en celular.
+
+#### Verificado
+
+- `npm test` 81/81, `lint`, `typecheck`, `format:check`, `build`.
+- API contra MySQL: 37 verificaciones (categorías, folio, fotos, URL firmada, visibilidad, transiciones, filtros).
+- Edge headless: reportes (17), clientes (17), usuarios (22) y login (11); sin scroll horizontal a 360px.
+
+#### Decisiones
+
+- D-015 reportes y evidencias.
+
+#### Tareas
+
+- F3-01..F3-06 terminadas. F3-07/F3-08 bloqueadas (SMTP, D-003).
+
+### Sesión 2026-10-13 #8
+
+#### Añadido
+
+- **F2-01** Tablas `clientes`, `cliente_contactos`, `sitios`, `sitio_guardia` y relación `usuarios.cliente_id` (migración `20261013010000_clientes_sitios`).
+- **F2-02** API `/api/clientes` (lista con búsqueda, estatus y vigencia; ficha; alta, edición, baja y reactivación; RFC validado y único) y pantallas `/clientes` y `/clientes/:id`.
+- **F2-03** Contactos 1..N por cliente con responsable, notificaciones (exigen correo) y prioridad.
+- **F2-04** Sitios por cliente con dirección, referencias y coordenadas ("usar mi ubicación"); la baja termina las asignaciones vigentes.
+- **F2-05** Asignación de guardias a sitios con turno y vigencia, sin cruces; `GET /api/sitios/mios` y tarjeta "Mis sitios" en el inicio del guardia.
+- Núcleo API: `AccionCtx` + `audit.registrarAccion`, `BaseController.accionCtx(req)`, `calcularCambios`, `hoyISO`/`fechaADate`/`dateAFecha`, `APP_TIMEZONE`.
+- Web: `useForm`, `FormModal`, `Checkbox`, `useDebounced`, `formatFecha`/`hoyLocal`, `mapsUrl`, `mensajeDeError`.
+
+#### Cambiado
+
+- Avisos (toasts) abajo a la derecha en escritorio para no tapar las acciones del encabezado.
+
+#### Corregido
+
+- `clienteUpdateSchema` ya no aplica el estatus por defecto en un PATCH parcial (reactivaba clientes suspendidos).
+- Scroll horizontal a 360px en la ficha del cliente (`grid-cols-1` explícito).
+
+#### Verificado
+
+- `npm test` 68/68, `lint`, `typecheck`, `format:check`, `build`.
+- API contra MySQL: 27 verificaciones de clientes, contactos, sitios y asignaciones.
+- Edge headless contra MySQL: clientes (17), usuarios (22) y login (11) verificaciones; sin scroll horizontal a 360px en páginas y modales.
+
+#### Decisiones
+
+- D-014 modelo de clientes, sitios y asignaciones.
+
+#### Tareas
+
+- F2-01..F2-05 terminadas. **Fase 2 completa.**
+
 ### Sesión 2026-10-12 #7
 
 #### Añadido

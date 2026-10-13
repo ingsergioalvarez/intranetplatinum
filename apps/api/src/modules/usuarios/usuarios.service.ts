@@ -11,16 +11,12 @@ import {
   AuditLogger,
   BaseService,
   HttpError,
+  calcularCambios,
   generateTemporaryPassword,
   hashPassword,
-  type RequestContext,
+  type AccionCtx,
 } from '../../core';
 import type { UsuariosRepository } from './usuarios.repository';
-
-/** Contexto de una acción administrativa: quién la hace y desde dónde. */
-export interface AccionCtx extends RequestContext {
-  actorId: number;
-}
 
 const correoDuplicado = () =>
   HttpError.conflict('Ya existe un usuario con este correo', [
@@ -78,16 +74,11 @@ export class UsuariosService extends BaseService {
       }
     }
 
-    const cambios = Object.fromEntries(
-      Object.entries(data).filter(([k, v]) => v !== undefined && v !== actual[k as keyof Usuario]),
-    );
-    if (Object.keys(cambios).length === 0) return actual;
+    const { antes, despues, hayCambios } = calcularCambios<Usuario>(actual, data);
+    if (!hayCambios) return actual;
 
-    const usuario = await this.repo.update(id, cambios);
-    await this.auditar(ctx, 'usuarios.editar', id, {
-      antes: Object.fromEntries(Object.keys(cambios).map((k) => [k, actual[k as keyof Usuario]])),
-      despues: cambios,
-    });
+    const usuario = await this.repo.update(id, despues);
+    await this.auditar(ctx, 'usuarios.editar', id, { antes, despues });
     return usuario;
   }
 
@@ -126,16 +117,7 @@ export class UsuariosService extends BaseService {
   }
 
   private auditar(ctx: AccionCtx, accion: string, id: number, datos: Record<string, unknown>) {
-    const { actorId, ip, userAgent } = ctx;
-    this.log(accion, { actorId, usuarioId: id });
-    return this.audit.registrar({
-      usuarioId: actorId,
-      accion,
-      entidad: 'usuarios',
-      entidadId: id,
-      datos,
-      ip,
-      userAgent,
-    });
+    this.log(accion, { actorId: ctx.actorId, usuarioId: id });
+    return this.audit.registrarAccion(ctx, accion, 'usuarios', id, datos);
   }
 }

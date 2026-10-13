@@ -26,6 +26,41 @@ if (!url) {
 
 const prisma = createPrismaClient(url);
 
+/** Catálogo inicial (A-11): el admin puede agregar más desde la app. */
+const CATEGORIAS_INICIALES: { nombre: string; icono: string; hijas: string[] }[] = [
+  {
+    nombre: 'Iluminación',
+    icono: 'lightbulb',
+    hijas: ['Lámpara fundida', 'Luminaria dañada', 'Área sin luz'],
+  },
+  {
+    nombre: 'Cámaras',
+    icono: 'cctv',
+    hijas: ['Cámara sin imagen', 'Cámara dañada o movida', 'Grabador (DVR/NVR) con falla'],
+  },
+  {
+    nombre: 'Casetas',
+    icono: 'house',
+    hijas: ['Daño en caseta', 'Falta de insumos', 'Falla eléctrica en caseta'],
+  },
+  {
+    nombre: 'Mobiliario / Escritorios',
+    icono: 'armchair',
+    hijas: ['Escritorio dañado', 'Silla dañada', 'Mobiliario faltante'],
+  },
+  {
+    nombre: 'Daño al inmueble',
+    icono: 'building-2',
+    hijas: ['Filtración o humedad', 'Vidrio roto', 'Pintura o grafiti', 'Puerta o cerradura dañada'],
+  },
+  {
+    nombre: 'Seguridad',
+    icono: 'shield-alert',
+    hijas: ['Acceso no autorizado', 'Objeto sospechoso', 'Riña o incidente con personas'],
+  },
+  { nombre: 'Otro', icono: 'circle-help', hijas: [] },
+];
+
 async function main() {
   // 1. Permisos
   for (const [clave, descripcion] of Object.entries(PERMISO_DESCRIPCIONES)) {
@@ -72,6 +107,24 @@ async function main() {
   } else {
     console.log(`[seed] Administrador ya existe: ${email}`);
   }
+
+  // 4. Catálogo inicial de categorías de reporte (F3-01). Solo agrega las que falten.
+  let nuevas = 0;
+  for (const [orden, { nombre, icono, hijas }] of CATEGORIAS_INICIALES.entries()) {
+    let padre = await prisma.categoriaReporte.findFirst({ where: { nombre, padreId: null } });
+    if (!padre) {
+      padre = await prisma.categoriaReporte.create({ data: { nombre, icono, orden: orden * 10 } });
+      nuevas++;
+    }
+    for (const [i, hija] of hijas.entries()) {
+      const existe = await prisma.categoriaReporte.findFirst({ where: { nombre: hija, padreId: padre.id } });
+      if (!existe) {
+        await prisma.categoriaReporte.create({ data: { nombre: hija, padreId: padre.id, orden: i * 10 } });
+        nuevas++;
+      }
+    }
+  }
+  console.log(`[seed] Categorías de reporte: ${nuevas} nuevas`);
 
   console.log(`[seed] OK — ${permisos.length} permisos, ${Object.values(ROLES).length} roles`);
 }

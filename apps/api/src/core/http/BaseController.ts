@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import type { ApiResponse, Paginated } from '@platinum/shared';
 import { HttpError } from '../errors/HttpError';
+import { requestContext, type AccionCtx } from '../audit/AuditLogger';
 
 /**
  * Base de controladores. Los handlers se declaran como propiedades flecha
@@ -41,5 +42,10 @@ export abstract class BaseController {
   protected currentUser(req: Request) {
     if (!req.user) throw HttpError.unauthorized();
     return req.user;
+  }
+
+  /** Quién hace la acción y desde dónde, para auditoría. */
+  protected accionCtx(req: Request): AccionCtx {
+    return { actorId: this.currentUser(req).id, ...requestContext(req) };
   }
 }

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Building2, ClipboardList, Home, LayoutGrid, Users } from 'lucide-react';
+import { Building2, ClipboardList, Home, LayoutGrid, Tags, Users } from 'lucide-react';
 import { PERMISOS, type Permiso } from '@platinum/shared';
 
 export interface NavItem {
@@ -18,5 +18,6 @@ export const navItems: NavItem[] = [
   { label: 'Reportes', to: '/reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_CREAR },
   { label: 'Clientes', to: '/clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
   { label: 'Usuarios', to: '/usuarios', icon: Users, permiso: PERMISOS.USUARIOS_VER },
+  { label: 'Catálogos', to: '/catalogos/categorias', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
   { label: 'Componentes', to: '/ui', icon: LayoutGrid, devOnly: true },
 ];

@@ -6,6 +6,11 @@ export interface RequestContext {
   userAgent?: string;
 }
 
+/** Contexto de una acción administrativa: quién la hace y desde dónde. */
+export interface AccionCtx extends RequestContext {
+  actorId: number;
+}
+
 export interface AuditEvent extends RequestContext {
   /** null/undefined = acción del sistema o intento anónimo. */
   usuarioId?: number | null;
@@ -32,6 +37,17 @@ export abstract class AuditLogger {
     } catch (err) {
       console.error(`[auditoria] No se pudo registrar ${evento.accion}`, err);
     }
+  }
+
+  /** Atajo para acciones administrativas sobre una entidad. */
+  registrarAccion(
+    { actorId, ip, userAgent }: AccionCtx,
+    accion: string,
+    entidad: string,
+    entidadId: number,
+    datos?: Record<string, unknown>,
+  ) {
+    return this.registrar({ usuarioId: actorId, accion, entidad, entidadId, datos, ip, userAgent });
   }
 
   protected abstract guardar(evento: AuditEvent): Promise<void>;

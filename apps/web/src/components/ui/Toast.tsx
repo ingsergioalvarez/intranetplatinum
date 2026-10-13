@@ -9,13 +9,16 @@ const styles: Record<ToastTone, { icon: typeof Info; className: string }> = {
   warning: { icon: AlertTriangle, className: 'text-amber-600' },
 };
 
-/** Montar una vez en la raíz. En celular aparece arriba (no tapa la navegación inferior). */
+/**
+ * Montar una vez en la raíz. En celular aparece arriba (no tapa la navegación inferior);
+ * en escritorio abajo a la derecha (no tapa las acciones del encabezado de cada página).
+ */
 export function Toaster() {
   const { items, dismiss } = useToastStore();
   return (
     <div
       aria-live="polite"
-      className="pt-safe pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 p-3 md:items-end md:p-4"
+      className="pt-safe pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 p-3 md:bottom-0 md:top-auto md:flex-col-reverse md:items-end md:p-4"
     >
       {items.map((t) => {
         const { icon: Icon, className } = styles[t.tone];

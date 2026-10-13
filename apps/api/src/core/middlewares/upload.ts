@@ -2,10 +2,11 @@ import multer from 'multer';
 import { env } from '../../config/env';
 import { HttpError } from '../errors/HttpError';
 
+// Filtro rápido por tipo declarado; el servicio confirma con `detectarImagen` (firma de bytes).
 const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 /**
- * Subida de imágenes en memoria; el StorageService (F3-03) decide dónde guardarlas.
+ * Subida de imágenes en memoria; el `StorageService` decide dónde guardarlas.
  * Uso: `router.post('/', uploadImages.array('fotos', 10), controller.create)`.
  */
 export const uploadImages = multer({

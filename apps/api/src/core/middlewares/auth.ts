@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import type { Rol } from '@platinum/shared';
 import { HttpError } from '../errors/HttpError';
 import { verifyAccessToken } from '../security/jwt';
+import type { AuthUser } from '../types/auth';
 
 function createAuthenticate(permitirPasswordTemporal: boolean): RequestHandler {
   return (req, _res, next) => {
@@ -45,9 +46,12 @@ export function requireRoles(...roles: Rol[]): RequestHandler {
 export function requirePermission(permiso: string): RequestHandler {
   return (req, _res, next) => {
     if (!req.user) return next(HttpError.unauthorized());
-    if (req.user.rol !== 'admin' && !req.user.permisos.includes(permiso)) {
-      return next(HttpError.forbidden());
-    }
+    if (!tienePermiso(req.user, permiso)) return next(HttpError.forbidden());
     next();
   };
+}
+
+/** Misma regla que `requirePermission`, para decisiones dentro de servicios. El admin tiene todo. */
+export function tienePermiso(user: AuthUser, permiso: string) {
+  return user.rol === 'admin' || user.permisos.includes(permiso);
 }

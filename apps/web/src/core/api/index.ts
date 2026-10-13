@@ -4,7 +4,7 @@ import { ApiClient } from './ApiClient';
 import { ApiError } from './ApiError';
 
 export { ApiClient } from './ApiClient';
-export { ApiError } from './ApiError';
+export { ApiError, mensajeDeError } from './ApiError';
 export { CrudService, type ListParams } from './CrudService';
 
 /** Instancia única del cliente HTTP. El refresh de sesión lo conecta `core/auth/AuthService`. */

@@ -1,7 +1,23 @@
 import type { AppModule } from '../core';
+import { archivosModule } from './archivos';
 import { authModule } from './auth';
+import { avisosModule } from './avisos';
+import { categoriasModule } from './categorias';
+import { clientesModule } from './clientes';
 import { healthModule } from './health';
+import { reportesModule } from './reportes';
+import { sitiosModule } from './sitios';
 import { usuariosModule } from './usuarios';
 
 /** Registro de módulos. Para agregar uno: crear `modules/<nombre>/index.ts` y listarlo aquí. */
-export const modules: AppModule[] = [healthModule, authModule, usuariosModule];
+export const modules: AppModule[] = [
+  healthModule,
+  authModule,
+  usuariosModule,
+  clientesModule,
+  sitiosModule,
+  categoriasModule,
+  reportesModule,
+  archivosModule,
+  avisosModule,
+];

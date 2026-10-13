@@ -4,6 +4,7 @@ import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
 import { cn } from '../ui';
+import { Campanita } from './Campanita';
 import { navItems } from './navItems';
 
 function useVisibleNav() {
@@ -28,7 +29,10 @@ function Sidebar() {
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-brand-900 text-white md:flex">
-      <Brand className="h-16 px-5" />
+      <div className="flex h-16 items-center justify-between pl-5 pr-3">
+        <Brand />
+        <Campanita />
+      </div>
       <nav className="flex-1 space-y-1 px-3 py-2">
         {items.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -77,6 +81,7 @@ function Topbar() {
         <Brand className="text-base" />
         {user && (
           <div className="flex items-center gap-1">
+            <Campanita />
             <Link
               to="/cambiar-password"
               className="rounded-lg p-2 text-brand-100 active:bg-brand-800"

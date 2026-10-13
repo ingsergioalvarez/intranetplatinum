@@ -15,6 +15,7 @@ export const PERMISOS = {
   REPORTES_CREAR: 'reportes.crear',
   REPORTES_SEGUIMIENTO: 'reportes.seguimiento',
   REPORTES_NOTIFICAR: 'reportes.notificar',
+  REPORTES_ESTATUS: 'reportes.estatus',
   CATALOGOS_ADMINISTRAR: 'catalogos.administrar',
   AUDITORIA_VER: 'auditoria.ver',
 } as const;
@@ -35,6 +36,7 @@ export const PERMISO_DESCRIPCIONES: Record<Permiso, string> = {
   'reportes.crear': 'Crear reportes',
   'reportes.seguimiento': 'Agregar seguimiento a reportes',
   'reportes.notificar': 'Notificar reportes al cliente',
+  'reportes.estatus': 'Cambiar el estatus de reportes',
   'catalogos.administrar': 'Administrar categorías y catálogos',
   'auditoria.ver': 'Ver bitácora de auditoría',
 };
@@ -54,6 +56,7 @@ export const PERMISOS_POR_ROL: Record<Rol, Permiso[]> = {
     P.REPORTES_CREAR,
     P.REPORTES_SEGUIMIENTO,
     P.REPORTES_NOTIFICAR,
+    P.REPORTES_ESTATUS,
     P.CATALOGOS_ADMINISTRAR,
   ],
   [ROLES.GUARDIA]: [P.REPORTES_VER_PROPIOS, P.REPORTES_CREAR, P.REPORTES_SEGUIMIENTO],

@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import type { IdParam, UsuarioCreate, UsuarioFiltro, UsuarioUpdate } from '@platinum/shared';
-import { BaseController, requestContext } from '../../core';
-import type { AccionCtx, UsuariosService } from './usuarios.service';
+import { BaseController } from '../../core';
+import type { UsuariosService } from './usuarios.service';
 
 export class UsuariosController extends BaseController {
   constructor(private readonly service: UsuariosService) {
@@ -15,7 +15,7 @@ export class UsuariosController extends BaseController {
     this.ok(res, await this.service.getById(this.params<IdParam>(req).id));
 
   create = async (req: Request, res: Response) =>
-    this.created(res, await this.service.crear(this.body<UsuarioCreate>(req), this.ctx(req)));
+    this.created(res, await this.service.crear(this.body<UsuarioCreate>(req), this.accionCtx(req)));
 
   update = async (req: Request, res: Response) =>
     this.ok(
@@ -23,24 +23,20 @@ export class UsuariosController extends BaseController {
       await this.service.actualizar(
         this.params<IdParam>(req).id,
         this.body<UsuarioUpdate>(req),
-        this.ctx(req),
+        this.accionCtx(req),
       ),
     );
 
   baja = async (req: Request, res: Response) => {
-    await this.service.darDeBaja(this.params<IdParam>(req).id, this.ctx(req));
+    await this.service.darDeBaja(this.params<IdParam>(req).id, this.accionCtx(req));
     return this.noContent(res);
   };
 
   reactivar = async (req: Request, res: Response) => {
-    await this.service.reactivar(this.params<IdParam>(req).id, this.ctx(req));
+    await this.service.reactivar(this.params<IdParam>(req).id, this.accionCtx(req));
     return this.noContent(res);
   };
 
   resetPassword = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.resetPassword(this.params<IdParam>(req).id, this.ctx(req)));
-
-  private ctx(req: Request): AccionCtx {
-    return { actorId: this.currentUser(req).id, ...requestContext(req) };
-  }
+    this.ok(res, await this.service.resetPassword(this.params<IdParam>(req).id, this.accionCtx(req)));
 }
