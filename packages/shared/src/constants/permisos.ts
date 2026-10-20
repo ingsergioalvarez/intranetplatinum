@@ -19,6 +19,8 @@ export const PERMISOS = {
   CATALOGOS_ADMINISTRAR: 'catalogos.administrar',
   GRUPOS_ADMINISTRAR: 'grupos.administrar',
   AUDITORIA_VER: 'auditoria.ver',
+  ASISTENCIA_MARCAR: 'asistencia.marcar',
+  ASISTENCIA_VER: 'asistencia.ver',
 } as const;
 
 export type Permiso = (typeof PERMISOS)[keyof typeof PERMISOS];
@@ -41,6 +43,8 @@ export const PERMISO_DESCRIPCIONES: Record<Permiso, string> = {
   'catalogos.administrar': 'Administrar categorías y catálogos',
   'grupos.administrar': 'Administrar grupos de guardias',
   'auditoria.ver': 'Ver bitácora de auditoría',
+  'asistencia.marcar': 'Marcar entrada, comida y salida',
+  'asistencia.ver': 'Ver las marcas de asistencia de todos los guardias',
 };
 
 const P = PERMISOS;
@@ -61,8 +65,9 @@ export const PERMISOS_POR_ROL: Record<Rol, Permiso[]> = {
     P.REPORTES_ESTATUS,
     P.CATALOGOS_ADMINISTRAR,
     P.GRUPOS_ADMINISTRAR,
+    P.ASISTENCIA_VER,
   ],
-  [ROLES.GUARDIA]: [P.REPORTES_VER_PROPIOS, P.REPORTES_CREAR, P.REPORTES_SEGUIMIENTO],
+  [ROLES.GUARDIA]: [P.REPORTES_VER_PROPIOS, P.REPORTES_CREAR, P.REPORTES_SEGUIMIENTO, P.ASISTENCIA_MARCAR],
   [ROLES.CLIENTE]: [P.REPORTES_VER_PROPIOS],
 };
 

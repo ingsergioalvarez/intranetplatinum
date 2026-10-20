@@ -77,6 +77,7 @@ model Usuario {
   reporteEvidencias   ReporteEvidencia[]
   avisos              Aviso[]
   grupoIntegrantes    GrupoIntegrante[]
+  marcaciones         Marcacion[]
 
   @@index([rolId])
   @@index([clienteId])
@@ -215,6 +216,7 @@ model Sitio {
   cliente      Cliente        @relation(fields: [clienteId], references: [id])
   asignaciones SitioGuardia[]
   reportes     Reporte[]
+  marcaciones  Marcacion[]
 
   @@index([clienteId, deletedAt])
   @@map("sitios")
@@ -479,4 +481,45 @@ model Aviso {
 
   @@index([usuarioId, leidoEn, createdAt])
   @@map("avisos")
+}
+
+// ============================================================
+// Control de asistencia (A-17, docs/ASISTENCIA.md)
+// ============================================================
+
+enum TipoMarcacion {
+  entrada
+  inicio_comida
+  fin_comida
+  salida
+}
+
+/// Marca de asistencia. Inmutable (DA-08): solo se inserta; no hay rutas para editar ni borrar.
+model Marcacion {
+  id           Int           @id @default(autoincrement())
+  /// Generado en el dispositivo; evita duplicados si la marca se reenvía.
+  idCliente    String        @unique @map("id_cliente") @db.Char(36)
+  usuarioId    Int           @map("usuario_id")
+  sitioId      Int?          @map("sitio_id")
+  /// Id de la marca de entrada de esta jornada (null en la propia entrada).
+  entradaId    Int?          @map("entrada_id")
+  tipo         TipoMarcacion
+  /// Hora del servidor (D-007).
+  registradaEn DateTime      @default(now()) @map("registrada_en")
+  lat          Decimal       @db.Decimal(10, 7)
+  lng          Decimal       @db.Decimal(10, 7)
+  precisionM   Int           @map("precision_m")
+  /// Distancia al sitio en metros; null si el sitio no tiene coordenadas.
+  distanciaM   Int?          @map("distancia_m")
+  /// Lista de códigos de alerta (`fuera_de_rango`, `sitio_sin_ubicacion`, `gps_impreciso`).
+  alertas      Json
+  ip           String?       @db.VarChar(45)
+  userAgent    String?       @map("user_agent") @db.VarChar(255)
+  usuario      Usuario       @relation(fields: [usuarioId], references: [id])
+  sitio        Sitio?        @relation(fields: [sitioId], references: [id], onDelete: Restrict)
+
+  @@index([usuarioId, registradaEn])
+  @@index([entradaId])
+  @@index([sitioId, registradaEn])
+  @@map("marcaciones")
 }

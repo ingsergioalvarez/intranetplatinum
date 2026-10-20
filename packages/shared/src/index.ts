@@ -9,3 +9,4 @@ export * from './schemas/clientes';
 export * from './schemas/comunes';
 export * from './schemas/reportes';
 export * from './schemas/avisos';
+export * from './schemas/asistencia';

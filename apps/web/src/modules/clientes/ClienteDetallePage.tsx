@@ -6,6 +6,7 @@ import {
   Building,
   ChevronLeft,
   MapPin,
+  MapPinOff,
   Navigation,
   Pencil,
   Plus,
@@ -309,6 +310,14 @@ export function ClienteDetallePage() {
                       )}
                     </div>
                     <p className="mt-1 text-sm text-slate-500">{s.direccion ?? 'Sin dirección'}</p>
+                    {/* Sin coordenadas no hay geocerca: las marcas de asistencia llevan alerta (AS1-01). */}
+                    {!s.deletedAt && (s.lat === null || s.lng === null) && (
+                      <p className="mt-2 flex gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
+                        <MapPinOff className="mt-px size-3.5 shrink-0" />
+                        Sin ubicación: las marcas de asistencia de este sitio llevarán alerta. Toca para
+                        agregarla.
+                      </p>
+                    )}
                   </button>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button

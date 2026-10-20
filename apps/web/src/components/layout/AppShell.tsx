@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { KeyRound, LogOut, ShieldCheck } from 'lucide-react';
 import { ROL_DESCRIPCIONES } from '@platinum/shared';
-import { hasPermission, useAuthStore } from '../../core/auth/authStore';
+import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
 import { cn } from '../ui';
 import { Campanita } from './Campanita';
@@ -9,7 +9,9 @@ import { navItems } from './navItems';
 
 function useVisibleNav() {
   const user = useAuthStore((s) => s.user);
-  return navItems.filter((i) => (!i.devOnly || import.meta.env.DEV) && hasPermission(user, i.permiso));
+  return navItems.filter(
+    (i) => (!i.devOnly || import.meta.env.DEV) && hasPermission(user, i.permiso) && hasRole(user, i.roles),
+  );
 }
 
 function Brand({ className }: { className?: string }) {

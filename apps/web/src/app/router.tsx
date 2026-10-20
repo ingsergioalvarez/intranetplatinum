@@ -1,5 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { PERMISOS } from '@platinum/shared';
+import { PERMISOS, ROLES } from '@platinum/shared';
 import { AppShell } from '../components/layout/AppShell';
 import { ProtectedRoute } from '../core/auth/ProtectedRoute';
 import { CambiarPasswordPage } from '../modules/auth/CambiarPasswordPage';
@@ -15,6 +15,10 @@ import { NuevoReportePage } from '../modules/reportes/NuevoReportePage';
 import { ReporteDetallePage } from '../modules/reportes/ReporteDetallePage';
 import { ReportesPage } from '../modules/reportes/ReportesPage';
 import { NotFoundPage } from '../modules/shared/PendientePage';
+import { AsistenciaGuardiaPage } from '../modules/asistencia/AsistenciaGuardiaPage';
+import { AsistenciaPage } from '../modules/asistencia/AsistenciaPage';
+import { MarcarPage } from '../modules/asistencia/MarcarPage';
+import { MisMarcasPage } from '../modules/asistencia/MisMarcasPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -35,6 +39,38 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <InicioPage /> },
+      {
+        path: 'marcar',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_MARCAR} roles={[ROLES.GUARDIA]}>
+            <MarcarPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER}>
+            <AsistenciaPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/guardias/:id',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER}>
+            <AsistenciaGuardiaPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'marcar/historial',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_MARCAR} roles={[ROLES.GUARDIA]}>
+            <MisMarcasPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'reportes',
         element: (
