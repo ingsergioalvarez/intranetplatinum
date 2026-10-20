@@ -1,8 +1,8 @@
-import type { Asignacion, MiSitio, Rol, Turno } from '@platinum/shared';
+import type { Asignacion, MiSitio, Rol, TipoAsignacion, Turno } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma, TurnoGuardia } from '../../generated/prisma/client';
-import { vigenteEn } from '../clientes/clientes.repository';
+import { asignadaA } from '../clientes/clientes.repository';
 
 export interface SitioEstado {
   id: number;
@@ -18,55 +18,92 @@ export interface GuardiaEstado {
   deletedAt: Date | null;
 }
 
-export interface AsignacionData {
-  sitioId: number;
-  usuarioId: number;
-  turno: Turno;
-  desde: string;
-  hasta?: string | null;
+export interface GrupoEstado {
+  id: number;
+  nombre: string;
+  deletedAt: Date | null;
 }
 
-/** Asignaciones de guardias a sitios (F2-05). Fechas `AAAA-MM-DD`. */
+/** Asignación a guardar (fechas `AAAA-MM-DD`). Exactamente uno de usuarioId / grupoId. */
+export interface AsignacionData {
+  sitioId: number;
+  usuarioId?: number | null;
+  grupoId?: number | null;
+  tipo: TipoAsignacion;
+  turno?: Turno | null;
+  horaInicio?: string | null;
+  horaFin?: string | null;
+  desde: string;
+  hasta?: string | null;
+  vigenteHasta: string | null;
+}
+
+/** Rango a revisar para solapes del mismo guardia o grupo en el mismo sitio. */
+export interface RangoAsignacion {
+  sitioId: number;
+  usuarioId?: number | null;
+  grupoId?: number | null;
+  desde: string;
+  vigenteHasta: string | null;
+}
+
+/** Asignaciones de sitios a guardias o grupos (F2-05, F2-07). */
 export abstract class SitiosRepository {
   abstract findSitio(id: number): Promise<SitioEstado | null>;
   abstract findGuardia(usuarioId: number): Promise<GuardiaEstado | null>;
+  abstract findGrupo(grupoId: number): Promise<GrupoEstado | null>;
   /** Vigentes y programadas; con `incluirTerminadas` también el historial. */
   abstract listAsignaciones(sitioId: number, hoy: string, incluirTerminadas: boolean): Promise<Asignacion[]>;
-  abstract findAsignacion(id: number, hoy: string): Promise<Asignacion | null>;
-  /** ¿El guardia ya tiene en el sitio una asignación que se cruce con [desde, hasta]? */
-  abstract haySolape(data: AsignacionData, excluirId?: number): Promise<boolean>;
+  abstract findAsignacion(
+    id: number,
+    hoy: string,
+  ): Promise<(Asignacion & { vigenteHasta: string | null }) | null>;
+  abstract haySolape(rango: RangoAsignacion, excluirId?: number): Promise<boolean>;
   abstract createAsignacion(data: AsignacionData, hoy: string): Promise<Asignacion>;
-  abstract updateAsignacion(id: number, data: { turno?: Turno; hasta?: string | null }): Promise<void>;
-  /** Sitios con asignación vigente hoy del guardia (sitio y cliente activos). */
+  abstract updateAsignacion(
+    id: number,
+    data: { turno?: Turno; hasta?: string | null; vigenteHasta?: string | null },
+  ): Promise<void>;
+  /** Sitios con asignación vigente hoy, directa o por grupo (sitio y cliente activos). */
   abstract misSitios(usuarioId: number, hoy: string): Promise<MiSitio[]>;
 }
 
 // La BD guarda `24x24` como `t24x24` en el enum de Prisma.
 const turnoADb = (t: Turno) => (t === '24x24' ? 't24x24' : t) as TurnoGuardia;
-const turnoDeDb = (t: TurnoGuardia) => (t === 't24x24' ? '24x24' : t) as Turno;
+const turnoDeDb = (t: TurnoGuardia | null) => (t === 't24x24' ? '24x24' : t) as Turno | null;
+const fecha = (d: Date | null) => (d ? dateAFecha(d) : null);
 
 const asignacionSelect = {
   id: true,
   sitioId: true,
-  usuarioId: true,
+  tipo: true,
   turno: true,
+  horaInicio: true,
+  horaFin: true,
   desde: true,
   hasta: true,
+  vigenteHasta: true,
   usuario: { select: { id: true, nombre: true, email: true, telefono: true } },
+  grupo: { select: { id: true, nombre: true, _count: { select: { integrantes: true } } } },
 } satisfies Prisma.SitioGuardiaSelect;
 
 type AsignacionRow = Prisma.SitioGuardiaGetPayload<{ select: typeof asignacionSelect }>;
 
-function toAsignacion({ usuario, turno, desde, hasta, ...a }: AsignacionRow, hoy: string): Asignacion {
+function toAsignacion(
+  { usuario, grupo, turno, desde, hasta, vigenteHasta, ...a }: AsignacionRow,
+  hoy: string,
+): Asignacion & { vigenteHasta: string | null } {
   const d = dateAFecha(desde);
-  const h = hasta ? dateAFecha(hasta) : null;
+  const vh = fecha(vigenteHasta);
   return {
     ...a,
     guardia: usuario,
+    grupo: grupo && { id: grupo.id, nombre: grupo.nombre, integrantes: grupo._count.integrantes },
     turno: turnoDeDb(turno),
     desde: d,
-    hasta: h,
-    vigente: d <= hoy && (h === null || h >= hoy),
+    hasta: fecha(hasta),
+    vigenteHasta: vh,
+    vigente: d <= hoy && (vh === null || vh >= hoy),
   };
 }
 
@@ -89,16 +126,28 @@ export class PrismaSitiosRepository extends SitiosRepository {
     return u && { id: u.id, nombre: u.nombre, deletedAt: u.deletedAt, rol: u.rol.clave as Rol };
   }
 
+  findGrupo(grupoId: number) {
+    return getPrisma().grupoGuardias.findUnique({
+      where: { id: grupoId },
+      select: { id: true, nombre: true, deletedAt: true },
+    });
+  }
+
   async listAsignaciones(sitioId: number, hoy: string, incluirTerminadas: boolean) {
     const rows = await getPrisma().sitioGuardia.findMany({
       where: {
         sitioId,
-        ...(!incluirTerminadas && { OR: [{ hasta: null }, { hasta: { gte: fechaADate(hoy) } }] }),
+        ...(!incluirTerminadas && {
+          OR: [{ vigenteHasta: null }, { vigenteHasta: { gte: fechaADate(hoy) } }],
+        }),
       },
       select: asignacionSelect,
       orderBy: [{ desde: 'desc' }, { id: 'desc' }],
     });
-    return rows.map((r) => toAsignacion(r, hoy));
+    return rows.map((r) => {
+      const { vigenteHasta: _vh, ...a } = toAsignacion(r, hoy);
+      return a;
+    });
   }
 
   async findAsignacion(id: number, hoy: string) {
@@ -106,39 +155,49 @@ export class PrismaSitiosRepository extends SitiosRepository {
     return a && toAsignacion(a, hoy);
   }
 
-  async haySolape({ sitioId, usuarioId, desde, hasta }: AsignacionData, excluirId?: number) {
+  async haySolape({ sitioId, usuarioId, grupoId, desde, vigenteHasta }: RangoAsignacion, excluirId?: number) {
     const n = await getPrisma().sitioGuardia.count({
       where: {
         sitioId,
-        usuarioId,
+        ...(usuarioId ? { usuarioId } : { grupoId }),
         ...(excluirId && { id: { not: excluirId } }),
-        // Se cruzan si: existente.desde <= nueva.hasta  y  existente.hasta >= nueva.desde
-        ...(hasta && { desde: { lte: fechaADate(hasta) } }),
-        OR: [{ hasta: null }, { hasta: { gte: fechaADate(desde) } }],
+        // Se cruzan si: existente.desde <= nueva.fin  y  existente.fin >= nueva.desde
+        ...(vigenteHasta && { desde: { lte: fechaADate(vigenteHasta) } }),
+        OR: [{ vigenteHasta: null }, { vigenteHasta: { gte: fechaADate(desde) } }],
       },
     });
     return n > 0;
   }
 
-  async createAsignacion({ turno, desde, hasta, ...data }: AsignacionData, hoy: string) {
+  async createAsignacion({ turno, desde, hasta, vigenteHasta, ...data }: AsignacionData, hoy: string) {
     const a = await getPrisma().sitioGuardia.create({
       data: {
         ...data,
-        turno: turnoADb(turno),
+        usuarioId: data.usuarioId ?? null,
+        grupoId: data.grupoId ?? null,
+        turno: turno ? turnoADb(turno) : null,
+        horaInicio: data.horaInicio ?? null,
+        horaFin: data.horaFin ?? null,
         desde: fechaADate(desde),
         hasta: hasta ? fechaADate(hasta) : null,
+        vigenteHasta: vigenteHasta ? fechaADate(vigenteHasta) : null,
       },
       select: asignacionSelect,
     });
-    return toAsignacion(a, hoy);
+    const { vigenteHasta: _vh, ...asignacion } = toAsignacion(a, hoy);
+    return asignacion;
   }
 
-  async updateAsignacion(id: number, { turno, hasta }: { turno?: Turno; hasta?: string | null }) {
+  async updateAsignacion(
+    id: number,
+    { turno, hasta, vigenteHasta }: { turno?: Turno; hasta?: string | null; vigenteHasta?: string | null },
+  ) {
     await getPrisma().sitioGuardia.update({
       where: { id },
       data: {
         ...(turno && { turno: turnoADb(turno) }),
         ...(hasta !== undefined && { hasta: hasta ? fechaADate(hasta) : null }),
+        ...(vigenteHasta !== undefined && { vigenteHasta: vigenteHasta ? fechaADate(vigenteHasta) : null }),
       },
     });
   }
@@ -146,15 +205,20 @@ export class PrismaSitiosRepository extends SitiosRepository {
   async misSitios(usuarioId: number, hoy: string): Promise<MiSitio[]> {
     const rows = await getPrisma().sitioGuardia.findMany({
       where: {
-        usuarioId,
-        ...vigenteEn(hoy),
-        sitio: { deletedAt: null, cliente: { deletedAt: null, estatus: 'activo' } },
+        AND: [
+          asignadaA(usuarioId, hoy),
+          { sitio: { deletedAt: null, cliente: { deletedAt: null, estatus: 'activo' } } },
+        ],
       },
       select: {
         id: true,
+        tipo: true,
         turno: true,
+        horaInicio: true,
+        horaFin: true,
         desde: true,
         hasta: true,
+        grupo: { select: { nombre: true } },
         sitio: {
           select: {
             id: true,
@@ -167,15 +231,36 @@ export class PrismaSitiosRepository extends SitiosRepository {
           },
         },
       },
-      orderBy: { sitio: { nombre: 'asc' } },
+      // Directas primero: si el sitio llega por guardia y por grupo, se muestra la directa.
+      orderBy: [{ sitio: { nombre: 'asc' } }, { grupoId: 'asc' }],
     });
-    return rows.map(({ id, turno, desde, hasta, sitio: { cliente, lat, lng, ...sitio } }) => ({
-      asignacionId: id,
-      turno: turnoDeDb(turno),
-      desde: dateAFecha(desde),
-      hasta: hasta ? dateAFecha(hasta) : null,
-      sitio: { ...sitio, lat: lat === null ? null : Number(lat), lng: lng === null ? null : Number(lng) },
-      cliente,
-    }));
+
+    const vistos = new Set<number>();
+    return rows
+      .filter((r) => (vistos.has(r.sitio.id) ? false : (vistos.add(r.sitio.id), true)))
+      .map(
+        ({
+          id,
+          tipo,
+          turno,
+          horaInicio,
+          horaFin,
+          desde,
+          hasta,
+          grupo,
+          sitio: { cliente, lat, lng, ...sitio },
+        }) => ({
+          asignacionId: id,
+          tipo,
+          grupo: grupo?.nombre ?? null,
+          turno: turnoDeDb(turno),
+          horaInicio,
+          horaFin,
+          desde: dateAFecha(desde),
+          hasta: fecha(hasta),
+          sitio: { ...sitio, lat: lat === null ? null : Number(lat), lng: lng === null ? null : Number(lng) },
+          cliente,
+        }),
+      );
   }
 }

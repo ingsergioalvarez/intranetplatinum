@@ -3,7 +3,6 @@ import request from 'supertest';
 import {
   PERMISOS_POR_ROL,
   ROLES,
-  type Asignacion,
   type ClienteCreateData,
   type ClienteResumen,
   type Contacto,
@@ -12,6 +11,7 @@ import {
   type Rol,
   type Sitio,
   type SitioData,
+  type Turno,
 } from '@platinum/shared';
 import { createApp } from '../src/app';
 import { createClientesModule } from '../src/modules/clientes';
@@ -21,6 +21,7 @@ import {
   SitiosRepository,
   type AsignacionData,
   type GuardiaEstado,
+  type RangoAsignacion,
 } from '../src/modules/sitios/sitios.repository';
 import { calcularCambios, hoyISO, signAccessToken } from '../src/core';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
@@ -107,7 +108,7 @@ class MemoryClientesRepository extends ClientesRepository {
       lng: null,
       ...data,
       deletedAt: null,
-      guardiasVigentes: 0,
+      asignacionesVigentes: 0,
     } as Sitio;
     this.sitios.push(s);
     return s;
@@ -137,6 +138,10 @@ class MemorySitiosRepository extends SitiosRepository {
     { id: 3, nombre: 'Gabriel', rol: ROLES.GUARDIA, deletedAt: null },
     { id: 2, nombre: 'Sofía', rol: ROLES.SUPERVISOR, deletedAt: null },
   ];
+  grupos = [
+    { id: 7, nombre: 'Nocturno Norte', deletedAt: null as Date | null },
+    { id: 8, nombre: 'Eventos', deletedAt: new Date() as Date | null },
+  ];
   asignaciones: (AsignacionData & { id: number })[] = [];
 
   async findSitio(id: number) {
@@ -145,16 +150,23 @@ class MemorySitiosRepository extends SitiosRepository {
   async findGuardia(id: number) {
     return this.guardias.find((g) => g.id === id) ?? null;
   }
-  private dto(a: AsignacionData & { id: number }, hoy: string): Asignacion {
+  async findGrupo(id: number) {
+    return this.grupos.find((g) => g.id === id) ?? null;
+  }
+  private dto(a: AsignacionData & { id: number }, hoy: string) {
     return {
       id: a.id,
       sitioId: a.sitioId,
-      usuarioId: a.usuarioId,
-      guardia: { id: a.usuarioId, nombre: 'G', email: 'g@x', telefono: null },
-      turno: a.turno,
+      tipo: a.tipo,
+      guardia: a.usuarioId ? { id: a.usuarioId, nombre: 'G', email: 'g@x', telefono: null } : null,
+      grupo: a.grupoId ? { id: a.grupoId, nombre: 'Grupo', integrantes: 2 } : null,
+      turno: a.turno ?? null,
+      horaInicio: a.horaInicio ?? null,
+      horaFin: a.horaFin ?? null,
       desde: a.desde,
       hasta: a.hasta ?? null,
-      vigente: a.desde <= hoy && (!a.hasta || a.hasta >= hoy),
+      vigenteHasta: a.vigenteHasta,
+      vigente: a.desde <= hoy && (!a.vigenteHasta || a.vigenteHasta >= hoy),
     };
   }
   async listAsignaciones(sitioId: number, hoy: string) {
@@ -164,25 +176,29 @@ class MemorySitiosRepository extends SitiosRepository {
     const a = this.asignaciones.find((x) => x.id === id);
     return a ? this.dto(a, hoy) : null;
   }
-  async haySolape({ sitioId, usuarioId, desde, hasta }: AsignacionData, excluirId?: number) {
+  async haySolape(r: RangoAsignacion, excluirId?: number) {
     return this.asignaciones.some(
       (a) =>
         a.id !== excluirId &&
-        a.sitioId === sitioId &&
-        a.usuarioId === usuarioId &&
-        (!hasta || a.desde <= hasta) &&
-        (!a.hasta || a.hasta >= desde),
+        a.sitioId === r.sitioId &&
+        (r.usuarioId ? a.usuarioId === r.usuarioId : a.grupoId === r.grupoId) &&
+        (!r.vigenteHasta || a.desde <= r.vigenteHasta) &&
+        (!a.vigenteHasta || a.vigenteHasta >= r.desde),
     );
   }
   async createAsignacion(data: AsignacionData, hoy: string) {
-    const a = { id: this.asignaciones.length + 1, ...data, hasta: data.hasta ?? null };
+    const a = { id: this.asignaciones.length + 1, ...data };
     this.asignaciones.push(a);
     return this.dto(a, hoy);
   }
-  async updateAsignacion(id: number, data: { turno?: AsignacionData['turno']; hasta?: string | null }) {
+  async updateAsignacion(
+    id: number,
+    data: { turno?: Turno; hasta?: string | null; vigenteHasta?: string | null },
+  ) {
     const a = this.asignaciones.find((x) => x.id === id)!;
     if (data.turno) a.turno = data.turno;
     if (data.hasta !== undefined) a.hasta = data.hasta;
+    if (data.vigenteHasta !== undefined) a.vigenteHasta = data.vigenteHasta;
   }
   async misSitios() {
     return [];
@@ -339,42 +355,90 @@ describe('sitios (F2-04)', () => {
 });
 
 // ---------- Asignaciones ----------
-describe('asignación de guardias (F2-05)', () => {
+describe('asignación de sitios (F2-05, F2-07)', () => {
   const asignar = (b: object) => como(SUPERVISOR).post('/sitios/1/guardias', b);
+  const fija = (b: object = {}) => ({ usuarioId: 3, tipo: 'fija', turno: 'diurno', desde: HOY, ...b });
 
-  it('asigna solo a guardias activos y en sitios activos', async () => {
-    const noGuardia = await asignar({ usuarioId: 2, turno: 'diurno', desde: HOY });
+  it('asigna solo a guardias activos o grupos activos, en sitios activos', async () => {
+    const noGuardia = await asignar(fija({ usuarioId: 2 }));
     expect(noGuardia.status).toBe(400);
     expect(noGuardia.body.error.details[0].path).toBe('usuarioId');
+    const grupoBaja = await asignar(fija({ usuarioId: undefined, grupoId: 8 }));
+    expect(grupoBaja.body.error.details[0].path).toBe('grupoId');
 
-    const ok = await asignar({ usuarioId: 3, turno: '24x24', desde: HOY });
+    const ok = await asignar(fija({ turno: '24x24' }));
     expect(ok.status).toBe(201);
-    expect(ok.body.data).toMatchObject({ vigente: true, turno: '24x24', hasta: null });
-    expect(audit.acciones()).toContain('sitios.asignar_guardia');
+    expect(ok.body.data).toMatchObject({ vigente: true, tipo: 'fija', turno: '24x24', hasta: null });
+    expect(audit.acciones()).toContain('sitios.asignar');
+
+    const grupo = await asignar(fija({ usuarioId: undefined, grupoId: 7 }));
+    expect(grupo.status).toBe(201);
+    expect(grupo.body.data.grupo).toMatchObject({ id: 7 });
 
     sitios.sitio.clienteDeBaja = true;
-    expect((await asignar({ usuarioId: 3, turno: 'diurno', desde: '2027-01-01' })).status).toBe(409);
+    expect((await asignar(fija({ desde: '2027-01-01' }))).status).toBe(409);
   });
 
-  it('rechaza asignaciones que se cruzan; permite consecutivas', async () => {
-    await asignar({ usuarioId: 3, turno: 'diurno', desde: '2026-10-01', hasta: '2026-10-31' });
-    expect((await asignar({ usuarioId: 3, turno: 'diurno', desde: '2026-10-31' })).status).toBe(409);
-    expect(
-      (await asignar({ usuarioId: 3, turno: 'diurno', desde: '2026-09-01', hasta: '2026-10-01' })).status,
-    ).toBe(409);
-    expect((await asignar({ usuarioId: 3, turno: 'nocturno', desde: '2026-11-01' })).status).toBe(201);
+  it('exige guardia o grupo (no ambos ni ninguno)', async () => {
+    expect((await asignar(fija({ usuarioId: undefined }))).status).toBe(400);
+    expect((await asignar(fija({ grupoId: 7 }))).body.error.details[0].path).toBe('usuarioId');
   });
 
-  it('valida fechas y permite terminar o cambiar turno', async () => {
-    expect((await asignar({ usuarioId: 3, turno: 'diurno', desde: HOY, hasta: '2026-01-01' })).status).toBe(
-      400,
+  it('reglas por tipo: fija sin fin, temporal con fin, eventual con horario', async () => {
+    expect((await asignar(fija({ hasta: '2026-12-31' }))).body.error.details[0].path).toBe('hasta');
+    expect((await asignar(fija({ tipo: 'temporal' }))).body.error.details[0].path).toBe('hasta');
+    const ev = await asignar({ usuarioId: 3, tipo: 'eventual', desde: '2026-10-20' });
+    expect(ev.body.error.details.map((d: { path: string }) => d.path).sort()).toEqual([
+      'horaFin',
+      'horaInicio',
+    ]);
+    const largo = await asignar({
+      usuarioId: 3,
+      tipo: 'eventual',
+      desde: '2026-10-20',
+      hasta: '2026-10-30',
+      horaInicio: '08:00',
+      horaFin: '18:00',
+    });
+    expect(largo.status).toBe(400);
+  });
+
+  it('evento que cruza medianoche sigue vigente la madrugada siguiente; no lleva turno', async () => {
+    const r = await asignar({
+      usuarioId: 3,
+      tipo: 'eventual',
+      turno: 'diurno',
+      desde: '2026-10-11',
+      horaInicio: '18:00',
+      horaFin: '02:00',
+    });
+    expect(r.status).toBe(201);
+    // HOY = 2026-10-12: el evento del día 11 que termina a las 02:00 sigue vigente.
+    expect(r.body.data).toMatchObject({ vigente: true, turno: null, horaInicio: '18:00', horaFin: '02:00' });
+    expect(sitios.asignaciones[0].vigenteHasta).toBe('2026-10-12');
+  });
+
+  it('rechaza cruces del mismo guardia o grupo; permite consecutivas', async () => {
+    await asignar(fija({ tipo: 'temporal', desde: '2026-10-01', hasta: '2026-10-31' }));
+    expect((await asignar(fija({ desde: '2026-10-31' }))).status).toBe(409);
+    expect((await asignar(fija({ tipo: 'temporal', desde: '2026-09-01', hasta: '2026-10-01' }))).status).toBe(
+      409,
     );
-    await asignar({ usuarioId: 3, turno: 'diurno', desde: '2026-10-01' });
+    expect((await asignar(fija({ desde: '2026-11-01' }))).status).toBe(201);
+    // Otro destinatario (grupo) en las mismas fechas sí se permite.
+    expect((await asignar(fija({ usuarioId: undefined, grupoId: 7, desde: '2026-10-05' }))).status).toBe(201);
+  });
+
+  it('terminar o cambiar turno; solo una fija puede quedar sin término', async () => {
+    await asignar(fija({ desde: '2026-10-01' }));
     expect((await como(SUPERVISOR).patch('/sitios/1/guardias/1', { hasta: '2026-09-01' })).status).toBe(400);
     const fin = await como(SUPERVISOR).patch('/sitios/1/guardias/1', { hasta: HOY, turno: 'mixto' });
     expect(fin.body.data).toMatchObject({ hasta: HOY, turno: 'mixto', vigente: true });
     expect(audit.eventos.at(-1)?.datos).toMatchObject({ antes: { hasta: null }, despues: { hasta: HOY } });
     expect((await como(SUPERVISOR).patch('/sitios/2/guardias/1', { hasta: HOY })).status).toBe(404);
+
+    await asignar(fija({ tipo: 'temporal', desde: '2026-11-01', hasta: '2026-11-30' }));
+    expect((await como(SUPERVISOR).patch('/sitios/1/guardias/2', { hasta: null })).status).toBe(400);
   });
 
   it('guardia: solo /sitios/mios; no puede ver ni asignar', async () => {

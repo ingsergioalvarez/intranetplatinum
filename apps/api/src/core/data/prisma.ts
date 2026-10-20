@@ -4,7 +4,11 @@ import { env } from '../../config/env';
 
 let client: PrismaClient | undefined;
 
-/** Convierte `mysql://user:pass@host:port/db` a la configuración del adaptador MariaDB/MySQL. */
+/**
+ * Convierte `mysql://user:pass@host:port/db?opciones` a la configuración del adaptador MariaDB/MySQL.
+ * Opciones: `connection_limit`, `allowPublicKeyRetrieval=true` (MySQL 8 con caching_sha2_password
+ * sin SSL; usar solo en local: en servidores remotos conviene SSL).
+ */
 export function parseDatabaseUrl(url: string) {
   const u = new URL(url);
   return {
@@ -14,6 +18,7 @@ export function parseDatabaseUrl(url: string) {
     password: decodeURIComponent(u.password),
     database: u.pathname.replace(/^\//, ''),
     connectionLimit: Number(u.searchParams.get('connection_limit') ?? 10),
+    allowPublicKeyRetrieval: u.searchParams.get('allowPublicKeyRetrieval') === 'true',
   };
 }
 

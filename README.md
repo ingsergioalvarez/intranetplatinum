@@ -40,14 +40,26 @@ npm run db:deploy -w @platinum/api       # aplica migraciones nuevas
 
 ## Arranque rápido (primera vez en una PC)
 
+Requisitos: Node 20+, git y MySQL 8 instalado y encendido en la PC (con el usuario `root` o uno con permiso para crear bases).
+
 ```bash
+git clone https://github.com/ingsergioalvarez/intranetplatinum.git
+cd intranetplatinum
 npm install                                  # instala todo y genera el cliente Prisma
-cp apps/api/.env.example apps/api/.env       # configurar variables (ver abajo)
-cp apps/web/.env.example apps/web/.env
+npm run db:setup -- --url "mysql://root:TU_CLAVE@localhost:3306/platinum_intranet?allowPublicKeyRetrieval=true"
 npm run dev                                  # API :4000 + Web :5173
 ```
 
-Abrir http://localhost:5173 e iniciar sesión con el administrador creado por el seed (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` de `apps/api/.env`). Requiere la BD con migraciones y seed aplicados (`npm run db:deploy -w @platinum/api` y `npm run db:seed -w @platinum/api`). El catálogo de componentes está en `/ui` (solo desarrollo).
+`npm run db:setup` es el constructor de la base de datos local:
+
+1. Crea `apps/api/.env` (con secretos JWT aleatorios) y `apps/web/.env` si no existen; guarda la `--url` como `DATABASE_URL`.
+2. Crea la base de datos si no existe (utf8mb4).
+3. Aplica todas las migraciones y el seed (roles, permisos, administrador y catálogo de categorías).
+4. Si `SEED_ADMIN_PASSWORD` está vacío, genera una contraseña, la guarda en `apps/api/.env` y la muestra en pantalla.
+
+Se puede volver a correr sin riesgo (solo aplica lo que falte). `npm run db:setup -- --reset` borra y recrea la base desde cero (solo con MySQL local). Si `.env` ya tiene la `DATABASE_URL`, basta con `npm run db:setup`.
+
+Abrir http://localhost:5173 e iniciar sesión con el administrador (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` de `apps/api/.env`). El catálogo de componentes está en `/ui` (solo desarrollo).
 
 Para probar desde el celular en la misma red, usar la dirección "Network" que muestra Vite (ej. `http://192.168.x.x:5173`).
 

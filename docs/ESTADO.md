@@ -2,9 +2,9 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-10-13
+**Última actualización:** 2026-10-20
 **Fase actual:** Fase 3 — Reportes terminada salvo envío de correos (F3-07/F3-08, esperan SMTP) → siguiente: **Fase 4 — PWA**
-**Última tarea terminada:** F3-10 — avisos en la app (antes F3-09 reglas de aviso por cliente y prioridad)
+**Última tarea terminada:** F0-10 — constructor de BD local `npm run db:setup` (antes F2-07 asignaciones de sitios)
 **Tarea en progreso:** ninguna
 
 ## Siguiente paso
@@ -13,12 +13,14 @@
 2. **F4-02 Cola offline de reportes** según D-001 (pendiente: ¿hay señal en los inmuebles?).
 3. Cuando el usuario configure el correo: **F1-05/F1-06** (recuperar contraseña) y **F3-07/F3-08** (enviar los correos en cola de `notificaciones`, marcar reporte "notificado", bitácora y reenvío).
 
+Grupos y asignaciones (D-017): menú "Grupos" (permiso `grupos.administrar`, supervisor y admin); en la ficha del cliente, botón "Asignaciones" de cada sitio asigna a un grupo o a un guardia, tipo fija (sin fin), temporal (desde–hasta) o eventual (con horario; si cruza medianoche sigue vigente la madrugada siguiente). El guardia ve solo sitios con asignación vigente directa o de sus grupos. Lista de integrantes y de guardias limitada a los primeros 100 guardias activos.
+
 Avisos (D-016): cada cliente tiene destino por defecto (solo supervisor / solo cliente / ambos) y excepciones por prioridad (`PUT /api/clientes/:id/avisos`, tarjeta "Avisos de reportes" en la ficha). Supervisores (permiso `reportes.estatus`) reciben avisos en la campanita; el guardia recibe aviso cuando su reporte cambia de estatus o le comentan; los correos al cliente quedan en cola.
 
 ## Bloqueos / pendientes del usuario
 
 - **F0-09** terminada (2026-10-12): MySQL 8.0.46 local de pruebas en esta PC, BD `platinum_intranet` con migración `init_seguridad` y seed (15 permisos, 4 roles, admin). Cada PC necesita su propio `apps/api/.env` (no está en git).
-- Pendiente de commit: Fases 2 y 3 sin commit; lo anterior está en `acf5d09` (sin push). El usuario avisa cuándo hacer commit/push.
+- Pendiente de commit: F2-06/F2-07 (grupos y tipos de asignación) y F0-10 (constructor de BD) sin commit; lo anterior está en `b08e624` (2 commits sin push). El usuario avisa cuándo hacer commit/push.
 - BD local con datos de prueba creados por las pruebas automáticas (usuarios `guardia.*`, `g.*@platinum.local`, clientes "Plaza …", "Corporativo …", "Hotel …", "Rep Plaza …" y sus reportes; fotos en `apps/api/uploads/`, ignorada por git).
 - **SMTP**: el usuario avisará cuando esté configurado (F1-05/F1-06, F3-07/F3-08).
 - D-001 (señal en inmuebles) y D-002 (portal de clientes) siguen sin respuesta.
@@ -26,8 +28,7 @@ Avisos (D-016): cada cliente tiene destino por defecto (solo supervisor / solo c
 ## Cómo levantar
 
 - `npm install` en la raíz (genera el cliente Prisma automáticamente).
-- Copiar `apps/api/.env.example` → `apps/api/.env` (y `apps/web/.env.example` → `apps/web/.env`).
-- Con MySQL disponible: `npm run db:deploy -w @platinum/api` y `npm run db:seed -w @platinum/api` (crea tablas y admin).
+- PC nueva (F0-10): `npm run db:setup -- --url "mysql://root:CLAVE@localhost:3306/platinum_intranet?allowPublicKeyRetrieval=true"` crea los `.env`, la base, migraciones y seed (ver README).
 - `npm run dev` → API en http://localhost:4000, web en http://localhost:5173. Entrar con `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`; catálogo de componentes en `/ui`.
 - Calidad: `npm test`, `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run build`.
 

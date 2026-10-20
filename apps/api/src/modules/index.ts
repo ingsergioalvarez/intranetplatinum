@@ -4,6 +4,7 @@ import { authModule } from './auth';
 import { avisosModule } from './avisos';
 import { categoriasModule } from './categorias';
 import { clientesModule } from './clientes';
+import { gruposModule } from './grupos';
 import { healthModule } from './health';
 import { reportesModule } from './reportes';
 import { sitiosModule } from './sitios';
@@ -16,6 +17,7 @@ export const modules: AppModule[] = [
   usuariosModule,
   clientesModule,
   sitiosModule,
+  gruposModule,
   categoriasModule,
   reportesModule,
   archivosModule,

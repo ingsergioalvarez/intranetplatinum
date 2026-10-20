@@ -5,6 +5,58 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-20 #12
+
+#### Añadido
+
+- Página de inicio de la API (`GET /` y `GET /api`): confirma que está en línea y lista los módulos (antes respondía "Ruta no encontrada" y parecía caída).
+- Opción `allowPublicKeyRetrieval=true` en `DATABASE_URL` (MySQL 8 local sin SSL); documentada en `.env.example`.
+
+#### Corregido
+
+- Login fallaba con "No se pudo iniciar sesión" tras reiniciar la PC: MySQL 8 (`caching_sha2_password`) exige la llave pública en la primera conexión sin SSL y el pool no podía conectarse.
+
+#### Verificado
+
+- `npm test` 94/94; login de admin a través de la web contra MySQL.
+
+### Sesión 2026-10-20 #12
+
+#### Añadido
+
+- **F0-10** Constructor de BD local `npm run db:setup` (`apps/api/prisma/setup.ts`): crea `apps/api/.env` (secretos JWT aleatorios, `--url` como `DATABASE_URL`, contraseña de admin generada si falta) y `apps/web/.env`, crea la base utf8mb4 si no existe, aplica migraciones y seed. `--reset` borra y recrea la base (solo MySQL local). Mensajes de ayuda para MySQL apagado, credenciales y `allowPublicKeyRetrieval`. Probado en PC "nueva" (sin `.env`), con `--reset` y en re-ejecución.
+
+#### Cambiado
+
+- README: "Arranque rápido" usa `npm run db:setup` para que otro desarrollador monte el proyecto en su PC.
+
+### Sesión 2026-10-14 #11
+
+#### Añadido
+
+- **F2-06** Grupos de guardias: tablas `grupos_guardias` y `grupo_integrantes`, API `/api/grupos` (lista, alta con integrantes, edición, integrantes, baja que termina sus asignaciones, reactivación) y pantalla `/grupos` (menú "Grupos"). Permiso nuevo `grupos.administrar` (supervisor y admin).
+- **F2-07** Asignaciones a grupo o a guardia, tipo fija / temporal / eventual (con horario): columnas `grupo_id`, `tipo`, `hora_inicio`, `hora_fin`, `vigente_hasta` en `sitio_guardia` (migración escrita a mano; datos existentes convertidos). Nuevo formulario de asignación en la ficha del cliente; "Mis sitios" muestra tipo, horario y grupo.
+- `LOGIN_RATE_LIMIT` configurable (30 por defecto; más alto solo en desarrollo).
+
+#### Cambiado
+
+- La visibilidad del guardia (Mis sitios, sitios para reportar y reportes) incluye las asignaciones de sus grupos (`asignadaA`).
+- La tarjeta del sitio cuenta "asignaciones" vigentes en lugar de guardias.
+
+#### Verificado
+
+- `npm test` 94/94, `lint`, `typecheck`, `format:check`, `build`.
+- API contra MySQL: grupos y asignaciones (26), reportes (37).
+- Edge headless: grupos (14), avisos (11), reportes (17), clientes (17), usuarios (22), login (11).
+
+#### Decisiones
+
+- D-017 grupos y tipos de asignación.
+
+#### Tareas
+
+- F2-06, F2-07 terminadas.
+
 ### Sesión 2026-10-13 #10
 
 #### Añadido

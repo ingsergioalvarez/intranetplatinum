@@ -16,6 +16,20 @@ export function createApp(modules: AppModule[] = defaultModules) {
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
 
+  // Raíz: confirma que la API está en línea y orienta a quien la abre en el navegador.
+  app.get(['/', '/api'], (_req, res) => {
+    res.json({
+      ok: true,
+      data: {
+        servicio: 'API Platinum Intranet',
+        estado: 'en línea',
+        salud: '/api/health',
+        modulos: modules.map((m) => `/api/${m.basePath}`),
+        web: env.APP_URL,
+      },
+    });
+  });
+
   for (const mod of modules) {
     app.use(`/api/${mod.basePath}`, mod.router);
   }

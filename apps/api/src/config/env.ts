@@ -22,6 +22,8 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().default(7),
   LOGIN_MAX_INTENTOS: z.coerce.number().int().min(1).default(5),
   LOGIN_BLOQUEO_MIN: z.coerce.number().int().min(1).default(15),
+  // Intentos de login por IP cada 15 min (además del bloqueo por cuenta).
+  LOGIN_RATE_LIMIT: z.coerce.number().int().min(1).default(30),
   PASSWORD_RESET_EXPIRES_MIN: z.coerce.number().int().default(30),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().default(587),

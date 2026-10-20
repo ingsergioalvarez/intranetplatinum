@@ -10,7 +10,7 @@ import type {
 } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
-import { vigenteEn } from '../clientes/clientes.repository';
+import { asignadaA } from '../clientes/clientes.repository';
 
 /** Qué reportes puede ver el usuario. */
 export type Visibilidad =
@@ -143,7 +143,7 @@ function whereVisibilidad(v: Visibilidad): Prisma.ReporteWhereInput {
       return {
         OR: [
           { creadoPorId: v.usuarioId },
-          { sitio: { asignaciones: { some: { usuarioId: v.usuarioId, ...vigenteEn(v.hoy) } } } },
+          { sitio: { asignaciones: { some: asignadaA(v.usuarioId, v.hoy) } } },
         ],
       };
   }
@@ -173,7 +173,7 @@ const sitioReportableWhere = (
 ): Prisma.SitioWhereInput => ({
   deletedAt: null,
   cliente: { deletedAt: null, estatus: 'activo' },
-  ...(guardia && { asignaciones: { some: { usuarioId: guardia.usuarioId, ...vigenteEn(guardia.hoy) } } }),
+  ...(guardia && { asignaciones: { some: asignadaA(guardia.usuarioId, guardia.hoy) } }),
 });
 
 // ---------- Implementación Prisma ----------

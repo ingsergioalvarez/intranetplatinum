@@ -179,7 +179,7 @@ export class ClientesService extends BaseService {
     await this.auditar(ctx, 'clientes.sitio_baja', 'sitios', sitioId, {
       clienteId,
       nombre: sitio.nombre,
-      guardiasTerminados: sitio.guardiasVigentes,
+      asignacionesTerminadas: sitio.asignacionesVigentes,
     });
   }
 

@@ -147,11 +147,11 @@ export interface Sitio {
   lat: number | null;
   lng: number | null;
   deletedAt: string | null;
-  /** Guardias con asignación vigente hoy. */
-  guardiasVigentes: number;
+  /** Asignaciones (de guardia o de grupo) vigentes hoy. */
+  asignacionesVigentes: number;
 }
 
-// ---------- Asignación de guardias ----------
+// ---------- Asignación de sitios a guardias o grupos (F2-05, F2-07, D-017) ----------
 
 export const TURNOS = ['diurno', 'nocturno', '24x24', 'mixto'] as const;
 export type Turno = (typeof TURNOS)[number];
@@ -163,19 +163,65 @@ export const TURNO_LABEL: Record<Turno, string> = {
   mixto: 'Mixto',
 };
 
+export const TIPOS_ASIGNACION = ['fija', 'temporal', 'eventual'] as const;
+export type TipoAsignacion = (typeof TIPOS_ASIGNACION)[number];
+
+export const TIPO_ASIGNACION_LABEL: Record<TipoAsignacion, string> = {
+  fija: 'Fija',
+  temporal: 'Temporal',
+  eventual: 'Eventual',
+};
+
+export const TIPO_ASIGNACION_DESCRIPCION: Record<TipoAsignacion, string> = {
+  fija: 'Desde una fecha, sin fecha de término',
+  temporal: 'Por un periodo: del día de inicio al de término',
+  eventual: 'Un evento puntual de uno o pocos días, con horario',
+};
+
+/** Días máximos de una asignación eventual. */
+export const MAX_DIAS_EVENTUAL = 7;
+
+/** Hora `HH:MM` (24 h). */
+export const horaSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora inválida (HH:MM)');
+
+const idOpcional = z.coerce.number().int().positive().nullish();
+const diasEntre = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
+
 export const asignacionCreateSchema = z
   .object({
-    usuarioId: z.coerce.number().int().positive('Selecciona un guardia'),
-    turno: z.enum(TURNOS, 'Selecciona un turno'),
+    /** Exactamente uno: guardia suelto o grupo. */
+    usuarioId: idOpcional,
+    grupoId: idOpcional,
+    tipo: z.enum(TIPOS_ASIGNACION, 'Elige el tipo de asignación'),
+    turno: z.enum(TURNOS).nullish(),
     desde: fechaSchema,
     hasta: fechaSchema.nullish(),
+    horaInicio: horaSchema.nullish(),
+    horaFin: horaSchema.nullish(),
   })
-  .refine((a) => !a.hasta || a.hasta >= a.desde, {
-    path: ['hasta'],
-    message: 'Debe ser igual o posterior a la fecha de inicio',
+  .superRefine((a, ctx) => {
+    const error = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
+    if (!!a.usuarioId === !!a.grupoId) error('usuarioId', 'Elige un guardia o un grupo');
+    if (a.hasta && a.hasta < a.desde) error('hasta', 'Debe ser igual o posterior a la fecha de inicio');
+    if (a.tipo === 'fija') {
+      if (a.hasta) error('hasta', 'Una asignación fija no tiene fecha de término');
+      if (!a.turno) error('turno', 'Selecciona un turno');
+    }
+    if (a.tipo === 'temporal') {
+      if (!a.hasta) error('hasta', 'Indica hasta cuándo');
+      if (!a.turno) error('turno', 'Selecciona un turno');
+    }
+    if (a.tipo === 'eventual') {
+      if (!a.horaInicio) error('horaInicio', 'Indica la hora de inicio');
+      if (!a.horaFin) error('horaFin', 'Indica la hora de término');
+      if (a.hasta && diasEntre(a.desde, a.hasta) >= MAX_DIAS_EVENTUAL) {
+        error('hasta', `Un evento dura máximo ${MAX_DIAS_EVENTUAL} días`);
+      }
+    }
   });
 
-export type AsignacionCreate = z.infer<typeof asignacionCreateSchema>;
+export type AsignacionCreate = z.input<typeof asignacionCreateSchema>;
+export type AsignacionCreateData = z.output<typeof asignacionCreateSchema>;
 
 export const asignacionUpdateSchema = z.object({
   turno: z.enum(TURNOS).optional(),
@@ -184,25 +230,73 @@ export const asignacionUpdateSchema = z.object({
 
 export type AsignacionUpdate = z.infer<typeof asignacionUpdateSchema>;
 
+/**
+ * Último día en que el sitio es visible: fija = sin fin; temporal = hasta;
+ * eventual = último día del evento, +1 si el horario cruza la medianoche.
+ */
+export function calcularVigenteHasta(
+  a: Pick<AsignacionCreateData, 'tipo' | 'desde' | 'hasta' | 'horaInicio' | 'horaFin'>,
+): string | null {
+  if (a.tipo !== 'eventual') return a.hasta ?? null;
+  const ultimo = a.hasta ?? a.desde;
+  if (a.horaInicio && a.horaFin && a.horaFin <= a.horaInicio) {
+    return new Date(Date.parse(`${ultimo}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  }
+  return ultimo;
+}
+
 export interface Asignacion {
   id: number;
   sitioId: number;
-  usuarioId: number;
-  guardia: { id: number; nombre: string; email: string; telefono: string | null };
-  turno: Turno;
+  tipo: TipoAsignacion;
+  /** Uno de los dos. */
+  guardia: { id: number; nombre: string; email: string; telefono: string | null } | null;
+  grupo: { id: number; nombre: string; integrantes: number } | null;
+  turno: Turno | null;
+  horaInicio: string | null;
+  horaFin: string | null;
   desde: string;
   hasta: string | null;
   vigente: boolean;
 }
 
-/** Sitio asignado al guardia en sesión (`GET /sitios/mios`). */
+/** Sitio asignado hoy al guardia en sesión, directo o por grupo (`GET /sitios/mios`). */
 export interface MiSitio {
   asignacionId: number;
-  turno: Turno;
+  tipo: TipoAsignacion;
+  /** Nombre del grupo si la asignación es por grupo. */
+  grupo: string | null;
+  turno: Turno | null;
+  horaInicio: string | null;
+  horaFin: string | null;
   desde: string;
   hasta: string | null;
   sitio: Pick<Sitio, 'id' | 'nombre' | 'direccion' | 'referencias' | 'lat' | 'lng'>;
   cliente: { id: number; nombreComercial: string };
+}
+
+// ---------- Grupos de guardias (F2-06) ----------
+
+export const grupoSchema = z.object({
+  nombre: z.string().trim().min(2, 'Escribe el nombre del grupo').max(80),
+  descripcion: textoOpcional(255),
+});
+
+export type GrupoInput = z.input<typeof grupoSchema>;
+export type GrupoData = z.output<typeof grupoSchema>;
+
+export const integrantesSchema = z.object({
+  usuarioIds: z.array(z.coerce.number().int().positive()).max(300),
+});
+
+export interface Grupo {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  deletedAt: string | null;
+  integrantes: { id: number; nombre: string; email: string }[];
+  /** Sitios asignados al grupo vigentes hoy. */
+  asignacionesVigentes: number;
 }
 
 export interface ClienteDetalle extends Cliente {

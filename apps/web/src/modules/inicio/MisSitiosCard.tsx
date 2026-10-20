@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Navigation } from 'lucide-react';
-import { TURNO_LABEL } from '@platinum/shared';
-import { formatFecha } from '../../core/format/fechas';
+import { MapPin, Navigation, UsersRound } from 'lucide-react';
+import { TIPO_ASIGNACION_LABEL } from '@platinum/shared';
 import { mapsUrl } from '../../core/format/mapas';
 import { Badge, Card, CardHeader, EmptyState, Spinner } from '../../components/ui';
+import { describirAsignacion } from '../clientes/asignaciones';
 import { sitiosService } from '../clientes/clientes.service';
 
 /** Sitios asignados hoy al guardia en sesión (F2-05). */
@@ -34,9 +34,16 @@ export function MisSitiosCard() {
                 <p className="text-sm text-slate-500">{m.cliente.nombreComercial}</p>
                 {m.sitio.direccion && <p className="mt-0.5 text-sm text-slate-500">{m.sitio.direccion}</p>}
                 <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <Badge tone="brand">{TURNO_LABEL[m.turno]}</Badge>
-                  {m.hasta ? `Hasta ${formatFecha(m.hasta)}` : `Desde ${formatFecha(m.desde)}`}
+                  <Badge tone={m.tipo === 'eventual' ? 'warning' : 'brand'}>
+                    {TIPO_ASIGNACION_LABEL[m.tipo]}
+                  </Badge>
+                  {describirAsignacion(m)}
                 </p>
+                {m.grupo && (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                    <UsersRound className="size-3.5" /> Grupo {m.grupo}
+                  </p>
+                )}
               </div>
               {m.sitio.lat !== null && m.sitio.lng !== null && (
                 <a

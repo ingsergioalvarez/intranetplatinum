@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { AsignacionCreate, AsignacionUpdate, IdParam } from '@platinum/shared';
+import type { AsignacionCreateData, AsignacionUpdate, IdParam } from '@platinum/shared';
 import { BaseController } from '../../core';
 import type { SitiosService } from './sitios.service';
 
@@ -25,7 +25,7 @@ export class SitiosController extends BaseController {
       res,
       await this.service.asignar(
         this.params<IdParam>(req).id,
-        this.body<AsignacionCreate>(req),
+        this.body<AsignacionCreateData>(req),
         this.accionCtx(req),
       ),
     );

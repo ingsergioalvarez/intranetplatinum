@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { cambiarPasswordSchema, loginSchema } from '@platinum/shared';
+import { env } from '../../config/env';
 import {
   AuditLogger,
   PrismaAuditLogger,
@@ -25,7 +26,7 @@ export function createAuthModule({
   repo = new PrismaAuthRepository(),
   audit = new PrismaAuditLogger(),
   policy,
-  loginRateLimit = 30,
+  loginRateLimit = env.LOGIN_RATE_LIMIT,
 }: AuthModuleDeps = {}): AppModule {
   const controller = new AuthController(new AuthService(repo, audit, policy));
 

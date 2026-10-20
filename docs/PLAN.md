@@ -64,18 +64,19 @@
 
 ### Fase 0 — Base del proyecto
 
-| ID    | Tarea                                                                                                                                  | Alcance    | Criterio de aceptación                                                       | Estado |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------- | ------ |
-| F0-00 | Estructura de trazabilidad: PLAN, CHANGELOG, ESTADO, DECISIONES, `.claude/`, CLAUDE.md                                                 | A-16       | Archivos creados y protocolo de sesión documentado                           | [x]    |
-| F0-01 | Monorepo (npm workspaces): `apps/api`, `apps/web`, `packages/shared`                                                                   | A-01, A-03 | `npm install` en raíz funciona                                               | [x]    |
-| F0-02 | Configuración TS, ESLint, Prettier, `.env.example`, `.gitignore`, git init                                                             | A-01       | Lint pasa en ambos apps                                                      | [x]    |
-| F0-03 | Backend core: `BaseController`, `BaseService`, `BaseRepository`, `HttpError`, middlewares (errores, validate zod, auth, roles, upload) | A-02, A-03 | Módulo de ejemplo `health` usa las clases base                               | [x]    |
-| F0-04 | Prisma 7 + adaptador MySQL, esquema inicial (roles, permisos, usuarios), migración SQL generada sin BD y seed (roles, permisos, admin) | A-01       | `prisma validate` OK, migración SQL generada, pruebas de capa de datos pasan | [x]    |
-| F0-05 | Frontend core: `ApiClient`, `CrudService`, manejo de errores, router con rutas protegidas                                              | A-02       | Llamada a `/api/health` desde web                                            | [x]    |
-| F0-06 | Librería UI: Button, Input, Select, Modal/BottomSheet, DataTable/CardList, Card, Badge, Toast, FormField, PhotoUploader (stub)         | A-02, A-04 | Componentes documentados en página `/ui`                                     | [x]    |
-| F0-07 | Layout responsive: AppShell, BottomNav (móvil), Sidebar (escritorio)                                                                   | A-04       | Se ve correcto en 360px y 1440px                                             | [x]    |
-| F0-08 | Scripts dev (concurrently), README de arranque                                                                                         | A-01       | `npm run dev` levanta api + web                                              | [x]    |
-| F0-09 | Aplicar migraciones y seed en el servidor MySQL (otra máquina, D-008)                                                                  | A-01       | `npm run db:deploy` y `npm run db:seed` crean tablas y usuario admin         | [x]    |
+| ID    | Tarea                                                                                                                                      | Alcance    | Criterio de aceptación                                                                         | Estado |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------- | ------ |
+| F0-00 | Estructura de trazabilidad: PLAN, CHANGELOG, ESTADO, DECISIONES, `.claude/`, CLAUDE.md                                                     | A-16       | Archivos creados y protocolo de sesión documentado                                             | [x]    |
+| F0-01 | Monorepo (npm workspaces): `apps/api`, `apps/web`, `packages/shared`                                                                       | A-01, A-03 | `npm install` en raíz funciona                                                                 | [x]    |
+| F0-02 | Configuración TS, ESLint, Prettier, `.env.example`, `.gitignore`, git init                                                                 | A-01       | Lint pasa en ambos apps                                                                        | [x]    |
+| F0-03 | Backend core: `BaseController`, `BaseService`, `BaseRepository`, `HttpError`, middlewares (errores, validate zod, auth, roles, upload)     | A-02, A-03 | Módulo de ejemplo `health` usa las clases base                                                 | [x]    |
+| F0-04 | Prisma 7 + adaptador MySQL, esquema inicial (roles, permisos, usuarios), migración SQL generada sin BD y seed (roles, permisos, admin)     | A-01       | `prisma validate` OK, migración SQL generada, pruebas de capa de datos pasan                   | [x]    |
+| F0-05 | Frontend core: `ApiClient`, `CrudService`, manejo de errores, router con rutas protegidas                                                  | A-02       | Llamada a `/api/health` desde web                                                              | [x]    |
+| F0-06 | Librería UI: Button, Input, Select, Modal/BottomSheet, DataTable/CardList, Card, Badge, Toast, FormField, PhotoUploader (stub)             | A-02, A-04 | Componentes documentados en página `/ui`                                                       | [x]    |
+| F0-07 | Layout responsive: AppShell, BottomNav (móvil), Sidebar (escritorio)                                                                       | A-04       | Se ve correcto en 360px y 1440px                                                               | [x]    |
+| F0-08 | Scripts dev (concurrently), README de arranque                                                                                             | A-01       | `npm run dev` levanta api + web                                                                | [x]    |
+| F0-09 | Aplicar migraciones y seed en el servidor MySQL (otra máquina, D-008)                                                                      | A-01       | `npm run db:deploy` y `npm run db:seed` crean tablas y usuario admin                           | [x]    |
+| F0-10 | Constructor de BD local (`npm run db:setup`): crea `.env`, la base, aplica migraciones y seed para que otro desarrollador trabaje en su PC | A-01       | En una PC nueva con MySQL 8, `npm install` + `npm run db:setup` dejan la app lista para entrar | [x]    |
 
 ### Fase 1 — Autenticación y usuarios
 
@@ -95,13 +96,15 @@
 
 ### Fase 2 — Clientes
 
-| ID    | Tarea                                                                         | Alcance          | Criterio de aceptación       | Estado |
-| ----- | ----------------------------------------------------------------------------- | ---------------- | ---------------------------- | ------ |
-| F2-01 | Tablas: clientes, cliente_contactos, sitios, sitio_guardia                    | A-09, A-10, P-01 | Migración aplicada           | [x]    |
-| F2-02 | API + pantalla CRUD clientes (datos generales)                                | A-09             | Alta/edición/baja de cliente | [x]    |
-| F2-03 | Contactos/responsables 1..N (flags `es_responsable`, `recibe_notificaciones`) | A-10             | Varios contactos por cliente | [x]    |
-| F2-04 | Sitios por cliente                                                            | P-01             | Varios sitios por cliente    | [x]    |
-| F2-05 | Asignación de guardias a sitios (turno, vigencia)                             | P-01             | Guardia ve solo sus sitios   | [x]    |
+| ID    | Tarea                                                                                 | Alcance          | Criterio de aceptación                         | Estado |
+| ----- | ------------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------- | ------ |
+| F2-01 | Tablas: clientes, cliente_contactos, sitios, sitio_guardia                            | A-09, A-10, P-01 | Migración aplicada                             | [x]    |
+| F2-02 | API + pantalla CRUD clientes (datos generales)                                        | A-09             | Alta/edición/baja de cliente                   | [x]    |
+| F2-03 | Contactos/responsables 1..N (flags `es_responsable`, `recibe_notificaciones`)         | A-10             | Varios contactos por cliente                   | [x]    |
+| F2-04 | Sitios por cliente                                                                    | P-01             | Varios sitios por cliente                      | [x]    |
+| F2-05 | Asignación de guardias a sitios (turno, vigencia)                                     | P-01             | Guardia ve solo sus sitios                     | [x]    |
+| F2-06 | Grupos de guardias (un guardia en varios grupos), administrables por supervisor/admin | P-01, D-017      | Alta de grupo con integrantes                  | [x]    |
+| F2-07 | Asignación de sitios a grupo o guardia, tipo fija / temporal / eventual (con horario) | P-01, D-017      | Guardia ve solo sitios propios y de sus grupos | [x]    |
 
 ### Fase 3 — Reportes de guardias
 
@@ -154,7 +157,9 @@ clientes(id, razon_social, nombre_comercial, rfc, giro, direccion_fiscal, telefo
 cliente_contactos(id, cliente_id, nombre, puesto, telefono, celular, email, es_responsable,
                   recibe_notificaciones, prioridad)
 sitios(id, cliente_id, nombre, direccion, referencias, lat, lng, deleted_at)            -- D-014
-sitio_guardia(id, sitio_id, usuario_id, turno, desde, hasta)                          -- historial
+sitio_guardia(id, sitio_id, usuario_id?, grupo_id?, tipo, turno?, hora_inicio?, hora_fin?,
+              desde, hasta, vigente_hasta)                                            -- D-017, historial
+grupos_guardias(id, nombre, descripcion, deleted_at)   grupo_integrantes(grupo_id, usuario_id)
 
 categorias_reporte(id, padre_id?, nombre, icono, orden, activo)
 reportes(id, folio, sitio_id, cliente_id, categoria_id, creado_por, titulo, descripcion,

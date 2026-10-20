@@ -300,9 +300,11 @@ export function ClienteDetallePage() {
                       {s.deletedAt ? (
                         <Badge>De baja</Badge>
                       ) : (
-                        <Badge tone={s.guardiasVigentes ? 'success' : 'warning'}>
+                        <Badge tone={s.asignacionesVigentes ? 'success' : 'warning'}>
                           <Shield className="mr-1 size-3" />
-                          {s.guardiasVigentes} {s.guardiasVigentes === 1 ? 'guardia' : 'guardias'}
+                          {s.asignacionesVigentes
+                            ? `${s.asignacionesVigentes} ${s.asignacionesVigentes === 1 ? 'asignación' : 'asignaciones'}`
+                            : 'Sin asignar'}
                         </Badge>
                       )}
                     </div>
@@ -315,7 +317,7 @@ export function ClienteDetallePage() {
                       icon={<Shield className="size-4" />}
                       onClick={() => setAbierto({ tipo: 'guardias', sitio: s })}
                     >
-                      Guardias
+                      Asignaciones
                     </Button>
                     {s.lat !== null && s.lng !== null && (
                       <a

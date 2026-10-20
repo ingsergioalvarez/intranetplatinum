@@ -10,6 +10,7 @@ import { UsuariosPage } from '../modules/usuarios/UsuariosPage';
 import { ClienteDetallePage } from '../modules/clientes/ClienteDetallePage';
 import { ClientesPage } from '../modules/clientes/ClientesPage';
 import { CategoriasPage } from '../modules/catalogos/CategoriasPage';
+import { GruposPage } from '../modules/grupos/GruposPage';
 import { NuevoReportePage } from '../modules/reportes/NuevoReportePage';
 import { ReporteDetallePage } from '../modules/reportes/ReporteDetallePage';
 import { ReportesPage } from '../modules/reportes/ReportesPage';
@@ -52,6 +53,14 @@ export const router = createBrowserRouter([
       },
       // El servidor decide si puede verlo (todos / sus sitios).
       { path: 'reportes/:id', element: <ReporteDetallePage /> },
+      {
+        path: 'grupos',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.GRUPOS_ADMINISTRAR}>
+            <GruposPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'catalogos/categorias',
         element: (

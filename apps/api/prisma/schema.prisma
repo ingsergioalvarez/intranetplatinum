@@ -76,6 +76,7 @@ model Usuario {
   reporteSeguimientos ReporteSeguimiento[]
   reporteEvidencias   ReporteEvidencia[]
   avisos              Aviso[]
+  grupoIntegrantes    GrupoIntegrante[]
 
   @@index([rolId])
   @@index([clienteId])
@@ -226,23 +227,66 @@ enum TurnoGuardia {
   mixto
 }
 
-/// Asignación de un guardia a un sitio con vigencia. Historial: no se borra; se termina con `hasta`.
-model SitioGuardia {
-  id        Int          @id @default(autoincrement())
-  sitioId   Int          @map("sitio_id")
-  usuarioId Int          @map("usuario_id")
-  turno     TurnoGuardia
-  desde     DateTime     @db.Date
-  // null = vigente sin fecha de término.
-  hasta     DateTime?    @db.Date
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
-  sitio     Sitio        @relation(fields: [sitioId], references: [id])
-  usuario   Usuario      @relation(fields: [usuarioId], references: [id])
+enum TipoAsignacion {
+  fija
+  temporal
+  eventual
+}
 
-  @@index([sitioId, hasta])
-  @@index([usuarioId, hasta])
+/// Asignación de un sitio a un guardia o a un grupo (exactamente uno de los dos), con vigencia (D-017).
+/// Historial: no se borra; se termina con `hasta`.
+model SitioGuardia {
+  id           Int            @id @default(autoincrement())
+  sitioId      Int            @map("sitio_id")
+  // Uno de los dos: guardia suelto o grupo.
+  usuarioId    Int?           @map("usuario_id")
+  grupoId      Int?           @map("grupo_id")
+  tipo         TipoAsignacion @default(fija)
+  // Fija/temporal usan turno; eventual usa horario.
+  turno        TurnoGuardia?
+  horaInicio   String?        @map("hora_inicio") @db.Char(5)
+  horaFin      String?        @map("hora_fin") @db.Char(5)
+  desde        DateTime       @db.Date
+  // Último día tal como se capturó (null = sin término).
+  hasta        DateTime?      @db.Date
+  // Último día en que el guardia ve el sitio: = hasta, o hasta + 1 si el evento cruza medianoche.
+  vigenteHasta DateTime?      @map("vigente_hasta") @db.Date
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  sitio        Sitio          @relation(fields: [sitioId], references: [id])
+  usuario      Usuario?       @relation(fields: [usuarioId], references: [id])
+  grupo        GrupoGuardias? @relation(fields: [grupoId], references: [id])
+
+  @@index([sitioId, vigenteHasta])
+  @@index([usuarioId, vigenteHasta])
+  @@index([grupoId, vigenteHasta])
   @@map("sitio_guardia")
+}
+
+/// Grupo de guardias (cuadrilla, turno, eventos…). Un guardia puede estar en varios.
+model GrupoGuardias {
+  id           Int               @id @default(autoincrement())
+  nombre       String            @unique @db.VarChar(80)
+  descripcion  String?           @db.VarChar(255)
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  deletedAt    DateTime?         @map("deleted_at")
+  integrantes  GrupoIntegrante[]
+  asignaciones SitioGuardia[]
+
+  @@map("grupos_guardias")
+}
+
+model GrupoIntegrante {
+  grupoId   Int           @map("grupo_id")
+  usuarioId Int           @map("usuario_id")
+  createdAt DateTime      @default(now()) @map("created_at")
+  grupo     GrupoGuardias @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuario   Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([grupoId, usuarioId])
+  @@index([usuarioId])
+  @@map("grupo_integrantes")
 }
 
 // ============================================================

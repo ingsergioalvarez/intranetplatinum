@@ -17,7 +17,11 @@ describe('capa de datos (sin BD)', () => {
       password: 'p@ss',
       database: 'platinum',
       connectionLimit: 5,
+      allowPublicKeyRetrieval: false,
     });
+    expect(
+      parseDatabaseUrl('mysql://u:p@localhost/db?allowPublicKeyRetrieval=true').allowPublicKeyRetrieval,
+    ).toBe(true);
   });
 
   it('usa el puerto 3306 por defecto', () => {

@@ -34,7 +34,7 @@ export abstract class ClientesRepository extends BaseRepository<
   abstract updateContacto(id: number, data: ContactoData): Promise<Contacto>;
   abstract softDeleteContacto(id: number): Promise<void>;
 
-  /** Sitios del cliente; `guardiasVigentes` se calcula a la fecha `hoy`. */
+  /** Sitios del cliente; `asignacionesVigentes` se calcula a la fecha `hoy`. */
   abstract listSitios(clienteId: number, hoy: string, incluirBaja?: boolean): Promise<Sitio[]>;
   abstract findSitio(id: number, hoy: string): Promise<Sitio | null>;
   abstract createSitio(clienteId: number, data: SitioData): Promise<Sitio>;
@@ -104,10 +104,25 @@ const contactoSelect = {
   prioridad: true,
 } satisfies Prisma.ClienteContactoSelect;
 
-/** Condición de asignación vigente a la fecha `hoy`. */
+/** Asignación vigente a la fecha `hoy` (usa `vigenteHasta`, que ya considera eventos que cruzan medianoche). */
 export function vigenteEn(hoy: string): Prisma.SitioGuardiaWhereInput {
   const d = fechaADate(hoy);
-  return { desde: { lte: d }, OR: [{ hasta: null }, { hasta: { gte: d } }] };
+  return { desde: { lte: d }, OR: [{ vigenteHasta: null }, { vigenteHasta: { gte: d } }] };
+}
+
+/** Asignación vigente hoy de este guardia: directa o por un grupo activo al que pertenece (D-017). */
+export function asignadaA(usuarioId: number, hoy: string): Prisma.SitioGuardiaWhereInput {
+  return {
+    AND: [
+      vigenteEn(hoy),
+      {
+        OR: [
+          { usuarioId, usuario: { activo: true, deletedAt: null } },
+          { grupo: { deletedAt: null, integrantes: { some: { usuarioId } } } },
+        ],
+      },
+    ],
+  };
 }
 
 const sitioSelect = (hoy: string) =>
@@ -131,7 +146,7 @@ function toSitio({ _count, lat, lng, deletedAt, ...s }: SitioRow): Sitio {
     lat: lat === null ? null : Number(lat),
     lng: lng === null ? null : Number(lng),
     deletedAt: deletedAt?.toISOString() ?? null,
-    guardiasVigentes: _count.asignaciones,
+    asignacionesVigentes: _count.asignaciones,
   };
 }
 
@@ -256,9 +271,9 @@ export class PrismaClientesRepository extends ClientesRepository {
         where: {
           sitioId: id,
           desde: { lte: fechaADate(hoy) },
-          OR: [{ hasta: null }, { hasta: { gt: fechaADate(hoy) } }],
+          OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: fechaADate(hoy) } }],
         },
-        data: { hasta: fechaADate(hoy) },
+        data: { hasta: fechaADate(hoy), vigenteHasta: fechaADate(hoy) },
       }),
     ]);
   }
