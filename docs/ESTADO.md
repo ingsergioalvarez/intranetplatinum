@@ -20,7 +20,7 @@ Avisos (D-016): cada cliente tiene destino por defecto (solo supervisor / solo c
 ## Bloqueos / pendientes del usuario
 
 - **F0-09** terminada (2026-10-12): MySQL 8.0.46 local de pruebas en esta PC, BD `platinum_intranet` con migración `init_seguridad` y seed (15 permisos, 4 roles, admin). Cada PC necesita su propio `apps/api/.env` (no está en git).
-- Pendiente de commit: F2-06/F2-07 (grupos y tipos de asignación) y F0-10 (constructor de BD) sin commit; lo anterior está en `b08e624` (2 commits sin push). El usuario avisa cuándo hacer commit/push.
+- Todo el trabajo está en GitHub (`main`, último commit `d33594d`). En otra PC: `git pull`, `npm install`, `npm run db:deploy -w @platinum/api` y, con MySQL 8 local sin SSL, `?allowPublicKeyRetrieval=true` en `DATABASE_URL`.
 - BD local con datos de prueba creados por las pruebas automáticas (usuarios `guardia.*`, `g.*@platinum.local`, clientes "Plaza …", "Corporativo …", "Hotel …", "Rep Plaza …" y sus reportes; fotos en `apps/api/uploads/`, ignorada por git).
 - **SMTP**: el usuario avisará cuando esté configurado (F1-05/F1-06, F3-07/F3-08).
 - D-001 (señal en inmuebles) y D-002 (portal de clientes) siguen sin respuesta.
