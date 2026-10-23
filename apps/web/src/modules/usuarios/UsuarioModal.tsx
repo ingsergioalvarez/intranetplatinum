@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, UserCheck, UserX } from 'lucide-react';
+import { KeyRound, Trash2, UserCheck, UserX } from 'lucide-react';
 import {
   PERMISOS,
   ROL_DESCRIPCIONES,
@@ -16,6 +16,7 @@ import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import { formatFechaHora } from '../../core/format/fechas';
 import { Badge, Button, ConfirmDialog, FormField, Input, Modal, Select, toast } from '../../components/ui';
+import { EliminarUsuarioDialog } from './EliminarUsuarioDialog';
 import { estadoUsuario } from './estadoUsuario';
 import { usuariosService } from './usuarios.service';
 
@@ -54,6 +55,9 @@ export function UsuarioModal({
     hasPermission(yo, esNuevo ? PERMISOS.USUARIOS_CREAR : PERMISOS.USUARIOS_EDITAR) && !deBaja;
   const puedeBaja = hasPermission(yo, PERMISOS.USUARIOS_BAJA) && !esYo && !esNuevo;
   const puedeReset = hasPermission(yo, PERMISOS.USUARIOS_EDITAR) && !esYo && !esNuevo && !deBaja;
+  // Eliminar definitivamente: solo el rol admin (no el supervisor), para limpiar cuentas de prueba.
+  const puedeEliminar = yo?.rol === ROLES.ADMIN && !esYo && !esNuevo;
+  const [eliminando, setEliminando] = useState(false);
 
   const inicial: Campos = {
     nombre: usuario?.nombre ?? '',
@@ -219,7 +223,7 @@ export function UsuarioModal({
               )}
             </dl>
 
-            {(puedeReset || puedeBaja) && (
+            {(puedeReset || puedeBaja || puedeEliminar) && (
               <div className="mt-4 flex flex-col gap-2 md:flex-row">
                 {puedeReset && (
                   <Button
@@ -249,11 +253,32 @@ export function UsuarioModal({
                       Dar de baja
                     </Button>
                   ))}
+                {puedeEliminar && (
+                  <Button
+                    variant="ghost"
+                    className="text-red-700 hover:bg-red-50"
+                    icon={<Trash2 className="size-4" />}
+                    onClick={() => setEliminando(true)}
+                  >
+                    Eliminar definitivamente
+                  </Button>
+                )}
               </div>
             )}
           </section>
         )}
       </Modal>
+
+      {usuario && eliminando && (
+        <EliminarUsuarioDialog
+          usuario={usuario}
+          onCancel={() => setEliminando(false)}
+          onEliminado={() => {
+            void refrescar();
+            onClose();
+          }}
+        />
+      )}
 
       {usuario && (
         <ConfirmDialog

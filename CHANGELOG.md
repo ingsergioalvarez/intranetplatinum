@@ -5,6 +5,27 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-22 #13 — Control de asistencia (A-17), fases 1 y 1B
+
+Detalle de decisiones en [ASISTENCIA.md](docs/ASISTENCIA.md) (DA-28 a DA-46).
+
+#### Añadido
+
+- **Cámara y rostro** (AS1-08..AS1-15, DA-28..DA-31, DA-43, DA-44): verificación en vivo del titular, gestos al azar, detector de pantalla o foto, registro de 5 fotos guiado con flechas, cámara compacta para teléfonos de gama baja, guía "Cómo sostener el teléfono", teléfono abajo/arriba (sensor de inclinación y respaldo por la cara), lentes obligatorio con "No traigo lentes" (alerta en la checada), cara oscura u ojos que no se distinguen, bienvenida para registrar el rostro la primera vez. "Marcar" pasa a **Checador**.
+- **Incidencias de rostro** con foto, revisión y conclusión (falsa alarma / confirmada).
+- **GPS obligatorio** para entrada y salida con radio por sitio (DA-36).
+- **Catálogo de turnos** con horarios libres (horas y días), cobertura del sitio con asignación en lote, grupos y calendario (DA-37).
+- **Avisos lógicos** de retardo, salida anticipada, comida fuera y patrones de 3 seguidos (DA-33).
+- **Bitácora del guardia** (DA-41, DA-42): todo lo que le pasa; comentar y justificar; incidencias = asistencia + rostro; pantalla "Incidencias" por guardia y general; ficha del guardia de escritorio con resumen del mes; el Estado de cada jornada abre sus incidencias.
+- **Supervisor por sitio** (DA-45, TC-38, TC-39): recibe los avisos de su sitio y solo ve sus sitios y guardias.
+- **Turnos sin entrada** (TC-11..TC-14, TC-40, TC-41): aviso al guardia a los 5 min, "no se presentó" al supervisor a los 15 min, falta a las 2 h; si llega después el supervisor acepta la asistencia o deja la falta; la asistencia del día muestra solo a quien le tocaba; la entrada se registra en el sitio del turno que le toca.
+- **Cubrir otro sitio** (DA-39, DA-46, TC-15..TC-18): "Enviar a cubrir" desde una falta o desde el sitio, motivo obligatorio, quién descansa primero, advertencia si descansa menos de 12 h; su sitio queda en pausa; etiqueta "Cobertura".
+- **Para el guardia** (DA-40, TC-19, TC-20): ventana "Tu turno empieza a las…" con distancia GPS en vivo y tarjeta "En turno" / "Descansas hoy, tu próximo turno…".
+
+#### Verificado
+
+- `npm test` 208/208; capturas a 360 px y 1440 px.
+
 ### Sesión 2026-10-20 #12
 
 #### Añadido

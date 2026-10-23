@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Search, UserPlus } from 'lucide-react';
+import { ScanFace, Search, UserPlus } from 'lucide-react';
 import {
   PERMISOS,
   ROL_DESCRIPCIONES,
@@ -25,6 +25,7 @@ import {
   Select,
   type Column,
 } from '../../components/ui';
+import { RegistrarRostroModal } from '../asistencia/RegistrarRostroModal';
 import { estadoUsuario } from './estadoUsuario';
 import { PasswordTemporalModal } from './PasswordTemporalModal';
 import { UsuarioModal } from './UsuarioModal';
@@ -52,6 +53,9 @@ export function UsuariosPage() {
   /** undefined = cerrado, null = alta, Usuario = edición. */
   const [editando, setEditando] = useState<Usuario | null | undefined>(undefined);
   const [temporal, setTemporal] = useState<{ resultado: UsuarioConPassword; titulo: string } | null>(null);
+  /** Guardia cuyo rostro se registra (asistencia, AS1-02). */
+  const [rostroDe, setRostroDe] = useState<Usuario | null>(null);
+  const puedeRostros = hasPermission(yo, PERMISOS.ASISTENCIA_ROSTROS);
 
   const q = useDebounced(busqueda.trim());
   useEffect(() => setPage(1), [q, rol, estado]);
@@ -161,6 +165,21 @@ export function UsuariosPage() {
             rowKey={(u) => u.id}
             loading={lista.isPending}
             onRowClick={setEditando}
+            actions={
+              puedeRostros
+                ? (u) =>
+                    u.rol === ROLES.GUARDIA && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<ScanFace className="size-4" />}
+                        onClick={() => setRostroDe(u)}
+                      >
+                        Rostro
+                      </Button>
+                    )
+                : undefined
+            }
             emptyTitle={hayFiltros ? 'Sin resultados' : 'Aún no hay usuarios'}
             emptyDescription={hayFiltros ? 'Prueba con otros filtros o búsqueda.' : undefined}
           />
@@ -179,6 +198,8 @@ export function UsuariosPage() {
           onPasswordTemporal={(resultado, titulo) => setTemporal({ resultado, titulo })}
         />
       )}
+
+      {rostroDe && <RegistrarRostroModal guardia={rostroDe} onClose={() => setRostroDe(null)} />}
 
       <PasswordTemporalModal
         resultado={temporal?.resultado ?? null}

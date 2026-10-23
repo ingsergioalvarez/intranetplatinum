@@ -14,7 +14,7 @@ export class SinUbicacionError extends Error {
 }
 
 export const MENSAJES_SIN_UBICACION: Record<MotivoSinUbicacion, string> = {
-  denegada: 'Permite el acceso a tu ubicación en el navegador para poder marcar.',
+  denegada: 'Permite el acceso a tu ubicación en el navegador para poder checar.',
   no_disponible: 'No se pudo obtener tu ubicación. Activa el GPS del celular e intenta de nuevo.',
   tiempo: 'La ubicación tardó demasiado. Intenta de nuevo en un lugar más despejado.',
 };

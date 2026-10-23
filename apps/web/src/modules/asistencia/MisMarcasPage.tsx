@@ -22,13 +22,13 @@ export function MisMarcasPage() {
   return (
     <>
       <PageHeader
-        title="Mis marcas"
+        title="Mis checadas"
         actions={
           <Link
             to="/marcar"
             className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline"
           >
-            <ArrowLeft className="size-4" /> Marcar
+            <ArrowLeft className="size-4" /> Checador
           </Link>
         }
       />
@@ -60,9 +60,9 @@ export function MisMarcasPage() {
             <Spinner className="size-7" />
           </div>
         ) : jornadas.isError ? (
-          <EmptyState title="No se pudieron cargar tus marcas" description="Revisa tu conexión." />
+          <EmptyState title="No se pudieron cargar tus checadas" description="Revisa tu conexión." />
         ) : jornadas.data.length === 0 ? (
-          <EmptyState icon={<CalendarDays className="size-10" />} title="Sin marcas en este mes" />
+          <EmptyState icon={<CalendarDays className="size-10" />} title="Sin checadas en este mes" />
         ) : (
           jornadas.data.map((j) => <JornadaCard key={j.entrada.id} jornada={j} />)
         )}

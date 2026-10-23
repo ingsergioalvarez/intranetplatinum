@@ -49,35 +49,51 @@ model RolPermiso {
 }
 
 model Usuario {
-  id                  Int                  @id @default(autoincrement())
-  nombre              String               @db.VarChar(120)
-  email               String               @unique @db.VarChar(160)
-  telefono            String?              @db.VarChar(30)
-  passwordHash        String               @map("password_hash") @db.VarChar(255)
-  rolId               Int                  @map("rol_id")
+  id                   Int                  @id @default(autoincrement())
+  nombre               String               @db.VarChar(120)
+  email                String               @unique @db.VarChar(160)
+  telefono             String?              @db.VarChar(30)
+  passwordHash         String               @map("password_hash") @db.VarChar(255)
+  rolId                Int                  @map("rol_id")
   // Usuario de rol cliente: a qué cliente pertenece (portal F5-01).
-  clienteId           Int?                 @map("cliente_id")
-  activo              Boolean              @default(true)
+  clienteId            Int?                 @map("cliente_id")
+  activo               Boolean              @default(true)
   // Contraseña temporal (alta o reset por admin): debe cambiarla al entrar (D-012).
-  debeCambiarPassword Boolean              @default(false) @map("debe_cambiar_password")
-  intentosFallidos    Int                  @default(0) @map("intentos_fallidos")
-  bloqueadoHasta      DateTime?            @map("bloqueado_hasta")
-  ultimoAcceso        DateTime?            @map("ultimo_acceso")
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
-  deletedAt           DateTime?            @map("deleted_at")
-  rol                 Rol                  @relation(fields: [rolId], references: [id])
-  cliente             Cliente?             @relation(fields: [clienteId], references: [id], onDelete: SetNull)
-  asignaciones        SitioGuardia[]
-  refreshTokens       RefreshToken[]
-  passwordResets      PasswordReset[]
-  auditoria           Auditoria[]
-  reportes            Reporte[]
-  reporteSeguimientos ReporteSeguimiento[]
-  reporteEvidencias   ReporteEvidencia[]
-  avisos              Aviso[]
-  grupoIntegrantes    GrupoIntegrante[]
-  marcaciones         Marcacion[]
+  debeCambiarPassword  Boolean              @default(false) @map("debe_cambiar_password")
+  intentosFallidos     Int                  @default(0) @map("intentos_fallidos")
+  bloqueadoHasta       DateTime?            @map("bloqueado_hasta")
+  ultimoAcceso         DateTime?            @map("ultimo_acceso")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+  deletedAt            DateTime?            @map("deleted_at")
+  rol                  Rol                  @relation(fields: [rolId], references: [id])
+  cliente              Cliente?             @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  asignaciones         SitioGuardia[]
+  refreshTokens        RefreshToken[]
+  passwordResets       PasswordReset[]
+  auditoria            Auditoria[]
+  reportes             Reporte[]
+  reporteSeguimientos  ReporteSeguimiento[]
+  reporteEvidencias    ReporteEvidencia[]
+  avisos               Aviso[]
+  grupoIntegrantes     GrupoIntegrante[]
+  marcaciones          Marcacion[]
+  rostros              RostroGuardia[]      @relation("RostroDe")
+  rostrosRegistrados   RostroGuardia[]      @relation("RostroRegistradoPor")
+  rostrosRevisados     RostroGuardia[]      @relation("RostroRevisadoPor")
+  incidencias          IncidenciaRostro[]   @relation("IncidenciaDe")
+  incidenciasRostroDe  IncidenciaRostro[]   @relation("IncidenciaRostroDe")
+  incidenciasRevisadas IncidenciaRostro[]   @relation("IncidenciaRevisadaPor")
+  sitiosSupervisados   Sitio[]              @relation("SitiosSupervisados")
+  turnosDia            TurnoDia[]
+  bitacoraDecidio      EventoBitacora[]     @relation("BitacoraDecidio")
+  coberturas           Cobertura[]          @relation("CoberturaDe")
+  coberturasCubierto   Cobertura[]          @relation("CoberturaCubreA")
+  coberturasCreadas    Cobertura[]          @relation("CoberturaCreadaPor")
+  bitacora             EventoBitacora[]     @relation("BitacoraDe")
+  bitacoraActor        EventoBitacora[]     @relation("BitacoraActor")
+  bitacoraJustifico    EventoBitacora[]     @relation("BitacoraJustifico")
+  bitacoraComentarios  ComentarioBitacora[]
 
   @@index([rolId])
   @@index([clienteId])
@@ -202,23 +218,33 @@ model ClienteContacto {
 }
 
 model Sitio {
-  id           Int            @id @default(autoincrement())
-  clienteId    Int            @map("cliente_id")
-  nombre       String         @db.VarChar(150)
-  direccion    String?        @db.VarChar(300)
-  referencias  String?        @db.VarChar(300)
-  lat          Decimal?       @db.Decimal(10, 7)
-  lng          Decimal?       @db.Decimal(10, 7)
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
+  id           Int                @id @default(autoincrement())
+  clienteId    Int                @map("cliente_id")
+  nombre       String             @db.VarChar(150)
+  direccion    String?            @db.VarChar(300)
+  referencias  String?            @db.VarChar(300)
+  lat          Decimal?           @db.Decimal(10, 7)
+  lng          Decimal?           @db.Decimal(10, 7)
+  /// Radio de la geocerca en metros: fuera de él no se marca entrada ni salida (DA-36).
+  radioM       Int                @default(100) @map("radio_m")
+  /// Supervisor del sitio (DA-45): recibe sus avisos y solo él (y el admin) ve sus guardias.
+  supervisorId Int?               @map("supervisor_id")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
   // Baja lógica: los reportes (F3) siguen referenciando el sitio.
-  deletedAt    DateTime?      @map("deleted_at")
-  cliente      Cliente        @relation(fields: [clienteId], references: [id])
+  deletedAt    DateTime?          @map("deleted_at")
+  cliente      Cliente            @relation(fields: [clienteId], references: [id])
+  supervisor   Usuario?           @relation("SitiosSupervisados", fields: [supervisorId], references: [id], onDelete: SetNull)
   asignaciones SitioGuardia[]
   reportes     Reporte[]
   marcaciones  Marcacion[]
+  incidencias  IncidenciaRostro[]
+  bitacora     EventoBitacora[]
+  turnosDia    TurnoDia[]
+  coberturas   Cobertura[]
 
   @@index([clienteId, deletedAt])
+  @@index([supervisorId])
   @@map("sitios")
 }
 
@@ -227,6 +253,8 @@ enum TurnoGuardia {
   nocturno
   t24x24   @map("24x24")
   mixto
+  /// Jornada de 12 h (DA-32). Diurno/nocturno/mixto ya no se ofrecen; se conservan en registros viejos.
+  t12x12   @map("12x12")
 }
 
 enum TipoAsignacion {
@@ -238,30 +266,40 @@ enum TipoAsignacion {
 /// Asignación de un sitio a un guardia o a un grupo (exactamente uno de los dos), con vigencia (D-017).
 /// Historial: no se borra; se termina con `hasta`.
 model SitioGuardia {
-  id           Int            @id @default(autoincrement())
-  sitioId      Int            @map("sitio_id")
+  id            Int            @id @default(autoincrement())
+  sitioId       Int            @map("sitio_id")
   // Uno de los dos: guardia suelto o grupo.
-  usuarioId    Int?           @map("usuario_id")
-  grupoId      Int?           @map("grupo_id")
-  tipo         TipoAsignacion @default(fija)
+  usuarioId     Int?           @map("usuario_id")
+  grupoId       Int?           @map("grupo_id")
+  /// Turno del catálogo (DA-37). Su horario se copia aquí (horas y días) y se actualiza al editarlo;
+  /// si el turno se borra, la asignación sigue con su copia.
+  turnoId       Int?           @map("turno_id")
+  horas         Int?
+  diasTipo      DiasTurnoTipo? @map("dias_tipo")
+  diasTrabajo   Int?           @map("dias_trabajo")
+  diasDescanso  Int?           @map("dias_descanso")
+  diasSemana    Int?           @map("dias_semana")
+  tipo          TipoAsignacion @default(fija)
   // Fija/temporal usan turno; eventual usa horario.
-  turno        TurnoGuardia?
-  horaInicio   String?        @map("hora_inicio") @db.Char(5)
-  horaFin      String?        @map("hora_fin") @db.Char(5)
-  desde        DateTime       @db.Date
+  turno         TurnoGuardia?
+  horaInicio    String?        @map("hora_inicio") @db.Char(5)
+  horaFin       String?        @map("hora_fin") @db.Char(5)
+  desde         DateTime       @db.Date
   // Último día tal como se capturó (null = sin término).
-  hasta        DateTime?      @db.Date
+  hasta         DateTime?      @db.Date
   // Último día en que el guardia ve el sitio: = hasta, o hasta + 1 si el evento cruza medianoche.
-  vigenteHasta DateTime?      @map("vigente_hasta") @db.Date
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
-  sitio        Sitio          @relation(fields: [sitioId], references: [id])
-  usuario      Usuario?       @relation(fields: [usuarioId], references: [id])
-  grupo        GrupoGuardias? @relation(fields: [grupoId], references: [id])
+  vigenteHasta  DateTime?      @map("vigente_hasta") @db.Date
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  sitio         Sitio          @relation(fields: [sitioId], references: [id])
+  usuario       Usuario?       @relation(fields: [usuarioId], references: [id])
+  grupo         GrupoGuardias? @relation(fields: [grupoId], references: [id])
+  turnoCatalogo Turno?         @relation(fields: [turnoId], references: [id])
 
   @@index([sitioId, vigenteHasta])
   @@index([usuarioId, vigenteHasta])
   @@index([grupoId, vigenteHasta])
+  @@index([turnoId])
   @@map("sitio_guardia")
 }
 
@@ -465,6 +503,22 @@ enum TipoAviso {
   reporte_nuevo
   reporte_estatus
   reporte_comentario
+  // Asistencia (A-17): rostro por revisar, intento de suplantación, rostro ya registrado en otra cuenta,
+  // pantalla o foto frente a la cámara, gesto (reto) no completado.
+  rostro_pendiente
+  rostro_suplantacion
+  rostro_duplicado
+  rostro_pantalla
+  rostro_reto
+  // Para el guardia (DA-34) y retardo para supervisores (DA-33).
+  rostro_aprobado
+  rostro_rechazado
+  cuenta_intento
+  asignacion
+  grupo
+  retardo
+  // Marca registrada con alerta: fuera del sitio o salida anticipada.
+  marca_alerta
 }
 
 /// Aviso dentro de la app (campanita) para un usuario.
@@ -474,6 +528,10 @@ model Aviso {
   reporteId Int?      @map("reporte_id")
   tipo      TipoAviso
   mensaje   String    @db.VarChar(255)
+  /// Pantalla a la que lleva el aviso (avisos que no son de un reporte).
+  ruta      String?   @db.VarChar(200)
+  /// Foto de evidencia que se muestra en miniatura (incidencias de rostro).
+  fotoClave String?   @map("foto_clave") @db.VarChar(255)
   leidoEn   DateTime? @map("leido_en")
   createdAt DateTime  @default(now()) @map("created_at")
   usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
@@ -496,30 +554,291 @@ enum TipoMarcacion {
 
 /// Marca de asistencia. Inmutable (DA-08): solo se inserta; no hay rutas para editar ni borrar.
 model Marcacion {
-  id           Int           @id @default(autoincrement())
+  id                Int              @id @default(autoincrement())
   /// Generado en el dispositivo; evita duplicados si la marca se reenvía.
-  idCliente    String        @unique @map("id_cliente") @db.Char(36)
-  usuarioId    Int           @map("usuario_id")
-  sitioId      Int?          @map("sitio_id")
+  idCliente         String           @unique @map("id_cliente") @db.Char(36)
+  usuarioId         Int              @map("usuario_id")
+  sitioId           Int?             @map("sitio_id")
   /// Id de la marca de entrada de esta jornada (null en la propia entrada).
-  entradaId    Int?          @map("entrada_id")
-  tipo         TipoMarcacion
+  entradaId         Int?             @map("entrada_id")
+  tipo              TipoMarcacion
   /// Hora del servidor (D-007).
-  registradaEn DateTime      @default(now()) @map("registrada_en")
-  lat          Decimal       @db.Decimal(10, 7)
-  lng          Decimal       @db.Decimal(10, 7)
-  precisionM   Int           @map("precision_m")
+  registradaEn      DateTime         @default(now()) @map("registrada_en")
+  lat               Decimal          @db.Decimal(10, 7)
+  lng               Decimal          @db.Decimal(10, 7)
+  precisionM        Int              @map("precision_m")
   /// Distancia al sitio en metros; null si el sitio no tiene coordenadas.
-  distanciaM   Int?          @map("distancia_m")
+  distanciaM        Int?             @map("distancia_m")
   /// Lista de códigos de alerta (`fuera_de_rango`, `sitio_sin_ubicacion`, `gps_impreciso`).
-  alertas      Json
-  ip           String?       @db.VarChar(45)
-  userAgent    String?       @map("user_agent") @db.VarChar(255)
-  usuario      Usuario       @relation(fields: [usuarioId], references: [id])
-  sitio        Sitio?        @relation(fields: [sitioId], references: [id], onDelete: Restrict)
+  alertas           Json
+  /// Foto de entrada/salida (clave en el almacenamiento, se sirve con URL firmada).
+  fotoClave         String?          @map("foto_clave") @db.VarChar(255)
+  /// Distancia al rostro registrado (menor = más parecido); null si no hay rostro o no se leyó.
+  rostroDistancia   Float?           @map("rostro_distancia")
+  /// Rostro contra el que se comparó (trazabilidad: "comparada contra el rostro #12").
+  rostroId          Int?             @map("rostro_id")
+  /// Intento de reconocimiento con el que se registró (1..3).
+  rostroIntentos    Int?             @map("rostro_intentos")
+  /// Entrada y salida programadas del turno (solo en la entrada; copia del horario de la asignación, DA-32).
+  programadaEntrada DateTime?        @map("programada_entrada")
+  programadaSalida  DateTime?        @map("programada_salida")
+  ip                String?          @db.VarChar(45)
+  userAgent         String?          @map("user_agent") @db.VarChar(255)
+  usuario           Usuario          @relation(fields: [usuarioId], references: [id])
+  sitio             Sitio?           @relation(fields: [sitioId], references: [id], onDelete: Restrict)
+  rostro            RostroGuardia?   @relation(fields: [rostroId], references: [id], onDelete: SetNull)
+  bitacora          EventoBitacora[]
+  turnosDia         TurnoDia[]
 
   @@index([usuarioId, registradaEn])
   @@index([entradaId])
   @@index([sitioId, registradaEn])
   @@map("marcaciones")
+}
+
+/// Estado del rostro: el guardia se registra solo (pendiente) y supervisor/admin lo revisan.
+enum EstadoRostro {
+  pendiente
+  aprobado
+  rechazado
+}
+
+/// Rostro de un guardia (AS1-02): vectores faciales de 3 a 5 fotos. Se registra por el propio guardia
+/// (pendiente de revisión) o por supervisor/admin en persona (aprobado). Al registrar de nuevo, el
+/// anterior se marca `reemplazadoEn` (se conserva el historial). Vigente = no reemplazado y no rechazado.
+model RostroGuardia {
+  id              Int          @id @default(autoincrement())
+  usuarioId       Int          @map("usuario_id")
+  estado          EstadoRostro @default(aprobado)
+  /// true si lo registró el propio guardia.
+  autoregistro    Boolean      @default(false)
+  /// Lista de vectores de 128 valores (face-api.js).
+  descriptores    Json
+  /// Foto de referencia (la primera).
+  fotoClave       String       @map("foto_clave") @db.VarChar(255)
+  /// Todas las fotos del registro (para revisarlas).
+  fotos           Json?
+  /// Quién lo registró; null si ese usuario se eliminó.
+  registradoPorId Int?         @map("registrado_por_id")
+  revisadoPorId   Int?         @map("revisado_por_id")
+  revisadoEn      DateTime?    @map("revisado_en")
+  motivoRechazo   String?      @map("motivo_rechazo") @db.VarChar(255)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  reemplazadoEn   DateTime?    @map("reemplazado_en")
+  usuario         Usuario      @relation("RostroDe", fields: [usuarioId], references: [id])
+  registradoPor   Usuario?     @relation("RostroRegistradoPor", fields: [registradoPorId], references: [id], onDelete: SetNull)
+  revisadoPor     Usuario?     @relation("RostroRevisadoPor", fields: [revisadoPorId], references: [id], onDelete: SetNull)
+  marcaciones     Marcacion[]
+
+  @@index([usuarioId, reemplazadoEn])
+  @@index([estado, reemplazadoEn])
+  @@index([registradoPorId])
+  @@index([revisadoPorId])
+  @@map("rostros_guardia")
+}
+
+enum MotivoIncidencia {
+  pantalla
+  rostro_de_otro
+  no_titular
+  reto_fallido
+  registro_duplicado
+}
+
+/// Intento rechazado al marcar o al registrar el rostro (DA-31): la foto queda como evidencia y
+/// supervisor/admin la revisan en "Incidencias de rostro".
+model IncidenciaRostro {
+  id            Int                   @id @default(autoincrement())
+  usuarioId     Int                   @map("usuario_id")
+  motivo        MotivoIncidencia
+  /// Entrada o salida; null si fue al registrar el rostro.
+  tipoMarca     TipoMarcacion?        @map("tipo_marca")
+  fotoClave     String                @map("foto_clave") @db.VarChar(255)
+  /// Guardia al que corresponde la cara (rostro de otro / registro duplicado).
+  rostroDeId    Int?                  @map("rostro_de_id")
+  sitioId       Int?                  @map("sitio_id")
+  revisadaPorId Int?                  @map("revisada_por_id")
+  revisadaEn    DateTime?             @map("revisada_en")
+  nota          String?               @db.VarChar(255)
+  /// Conclusión al revisarla (DA-35).
+  conclusion    ConclusionIncidencia?
+  createdAt     DateTime              @default(now()) @map("created_at")
+  usuario       Usuario               @relation("IncidenciaDe", fields: [usuarioId], references: [id])
+  rostroDe      Usuario?              @relation("IncidenciaRostroDe", fields: [rostroDeId], references: [id], onDelete: SetNull)
+  revisadaPor   Usuario?              @relation("IncidenciaRevisadaPor", fields: [revisadaPorId], references: [id], onDelete: SetNull)
+  sitio         Sitio?                @relation(fields: [sitioId], references: [id], onDelete: SetNull)
+  bitacora      EventoBitacora[]
+
+  @@index([revisadaEn, createdAt])
+  @@index([usuarioId, createdAt])
+  @@index([rostroDeId])
+  @@index([revisadaPorId])
+  @@index([sitioId])
+  @@map("incidencias_rostro")
+}
+
+enum ConclusionIncidencia {
+  falsa_alarma
+  confirmada
+}
+
+/// Turno del catálogo (DA-37): horas de trabajo desde la hora de entrada y qué días (todos, ciclo N×M o días de la semana)
+/// desde la hora de entrada. Se asigna a guardias o grupos en cada sitio.
+model Turno {
+  id           Int            @id @default(autoincrement())
+  nombre       String         @unique @db.VarChar(80)
+  /// Horas de trabajo (1 a 24) desde la hora de entrada.
+  horas        Int
+  horaEntrada  String         @map("hora_entrada") @db.Char(5)
+  /// Qué días trabaja: todos, ciclo de N días sí y M no, o días de la semana.
+  diasTipo     DiasTurnoTipo  @default(diario) @map("dias_tipo")
+  diasTrabajo  Int?           @map("dias_trabajo")
+  diasDescanso Int?           @map("dias_descanso")
+  /// Días de la semana como bits: 1 = domingo, 2 = lunes … 64 = sábado.
+  diasSemana   Int?           @map("dias_semana")
+  activo       Boolean        @default(true)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  asignaciones SitioGuardia[]
+
+  @@map("turnos")
+}
+
+enum DiasTurnoTipo {
+  diario
+  ciclo
+  semanal
+}
+
+enum TipoEventoBitacora {
+  retardo
+  salida_anticipada
+  comida_fuera
+  racha
+  falta
+  no_se_presento
+  incidencia_rostro
+  rostro_registrado
+  rostro_aprobado
+  rostro_rechazado
+  rostro_eliminado
+  asignacion
+  asignacion_cambio
+  asignacion_fin
+  grupo_alta
+  grupo_baja
+  cobertura
+  cobertura_cancelada
+}
+
+/// Bitácora del guardia (DA-41): control interno de supervisores y admin. Cada evento se guarda al
+/// ocurrir con su texto ya armado; el supervisor puede comentarlo y justificar los de asistencia.
+model EventoBitacora {
+  id               Int                  @id @default(autoincrement())
+  usuarioId        Int                  @map("usuario_id")
+  tipo             TipoEventoBitacora
+  /// Cuándo ocurrió.
+  ocurrioEn        DateTime             @map("ocurrio_en")
+  detalle          String               @db.VarChar(300)
+  datos            Json?
+  marcacionId      Int?                 @map("marcacion_id")
+  incidenciaId     Int?                 @map("incidencia_id")
+  sitioId          Int?                 @map("sitio_id")
+  /// Quién lo hizo (supervisor/admin); null si fue el sistema o el propio guardia.
+  actorId          Int?                 @map("actor_id")
+  justificacion    String?              @db.VarChar(255)
+  justificadoPorId Int?                 @map("justificado_por_id")
+  justificadoEn    DateTime?            @map("justificado_en")
+  /// Falta con llegada tarde (DA-45): el supervisor acepta la asistencia ("asistencia") o deja la falta ("falta").
+  decision         String?              @db.VarChar(20)
+  decididoPorId    Int?                 @map("decidido_por_id")
+  decididoEn       DateTime?            @map("decidido_en")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  usuario          Usuario              @relation("BitacoraDe", fields: [usuarioId], references: [id], onDelete: Cascade)
+  actor            Usuario?             @relation("BitacoraActor", fields: [actorId], references: [id], onDelete: SetNull)
+  justificadoPor   Usuario?             @relation("BitacoraJustifico", fields: [justificadoPorId], references: [id], onDelete: SetNull)
+  decididoPor      Usuario?             @relation("BitacoraDecidio", fields: [decididoPorId], references: [id], onDelete: SetNull)
+  marcacion        Marcacion?           @relation(fields: [marcacionId], references: [id], onDelete: SetNull)
+  incidencia       IncidenciaRostro?    @relation(fields: [incidenciaId], references: [id], onDelete: SetNull)
+  sitio            Sitio?               @relation(fields: [sitioId], references: [id], onDelete: SetNull)
+  comentarios      ComentarioBitacora[]
+
+  @@index([usuarioId, ocurrioEn])
+  @@index([actorId])
+  @@index([justificadoPorId])
+  @@index([decididoPorId])
+  @@index([marcacionId])
+  @@index([incidenciaId])
+  @@index([sitioId])
+  @@map("bitacora_eventos")
+}
+
+model ComentarioBitacora {
+  id        Int            @id @default(autoincrement())
+  eventoId  Int            @map("evento_id")
+  autorId   Int?           @map("autor_id")
+  texto     String         @db.VarChar(500)
+  createdAt DateTime       @default(now()) @map("created_at")
+  evento    EventoBitacora @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  autor     Usuario?       @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([eventoId])
+  @@index([autorId])
+  @@map("bitacora_comentarios")
+}
+
+/// Turno del día que empezó sin entrada (DA-45): lleva el control de avisos (5 min al guardia, 15 min
+/// al supervisor) y de la falta (2 h), y de la llegada tarde si checa después. Solo se crea cuando
+/// pasan 5 min sin entrada.
+model TurnoDia {
+  id                Int        @id @default(autoincrement())
+  usuarioId         Int        @map("usuario_id")
+  sitioId           Int        @map("sitio_id")
+  asignacionId      Int?       @map("asignacion_id")
+  programadaEntrada DateTime   @map("programada_entrada")
+  avisoGuardiaEn    DateTime?  @map("aviso_guardia_en")
+  noSePresentoEn    DateTime?  @map("no_se_presento_en")
+  faltaEn           DateTime?  @map("falta_en")
+  /// Evento de falta en la bitácora (para la decisión del supervisor si llega tarde).
+  faltaEventoId     Int?       @map("falta_evento_id")
+  entradaId         Int?       @map("entrada_id")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  usuario           Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  sitio             Sitio      @relation(fields: [sitioId], references: [id], onDelete: Cascade)
+  entrada           Marcacion? @relation(fields: [entradaId], references: [id], onDelete: SetNull)
+
+  @@unique([usuarioId, programadaEntrada])
+  @@index([sitioId])
+  @@index([entradaId])
+  @@map("turnos_dia")
+}
+
+/// Guardia enviado a cubrir otro sitio por un turno o unos días (DA-39, DA-46). Mientras dura, su
+/// sitio queda en pausa (sin faltas) y checa en el sitio que cubre.
+model Cobertura {
+  id            Int       @id @default(autoincrement())
+  usuarioId     Int       @map("usuario_id")
+  sitioId       Int       @map("sitio_id")
+  /// Guardia al que cubre (si fue por su falta).
+  cubreAId      Int?      @map("cubre_a_id")
+  desde         DateTime  @db.Date
+  hasta         DateTime  @db.Date
+  horaInicio    String    @map("hora_inicio") @db.Char(5)
+  horas         Int
+  motivo        String    @db.VarChar(255)
+  /// Horas de descanso que tendría; si son menos de 12 se advirtió al enviarlo.
+  descansoHoras Int?      @map("descanso_horas")
+  creadaPorId   Int?      @map("creada_por_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  canceladaEn   DateTime? @map("cancelada_en")
+  usuario       Usuario   @relation("CoberturaDe", fields: [usuarioId], references: [id], onDelete: Cascade)
+  cubreA        Usuario?  @relation("CoberturaCubreA", fields: [cubreAId], references: [id], onDelete: SetNull)
+  creadaPor     Usuario?  @relation("CoberturaCreadaPor", fields: [creadaPorId], references: [id], onDelete: SetNull)
+  sitio         Sitio     @relation(fields: [sitioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, desde])
+  @@index([sitioId, desde])
+  @@index([cubreAId])
+  @@index([creadaPorId])
+  @@map("coberturas")
 }

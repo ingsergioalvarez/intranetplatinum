@@ -1,3 +1,5 @@
+import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
+import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import {
@@ -79,6 +81,8 @@ interface GruposModuleDeps {
   repo?: GruposRepository;
   audit?: AuditLogger;
   hoy?: () => string;
+  avisar?: AvisarUsuarios;
+  bitacora?: RegistrarBitacora;
 }
 
 /** Grupos de guardias (F2-06). Los administra quien tenga `grupos.administrar`. */
@@ -86,8 +90,10 @@ export function createGruposModule({
   repo = new PrismaGruposRepository(),
   audit = new PrismaAuditLogger(),
   hoy,
+  avisar = avisarConPrisma,
+  bitacora = bitacoraConPrisma,
 }: GruposModuleDeps = {}): AppModule {
-  const c = new GruposController(new GruposService(repo, audit, hoy));
+  const c = new GruposController(new GruposService(repo, audit, hoy, avisar, bitacora));
   const id = validate({ params: idParamSchema });
 
   const router = Router();

@@ -10,6 +10,7 @@ import { UsuariosPage } from '../modules/usuarios/UsuariosPage';
 import { ClienteDetallePage } from '../modules/clientes/ClienteDetallePage';
 import { ClientesPage } from '../modules/clientes/ClientesPage';
 import { CategoriasPage } from '../modules/catalogos/CategoriasPage';
+import { TurnosPage } from '../modules/catalogos/TurnosPage';
 import { GruposPage } from '../modules/grupos/GruposPage';
 import { NuevoReportePage } from '../modules/reportes/NuevoReportePage';
 import { ReporteDetallePage } from '../modules/reportes/ReporteDetallePage';
@@ -17,6 +18,8 @@ import { ReportesPage } from '../modules/reportes/ReportesPage';
 import { NotFoundPage } from '../modules/shared/PendientePage';
 import { AsistenciaGuardiaPage } from '../modules/asistencia/AsistenciaGuardiaPage';
 import { AsistenciaPage } from '../modules/asistencia/AsistenciaPage';
+import { RostrosPendientesPage } from '../modules/asistencia/RostrosPendientesPage';
+import { IncidenciasPage } from '../modules/asistencia/IncidenciasPage';
 import { MarcarPage } from '../modules/asistencia/MarcarPage';
 import { MisMarcasPage } from '../modules/asistencia/MisMarcasPage';
 
@@ -52,6 +55,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER}>
             <AsistenciaPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/rostros',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_ROSTROS}>
+            <RostrosPendientesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/incidencias',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_ROSTROS}>
+            <IncidenciasPage />
           </ProtectedRoute>
         ),
       },
@@ -102,6 +121,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.CATALOGOS_ADMINISTRAR}>
             <CategoriasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'catalogos/turnos',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.CATALOGOS_ADMINISTRAR}>
+            <TurnosPage />
           </ProtectedRoute>
         ),
       },

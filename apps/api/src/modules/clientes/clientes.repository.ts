@@ -134,7 +134,9 @@ const sitioSelect = (hoy: string) =>
     referencias: true,
     lat: true,
     lng: true,
+    radioM: true,
     deletedAt: true,
+    supervisor: { select: { id: true, nombre: true } },
     _count: { select: { asignaciones: { where: vigenteEn(hoy) } } },
   }) satisfies Prisma.SitioSelect;
 

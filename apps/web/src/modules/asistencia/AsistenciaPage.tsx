@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import type { FilaAsistencia } from '@platinum/shared';
+import { ChevronLeft, ChevronRight, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
+import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
   Badge,
@@ -13,12 +13,23 @@ import {
   EmptyState,
   Input,
   Pagination,
+  cn,
   type Column,
 } from '../../components/ui';
+import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { asistenciaService } from './asistencia.service';
-import { formatDuracion, formatHora, jornadaEnCurso } from './formato';
+import { formatDuracion, formatHora, horasEsperadas } from './formato';
+import { EstadoJornada } from './EstadoJornada';
+import { HoraMarca } from './HoraMarca';
+import { EnviarCubrirModal } from '../clientes/EnviarCubrirModal';
+
+/** `08:00` local de un instante ISO (para precargar la hora del turno). */
+const horaLocal = (iso: string) =>
+  new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }).format(
+    new Date(iso),
+  );
 
 const LIMIT = 25;
 
@@ -31,41 +42,46 @@ function moverDia(fecha: string, delta: number) {
 
 const hora = (iso: string | undefined) => (iso ? formatHora(iso) : '—');
 
-function Estado({ fila: { jornada: j } }: { fila: FilaAsistencia }) {
-  if (!j) return <Badge>Sin marcas</Badge>;
-  if (j.alertas.length) {
-    return (
-      <Badge tone="warning">
-        {j.alertas.length} {j.alertas.length === 1 ? 'alerta' : 'alertas'}
-      </Badge>
-    );
-  }
-  if (!j.salida)
-    return jornadaEnCurso(j) ? <Badge tone="info">En curso</Badge> : <Badge tone="warning">Sin salida</Badge>;
-  return <Badge tone="success">Completa</Badge>;
-}
-
 const columns: Column<FilaAsistencia>[] = [
   { key: 'guardia', header: 'Guardia', mobile: 'title', render: (f) => f.guardia.nombre },
-  { key: 'sitio', header: 'Sitio', mobile: 'subtitle', render: (f) => f.sitio?.nombre ?? '—' },
+  {
+    key: 'sitio',
+    header: 'Sitio',
+    mobile: 'subtitle',
+    render: (f) => (
+      <>
+        {f.sitio?.nombre ?? '—'}
+        {f.cobertura && (
+          <Badge tone="brand" className="ml-1.5 align-middle">
+            Cobertura
+          </Badge>
+        )}
+      </>
+    ),
+  },
   {
     key: 'entrada',
     header: 'Entrada',
     className: 'tabular-nums',
-    render: (f) => hora(f.jornada?.entrada.registradaEn),
+    render: ({ jornada: j }) => (j ? <HoraMarca jornada={j} tipo="entrada" /> : '—'),
   },
   {
-    key: 'comida',
-    header: 'Comida',
+    key: 'inicioComida',
+    header: 'Inicio comida',
     className: 'tabular-nums',
-    render: ({ jornada: j }) =>
-      j?.inicioComida ? `${hora(j.inicioComida.registradaEn)}–${hora(j.finComida?.registradaEn)}` : '—',
+    render: ({ jornada: j }) => hora(j?.inicioComida?.registradaEn),
+  },
+  {
+    key: 'finComida',
+    header: 'Fin comida',
+    className: 'tabular-nums',
+    render: ({ jornada: j }) => hora(j?.finComida?.registradaEn),
   },
   {
     key: 'salida',
     header: 'Salida',
     className: 'tabular-nums',
-    render: (f) => hora(f.jornada?.salida?.registradaEn),
+    render: ({ jornada: j }) => (j ? <HoraMarca jornada={j} tipo="salida" /> : '—'),
   },
   {
     key: 'horas',
@@ -73,15 +89,29 @@ const columns: Column<FilaAsistencia>[] = [
     mobile: 'hidden',
     className: 'tabular-nums',
     render: ({ jornada: j }) =>
-      j?.salida ? formatDuracion(j.entrada.registradaEn, j.salida.registradaEn) : '—',
+      j?.salida ? (
+        <>
+          {formatDuracion(j.entrada.registradaEn, j.salida.registradaEn)}
+          {horasEsperadas(j) && <span className="block text-xs text-slate-500">de {horasEsperadas(j)}</span>}
+        </>
+      ) : (
+        '—'
+      ),
   },
-  { key: 'estado', header: 'Estado', render: (f) => <Estado fila={f} /> },
+  { key: 'estado', header: 'Estado', render: (f) => <EstadoJornada jornada={f.jornada} turno={f.turno} /> },
 ];
 
 /** Asistencia del día: una fila por guardia (con jornada o asignado sin marcas). Solo lectura (AS1-07). */
 export function AsistenciaPage() {
   const navigate = useNavigate();
+  const puedeRevisar = hasPermission(
+    useAuthStore((s) => s.user),
+    PERMISOS.ASISTENCIA_ROSTROS,
+  );
   const hoy = hoyLocal();
+  // Falta o no se presentó: el supervisor o el admin pueden enviar a alguien a cubrir (DA-39).
+  const puedeCubrir = useAuthStore((s) => s.user?.rol === ROLES.ADMIN || s.user?.rol === ROLES.SUPERVISOR);
+  const [cubrir, setCubrir] = useState<FilaAsistencia | null>(null);
   const [fecha, setFecha] = useState(hoy);
   const [busqueda, setBusqueda] = useState('');
   const [soloAlertas, setSoloAlertas] = useState(false);
@@ -106,7 +136,18 @@ export function AsistenciaPage() {
 
   return (
     <>
-      <PageHeader title="Asistencia" subtitle="Una fila por guardia · toca para ver su detalle" />
+      <PageHeader
+        title="Asistencia"
+        subtitle="Una fila por guardia · toca para ver su detalle"
+        actions={
+          puedeRevisar && (
+            <div className="flex flex-wrap gap-2">
+              <BotonIncidencias />
+              <BotonRostrosPendientes />
+            </div>
+          )
+        }
+      />
 
       <Card>
         <div className="grid gap-3 border-b border-slate-100 p-4 md:grid-cols-[auto_1fr_auto] md:items-center">
@@ -172,6 +213,23 @@ export function AsistenciaPage() {
             rowKey={(f) => `${f.guardia.id}-${f.jornada?.entrada.id ?? 'sin'}`}
             loading={lista.isPending}
             onRowClick={(f) => navigate(`/asistencia/guardias/${f.guardia.id}?mes=${fecha.slice(0, 7)}`)}
+            actions={
+              puedeCubrir
+                ? (f) =>
+                    f.sitio &&
+                    (f.turno?.estado === 'falta' || f.turno?.estado === 'no_se_presento') && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={<Shuffle className="size-4" />}
+                        onClick={() => setCubrir(f)}
+                      >
+                        <span className="hidden sm:inline">Enviar a cubrir</span>
+                        <span className="sm:hidden">Cubrir</span>
+                      </Button>
+                    )
+                : undefined
+            }
             emptyTitle="Sin guardias"
             emptyDescription={
               q || soloAlertas ? 'Prueba con otros filtros.' : 'Nadie marcó ni tenía asignación este día.'
@@ -183,6 +241,66 @@ export function AsistenciaPage() {
           <Pagination page={page} limit={LIMIT} total={lista.data.total} onPageChange={setPage} />
         )}
       </Card>
+      {cubrir?.sitio && (
+        <EnviarCubrirModal
+          sitio={cubrir.sitio}
+          fecha={fecha}
+          horaInicio={cubrir.turno ? horaLocal(cubrir.turno.entrada) : ''}
+          horas={cubrir.turno?.horas}
+          cubreA={{ id: cubrir.guardia.id, nombre: cubrir.guardia.nombre }}
+          onClose={() => setCubrir(null)}
+        />
+      )}
     </>
+  );
+}
+
+/** Acceso a "Rostros por revisar" con el número de pendientes. */
+function BotonRostrosPendientes() {
+  const pendientes = useQuery({
+    queryKey: asistenciaService.keys.pendientes,
+    queryFn: asistenciaService.rostrosPendientes,
+    refetchInterval: 60_000,
+  });
+  const n = pendientes.data?.length ?? 0;
+  return (
+    <Link
+      to="/asistencia/rostros"
+      className={cn(
+        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
+        n > 0 ? 'bg-amber-50 text-amber-800 ring-amber-200' : 'bg-white text-slate-700 ring-slate-300',
+      )}
+    >
+      <ScanFace className="size-4" /> Rostros por revisar
+      {n > 0 && (
+        <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
+    </Link>
+  );
+}
+
+/** Acceso a "Incidencias" con el número de las del mes sin atender (DA-42). */
+function BotonIncidencias() {
+  // Incidencias del mes sin atender (asistencia y rostro, DA-42).
+  const mes = hoyLocal().slice(0, 7);
+  const porGuardia = useQuery({
+    queryKey: asistenciaService.keys.incidenciasPorGuardia(mes),
+    queryFn: () => asistenciaService.incidenciasPorGuardia(mes),
+    refetchInterval: 60_000,
+  });
+  const n = porGuardia.data?.reduce((t, f) => t + f.pendientes, 0) ?? 0;
+  return (
+    <Link
+      to="/asistencia/incidencias"
+      className={cn(
+        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
+        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
+      )}
+    >
+      <ShieldAlert className="size-4" /> Incidencias
+      {n > 0 && (
+        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
+    </Link>
   );
 }

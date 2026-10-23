@@ -1,11 +1,20 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Crosshair, MapPinOff, RotateCcw } from 'lucide-react';
-import { sitioSchema, type Sitio } from '@platinum/shared';
+import { RADIO_SITIO_DEFAULT_M, sitioSchema, type Sitio } from '@platinum/shared';
 import { mensajeDeError } from '../../core/api';
 import { useForm } from '../../core/forms/useForm';
-import { Button, ConfirmDialog, FormField, FormModal, Input, Textarea, toast } from '../../components/ui';
-import { clientesService } from './clientes.service';
+import {
+  Button,
+  ConfirmDialog,
+  FormField,
+  FormModal,
+  Input,
+  Select,
+  Textarea,
+  toast,
+} from '../../components/ui';
+import { clientesService, sitiosService } from './clientes.service';
 
 type Accion = 'baja' | 'reactivar';
 
@@ -32,15 +41,33 @@ export function SitioModal({
     referencias: sitio?.referencias ?? '',
     lat: sitio?.lat?.toString() ?? '',
     lng: sitio?.lng?.toString() ?? '',
+    radioM: String(sitio?.radioM ?? RADIO_SITIO_DEFAULT_M),
+  });
+  // Supervisor del sitio (DA-45): se guarda aparte, después del sitio.
+  const supervisorInicial = sitio?.supervisor ? String(sitio.supervisor.id) : '';
+  const [supervisorId, setSupervisorId] = useState(supervisorInicial);
+  const cambiaSupervisor = supervisorId !== supervisorInicial;
+  const supervisores = useQuery({
+    queryKey: sitiosService.keys.supervisores,
+    queryFn: sitiosService.supervisores,
+    enabled: !readOnly,
   });
 
   const refrescar = () => qc.invalidateQueries({ queryKey: clientesService.keys.all });
 
   const guardar = useMutation({
-    mutationFn: (data: ReturnType<typeof sitioSchema.parse>) =>
-      esNuevo
-        ? clientesService.crearSitio(clienteId, data)
-        : clientesService.actualizarSitio(clienteId, sitio.id, data),
+    mutationFn: async (data: ReturnType<typeof sitioSchema.parse>) => {
+      const guardado =
+        esNuevo || form.cambiado
+          ? await (esNuevo
+              ? clientesService.crearSitio(clienteId, data)
+              : clientesService.actualizarSitio(clienteId, sitio.id, data))
+          : sitio;
+      if (cambiaSupervisor) {
+        await sitiosService.asignarSupervisor(guardado.id, supervisorId ? Number(supervisorId) : null);
+      }
+      return guardado;
+    },
     onSuccess: () => {
       void refrescar();
       onClose();
@@ -102,8 +129,8 @@ export function SitioModal({
         onSubmit={onSubmit}
         submitLabel={esNuevo ? 'Agregar sitio' : 'Guardar cambios'}
         loading={guardar.isPending}
-        dirty={form.cambiado}
-        submitDisabled={!esNuevo && !form.cambiado}
+        dirty={form.cambiado || cambiaSupervisor}
+        submitDisabled={!esNuevo && !form.cambiado && !cambiaSupervisor}
         readOnly={soloLectura}
         secondaryAction={
           !esNuevo &&
@@ -145,6 +172,36 @@ export function SitioModal({
             <Input {...bind('lng')} inputMode="decimal" placeholder="-99.1332" />
           </FormField>
         </div>
+        <FormField
+          label="Supervisor"
+          hint="Le llegan los avisos de este sitio y revisa a sus guardias. Sin supervisor, los avisos le llegan al admin."
+        >
+          <Select
+            value={supervisorId}
+            onChange={(e) => setSupervisorId(e.target.value)}
+            disabled={soloLectura}
+            placeholder="Sin supervisor"
+            options={[
+              // El actual aparece aunque la lista aún no cargue.
+              ...(sitio?.supervisor && !supervisores.data?.some((s) => s.id === sitio.supervisor!.id)
+                ? [{ value: String(sitio.supervisor.id), label: sitio.supervisor.nombre }]
+                : []),
+              ...(supervisores.data ?? []).map((s) => ({
+                value: String(s.id),
+                label: s.sitios
+                  ? `${s.nombre} (${s.sitios} ${s.sitios === 1 ? 'sitio' : 'sitios'})`
+                  : s.nombre,
+              })),
+            ]}
+          />
+        </FormField>
+        <FormField
+          label="Radio para marcar asistencia (m)"
+          error={errors.radioM}
+          hint="Fuera de este radio el guardia no puede marcar entrada ni salida. Amplíalo en plazas o bodegas grandes."
+        >
+          <Input {...bind('radioM')} type="number" inputMode="numeric" min={20} max={2000} step={10} />
+        </FormField>
         {!soloLectura && (
           <Button
             variant="secondary"

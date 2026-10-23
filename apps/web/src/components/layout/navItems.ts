@@ -28,7 +28,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { label: 'Inicio', to: '/', icon: Home },
   {
-    label: 'Marcar',
+    label: 'Checador',
     to: '/marcar',
     icon: Timer,
     permiso: PERMISOS.ASISTENCIA_MARCAR,

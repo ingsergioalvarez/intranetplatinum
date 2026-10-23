@@ -1,3 +1,4 @@
+import type { DiasTurno } from './turnos';
 import { z } from 'zod';
 import { coordenada, fechaSchema, textoOpcional } from './comunes';
 import type { ReglasAviso } from './avisos';
@@ -127,12 +128,22 @@ export interface Contacto {
 
 // ---------- Sitios ----------
 
+/** Radio de la geocerca de un sitio si no se indica otro (DA-36). */
+export const RADIO_SITIO_DEFAULT_M = 100;
+
 export const sitioSchema = z.object({
   nombre: z.string().trim().min(2, 'Escribe el nombre del sitio').max(150),
   direccion: textoOpcional(300),
   referencias: textoOpcional(300),
   lat: coordenada(-90, 90),
   lng: coordenada(-180, 180),
+  /** Radio en metros para marcar asistencia (sitios grandes: plazas, bodegas). */
+  radioM: z.coerce
+    .number('Escribe el radio en metros')
+    .int('Solo metros enteros')
+    .min(20, 'Mínimo 20 m')
+    .max(2000, 'Máximo 2,000 m')
+    .default(RADIO_SITIO_DEFAULT_M),
 });
 
 export type SitioInput = z.input<typeof sitioSchema>;
@@ -146,22 +157,62 @@ export interface Sitio {
   referencias: string | null;
   lat: number | null;
   lng: number | null;
+  radioM: number;
   deletedAt: string | null;
   /** Asignaciones (de guardia o de grupo) vigentes hoy. */
   asignacionesVigentes: number;
+  /** Supervisor del sitio (DA-45): recibe sus avisos y revisa a sus guardias. */
+  supervisor: { id: number; nombre: string } | null;
+}
+
+/** Asignar o quitar (null) el supervisor de un sitio (DA-45). */
+export const supervisorSitioSchema = z.object({
+  supervisorId: z.number().int().positive().nullable(),
+});
+export type SupervisorSitioInput = z.infer<typeof supervisorSitioSchema>;
+
+/** Supervisor que se puede asignar a un sitio, con cuántos sitios tiene ya. */
+export interface SupervisorOpcion {
+  id: number;
+  nombre: string;
+  email: string;
+  sitios: number;
 }
 
 // ---------- Asignación de sitios a guardias o grupos (F2-05, F2-07, D-017) ----------
 
-export const TURNOS = ['diurno', 'nocturno', '24x24', 'mixto'] as const;
+/** Diurno, nocturno y mixto ya no se ofrecen (DA-32); se conservan en asignaciones viejas. */
+export const TURNOS = ['24x24', '12x12', 'diurno', 'nocturno', 'mixto'] as const;
 export type Turno = (typeof TURNOS)[number];
 
+/** Turnos que se pueden asignar: jornada de 24 h o de 12 h desde la hora de entrada (DA-32). */
+export const TURNOS_JORNADA = ['24x24', '12x12'] as const;
+export type TurnoJornada = (typeof TURNOS_JORNADA)[number];
+
+export const HORAS_TURNO: Record<TurnoJornada, number> = { '24x24': 24, '12x12': 12 };
+
 export const TURNO_LABEL: Record<Turno, string> = {
+  '24x24': '24 h',
+  '12x12': '12 h',
   diurno: 'Diurno',
   nocturno: 'Nocturno',
-  '24x24': '24 × 24',
   mixto: 'Mixto',
 };
+
+export const esTurnoJornada = (t: Turno | null | undefined): t is TurnoJornada =>
+  t === '24x24' || t === '12x12';
+
+/** Hora de salida del turno: entrada + 24 h (misma hora) o + 12 h. */
+export function horaSalidaTurno(turno: TurnoJornada, entrada: string): string {
+  const [h, m] = entrada.split(':').map(Number);
+  return `${String((h + HORAS_TURNO[turno]) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** `08:00` → `8:00 a.m.`; `20:30` → `8:30 p.m.` */
+export function horaLegible(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'a.m.' : 'p.m.'}`;
+}
 
 export const TIPOS_ASIGNACION = ['fija', 'temporal', 'eventual'] as const;
 export type TipoAsignacion = (typeof TIPOS_ASIGNACION)[number];
@@ -203,13 +254,11 @@ export const asignacionCreateSchema = z
     const error = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
     if (!!a.usuarioId === !!a.grupoId) error('usuarioId', 'Elige un guardia o un grupo');
     if (a.hasta && a.hasta < a.desde) error('hasta', 'Debe ser igual o posterior a la fecha de inicio');
-    if (a.tipo === 'fija') {
-      if (a.hasta) error('hasta', 'Una asignación fija no tiene fecha de término');
-      if (!a.turno) error('turno', 'Selecciona un turno');
-    }
-    if (a.tipo === 'temporal') {
-      if (!a.hasta) error('hasta', 'Indica hasta cuándo');
-      if (!a.turno) error('turno', 'Selecciona un turno');
+    if (a.tipo === 'fija' && a.hasta) error('hasta', 'Una asignación fija no tiene fecha de término');
+    if (a.tipo === 'temporal' && !a.hasta) error('hasta', 'Indica hasta cuándo');
+    if (a.tipo !== 'eventual') {
+      if (!esTurnoJornada(a.turno)) error('turno', 'Elige un turno de 24 h o de 12 h');
+      if (!a.horaInicio) error('horaInicio', 'Indica la hora de entrada');
     }
     if (a.tipo === 'eventual') {
       if (!a.horaInicio) error('horaInicio', 'Indica la hora de inicio');
@@ -224,7 +273,11 @@ export type AsignacionCreate = z.input<typeof asignacionCreateSchema>;
 export type AsignacionCreateData = z.output<typeof asignacionCreateSchema>;
 
 export const asignacionUpdateSchema = z.object({
-  turno: z.enum(TURNOS).optional(),
+  /** Turno del catálogo (DA-37): copia su jornada y horario. */
+  turnoId: z.coerce.number().int().positive().optional(),
+  turno: z.enum(TURNOS_JORNADA, 'Elige un turno de 24 h o de 12 h').optional(),
+  /** Hora de entrada (fija/temporal); la salida se recalcula. */
+  horaInicio: horaSchema.optional(),
   hasta: fechaSchema.nullish(),
 });
 
@@ -255,6 +308,11 @@ export interface Asignacion {
   turno: Turno | null;
   horaInicio: string | null;
   horaFin: string | null;
+  /** Turno del catálogo (DA-37); null en eventos, asignaciones anteriores o si se borró el turno. */
+  turnoCatalogo: { id: number; nombre: string } | null;
+  /** Copia del horario del turno: horas de trabajo y qué días (null en eventos y anteriores). */
+  horas: number | null;
+  dias: DiasTurno | null;
   desde: string;
   hasta: string | null;
   vigente: boolean;
@@ -269,10 +327,14 @@ export interface MiSitio {
   turno: Turno | null;
   horaInicio: string | null;
   horaFin: string | null;
+  horas: number | null;
+  dias: DiasTurno | null;
   desde: string;
   hasta: string | null;
-  sitio: Pick<Sitio, 'id' | 'nombre' | 'direccion' | 'referencias' | 'lat' | 'lng'>;
+  sitio: Pick<Sitio, 'id' | 'nombre' | 'direccion' | 'referencias' | 'lat' | 'lng' | 'radioM'>;
   cliente: { id: number; nombreComercial: string };
+  /** Cubre este sitio (DA-39): mientras dura, sus sitios propios quedan en pausa. */
+  cobertura?: { id: number; motivo: string; cubreA: string | null } | null;
 }
 
 // ---------- Grupos de guardias (F2-06) ----------

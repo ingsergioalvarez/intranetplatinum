@@ -1,5 +1,7 @@
 import type { Grupo, GrupoData } from '@platinum/shared';
 import { AuditLogger, BaseService, HttpError, calcularCambios, hoyISO, type AccionCtx } from '../../core';
+import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
+import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type { GrupoFiltro, GruposRepository } from './grupos.repository';
 
 const nombreRepetido = () =>
@@ -13,8 +15,32 @@ export class GruposService extends BaseService {
     private readonly repo: GruposRepository,
     private readonly audit: AuditLogger,
     private readonly hoy: () => string = () => hoyISO(),
+    private readonly avisar: AvisarUsuarios = sinAvisos,
+    private readonly bitacora: RegistrarBitacora = sinBitacora,
   ) {
     super();
+  }
+
+  /** Avisa a los guardias que entran o salen del grupo (DA-34) y lo deja en su bitácora (DA-41). */
+  private async avisarIntegrantes(nombre: string, agregados: number[], quitados: number[], actorId: number) {
+    await this.bitacora({
+      usuarioIds: agregados,
+      tipo: 'grupo_alta',
+      detalle: `Entró al grupo ${nombre}`,
+      actorId,
+    });
+    await this.bitacora({
+      usuarioIds: quitados,
+      tipo: 'grupo_baja',
+      detalle: `Salió del grupo ${nombre}`,
+      actorId,
+    });
+    await this.avisar(agregados, { tipo: 'grupo', mensaje: `Te agregaron al grupo ${nombre}`, ruta: '/' });
+    await this.avisar(quitados, {
+      tipo: 'grupo',
+      mensaje: `Ya no formas parte del grupo ${nombre}`,
+      ruta: '/',
+    });
   }
 
   listar(filtro: GrupoFiltro) {
@@ -36,6 +62,7 @@ export class GruposService extends BaseService {
       nombre: data.nombre,
       integrantes,
     });
+    await this.avisarIntegrantes(data.nombre, integrantes, [], ctx.actorId);
     return this.getById(id);
   }
 
@@ -57,10 +84,13 @@ export class GruposService extends BaseService {
     const integrantes = await this.validarIntegrantes(usuarioIds);
     const antes = actual.integrantes.map((i) => i.id);
     await this.repo.setIntegrantes(id, integrantes);
+    const agregados = integrantes.filter((u) => !antes.includes(u));
+    const quitados = antes.filter((u) => !integrantes.includes(u));
     await this.audit.registrarAccion(ctx, 'grupos.integrantes', 'grupos_guardias', id, {
-      agregados: integrantes.filter((u) => !antes.includes(u)),
-      quitados: antes.filter((u) => !integrantes.includes(u)),
+      agregados,
+      quitados,
     });
+    await this.avisarIntegrantes(actual.nombre, agregados, quitados, ctx.actorId);
     return this.getById(id);
   }
 
@@ -72,6 +102,14 @@ export class GruposService extends BaseService {
     await this.audit.registrarAccion(ctx, 'grupos.baja', 'grupos_guardias', id, {
       nombre: grupo.nombre,
       asignacionesTerminadas: grupo.asignacionesVigentes,
+    });
+    await this.bitacora({
+      usuarioIds: grupo.integrantes.map((i) => i.id),
+      tipo: 'grupo_baja',
+      detalle: `Se dio de baja el grupo ${grupo.nombre}${
+        grupo.asignacionesVigentes ? ': terminan hoy sus asignaciones' : ''
+      }`,
+      actorId: ctx.actorId,
     });
   }
 

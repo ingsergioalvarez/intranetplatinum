@@ -1,11 +1,11 @@
 import { JORNADA_MAX_HORAS, type Jornada } from '@platinum/shared';
 
-const hora = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+const hora = new Intl.DateTimeFormat('es-MX', { hour: 'numeric', minute: '2-digit', hour12: true });
 const dia = new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
 const diaLargo = new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 const mes = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' });
 
-/** `06:53` */
+/** `6:53 a.m.` */
 export const formatHora = (iso: string | Date) => hora.format(new Date(iso));
 
 const mayuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -38,4 +38,11 @@ export function formatDuracion(desde: string, hasta: string) {
 /** Sin salida: la jornada sigue en curso mientras no pase el límite de horas. */
 export function jornadaEnCurso(j: Jornada) {
   return !j.salida && Date.now() - new Date(j.entrada.registradaEn).getTime() < JORNADA_MAX_HORAS * 3_600_000;
+}
+
+/** Horas que debía cubrir según la entrada y salida programadas: `24 h`, `12 h`. */
+export function horasEsperadas(j: Jornada) {
+  if (!j.programada) return null;
+  const min = Math.round((Date.parse(j.programada.salida) - Date.parse(j.programada.entrada)) / 60_000);
+  return `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, '0')} min` : ''}`;
 }

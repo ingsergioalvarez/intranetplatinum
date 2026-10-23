@@ -1,5 +1,6 @@
 import { PERMISOS, ROLES, type Aviso, type ReglasAviso, type TipoAviso } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
+import { firmarArchivo } from '../../core';
 
 export interface NuevoAviso {
   tipo: TipoAviso;
@@ -35,10 +36,20 @@ export class PrismaAvisosRepository extends AvisosRepository {
       where: { usuarioId },
       orderBy: { createdAt: 'desc' },
       take: limite,
-      select: { id: true, tipo: true, mensaje: true, reporteId: true, leidoEn: true, createdAt: true },
+      select: {
+        id: true,
+        tipo: true,
+        mensaje: true,
+        reporteId: true,
+        ruta: true,
+        fotoClave: true,
+        leidoEn: true,
+        createdAt: true,
+      },
     });
-    return rows.map(({ leidoEn, createdAt, ...a }) => ({
+    return rows.map(({ leidoEn, createdAt, fotoClave, ...a }) => ({
       ...a,
+      foto: fotoClave ? firmarArchivo(fotoClave) : null,
       leido: leidoEn !== null,
       createdAt: createdAt.toISOString(),
     }));

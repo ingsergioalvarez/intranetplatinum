@@ -4,6 +4,8 @@ import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
 import { cn } from '../ui';
+import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
+import { VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
 import { Campanita } from './Campanita';
 import { navItems } from './navItems';
 
@@ -146,6 +148,8 @@ export function AppShell() {
         </main>
       </div>
       <BottomNav />
+      <BienvenidaRostro />
+      <VentanaTurno />
     </div>
   );
 }

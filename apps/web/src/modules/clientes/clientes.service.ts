@@ -2,17 +2,20 @@ import type {
   Asignacion,
   AsignacionCreate,
   AsignacionUpdate,
+  AsignarTurnoInput,
   ClienteCreate,
   ClienteDetalle,
   ClienteResumen,
   ClienteUpdate,
   Contacto,
+  GuardiaDisponible,
   ContactoInput,
   MiSitio,
   ReglasAviso,
   ReglasAvisoInput,
   Sitio,
   SitioInput,
+  SupervisorOpcion,
 } from '@platinum/shared';
 import { api, CrudService } from '../../core/api';
 
@@ -63,6 +66,8 @@ export const sitiosService = {
     all: ['sitios'] as const,
     guardias: (sitioId: number, historial: boolean) => ['sitios', sitioId, 'guardias', historial] as const,
     mios: ['sitios', 'mios'] as const,
+    disponibles: ['sitios', 'guardias-disponibles'] as const,
+    supervisores: ['sitios', 'supervisores'] as const,
   },
   asignaciones: (sitioId: number, historial = false) =>
     api.get<Asignacion[]>(`/sitios/${sitioId}/guardias`, { query: { historial } }),
@@ -70,5 +75,16 @@ export const sitiosService = {
     api.post<Asignacion>(`/sitios/${sitioId}/guardias`, data),
   actualizarAsignacion: (sitioId: number, id: number, data: AsignacionUpdate) =>
     api.patch<Asignacion>(`/sitios/${sitioId}/guardias/${id}`, data),
+  /** Cancela una asignación que aún no empieza. */
+  cancelarAsignacion: (sitioId: number, id: number) => api.delete(`/sitios/${sitioId}/guardias/${id}`),
+  /** Asigna un turno del catálogo a varios guardias y/o grupos (DA-37). */
+  asignarTurno: (sitioId: number, data: AsignarTurnoInput) =>
+    api.post<Asignacion[]>(`/sitios/${sitioId}/turnos`, data),
+  /** Guardias activos con su foto y lo que ya tienen asignado. */
+  guardiasDisponibles: () => api.get<GuardiaDisponible[]>('/sitios/guardias-disponibles'),
   mios: () => api.get<MiSitio[]>('/sitios/mios'),
+  /** Supervisores que se pueden asignar a un sitio (DA-45). */
+  supervisores: () => api.get<SupervisorOpcion[]>('/sitios/supervisores'),
+  asignarSupervisor: (sitioId: number, supervisorId: number | null) =>
+    api.put<void>(`/sitios/${sitioId}/supervisor`, { supervisorId }),
 };

@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "concurrently -n api,web -c blue,magenta \"npm run dev -w @platinum/api\" \"npm run dev -w @platinum/web\"",
+    "dev:https": "concurrently -n api,web -c blue,magenta \"npm run dev -w @platinum/api\" \"npm run dev:https -w @platinum/web\"",
     "dev:api": "npm run dev -w @platinum/api",
     "dev:web": "npm run dev -w @platinum/web",
     "db:setup": "npm run db:setup -w @platinum/api --",

@@ -15,6 +15,7 @@ import {
   Star,
   Users,
   XCircle,
+  UserCog,
 } from 'lucide-react';
 import { PERMISOS, type Contacto, type Sitio } from '@platinum/shared';
 import { ApiError, mensajeDeError } from '../../core/api';
@@ -34,7 +35,7 @@ import { ClienteModal } from './ClienteModal';
 import { ContactoModal } from './ContactoModal';
 import { EstatusClienteBadge } from './EstatusClienteBadge';
 import { ReglasAvisoCard } from './ReglasAviso';
-import { GuardiasSitioModal } from './GuardiasSitioModal';
+import { CoberturaSitioModal } from './CoberturaSitioModal';
 import { SitioModal } from './SitioModal';
 import { clientesService } from './clientes.service';
 
@@ -310,6 +311,18 @@ export function ClienteDetallePage() {
                       )}
                     </div>
                     <p className="mt-1 text-sm text-slate-500">{s.direccion ?? 'Sin dirección'}</p>
+                    {!s.deletedAt && (
+                      <p className="mt-1 flex items-center gap-1.5 text-sm">
+                        <UserCog className="size-4 shrink-0 text-slate-400" />
+                        {s.supervisor ? (
+                          <span className="text-slate-700">Supervisor: {s.supervisor.nombre}</span>
+                        ) : (
+                          <span className="text-amber-700">
+                            Sin supervisor: los avisos le llegan al admin
+                          </span>
+                        )}
+                      </p>
+                    )}
                     {/* Sin coordenadas no hay geocerca: las marcas de asistencia llevan alerta (AS1-01). */}
                     {!s.deletedAt && (s.lat === null || s.lng === null) && (
                       <p className="mt-2 flex gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
@@ -326,7 +339,7 @@ export function ClienteDetallePage() {
                       icon={<Shield className="size-4" />}
                       onClick={() => setAbierto({ tipo: 'guardias', sitio: s })}
                     >
-                      Asignaciones
+                      Cobertura
                     </Button>
                     {s.lat !== null && s.lng !== null && (
                       <a
@@ -366,7 +379,7 @@ export function ClienteDetallePage() {
         />
       )}
       {abierto?.tipo === 'guardias' && (
-        <GuardiasSitioModal
+        <CoberturaSitioModal
           sitio={abierto.sitio}
           puedeEditar={puedeEditar}
           onClose={() => setAbierto(null)}

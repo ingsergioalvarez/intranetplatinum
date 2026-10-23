@@ -42,7 +42,25 @@ export const avisaACliente = (d: DestinoAviso) => d === 'cliente' || d === 'ambo
 
 // ---------- Avisos en la app (F3-10) ----------
 
-export const TIPOS_AVISO = ['reporte_nuevo', 'reporte_estatus', 'reporte_comentario'] as const;
+export const TIPOS_AVISO = [
+  'reporte_nuevo',
+  'reporte_estatus',
+  'reporte_comentario',
+  // Asistencia (A-17)
+  'rostro_pendiente',
+  'rostro_suplantacion',
+  'rostro_duplicado',
+  'rostro_pantalla',
+  'rostro_reto',
+  // Para el guardia (DA-34) y retardo para supervisores (DA-33)
+  'rostro_aprobado',
+  'rostro_rechazado',
+  'cuenta_intento',
+  'asignacion',
+  'grupo',
+  'retardo',
+  'marca_alerta',
+] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 
 export interface Aviso {
@@ -50,6 +68,10 @@ export interface Aviso {
   tipo: TipoAviso;
   mensaje: string;
   reporteId: number | null;
+  /** Pantalla a la que lleva el aviso (avisos que no son de un reporte). */
+  ruta?: string | null;
+  /** Miniatura de la foto de evidencia (incidencias de rostro), URL firmada. */
+  foto?: string | null;
   leido: boolean;
   createdAt: string;
 }

@@ -1,3 +1,4 @@
+import type { EventoNuevo } from '../src/modules/bitacora/registrar';
 import { beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import {
@@ -11,7 +12,6 @@ import {
   type Rol,
   type Sitio,
   type SitioData,
-  type Turno,
 } from '@platinum/shared';
 import { createApp } from '../src/app';
 import { createClientesModule } from '../src/modules/clientes';
@@ -20,6 +20,9 @@ import { createSitiosModule } from '../src/modules/sitios';
 import {
   SitiosRepository,
   type AsignacionData,
+  type AsignacionDeGuardia,
+  type CambioAsignacion,
+  type TurnoEstado,
   type GuardiaEstado,
   type RangoAsignacion,
 } from '../src/modules/sitios/sitios.repository';
@@ -27,6 +30,8 @@ import { calcularCambios, hoyISO, signAccessToken } from '../src/core';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
 
 const HOY = '2026-10-12';
+const UNO_Y_UNO = { tipo: 'ciclo' as const, trabaja: 1, descansa: 1 };
+const DIARIO = { tipo: 'diario' as const };
 
 // ---------- Dobles en memoria ----------
 class MemoryClientesRepository extends ClientesRepository {
@@ -109,6 +114,7 @@ class MemoryClientesRepository extends ClientesRepository {
       ...data,
       deletedAt: null,
       asignacionesVigentes: 0,
+      supervisor: null,
     } as Sitio;
     this.sitios.push(s);
     return s;
@@ -133,11 +139,25 @@ class MemoryClientesRepository extends ClientesRepository {
 }
 
 class MemorySitiosRepository extends SitiosRepository {
-  sitio = { id: 1, clienteId: 1, deletedAt: null as Date | null, clienteDeBaja: false };
+  sitio = {
+    id: 1,
+    nombre: 'Torre Norte',
+    clienteId: 1,
+    deletedAt: null as Date | null,
+    clienteDeBaja: false,
+    supervisorId: null as number | null,
+  };
   guardias: GuardiaEstado[] = [
     { id: 3, nombre: 'Gabriel', rol: ROLES.GUARDIA, deletedAt: null },
+    { id: 4, nombre: 'Lucía', rol: ROLES.GUARDIA, deletedAt: null },
     { id: 2, nombre: 'Sofía', rol: ROLES.SUPERVISOR, deletedAt: null },
   ];
+  turnos = new Map<number, TurnoEstado>([
+    [1, { id: 1, nombre: '24 h · 8:00', horas: 24, horaEntrada: '08:00', dias: UNO_Y_UNO, activo: true }],
+    [2, { id: 2, nombre: '12 h noche', horas: 12, horaEntrada: '20:00', dias: DIARIO, activo: true }],
+    [3, { id: 3, nombre: 'Viejo', horas: 12, horaEntrada: '07:00', dias: DIARIO, activo: false }],
+    [4, { id: 4, nombre: '12 h día', horas: 12, horaEntrada: '08:00', dias: DIARIO, activo: true }],
+  ]);
   grupos = [
     { id: 7, nombre: 'Nocturno Norte', deletedAt: null as Date | null },
     { id: 8, nombre: 'Eventos', deletedAt: new Date() as Date | null },
@@ -147,11 +167,22 @@ class MemorySitiosRepository extends SitiosRepository {
   async findSitio(id: number) {
     return id === 1 ? this.sitio : null;
   }
+  async supervisores() {
+    return this.guardias
+      .filter((g) => g.rol === ROLES.SUPERVISOR)
+      .map((g) => ({ id: g.id, nombre: g.nombre, email: `${g.id}@x.mx`, sitios: 0 }));
+  }
+  async setSupervisor(_sitioId: number, supervisorId: number | null) {
+    this.sitio.supervisorId = supervisorId;
+  }
   async findGuardia(id: number) {
     return this.guardias.find((g) => g.id === id) ?? null;
   }
   async findGrupo(id: number) {
     return this.grupos.find((g) => g.id === id) ?? null;
+  }
+  async integrantesGrupo(id: number) {
+    return id === 7 ? [3, 4] : [];
   }
   private dto(a: AsignacionData & { id: number }, hoy: string) {
     return {
@@ -160,6 +191,9 @@ class MemorySitiosRepository extends SitiosRepository {
       tipo: a.tipo,
       guardia: a.usuarioId ? { id: a.usuarioId, nombre: 'G', email: 'g@x', telefono: null } : null,
       grupo: a.grupoId ? { id: a.grupoId, nombre: 'Grupo', integrantes: 2 } : null,
+      turnoCatalogo: a.turnoId ? { id: a.turnoId, nombre: this.turnos.get(a.turnoId)!.nombre } : null,
+      horas: a.horas ?? null,
+      dias: a.dias ?? null,
       turno: a.turno ?? null,
       horaInicio: a.horaInicio ?? null,
       horaFin: a.horaFin ?? null,
@@ -191,17 +225,53 @@ class MemorySitiosRepository extends SitiosRepository {
     this.asignaciones.push(a);
     return this.dto(a, hoy);
   }
-  async updateAsignacion(
-    id: number,
-    data: { turno?: Turno; hasta?: string | null; vigenteHasta?: string | null },
-  ) {
+  async updateAsignacion(id: number, data: CambioAsignacion) {
     const a = this.asignaciones.find((x) => x.id === id)!;
-    if (data.turno) a.turno = data.turno;
+    if (data.turnoId) a.turnoId = data.turnoId;
+    if (data.horas) a.horas = data.horas;
+    if (data.dias) a.dias = data.dias;
+    if (data.turno !== undefined) a.turno = data.turno;
+    if (data.horaInicio) a.horaInicio = data.horaInicio;
+    if (data.horaFin) a.horaFin = data.horaFin;
     if (data.hasta !== undefined) a.hasta = data.hasta;
     if (data.vigenteHasta !== undefined) a.vigenteHasta = data.vigenteHasta;
   }
   async misSitios() {
     return [];
+  }
+  async findTurno(id: number) {
+    return this.turnos.get(id) ?? null;
+  }
+  async asignacionesDeGuardias(ids: number[], hoy: string) {
+    const mapa = new Map<number, AsignacionDeGuardia[]>(ids.map((id) => [id, []]));
+    for (const a of this.asignaciones.filter((x) => !x.vigenteHasta || x.vigenteHasta >= hoy)) {
+      const de = a.usuarioId ? [a.usuarioId] : a.grupoId ? await this.integrantesGrupo(a.grupoId) : [];
+      for (const id of de)
+        mapa.get(id)?.push({
+          asignacionId: a.id,
+          tipo: a.tipo,
+          turno: a.turno ?? null,
+          horas: a.horas ?? null,
+          dias: a.dias ?? null,
+          horaInicio: a.horaInicio ?? null,
+          horaFin: a.horaFin ?? null,
+          desde: a.desde,
+          hasta: a.hasta ?? null,
+          sitio: { id: a.sitioId, nombre: a.sitioId === 1 ? this.sitio.nombre : 'Plaza Sur' },
+          grupo: a.grupoId ? this.grupos.find((g) => g.id === a.grupoId)!.nombre : null,
+          turnoId: a.turnoId ?? null,
+          turnoNombre: a.turnoId ? this.turnos.get(a.turnoId)!.nombre : null,
+        });
+    }
+    return mapa;
+  }
+  async guardiasActivos() {
+    return this.guardias
+      .filter((g) => g.rol === ROLES.GUARDIA)
+      .map((g) => ({ id: g.id, nombre: g.nombre, email: `u${g.id}@x.mx`, fotoClave: null }));
+  }
+  async eliminarAsignacion(id: number) {
+    this.asignaciones = this.asignaciones.filter((a) => a.id !== id);
   }
 }
 
@@ -209,12 +279,15 @@ class MemorySitiosRepository extends SitiosRepository {
 let clientes: MemoryClientesRepository;
 let sitios: MemorySitiosRepository;
 let audit: MemoryAuditLogger;
+let avisos: { usuarioIds: number[]; tipo: string; mensaje: string }[];
+let bitacora: EventoNuevo[];
 let app: ReturnType<typeof createApp>;
 
 const tokenDe = (id: number, rol: Rol) =>
   signAccessToken({ id, email: `u${id}@x.mx`, rol, permisos: PERMISOS_POR_ROL[rol] });
 const SUPERVISOR = tokenDe(2, ROLES.SUPERVISOR);
 const GUARDIA = tokenDe(3, ROLES.GUARDIA);
+const ADMIN = tokenDe(1, ROLES.ADMIN);
 
 const como = (t: string) => ({
   get: (u: string) => request(app).get(`/api${u}`).set('Authorization', `Bearer ${t}`),
@@ -229,9 +302,17 @@ beforeEach(async () => {
   clientes = new MemoryClientesRepository();
   sitios = new MemorySitiosRepository();
   audit = new MemoryAuditLogger();
+  avisos = [];
+  bitacora = [];
   app = createApp([
     createClientesModule({ repo: clientes, audit, hoy: () => HOY }),
-    createSitiosModule({ repo: sitios, audit, hoy: () => HOY }),
+    createSitiosModule({
+      repo: sitios,
+      audit,
+      hoy: () => HOY,
+      avisar: async (usuarioIds, { tipo, mensaje }) => void avisos.push({ usuarioIds, tipo, mensaje }),
+      bitacora: async (e) => void bitacora.push(e),
+    }),
   ]);
   await clientes.create({
     nombreComercial: 'Plaza Uno',
@@ -357,7 +438,14 @@ describe('sitios (F2-04)', () => {
 // ---------- Asignaciones ----------
 describe('asignación de sitios (F2-05, F2-07)', () => {
   const asignar = (b: object) => como(SUPERVISOR).post('/sitios/1/guardias', b);
-  const fija = (b: object = {}) => ({ usuarioId: 3, tipo: 'fija', turno: 'diurno', desde: HOY, ...b });
+  const fija = (b: object = {}) => ({
+    usuarioId: 3,
+    tipo: 'fija',
+    turno: '24x24',
+    horaInicio: '08:00',
+    desde: HOY,
+    ...b,
+  });
 
   it('asigna solo a guardias activos o grupos activos, en sitios activos', async () => {
     const noGuardia = await asignar(fija({ usuarioId: 2 }));
@@ -432,8 +520,8 @@ describe('asignación de sitios (F2-05, F2-07)', () => {
   it('terminar o cambiar turno; solo una fija puede quedar sin término', async () => {
     await asignar(fija({ desde: '2026-10-01' }));
     expect((await como(SUPERVISOR).patch('/sitios/1/guardias/1', { hasta: '2026-09-01' })).status).toBe(400);
-    const fin = await como(SUPERVISOR).patch('/sitios/1/guardias/1', { hasta: HOY, turno: 'mixto' });
-    expect(fin.body.data).toMatchObject({ hasta: HOY, turno: 'mixto', vigente: true });
+    const fin = await como(SUPERVISOR).patch('/sitios/1/guardias/1', { hasta: HOY, turno: '12x12' });
+    expect(fin.body.data).toMatchObject({ hasta: HOY, turno: '12x12', horaFin: '20:00', vigente: true });
     expect(audit.eventos.at(-1)?.datos).toMatchObject({ antes: { hasta: null }, despues: { hasta: HOY } });
     expect((await como(SUPERVISOR).patch('/sitios/2/guardias/1', { hasta: HOY })).status).toBe(404);
 
@@ -461,5 +549,262 @@ describe('utilidades', () => {
       despues: { b: 'y' },
       hayCambios: true,
     });
+  });
+});
+
+describe('horario del turno y avisos al guardia (DA-32, DA-34)', () => {
+  const asignar = (b: object) => como(SUPERVISOR).post('/sitios/1/guardias', b);
+  const base = { usuarioId: 3, tipo: 'fija', desde: '2026-10-22' };
+
+  it('fija/temporal exigen turno de 24 o 12 h y hora de entrada; la salida se calcula', async () => {
+    const sin = await asignar({ ...base, turno: 'diurno' });
+    expect(sin.body.error.details.map((d: { path: string }) => d.path).sort()).toEqual([
+      'horaInicio',
+      'turno',
+    ]);
+    const t24 = await asignar({ ...base, turno: '24x24', horaInicio: '08:00' });
+    expect(t24.body.data).toMatchObject({ turno: '24x24', horaInicio: '08:00', horaFin: '08:00' });
+    const t12 = await asignar({
+      ...base,
+      usuarioId: undefined,
+      grupoId: 7,
+      turno: '12x12',
+      horaInicio: '20:00',
+    });
+    expect(t12.body.data).toMatchObject({ turno: '12x12', horaInicio: '20:00', horaFin: '08:00' });
+  });
+
+  it('avisa al guardia o a los integrantes del grupo al asignar y al cambiar el horario', async () => {
+    await asignar({ ...base, turno: '24x24', horaInicio: '08:00' });
+    expect(avisos[0]).toEqual({
+      usuarioIds: [3],
+      tipo: 'asignacion',
+      mensaje: 'Te asignaron a Torre Norte: Turno de 24 h · entrada 8:00 a.m. · desde el 22 oct',
+    });
+    await asignar({ ...base, usuarioId: undefined, grupoId: 7, turno: '12x12', horaInicio: '19:30' });
+    expect(avisos[1]).toMatchObject({
+      usuarioIds: [3, 4],
+      mensaje:
+        'Tu grupo Grupo fue asignado a Torre Norte: Turno de 12 h · entrada 7:30 p.m. · desde el 22 oct',
+    });
+
+    await como(SUPERVISOR).patch('/sitios/1/guardias/1', { horaInicio: '07:00' });
+    expect(avisos[2].mensaje).toBe(
+      'Tu asignación en Torre Norte: nuevo horario: Turno de 24 h · entrada 7:00 a.m.',
+    );
+    expect(sitios.asignaciones[0]).toMatchObject({ horaInicio: '07:00', horaFin: '07:00' });
+  });
+});
+
+describe('turnos del catálogo en el sitio: asignar en lote (DA-37)', () => {
+  const asignarTurno = (b: object) => como(SUPERVISOR).post('/sitios/1/turnos', b);
+
+  it('asigna un turno a varios guardias (Día A / Día B), copia horas y días y avisa a cada uno', async () => {
+    const res = await asignarTurno({
+      turnoId: 1,
+      guardias: [
+        { usuarioId: 3, desde: '2026-10-12' },
+        { usuarioId: 4, desde: '2026-10-13' },
+      ],
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.data[0]).toMatchObject({
+      tipo: 'fija',
+      horas: 24,
+      dias: UNO_Y_UNO,
+      horaInicio: '08:00',
+      horaFin: '08:00',
+      turnoCatalogo: { id: 1, nombre: '24 h · 8:00' },
+      guardia: { id: 3 },
+    });
+    expect(avisos).toEqual([
+      {
+        usuarioIds: [3],
+        tipo: 'asignacion',
+        mensaje: 'Te asignaron a Torre Norte: 24 h · entrada 8:00 a.m. (un día sí, uno no) · desde el 12 oct',
+      },
+      expect.objectContaining({ usuarioIds: [4] }),
+    ]);
+    expect(audit.acciones().filter((a) => a === 'sitios.asignar')).toHaveLength(2);
+  });
+
+  it('a un grupo: avisa a sus integrantes; con fecha de fin queda temporal', async () => {
+    const res = await asignarTurno({ turnoId: 2, hasta: '2026-12-31', grupos: [{ grupoId: 7, desde: HOY }] });
+    expect(res.body.data[0]).toMatchObject({
+      tipo: 'temporal',
+      horaInicio: '20:00',
+      horaFin: '08:00',
+      grupo: { id: 7 },
+    });
+    expect(avisos[0]).toMatchObject({
+      usuarioIds: [3, 4],
+      mensaje:
+        'Tu grupo Nocturno Norte fue asignado a Torre Norte: 12 h · entrada 8:00 p.m. (todos los días) · desde el 12 oct',
+    });
+  });
+
+  it('mismo sitio y mismo horario: pasa al grupo sin cambiarle nada (sin aviso de horario)', async () => {
+    await asignarTurno({ turnoId: 4, guardias: [{ usuarioId: 3, desde: HOY }] });
+    avisos.length = 0;
+    const res = await asignarTurno({ turnoId: 4, grupos: [{ grupoId: 7, desde: HOY }] });
+    expect(res.status).toBe(201);
+    // Su asignación individual se reemplaza por la del grupo.
+    expect(sitios.asignaciones.map((a) => [a.usuarioId ?? null, a.grupoId ?? null])).toEqual([[null, 7]]);
+    // Solo Lucía (a quien sí le cambia) recibe el aviso de su nuevo horario.
+    expect(avisos.map((a) => a.usuarioIds)).toEqual([[4]]);
+  });
+
+  it('mismo sitio y otro horario: hay que elegir cambiarlo; con "reemplazar" su turno anterior termina un día antes', async () => {
+    await asignarTurno({ turnoId: 2, guardias: [{ usuarioId: 3, desde: HOY }] });
+    const sinElegir = await asignarTurno({ turnoId: 4, grupos: [{ grupoId: 7, desde: '2026-10-14' }] });
+    expect(sinElegir.status).toBe(409);
+    expect(sinElegir.body.error.message).toBe(
+      'Gabriel (de Grupo Nocturno Norte) ya tiene otro horario en este sitio (12 h noche). Elige si lo cambias a este horario.',
+    );
+    avisos.length = 0;
+    const res = await asignarTurno({
+      turnoId: 4,
+      grupos: [{ grupoId: 7, desde: '2026-10-14' }],
+      reemplazar: [3],
+    });
+    expect(res.status).toBe(201);
+    expect(sitios.asignaciones[0]).toMatchObject({
+      usuarioId: 3,
+      hasta: '2026-10-13',
+      vigenteHasta: '2026-10-13',
+    });
+    // Los dos reciben su nuevo horario (a Gabriel le cambia de noche a día).
+    expect(avisos[0].usuarioIds).toEqual([3, 4]);
+    expect(audit.acciones()).toContain('sitios.reasignar');
+  });
+
+  it('otro sitio: solo se rechaza si los horarios se enciman', async () => {
+    sitios.asignaciones.push({
+      id: 50,
+      sitioId: 2,
+      usuarioId: 3,
+      tipo: 'fija',
+      turnoId: 2,
+      horas: 12,
+      dias: DIARIO,
+      horaInicio: '20:00',
+      horaFin: '08:00',
+      desde: HOY,
+      hasta: null,
+      vigenteHasta: null,
+    });
+    // 12 h de día (8 a 20) no se encima con su noche en Plaza Sur.
+    expect((await asignarTurno({ turnoId: 4, guardias: [{ usuarioId: 3, desde: HOY }] })).status).toBe(201);
+    // 24 h sí.
+    const cruce = await asignarTurno({
+      turnoId: 1,
+      guardias: [{ usuarioId: 4, desde: HOY }],
+      grupos: [{ grupoId: 7, desde: '2026-10-13' }],
+    });
+    expect(cruce.status).toBe(409);
+    expect(cruce.body.error.message).toMatch(/Gabriel \(de Grupo Nocturno Norte\)/);
+  });
+
+  it('ya está en este turno: no se duplica', async () => {
+    await asignarTurno({ turnoId: 1, guardias: [{ usuarioId: 3, desde: HOY }] });
+    const res = await asignarTurno({ turnoId: 1, guardias: [{ usuarioId: 3, desde: HOY }] });
+    expect(res.body.error.message).toBe('Gabriel ya está en este turno');
+  });
+
+  it('valida: turno activo y al menos un guardia o grupo', async () => {
+    expect((await asignarTurno({ turnoId: 3, guardias: [{ usuarioId: 3, desde: HOY }] })).status).toBe(400);
+    const vacio = await asignarTurno({ turnoId: 1 });
+    expect(vacio.body.error.details[0]).toMatchObject({ path: 'guardias' });
+    expect((await asignarTurno({ turnoId: 1, guardias: [{ usuarioId: 2, desde: HOY }] })).status).toBe(400);
+  });
+
+  it('cancelar una asignación que aún no empieza (avisa); la que ya empezó se termina', async () => {
+    await asignarTurno({ turnoId: 1, guardias: [{ usuarioId: 3, desde: '2026-10-20' }] });
+    await asignarTurno({ turnoId: 1, guardias: [{ usuarioId: 4, desde: HOY }] });
+    avisos.length = 0;
+    expect((await como(SUPERVISOR).delete('/sitios/1/guardias/1')).status).toBe(204);
+    expect(sitios.asignaciones.map((a) => a.id)).toEqual([2]);
+    expect(avisos[0]).toEqual({
+      usuarioIds: [3],
+      tipo: 'asignacion',
+      mensaje: 'Se canceló tu asignación en Torre Norte que empezaba el 20 oct',
+    });
+    expect((await como(SUPERVISOR).delete('/sitios/1/guardias/2')).status).toBe(409);
+  });
+
+  it('supervisor del sitio: se asigna, se cambia y se avisa a ambos (DA-45)', async () => {
+    expect((await como(SUPERVISOR).get('/sitios/supervisores')).body.data).toEqual([
+      { id: 2, nombre: 'Sofía', email: '2@x.mx', sitios: 0 },
+    ]);
+    expect((await como(SUPERVISOR).put('/sitios/1/supervisor', { supervisorId: 3 })).status).toBe(400);
+    expect((await como(SUPERVISOR).put('/sitios/1/supervisor', { supervisorId: 2 })).status).toBe(204);
+    expect(sitios.sitio.supervisorId).toBe(2);
+    expect(avisos).toEqual([
+      expect.objectContaining({
+        usuarioIds: [2],
+        mensaje: expect.stringMatching(/^Ahora supervisas Torre Norte/),
+      }),
+    ]);
+    avisos.length = 0;
+    await como(SUPERVISOR).put('/sitios/1/supervisor', { supervisorId: null });
+    expect(avisos).toEqual([
+      expect.objectContaining({ usuarioIds: [2], mensaje: 'Ya no supervisas Torre Norte' }),
+    ]);
+    expect(audit.acciones().filter((a) => a === 'sitios.supervisor')).toHaveLength(2);
+  });
+
+  it('el admin elimina al momento una asignación que ya empezó (aunque termine hoy) y avisa', async () => {
+    await asignarTurno({ turnoId: 1, guardias: [{ usuarioId: 3, desde: '2026-10-01' }] });
+    await como(SUPERVISOR).patch('/sitios/1/guardias/1', { hasta: HOY });
+    avisos.length = 0;
+    expect((await como(ADMIN).delete('/sitios/1/guardias/1')).status).toBe(204);
+    expect(sitios.asignaciones).toEqual([]);
+    expect(avisos).toEqual([
+      { usuarioIds: [3], tipo: 'asignacion', mensaje: 'Ya no estás asignado a Torre Norte' },
+    ]);
+    expect(audit.acciones()).toContain('sitios.eliminar_asignacion');
+    expect(bitacora.map((e) => [e.tipo, e.usuarioIds, e.detalle])).toEqual([
+      ['asignacion', [3], expect.stringMatching(/^Asignado a Torre Norte: /)],
+      ['asignacion_fin', [3], expect.stringMatching(/^Su asignación en Torre Norte termina el /)],
+      ['asignacion_fin', [3], 'Lo quitaron de Torre Norte'],
+    ]);
+    expect(bitacora[2].actorId).toBe(1);
+  });
+
+  it('elegir un turno del catálogo para una asignación anterior copia su horario y avisa', async () => {
+    await como(SUPERVISOR).post('/sitios/1/guardias', {
+      usuarioId: 3,
+      tipo: 'fija',
+      turno: '24x24',
+      horaInicio: '09:00',
+      desde: HOY,
+    });
+    avisos.length = 0;
+    const res = await como(SUPERVISOR).patch('/sitios/1/guardias/1', { turnoId: 2 });
+    expect(res.body.data).toMatchObject({
+      turno: null,
+      horas: 12,
+      dias: DIARIO,
+      horaInicio: '20:00',
+      horaFin: '08:00',
+      turnoCatalogo: { id: 2 },
+    });
+    expect(avisos[0].mensaje).toBe(
+      'Tu asignación en Torre Norte: nuevo horario: 12 h · entrada 8:00 p.m. (todos los días)',
+    );
+  });
+
+  it('guardias disponibles: con lo que ya tienen asignado; el guardia no puede verlos', async () => {
+    await asignarTurno({ turnoId: 1, guardias: [{ usuarioId: 3, desde: HOY }] });
+    const res = await como(SUPERVISOR).get('/sitios/guardias-disponibles');
+    expect(res.body.data.map((g: { nombre: string }) => g.nombre)).toEqual(['Gabriel', 'Lucía']);
+    expect(res.body.data[0].asignaciones[0]).toMatchObject({
+      sitio: { nombre: 'Torre Norte' },
+      turnoNombre: '24 h · 8:00',
+      turnoId: 1,
+    });
+    expect(res.body.data[1].asignaciones).toEqual([]);
+    expect((await como(GUARDIA).get('/sitios/guardias-disponibles')).status).toBe(403);
   });
 });

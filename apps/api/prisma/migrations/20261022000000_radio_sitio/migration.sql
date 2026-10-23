@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `sitios` ADD COLUMN `radio_m` INTEGER NOT NULL DEFAULT 100;

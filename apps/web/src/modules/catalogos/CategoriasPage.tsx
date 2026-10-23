@@ -22,6 +22,7 @@ import {
 import { ICONOS_CATEGORIA } from '../reportes/categoriaIconos';
 import { IconoCategoria } from '../reportes/etiquetas';
 import { categoriasService } from '../reportes/reportes.service';
+import { PestanasCatalogos } from './PestanasCatalogos';
 
 type Editando = { categoria: Categoria | null; padreId: number | null };
 
@@ -37,6 +38,7 @@ export function CategoriasPage() {
 
   return (
     <>
+      <PestanasCatalogos />
       <PageHeader
         title="Categorías de reporte"
         subtitle="Tipos de incidencia que eligen los guardias"

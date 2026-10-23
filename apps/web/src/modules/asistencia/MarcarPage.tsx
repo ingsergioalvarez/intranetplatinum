@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronRight,
@@ -10,6 +10,7 @@ import {
   MapPin,
   MapPinOff,
   RefreshCw,
+  ScanFace,
   TriangleAlert,
   Utensils,
   type LucideIcon,
@@ -17,11 +18,16 @@ import {
 import {
   ALERTA_MARCACION_LABEL,
   RADIO_GEOCERCA_M,
+  TIPOS_CON_FOTO,
   TIPO_MARCACION_LABEL,
+  TURNO_LABEL,
   distanciaMetros,
+  horaLegible,
+  textoDias,
   sitioMasCercano,
   type EstadoAsistencia,
   type Marcacion,
+  type SitioMarcable,
   type TipoMarcacion,
 } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
@@ -38,7 +44,13 @@ import {
   toast,
 } from '../../components/ui';
 import { asistenciaService } from './asistencia.service';
+import { CamaraMarca } from './CamaraMarca';
+import { ConsejosCamara } from './rostro/ConsejosCamara';
+import { debeMostrarConsejos } from './rostro/consejos';
+import { pedirSensorInclinacion } from './rostro/inclinacion';
+import { TurnoGuardiaCard } from './TurnoGuardia';
 import { formatDiaLargo, formatHora } from './formato';
+import { precargarMotor } from './rostro/motor';
 import { SinUbicacionError, nuevoIdMarca, obtenerUbicacion, type Ubicacion } from './ubicacion';
 
 const BOTONES: { tipo: TipoMarcacion; icon: LucideIcon }[] = [
@@ -49,16 +61,44 @@ const BOTONES: { tipo: TipoMarcacion; icon: LucideIcon }[] = [
 ];
 
 const CONFIRMAR: Record<TipoMarcacion, string> = {
-  entrada: '¿Registrar tu entrada?',
-  inicio_comida: '¿Iniciar tu comida?',
-  fin_comida: '¿Terminar tu comida?',
-  salida: '¿Registrar tu salida?',
+  entrada: '¿Checar tu entrada?',
+  inicio_comida: '¿Salir a comer?',
+  fin_comida: '¿Regresar de comer?',
+  salida: '¿Checar tu salida?',
+};
+
+/** Texto de cada botón del checador (DA-43). */
+const ACCION: Record<TipoMarcacion, string> = {
+  entrada: 'Checar entrada',
+  inicio_comida: 'Salir a comer',
+  fin_comida: 'Regresar de comer',
+  salida: 'Checar salida',
+};
+
+/** Título al terminar: "Entrada checada". */
+const CHECADA: Record<TipoMarcacion, string> = {
+  entrada: 'Entrada checada',
+  inicio_comida: 'Salida a comer checada',
+  fin_comida: 'Regreso de comer checado',
+  salida: 'Salida checada',
 };
 
 type EstadoUbicacion =
   | { estado: 'buscando' }
   | { estado: 'ok'; ubicacion: Ubicacion }
   | { estado: 'error'; error: SinUbicacionError };
+
+/** "Turno de 24 h · entrada 8:00 a.m." según la asignación del sitio (DA-32). */
+function horarioDe(s: SitioMarcable | undefined) {
+  if (!s?.horaInicio) return null;
+  if (s.horas) {
+    return `Turno de ${s.horas} h · entrada ${horaLegible(s.horaInicio)}${s.dias ? ` · ${textoDias(s.dias).toLowerCase()}` : ''}`;
+  }
+  if (s.turno === '24x24' || s.turno === '12x12') {
+    return `Turno de ${TURNO_LABEL[s.turno]} · entrada ${horaLegible(s.horaInicio)}`;
+  }
+  return s.horaFin ? `Horario ${horaLegible(s.horaInicio)} a ${horaLegible(s.horaFin)}` : null;
+}
 
 /** Sitio contra el que se mide: el de la jornada abierta o, si toca entrada, el asignado más cercano. */
 function sitioDeReferencia(data: EstadoAsistencia, ubicacion: Ubicacion | null) {
@@ -69,21 +109,58 @@ function sitioDeReferencia(data: EstadoAsistencia, ubicacion: Ubicacion | null) 
       conCoords?.lat != null && conCoords.lng != null && ubicacion
         ? distanciaMetros(ubicacion, { lat: conCoords.lat, lng: conCoords.lng })
         : null;
-    return { nombre: abierta.nombre, tieneCoords: conCoords?.lat != null, distanciaM };
+    return {
+      nombre: abierta.nombre,
+      tieneCoords: conCoords?.lat != null,
+      distanciaM,
+      radioM: conCoords?.radioM ?? RADIO_GEOCERCA_M,
+      horario: horarioDe(conCoords),
+    };
   }
   if (data.sitios.length === 0) return null;
   const cercano = ubicacion ? sitioMasCercano(data.sitios, ubicacion) : null;
   const sitio = cercano?.sitio ?? data.sitios[0];
-  return { nombre: sitio.nombre, tieneCoords: sitio.lat !== null, distanciaM: cercano?.distanciaM ?? null };
+  return {
+    nombre: sitio.nombre,
+    tieneCoords: sitio.lat !== null,
+    distanciaM: cercano?.distanciaM ?? null,
+    radioM: sitio.radioM ?? RADIO_GEOCERCA_M,
+    horario: horarioDe(sitio),
+  };
+}
+
+/** `85 m`, `2.3 km` */
+const distanciaTexto = (m: number) => (m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`);
+
+/**
+ * Entrada y salida solo dentro del sitio (DA-36): fuera del radio o con señal débil no se puede.
+ * Sin coordenadas del sitio se permite (con alerta).
+ */
+function bloqueoGps(referencia: ReturnType<typeof sitioDeReferencia>, ubicacion: Ubicacion | null) {
+  if (!referencia?.tieneCoords || !ubicacion) return null;
+  if (ubicacion.precisionM > referencia.radioM) return 'senal' as const;
+  if (referencia.distanciaM !== null && referencia.distanciaM > referencia.radioM) return 'lejos' as const;
+  return null;
 }
 
 /** Pantalla del guardia para marcar entrada, comida y salida (A-17, AS1-03). */
 export function MarcarPage() {
   const queryClient = useQueryClient();
   const estado = useQuery({ queryKey: asistenciaService.keys.estado, queryFn: asistenciaService.estado });
+  // Si le toca entrada o salida (con cámara), el reconocimiento se carga y calienta desde ya.
+  const conCamara = estado.data?.permitidas.some((t) => TIPOS_CON_FOTO.includes(t)) ?? false;
+  useEffect(() => {
+    if (!conCamara) return;
+    const t = setTimeout(precargarMotor, 800);
+    return () => clearTimeout(t);
+  }, [conCamara]);
   const [ubic, setUbic] = useState<EstadoUbicacion>({ estado: 'buscando' });
   const [pendiente, setPendiente] = useState<TipoMarcacion | null>(null);
   const [resultado, setResultado] = useState<Marcacion | null>(null);
+  /** Entrada o salida en curso con la cámara (AS1-08). */
+  const [camara, setCamara] = useState<'entrada' | 'salida' | null>(null);
+  /** Consejos antes de abrir la cámara (quitarse lentes, buena luz...). */
+  const [consejos, setConsejos] = useState<'entrada' | 'salida' | null>(null);
   const [ahora, setAhora] = useState(() => new Date());
 
   const actualizarUbicacion = useCallback(async () => {
@@ -101,6 +178,37 @@ export function MarcarPage() {
     return () => clearInterval(reloj);
   }, [actualizarUbicacion]);
 
+  const ubicacionActual = ubic.estado === 'ok' ? ubic.ubicacion : null;
+  const gpsBloquea =
+    conCamara && estado.data
+      ? bloqueoGps(sitioDeReferencia(estado.data, ubicacionActual), ubicacionActual)
+      : null;
+  useEffect(() => {
+    if (!gpsBloquea) return;
+    const t = setInterval(() => void actualizarUbicacion(), 15_000);
+    return () => clearInterval(t);
+  }, [gpsBloquea, actualizarUbicacion]);
+
+  /** Entrada o salida con foto: consejos (si no los ocultó) y luego la cámara. */
+  const abrirCamara = (tipo: 'entrada' | 'salida') => {
+    if (debeMostrarConsejos()) return setConsejos(tipo);
+    pedirSensorInclinacion();
+    setCamara(tipo);
+  };
+
+  // Desde la ventana "Tu turno empieza" (DA-40): abre directo "Checar entrada" cuando ya se sabe la
+  // ubicación y nada lo impide.
+  const [params, setParams] = useSearchParams();
+  const pideEntrada = params.get('checar') === 'entrada';
+  useEffect(() => {
+    if (!pideEntrada || !estado.data || ubic.estado === 'buscando') return;
+    setParams({}, { replace: true });
+    if (ubic.estado === 'ok' && !gpsBloquea && estado.data.permitidas.includes('entrada')) {
+      if (debeMostrarConsejos()) setConsejos('entrada');
+      else setCamara('entrada');
+    }
+  }, [pideEntrada, estado.data, ubic.estado, gpsBloquea, setParams]);
+
   const marcar = useMutation({
     mutationFn: async (tipo: TipoMarcacion) => {
       // Ubicación fresca al momento de marcar (la de la pantalla puede ser de hace un rato).
@@ -116,7 +224,7 @@ export function MarcarPage() {
     onError: (err) => {
       setPendiente(null);
       if (err instanceof SinUbicacionError) setUbic({ estado: 'error', error: err });
-      toast.error(err instanceof Error ? err.message : 'No se pudo registrar la marca');
+      toast.error(err instanceof Error ? err.message : 'No se pudo checar');
     },
   });
 
@@ -142,29 +250,38 @@ export function MarcarPage() {
   const referencia = sitioDeReferencia(data, ubicacion);
   const sinSitio = data.permitidas.includes('entrada') && data.sitios.length === 0;
   const bloqueado = sinSitio || ubic.estado === 'error';
+  const gps = bloqueoGps(referencia, ubicacion);
 
   return (
     <>
-      <PageHeader title="Marcar asistencia" subtitle={formatDiaLargo(ahora)} />
+      <PageHeader title="Checador" subtitle={formatDiaLargo(ahora)} />
 
       <div className="max-w-md space-y-4">
+        <TurnoGuardiaCard estado={data} />
         <UbicacionCard
           ubic={ubic}
           referencia={referencia}
           sinSitio={sinSitio}
+          gps={conCamara ? gps : null}
           onReintentar={() => void actualizarUbicacion()}
         />
 
         <div className="space-y-2">
           {BOTONES.map(({ tipo, icon: Icon }) => {
-            const permitido = data.permitidas.includes(tipo) && !bloqueado;
+            // Entrada y salida requieren estar en el sitio; la comida no (DA-36).
+            const permitido =
+              data.permitidas.includes(tipo) && !bloqueado && !(gps && TIPOS_CON_FOTO.includes(tipo));
             const principal = permitido && tipo === data.permitidas[0];
             return (
               <button
                 key={tipo}
                 type="button"
                 disabled={!permitido}
-                onClick={() => setPendiente(tipo)}
+                onClick={() =>
+                  TIPOS_CON_FOTO.includes(tipo)
+                    ? abrirCamara(tipo as 'entrada' | 'salida')
+                    : setPendiente(tipo)
+                }
                 className={cn(
                   'flex w-full items-center gap-3 rounded-xl px-4 font-semibold transition-colors',
                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500',
@@ -176,11 +293,27 @@ export function MarcarPage() {
                 )}
               >
                 <Icon className={principal ? 'size-6' : 'size-5'} />
-                {TIPO_MARCACION_LABEL[tipo]}
+                {ACCION[tipo]}
               </button>
             );
           })}
         </div>
+
+        {data.rostro.estado === 'pendiente' && (
+          <Aviso tono="ok" icon={ScanFace}>
+            <p className="font-medium">Tu rostro está en revisión</p>
+            <p>Puedes checar normalmente; tu supervisor lo aprobará pronto.</p>
+          </Aviso>
+        )}
+        {data.rostro.estado === 'rechazado' && (
+          <Aviso tono="warning" icon={ScanFace}>
+            <p className="font-medium">Tu registro de rostro fue rechazado</p>
+            <p>
+              {data.rostro.motivoRechazo ? `Motivo: ${data.rostro.motivoRechazo}. ` : ''}Al checar se te
+              pedirá tomarte las fotos de nuevo.
+            </p>
+          </Aviso>
+        )}
 
         <HoyCard data={data} />
 
@@ -188,7 +321,7 @@ export function MarcarPage() {
           to="/marcar/historial"
           className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-medium text-brand-700 ring-1 ring-inset ring-slate-200 active:bg-slate-50"
         >
-          Ver mis marcas <ChevronRight className="size-4" />
+          Ver mis checadas <ChevronRight className="size-4" />
         </Link>
       </div>
 
@@ -207,6 +340,31 @@ export function MarcarPage() {
         onCancel={() => setPendiente(null)}
       />
 
+      {consejos && (
+        <ConsejosCamara
+          onCancelar={() => setConsejos(null)}
+          onContinuar={() => {
+            setCamara(consejos);
+            setConsejos(null);
+          }}
+        />
+      )}
+
+      {camara && (
+        <CamaraMarca
+          tipo={camara}
+          sitio={referencia?.nombre ?? null}
+          registrarRostro={data.rostro.estado === 'sin_registro' || data.rostro.estado === 'rechazado'}
+          motivoRechazo={data.rostro.motivoRechazo}
+          onCerrar={() => setCamara(null)}
+          onRegistrada={(marca) => {
+            setCamara(null);
+            setResultado(marca);
+            void queryClient.invalidateQueries({ queryKey: asistenciaService.keys.all });
+          }}
+        />
+      )}
+
       <ResultadoModal marca={resultado} onClose={() => setResultado(null)} />
     </>
   );
@@ -216,11 +374,14 @@ function UbicacionCard({
   ubic,
   referencia,
   sinSitio,
+  gps,
   onReintentar,
 }: {
   ubic: EstadoUbicacion;
   referencia: ReturnType<typeof sitioDeReferencia>;
   sinSitio: boolean;
+  /** Bloqueo de entrada/salida por GPS (DA-36). */
+  gps: ReturnType<typeof bloqueoGps>;
   onReintentar: () => void;
 }) {
   if (sinSitio) {
@@ -250,6 +411,28 @@ function UbicacionCard({
   }
 
   const nombre = referencia?.nombre ?? '—';
+  if (gps && referencia && ubic.estado === 'ok') {
+    return (
+      <Aviso tono="error" icon={gps === 'lejos' ? MapPinOff : MapPin}>
+        <p className="font-medium">{nombre}</p>
+        {referencia.horario && <p className="text-sm opacity-90">{referencia.horario}</p>}
+        <p>
+          {gps === 'lejos'
+            ? `Estás a ${distanciaTexto(referencia.distanciaM!)} del sitio. Acércate (máximo ${referencia.radioM} m) para registrar tu entrada o salida.`
+            : `La señal de tu GPS es débil (±${Math.round(ubic.ubicacion.precisionM)} m). Sal a un lugar abierto e intenta de nuevo.`}
+        </p>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="mt-2"
+          icon={<RefreshCw className="size-4" />}
+          onClick={onReintentar}
+        >
+          Actualizar ubicación
+        </Button>
+      </Aviso>
+    );
+  }
   let detalle: React.ReactNode;
   let tono: 'ok' | 'warning' = 'ok';
   if (ubic.estado === 'buscando') {
@@ -260,10 +443,11 @@ function UbicacionCard({
     );
   } else if (!referencia?.tieneCoords) {
     tono = 'warning';
-    detalle = 'El sitio no tiene ubicación registrada; tu marca llevará una alerta.';
-  } else if (referencia.distanciaM !== null && referencia.distanciaM > RADIO_GEOCERCA_M) {
+    detalle = 'El sitio no tiene ubicación registrada; tu checada llevará una alerta.';
+  } else if (referencia.distanciaM !== null && referencia.distanciaM > referencia.radioM) {
+    // Solo llega aquí si no toca entrada ni salida (la comida se permite con alerta).
     tono = 'warning';
-    detalle = `Estás a ${referencia.distanciaM} m del sitio; tu marca llevará una alerta.`;
+    detalle = `Estás a ${distanciaTexto(referencia.distanciaM)} del sitio; tu checada llevará una alerta.`;
   } else {
     detalle = (
       <span className="flex items-center gap-1.5">
@@ -275,6 +459,7 @@ function UbicacionCard({
   return (
     <Aviso tono={tono} icon={MapPin}>
       <p className="font-medium">{nombre}</p>
+      {referencia?.horario && <p className="text-sm opacity-90">{referencia.horario}</p>}
       <div>{detalle}</div>
     </Aviso>
   );
@@ -339,7 +524,7 @@ function HoyCard({ data }: { data: EstadoAsistencia }) {
           ))}
         </ul>
       ) : (
-        <CardBody className="text-sm text-slate-500">Sin marcas todavía.</CardBody>
+        <CardBody className="text-sm text-slate-500">Sin checadas todavía.</CardBody>
       )}
     </Card>
   );
@@ -352,7 +537,7 @@ function ResultadoModal({ marca, onClose }: { marca: Marcacion | null; onClose: 
       open={marca !== null}
       onClose={onClose}
       size="sm"
-      title={marca ? `${TIPO_MARCACION_LABEL[marca.tipo]} registrada` : ''}
+      title={marca ? CHECADA[marca.tipo] : ''}
       footer={<Button onClick={onClose}>Listo</Button>}
     >
       {marca && (
