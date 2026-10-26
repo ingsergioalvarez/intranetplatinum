@@ -1071,7 +1071,7 @@ export function EscanerRostro({
                     <span className="font-semibold">
                       {objetivo.tipo === 'vertical'
                         ? objetivo.sentido === 'arriba'
-                          ? 'Mira un poco arriba'
+                          ? 'Inclina la cabeza hacia arriba'
                           : 'Baja un poco la cabeza'
                         : 'Gira la cabeza hacia la flecha'}
                     </span>

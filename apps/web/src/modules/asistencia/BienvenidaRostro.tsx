@@ -6,13 +6,15 @@ import { Button, Modal, toast } from '../../components/ui';
 import { ApiError } from '../../core/api';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { asistenciaService } from './asistencia.service';
+import { alPedirBienvenidaRostro } from './bienvenidaRostroEvento';
 import { CapturaRegistro } from './rostro/CapturaRegistro';
 import { GuiaTelefono } from './rostro/GuiaTelefono';
 import { pedirSensorInclinacion } from './rostro/inclinacion';
 import { precargarMotor } from './rostro/motor';
 import { formularioRostro } from './rostro/registro';
 
-const CLAVE = 'asistencia.bienvenidaRostro.omitida';
+/** Tras "Ahora no" vuelve a salir pasado este tiempo (o al refrescar la página). */
+const VUELVE_A_SALIR_MS = 30 * 60_000;
 
 const PASOS = [
   { icono: Glasses, texto: 'Quítate los lentes (obligatorio), la gorra y el cubrebocas' },
@@ -21,24 +23,16 @@ const PASOS = [
   { icono: ScanFace, texto: 'Sigue las flechas: son 5 fotos' },
 ];
 
-const omitida = () => {
-  try {
-    return sessionStorage.getItem(CLAVE) === '1';
-  } catch {
-    return false;
-  }
-};
-
 /**
  * Primera vez del guardia (DA-43): si no tiene rostro registrado (o se lo rechazaron), al abrir la
- * app le pide registrarlo, sin tener que buscar dónde. "Ahora no" la oculta hasta que vuelva a
- * abrir la app; al checar se le pedirá de todos modos.
+ * app le pide registrarlo, sin tener que buscar dónde. "Ahora no" la oculta 30 minutos (un refresh
+ * la vuelve a mostrar); al intentar checar sale otra vez, y también desde el aviso del Checador.
  */
 export function BienvenidaRostro() {
   const user = useAuthStore((s) => s.user);
   const esGuardia = hasRole(user, [ROLES.GUARDIA]) && hasPermission(user, PERMISOS.ASISTENCIA_MARCAR);
   const qc = useQueryClient();
-  const [cerrada, setCerrada] = useState(omitida);
+  const [cerrada, setCerrada] = useState(false);
   const [capturando, setCapturando] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
@@ -51,6 +45,15 @@ export function BienvenidaRostro() {
   const falta = !!rostro && (rostro.estado === 'sin_registro' || rostro.estado === 'rechazado');
   const visible = esGuardia && falta && !cerrada;
 
+  // Al intentar checar o tocar el aviso del Checador.
+  useEffect(() => alPedirBienvenidaRostro(() => setCerrada(false)), []);
+  // Tras "Ahora no" vuelve a salir pasado un rato.
+  useEffect(() => {
+    if (!cerrada) return;
+    const t = setTimeout(() => setCerrada(false), VUELVE_A_SALIR_MS);
+    return () => clearTimeout(t);
+  }, [cerrada]);
+
   // La cámara abre más rápido si el motor ya se está descargando.
   useEffect(() => {
     if (visible) precargarMotor();
@@ -59,11 +62,6 @@ export function BienvenidaRostro() {
   if (!visible) return null;
 
   const ahoraNo = () => {
-    try {
-      sessionStorage.setItem(CLAVE, '1');
-    } catch {
-      // Sin almacenamiento: solo se cierra por ahora.
-    }
     setCerrada(true);
   };
 

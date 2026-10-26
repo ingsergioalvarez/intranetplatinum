@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronRight,
   CircleCheck,
+  CloudOff,
   Coffee,
   LogIn,
   LogOut,
@@ -46,6 +47,7 @@ import {
 import { asistenciaService } from './asistencia.service';
 import { CamaraMarca } from './CamaraMarca';
 import { ConsejosCamara } from './rostro/ConsejosCamara';
+import { pedirBienvenidaRostro } from './bienvenidaRostroEvento';
 import { debeMostrarConsejos } from './rostro/consejos';
 import { pedirSensorInclinacion } from './rostro/inclinacion';
 import { TurnoGuardiaCard } from './TurnoGuardia';
@@ -54,6 +56,11 @@ import { formatDiaLargo, formatHora } from './formato';
 import { precargarMotor } from './rostro/motor';
 import { RelevoTurnoModal } from './RelevoTurnoModal';
 import { SinUbicacionError, nuevoIdMarca, obtenerUbicacion, type Ubicacion } from './ubicacion';
+import { ApiError } from '../../core/api';
+import { quitarMarca, useCola, type MarcaPendiente } from '../../core/offline/cola';
+import { useEnLinea } from '../../core/offline/enLinea';
+import { aplicarPendientes, comidasDe } from './estadoLocal';
+import { guardarSinConexion, type DatosSinConexion } from './marcarSinConexion';
 
 const BOTONES: { tipo: TipoMarcacion; icon: LucideIcon }[] = [
   { tipo: 'entrada', icon: LogIn },
@@ -150,8 +157,15 @@ export function MarcarPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const estado = useQuery({ queryKey: asistenciaService.keys.estado, queryFn: asistenciaService.estado });
+  // Lo que ya checó sin conexión cuenta para saber qué sigue, aunque aún no llegue al servidor (AS2-02).
+  const cola = useCola(user?.id);
+  const enLinea = useEnLinea();
+  const estadoData = useMemo(
+    () => (estado.data ? aplicarPendientes(estado.data, cola) : undefined),
+    [estado.data, cola],
+  );
   // Si le toca entrada o salida (con cámara), el reconocimiento se carga y calienta desde ya.
-  const conCamara = estado.data?.permitidas.some((t) => TIPOS_CON_FOTO.includes(t)) ?? false;
+  const conCamara = estadoData?.permitidas.some((t) => TIPOS_CON_FOTO.includes(t)) ?? false;
   useEffect(() => {
     if (!conCamara) return;
     const t = setTimeout(precargarMotor, 800);
@@ -185,8 +199,8 @@ export function MarcarPage() {
 
   const ubicacionActual = ubic.estado === 'ok' ? ubic.ubicacion : null;
   const gpsBloquea =
-    conCamara && estado.data
-      ? bloqueoGps(sitioDeReferencia(estado.data, ubicacionActual), ubicacionActual)
+    conCamara && estadoData
+      ? bloqueoGps(sitioDeReferencia(estadoData, ubicacionActual), ubicacionActual)
       : null;
   useEffect(() => {
     if (!gpsBloquea) return;
@@ -195,6 +209,11 @@ export function MarcarPage() {
   }, [gpsBloquea, actualizarUbicacion]);
 
   const abrirCamara = (tipo: 'entrada' | 'salida') => {
+    // Sin rostro registrado: primero la ventana que lo explica (con la guía del teléfono).
+    if (estadoData && (estadoData.rostro.estado === 'sin_registro' || estadoData.rostro.estado === 'rechazado')) {
+      pedirBienvenidaRostro();
+      return;
+    }
     if (debeMostrarConsejos()) {
       setConsejos(tipo);
       return;
@@ -207,19 +226,48 @@ export function MarcarPage() {
   const [params, setParams] = useSearchParams();
   const pideEntrada = params.get('checar') === 'entrada';
   useEffect(() => {
-    if (!pideEntrada || !estado.data || ubic.estado === 'buscando') return;
+    if (!pideEntrada || !estadoData || ubic.estado === 'buscando') return;
     setParams({}, { replace: true });
-    if (ubic.estado === 'ok' && !gpsBloquea && estado.data.permitidas.includes('entrada')) {
+    if (ubic.estado === 'ok' && !gpsBloquea && estadoData.permitidas.includes('entrada')) {
       setRelevo('entrada');
     }
-  }, [pideEntrada, estado.data, ubic.estado, gpsBloquea, setParams]);
+  }, [pideEntrada, estadoData, ubic.estado, gpsBloquea, setParams]);
+
+  /** Guarda en el celular una checada que no se pudo enviar (AS2-02). */
+  const guardarLocal = (d: Pick<DatosSinConexion, 'idCliente' | 'tipo' | 'ubicacion'> & Partial<DatosSinConexion>) => {
+    if (!estadoData || !user) throw new Error('No se pudo guardar la checada');
+    const abierta = estadoData.jornada && !estadoData.permitidas.includes('entrada') ? estadoData.jornada.sitio : null;
+    const cercano = sitioMasCercano(estadoData.sitios, d.ubicacion)?.sitio ?? estadoData.sitios[0];
+    const sitio = abierta ?? (cercano ? { id: cercano.id, nombre: cercano.nombre } : null);
+    return guardarSinConexion({
+      usuarioId: user.id,
+      sitio,
+      comidas: d.tipo === 'entrada' ? comidasDe(cercano?.horas) : undefined,
+      ...d,
+    });
+  };
 
   const marcar = useMutation({
     mutationFn: async (tipo: TipoMarcacion) => {
       // Ubicación fresca al momento de marcar (la de la pantalla puede ser de hace un rato).
       const ubicacion = await obtenerUbicacion({ fresca: true });
       setUbic({ estado: 'ok', ubicacion });
-      return asistenciaService.marcar({ idCliente: nuevoIdMarca(), tipo, ...ubicacion });
+      const idCliente = nuevoIdMarca();
+      // Sin conexión (o sin llegar al servidor) la comida se guarda en el celular y se envía sola.
+      if (!navigator.onLine) return guardarLocal({ idCliente, tipo, ubicacion });
+      try {
+        return await asistenciaService.marcar({
+          idCliente,
+          tipo,
+          ...ubicacion,
+          horaCelular: new Date().toISOString(),
+        });
+      } catch (err) {
+        if (err instanceof ApiError && err.code === 'NETWORK_ERROR') {
+          return guardarLocal({ idCliente, tipo, ubicacion });
+        }
+        throw err;
+      }
     },
     onSuccess: (marca) => {
       setPendiente(null);
@@ -233,7 +281,7 @@ export function MarcarPage() {
     },
   });
 
-  if (estado.isPending) {
+  if (estado.isPending || (estado.data && !estadoData)) {
     return (
       <div className="flex justify-center py-16 text-brand-600">
         <Spinner className="size-8" />
@@ -250,7 +298,7 @@ export function MarcarPage() {
     );
   }
 
-  const data = estado.data;
+  const data = estadoData!;
   const ubicacion = ubic.estado === 'ok' ? ubic.ubicacion : null;
   const referencia = sitioDeReferencia(data, ubicacion);
   const sinSitio = data.permitidas.includes('entrada') && data.sitios.length === 0;
@@ -262,6 +310,7 @@ export function MarcarPage() {
       <PageHeader title={`Hola, ${user?.nombre ?? ''}`} subtitle={formatDiaLargo(ahora)} />
 
       <div className="max-w-md space-y-4">
+        <SinConexionAviso enLinea={enLinea} pendientes={cola} />
         <TurnoGuardiaCard estado={data} />
         <UbicacionCard
           ubic={ubic}
@@ -341,13 +390,33 @@ export function MarcarPage() {
             <p>Puedes checar normalmente; tu supervisor lo aprobará pronto.</p>
           </Aviso>
         )}
+        {data.rostro.estado === 'sin_registro' && (
+          <Aviso tono="warning" icon={ScanFace}>
+            <p className="font-medium">Falta registrar tu rostro</p>
+            <p>Lo necesitas para poder checar. Solo se hace una vez.</p>
+            <button
+              type="button"
+              onClick={pedirBienvenidaRostro}
+              className="mt-2 inline-flex h-10 items-center rounded-lg bg-amber-700 px-4 font-medium text-white active:bg-amber-800"
+            >
+              Registrar mi rostro
+            </button>
+          </Aviso>
+        )}
         {data.rostro.estado === 'rechazado' && (
           <Aviso tono="warning" icon={ScanFace}>
             <p className="font-medium">Tu registro de rostro fue rechazado</p>
             <p>
-              {data.rostro.motivoRechazo ? `Motivo: ${data.rostro.motivoRechazo}. ` : ''}Al checar se te
-              pedirá tomarte las fotos de nuevo.
+              {data.rostro.motivoRechazo ? `Motivo: ${data.rostro.motivoRechazo}. ` : ''}Regístralo de nuevo
+              para poder checar.
             </p>
+            <button
+              type="button"
+              onClick={pedirBienvenidaRostro}
+              className="mt-2 inline-flex h-10 items-center rounded-lg bg-amber-700 px-4 font-medium text-white active:bg-amber-800"
+            >
+              Registrar mi rostro
+            </button>
           </Aviso>
         )}
 
@@ -393,6 +462,17 @@ export function MarcarPage() {
           registrarRostro={data.rostro.estado === 'sin_registro' || data.rostro.estado === 'rechazado'}
           motivoRechazo={data.rostro.motivoRechazo}
           onCerrar={() => setCamara(null)}
+          guardarSinConexion={(c, ubicacion, intento, idCliente) =>
+            guardarLocal({
+              idCliente,
+              tipo: camara,
+              ubicacion,
+              foto: c.foto,
+              descriptor: c.descriptor ?? undefined,
+              sinLentes: c.sinLentes,
+              intento,
+            })
+          }
           onRegistrada={(marca) => {
             setCamara(null);
             setResultado(marca);
@@ -593,7 +673,9 @@ function HoyCard({ data }: { data: EstadoAsistencia }) {
 }
 
 function ResultadoModal({ marca, onClose }: { marca: Marcacion | null; onClose: () => void }) {
-  const conAlerta = !!marca?.alertas.length;
+  // Id negativo: se guardó en el celular y aún no llega al servidor.
+  const local = !!marca && marca.id < 0;
+  const conAlerta = !!marca?.alertas.length && !local;
   return (
     <Modal
       open={marca !== null}
@@ -604,13 +686,21 @@ function ResultadoModal({ marca, onClose }: { marca: Marcacion | null; onClose: 
     >
       {marca && (
         <div className="flex flex-col items-center gap-2 py-2 text-center">
-          {conAlerta ? (
+          {local ? (
+            <CloudOff className="size-12 text-amber-500" />
+          ) : conAlerta ? (
             <TriangleAlert className="size-12 text-amber-500" />
           ) : (
             <CircleCheck className="size-12 text-emerald-600" />
           )}
           <p className="text-2xl font-bold tabular-nums text-slate-900">{formatHora(marca.registradaEn)}</p>
           {marca.sitio && <p className="text-slate-600">{marca.sitio.nombre}</p>}
+          {local && (
+            <div className="mt-2 w-full rounded-lg bg-amber-50 p-3 text-left text-sm text-amber-800">
+              <p className="font-medium">Guardada en tu celular</p>
+              <p>No hay conexión. Tu checada ya cuenta con la hora de ahora y se enviará sola cuando haya señal.</p>
+            </div>
+          )}
           {conAlerta && (
             <div className="mt-2 w-full rounded-lg bg-amber-50 p-3 text-left text-sm text-amber-800">
               <p className="font-medium">Se registró con alerta; tu supervisor la verá:</p>
@@ -624,5 +714,63 @@ function ResultadoModal({ marca, onClose }: { marca: Marcacion | null; onClose: 
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Aviso de "sin conexión" y de las checadas guardadas que aún no se envían (AS2-02). */
+function SinConexionAviso({ enLinea, pendientes }: { enLinea: boolean; pendientes: MarcaPendiente[] }) {
+  const [descartando, setDescartando] = useState<MarcaPendiente | null>(null);
+  if (enLinea && pendientes.length === 0) return null;
+  const conError = pendientes.filter((m) => m.error);
+  return (
+    <div className="space-y-2">
+      {!enLinea && (
+        <Aviso tono="warning" icon={CloudOff}>
+          <p className="font-medium">Sin conexión</p>
+          <p>Puedes checar normal: se guarda en tu celular y se envía sola cuando vuelva la señal.</p>
+        </Aviso>
+      )}
+      {pendientes.length > 0 && (
+        <div className="rounded-xl bg-white p-4 text-sm ring-1 ring-slate-200 ring-inset">
+          <p className="font-medium text-slate-900">
+            {pendientes.length === 1
+              ? '1 checada pendiente de enviar'
+              : pendientes.length + ' checadas pendientes de enviar'}
+          </p>
+          <ul className="mt-1 space-y-1">
+            {pendientes.map((m) => (
+              <li key={m.idCliente} className="flex items-center justify-between gap-2 text-slate-600">
+                <span>
+                  {CHECADA[m.tipo]} · {formatHora(m.capturadaEn)}
+                  {m.error && <span className="block text-xs text-red-700">{m.error}</span>}
+                </span>
+                {m.error && (
+                  <Button size="sm" variant="secondary" onClick={() => setDescartando(m)}>
+                    Descartar
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {conError.length > 0 && (
+            <p className="mt-2 text-xs text-red-700">
+              El servidor rechazó una checada; las siguientes esperan. Avisa a tu supervisor o descártala.
+            </p>
+          )}
+        </div>
+      )}
+      <ConfirmDialog
+        open={descartando !== null}
+        title="Descartar checada"
+        description="Esta checada no se enviará y no quedará registrada. ¿Descartarla?"
+        confirmLabel="Descartar"
+        variant="danger"
+        onConfirm={() => {
+          if (descartando) void quitarMarca(descartando.idCliente);
+          setDescartando(null);
+        }}
+        onCancel={() => setDescartando(null)}
+      />
+    </div>
   );
 }

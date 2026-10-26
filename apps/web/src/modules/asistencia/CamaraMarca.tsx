@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Info, MapPin, RotateCcw, ScanFace, ShieldAlert } from 'lucide-react';
 import { TIPO_MARCACION_LABEL, type Marcacion } from '@platinum/shared';
 import { Button, Spinner, toast } from '../../components/ui';
@@ -10,7 +10,7 @@ import { CapturaRegistro } from './rostro/CapturaRegistro';
 import { EscanerRostro, type Captura, type Titular } from './rostro/EscanerRostro';
 import { PantallaCamara } from './rostro/PantallaCamara';
 import { formularioRostro } from './rostro/registro';
-import { SinUbicacionError, nuevoIdMarca, obtenerUbicacion } from './ubicacion';
+import { SinUbicacionError, nuevoIdMarca, obtenerUbicacion, type Ubicacion } from './ubicacion';
 
 type Paso =
   | { tipo: 'registro' }
@@ -36,6 +36,7 @@ export function CamaraMarca({
   onRegistrada,
   registrarRostro = false,
   motivoRechazo = null,
+  guardarSinConexion,
 }: {
   tipo: 'entrada' | 'salida';
   sitio: string | null;
@@ -43,10 +44,13 @@ export function CamaraMarca({
   onRegistrada: (m: Marcacion) => void;
   registrarRostro?: boolean;
   motivoRechazo?: string | null;
+  /** Guarda la checada en el celular si no hay conexión (AS2-02); devuelve la marca local. */
+  guardarSinConexion?: (c: Captura, ubicacion: Ubicacion, intento: number, idCliente: string) => Promise<Marcacion>;
 }) {
   const [paso, setPaso] = useState<Paso>({ tipo: registrarRostro ? 'registro' : 'camara' });
   const [enviandoRegistro, setEnviandoRegistro] = useState(false);
   const [intento, setIntento] = useState(1);
+  const idRef = useRef('');
   const nombre = useAuthStore((s) => s.user?.nombre ?? '');
   const titulo = TIPO_MARCACION_LABEL[tipo];
 
@@ -54,7 +58,13 @@ export function CamaraMarca({
   const titular = useMemo<Titular>(
     () => ({
       nombre,
-      verificar: asistenciaService.verificarRostro,
+      // Sin conexión no se puede consultar al servidor: se sigue con el reto de vida y el antipantalla
+      // locales, y el servidor verifica el rostro al recibir la marca (AS2-03).
+      verificar: (descriptor) =>
+        asistenciaService.verificarRostro(descriptor).catch((e: unknown) => {
+          if (e instanceof ApiError && e.code === 'NETWORK_ERROR') return 'sin_rostro' as const;
+          throw e;
+        }),
       onIncidencia: (motivo, foto, descriptor) => {
         const form = new FormData();
         form.append('tipo', tipo);
@@ -75,8 +85,15 @@ export function CamaraMarca({
     setPaso({ tipo: 'verificando', captura: c });
     try {
       const ubicacion = await obtenerUbicacion({ fresca: true });
+      const idCliente = nuevoIdMarca();
+      idRef.current = idCliente;
+      if (!navigator.onLine && guardarSinConexion) {
+        onRegistrada(await guardarSinConexion(c, ubicacion, intento, idCliente));
+        return;
+      }
       const form = new FormData();
-      form.append('idCliente', nuevoIdMarca());
+      form.append('idCliente', idCliente);
+      form.append('horaCelular', new Date().toISOString());
       form.append('tipo', tipo);
       form.append('lat', String(ubicacion.lat));
       form.append('lng', String(ubicacion.lng));
@@ -87,6 +104,17 @@ export function CamaraMarca({
       form.append('foto', c.foto, 'marca.jpg');
       onRegistrada(await asistenciaService.marcarConFoto(form));
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'NETWORK_ERROR' && guardarSinConexion) {
+        // La red se cayó al enviar: se guarda con el mismo id (si la marca sí llegó, el servidor no la duplica).
+        try {
+          const ubicacion = await obtenerUbicacion();
+          const id = idRef.current;
+          onRegistrada(await guardarSinConexion(c, ubicacion, intento, id));
+          return;
+        } catch {
+          // Sin ubicación: se muestra el error de abajo.
+        }
+      }
       if (err instanceof ApiError && err.code === 'ROSTRO_DE_OTRO') {
         setPaso({
           tipo: 'bloqueado',

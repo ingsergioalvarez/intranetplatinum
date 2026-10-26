@@ -17,7 +17,36 @@ import type {
   RostroPendiente,
   RostroRegistro,
 } from '@platinum/shared';
-import { api, type ListParams } from '../../core/api';
+import { ApiError, api, type ListParams } from '../../core/api';
+import { useAuthStore } from '../../core/auth/authStore';
+
+const claveEstado = () => `offline.estado.${useAuthStore.getState().user?.id ?? 0}`;
+
+/**
+ * Estado del Checador. Se guarda la última respuesta para que, sin señal, la pantalla siga mostrando
+ * el sitio, las coordenadas y el turno (AS2-01).
+ */
+async function estadoConRespaldo() {
+  try {
+    const estado = await api.get<EstadoAsistencia>('/asistencia/estado');
+    try {
+      localStorage.setItem(claveEstado(), JSON.stringify(estado));
+    } catch {
+      // Sin almacenamiento: solo funciona con señal.
+    }
+    return estado;
+  } catch (err) {
+    if (err instanceof ApiError && err.code === 'NETWORK_ERROR') {
+      try {
+        const guardado = localStorage.getItem(claveEstado());
+        if (guardado) return JSON.parse(guardado) as EstadoAsistencia;
+      } catch {
+        // Respaldo ilegible: se informa el error de red.
+      }
+    }
+    throw err;
+  }
+}
 
 export const asistenciaService = {
   keys: {
@@ -35,7 +64,7 @@ export const asistenciaService = {
     incidenciasPorGuardia: (mes: string) => ['asistencia', 'incidencias-guardias', mes] as const,
     incidenciasMes: (params: ListParams) => ['asistencia', 'incidencias-mes', params] as const,
   },
-  estado: () => api.get<EstadoAsistencia>('/asistencia/estado'),
+  estado: estadoConRespaldo,
   /** Verificación en vivo del titular con la cámara abierta (DA-28). */
   verificarRostro: (descriptor: number[]) =>
     api

@@ -1,4 +1,5 @@
 import type { ApiResponse } from '@platinum/shared';
+import { registrarHoraServidor } from '../offline/reloj';
 import { ApiError } from './ApiError';
 
 type Query = Record<string, string | number | boolean | undefined | null>;
@@ -101,6 +102,8 @@ export class ApiClient {
       throw ApiError.network();
     }
 
+    registrarHoraServidor(res.headers.get('Date'));
+
     if (res.status === 401 && !retried && !opts.skipAuthRefresh && this.config.refreshSession) {
       if (await this.refreshOnce()) return this.request<T>(method, path, opts, true);
       this.config.onUnauthorized?.();
@@ -111,6 +114,28 @@ export class ApiClient {
     const json = (await res.json().catch(() => null)) as ApiResponse<T> | null;
     if (!res.ok || !json?.ok) throw ApiError.fromBody(res.status, json?.error);
     return json.data as T;
+  }
+
+  /** Descarga un archivo (PDF, Excel) con la sesión actual. */
+  async blob(path: string, retried = false): Promise<Blob> {
+    const headers: Record<string, string> = {};
+    const token = this.config.getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    let res: Response;
+    try {
+      res = await fetch(this.buildUrl(path), { headers, credentials: 'include' });
+    } catch {
+      throw ApiError.network();
+    }
+    if (res.status === 401 && !retried && this.config.refreshSession) {
+      if (await this.refreshOnce()) return this.blob(path, true);
+      this.config.onUnauthorized?.();
+    }
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as ApiResponse<unknown> | null;
+      throw ApiError.fromBody(res.status, json?.error);
+    }
+    return res.blob();
   }
 
   /** Varias peticiones con 401 simultáneo comparten un solo refresh. */

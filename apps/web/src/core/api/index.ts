@@ -19,9 +19,14 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       refetchOnWindowFocus: false,
-      // No reintentar errores de negocio (4xx); sí fallas de red / 5xx.
+      // Sin conexión también se intenta (el Checador usa su respaldo local, AS2-01).
+      networkMode: 'always',
+      // No reintentar errores de negocio (4xx) ni sin conexión; sí fallas de red / 5xx.
       retry: (count, error) =>
-        count < 2 && !(error instanceof ApiError && error.status >= 400 && error.status < 500),
+        count < 2 &&
+        navigator.onLine &&
+        !(error instanceof ApiError && error.status >= 400 && error.status < 500),
     },
+    mutations: { networkMode: 'always' },
   },
 });

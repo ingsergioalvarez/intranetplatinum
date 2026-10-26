@@ -8,6 +8,8 @@ import {
   JORNADA_MAX_HORAS,
   RADIO_GEOCERCA_M,
   TOLERANCIA_RETARDO_MIN,
+  DESFASE_RELOJ_MAX_SEG,
+  HORAS_MAX_SIN_CONEXION,
   esTurnoJornada,
   horaLegible,
   ROLES,
@@ -327,7 +329,7 @@ function turnosDelGuardia(sitios: SitioMarcable[], ahora: Date) {
         desde: s.desde ?? fecha,
         hasta: s.hasta ?? null,
       };
-      if (!trabajaEl(fecha, patron)) continue;
+      if (!trabajaEl(fecha, patron) || s.pausas?.includes(fecha)) continue;
       const entrada = new Date(inicioDelDia(fecha).getTime() + minutos * 60_000);
       turnos.push({
         sitio: { id: s.id, nombre: s.nombre, lat: s.lat, lng: s.lng, radioM: s.radioM ?? null },
@@ -352,6 +354,7 @@ const MARGEN_TURNO_MS = 3 * 3_600_000;
 function leTocaAhora(s: SitioMarcable, ahora: Date) {
   const p = programarTurno(s, ahora);
   if (!p || Math.abs(ahora.getTime() - p.entrada.getTime()) > MARGEN_TURNO_MS) return false;
+  if (s.pausas?.includes(hoyISO(undefined, p.entrada))) return false;
   if (!s.desde || !s.tipo) return true;
   return trabajaEl(hoyISO(undefined, p.entrada), {
     tipo: s.tipo,
@@ -466,7 +469,23 @@ export class AsistenciaService extends BaseService {
     if (!permitidas.includes(data.tipo)) throw fueraDeOrden(data.tipo, permitidas);
 
     const punto = { lat: data.lat, lng: data.lng };
-    const ahora = this.ahora();
+    // Marca hecha sin conexión (AS2-02): la hora es la estimada por el celular (reloj corregido con la
+    // última hora del servidor), nunca en el futuro. El resto de la marca se valida igual, pero lo que
+    // ya no se puede corregir (está lejos, rostro dudoso) queda como alerta en vez de rechazarse.
+    const recibida = this.ahora();
+    const sinConexion = !!data.capturadaEn;
+    const capturada = data.capturadaEn ? new Date(data.capturadaEn) : null;
+    const ahora = capturada && capturada.getTime() < recibida.getTime() ? capturada : recibida;
+    const alertasDeHora: AlertaMarcacion[] = [];
+    if (sinConexion) alertasDeHora.push('enviada_sin_conexion');
+    let desfaseSeg: number | null = null;
+    if (data.horaCelular) {
+      desfaseSeg = Math.round((Date.parse(data.horaCelular) - ahora.getTime()) / 1000);
+      if (Math.abs(desfaseSeg) > DESFASE_RELOJ_MAX_SEG) alertasDeHora.push('hora_desfasada');
+    }
+    if (sinConexion && recibida.getTime() - ahora.getTime() > HORAS_MAX_SIN_CONEXION * 3_600_000) {
+      if (!alertasDeHora.includes('hora_desfasada')) alertasDeHora.push('hora_desfasada');
+    }
     let sitio: { id: number; nombre?: string } | null;
     let distanciaM: number | null;
     let radio: number;
@@ -492,7 +511,7 @@ export class AsistenciaService extends BaseService {
     }
 
     // Entrada y salida solo dentro del sitio (DA-36). Sin coordenadas se permite con alerta.
-    if (TIPOS_CON_FOTO.includes(data.tipo) && distanciaM !== null) {
+    if (TIPOS_CON_FOTO.includes(data.tipo) && distanciaM !== null && !sinConexion) {
       const accion = data.tipo === 'entrada' ? 'tu entrada' : 'tu salida';
       if (data.precisionM > radio) {
         throw new HttpError(
@@ -525,7 +544,7 @@ export class AsistenciaService extends BaseService {
       }
     }
 
-    const alertas: AlertaMarcacion[] = [];
+    const alertas: AlertaMarcacion[] = [...alertasDeHora];
     if (distanciaM === null) alertas.push('sitio_sin_ubicacion');
     else if (distanciaM > radio) alertas.push('fuera_de_rango');
     if (data.precisionM > radio) alertas.push('gps_impreciso');
@@ -556,18 +575,24 @@ export class AsistenciaService extends BaseService {
           { buffer: foto.buffer, mime },
           ctx,
         );
-        throw new HttpError(
-          409,
-          'ROSTRO_DE_OTRO',
-          'El rostro frente a la cámara no corresponde al titular de esta cuenta',
-        );
+        if (!sinConexion) {
+          throw new HttpError(
+            409,
+            'ROSTRO_DE_OTRO',
+            'El rostro frente a la cámara no corresponde al titular de esta cuenta',
+          );
+        }
+        alertas.push('rostro_no_coincide');
       }
 
       if (!propio) {
         alertas.push('sin_rostro_registrado');
       } else {
         if (distancia === null || distancia > UMBRAL_ROSTRO) {
-          throw new HttpError(422, 'ROSTRO_NO_COINCIDE', 'No pudimos confirmar que seas el titular');
+          if (!sinConexion) {
+            throw new HttpError(422, 'ROSTRO_NO_COINCIDE', 'No pudimos confirmar que seas el titular');
+          }
+          if (!alertas.includes('rostro_no_coincide')) alertas.push('rostro_no_coincide');
         }
         if (propio.estado === 'pendiente') alertas.push('rostro_pendiente');
       }
@@ -593,6 +618,10 @@ export class AsistenciaService extends BaseService {
       ...evidencia,
       programadaEntrada: programada?.entrada ?? null,
       programadaSalida: programada?.salida ?? null,
+      ...(sinConexion ? { registradaEn: ahora } : {}),
+      recibidaEn: recibida,
+      horaCelular: data.horaCelular ? new Date(data.horaCelular) : null,
+      desfaseSeg,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
     };
@@ -1503,7 +1532,7 @@ export class AsistenciaService extends BaseService {
   private async sitiosMarcables(usuarioId: number): Promise<SitioMarcable[]> {
     const mios = await this.misSitios(usuarioId, this.hoy());
     return mios.map(
-      ({ sitio, cliente, turno, horaInicio, horaFin, horas, dias, tipo, desde, hasta, cobertura }) => ({
+      ({ sitio, cliente, turno, horaInicio, horaFin, horas, dias, tipo, desde, hasta, cobertura, pausas }) => ({
         id: sitio.id,
         nombre: sitio.nombre,
         cliente: cliente.nombreComercial,
@@ -1519,6 +1548,7 @@ export class AsistenciaService extends BaseService {
         desde,
         hasta,
         cobertura: cobertura && { motivo: cobertura.motivo, cubreA: cobertura.cubreA },
+        pausas,
       }),
     );
   }

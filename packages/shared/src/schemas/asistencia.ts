@@ -54,6 +54,8 @@ export const ALERTAS_MARCACION = [
   'salida_anticipada',
   'sin_lentes_declarado',
   'cerrada_por_supervisor',
+  'enviada_sin_conexion',
+  'hora_desfasada',
 ] as const;
 export type AlertaMarcacion = (typeof ALERTAS_MARCACION)[number];
 
@@ -68,8 +70,15 @@ export const ALERTA_MARCACION_LABEL: Record<AlertaMarcacion, string> = {
   retardo: 'Retardo',
   salida_anticipada: 'Salida anticipada',
   cerrada_por_supervisor: 'Jornada cerrada por un supervisor',
+  enviada_sin_conexion: 'Checada hecha sin conexión y enviada después',
+  hora_desfasada: 'La hora del celular no coincide con la del servidor',
   sin_lentes_declarado: 'Dijo que no traía lentes (el sistema detectó lentes)',
 };
+
+/** Diferencia entre el reloj del celular y el del servidor a partir de la cual se alerta (AS2-04). */
+export const DESFASE_RELOJ_MAX_SEG = 300;
+/** Una marca hecha sin conexión que tarda más en llegar se marca como sospechosa (AS2-02). */
+export const HORAS_MAX_SIN_CONEXION = 72;
 
 /** Minutos de tolerancia en la entrada y la salida (DA-33). */
 export const TOLERANCIA_RETARDO_MIN = 10;
@@ -299,6 +308,8 @@ export interface SitioMarcable {
   hasta?: string | null;
   /** Lo cubre ese día (DA-39): motivo y a quién cubre. */
   cobertura?: { motivo: string; cubreA: string | null } | null;
+  /** Días en que no le toca por un cambio de turno aprobado (TC-22). */
+  pausas?: string[];
 }
 
 /** Turno del guardia (DA-40): para "Tu turno empieza a las…" y "Descansas hoy, tu próximo turno…". */
@@ -343,6 +354,13 @@ export const marcacionCreateSchema = z.object({
   descriptor: desdeJson(descriptorSchema).optional(),
   /** Tocó "No traigo lentes" aunque la cámara detectaba lentes (DA-44): la marca lleva alerta. */
   sinLentes: z.stringbool().optional(),
+  /** Hora del reloj del celular al checar (ISO); el servidor la compara con la suya (AS2-04). */
+  horaCelular: z.iso.datetime({ offset: true }).optional(),
+  /**
+   * Solo si se checó sin conexión: hora estimada de la checada (reloj corregido con la última hora del
+   * servidor). Entra como hora de la marca, nunca en el futuro ni más de 72 h atrás (AS2-02).
+   */
+  capturadaEn: z.iso.datetime({ offset: true }).optional(),
 });
 export type MarcacionCreate = z.input<typeof marcacionCreateSchema>;
 export type MarcacionCreateData = z.output<typeof marcacionCreateSchema>;

@@ -1,6 +1,25 @@
 import type { AuthSession, CambiarPasswordInput, LoginInput } from '@platinum/shared';
-import { api, queryClient, type ApiClient } from '../api';
+import { ApiError, api, queryClient, type ApiClient } from '../api';
 import { useAuthStore } from './authStore';
+
+const PERFIL = 'offline.perfil';
+
+/** Perfil del guardia para abrir el Checador sin señal (AS2-01); las checadas se envían al volver la red. */
+const guardarPerfil = (user: AuthSession['user']) => {
+  try {
+    if (user.rol === 'guardia') localStorage.setItem(PERFIL, JSON.stringify(user));
+    else localStorage.removeItem(PERFIL);
+  } catch {
+    // Sin almacenamiento: sin modo sin señal.
+  }
+};
+const leerPerfil = (): AuthSession['user'] | null => {
+  try {
+    return JSON.parse(localStorage.getItem(PERFIL) ?? 'null');
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Sesión del lado del cliente. El access token vive en memoria (store) y el refresh token
@@ -8,6 +27,8 @@ import { useAuthStore } from './authStore';
  */
 export class AuthService {
   private refreshing: Promise<boolean> | null = null;
+  /** El último intento de renovar falló por falta de red (no porque la sesión expiró). */
+  private sinRed = false;
 
   constructor(private readonly http: ApiClient) {
     http.setRefreshSession(() => this.refresh());
@@ -34,7 +55,10 @@ export class AuthService {
         this.aplicar(sesion);
         return true;
       })
-      .catch(() => false)
+      .catch((e) => {
+        this.sinRed = e instanceof ApiError && e.code === 'NETWORK_ERROR';
+        return false;
+      })
       .finally(() => {
         this.refreshing = null;
       });
@@ -46,7 +70,13 @@ export class AuthService {
     const store = useAuthStore.getState();
     store.setRestoring(true);
     try {
-      if (!(await this.refresh())) store.clear();
+      if (!(await this.refresh())) {
+        // Sin señal al abrir: el guardia entra con su perfil guardado para poder checar; la sesión real
+        // se renueva sola cuando vuelva la red (las checadas pendientes se envían entonces).
+        const perfil = this.sinRed ? leerPerfil() : null;
+        if (perfil) store.setSession(perfil, '');
+        else store.clear();
+      }
     } finally {
       store.setRestoring(false);
     }
@@ -59,11 +89,17 @@ export class AuthService {
     } catch {
       // Sin red: la cookie expira sola; la sesión local se cierra igual.
     }
+    try {
+      localStorage.removeItem(PERFIL);
+    } catch {
+      // Nada que limpiar.
+    }
     useAuthStore.getState().logout();
     queryClient.clear();
   }
 
   private aplicar({ user, accessToken }: AuthSession) {
+    guardarPerfil(user);
     useAuthStore.getState().setSession(user, accessToken);
   }
 }

@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardList, MapPin, Navigation, Shuffle, UsersRound } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRightLeft, ClipboardList, MapPin, Navigation, Shuffle, UsersRound } from 'lucide-react';
 import { TIPO_ASIGNACION_LABEL } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
-import { Badge, Card, EmptyState, Spinner } from '../../components/ui';
+import { Badge, Button, Card, CardHeader, EmptyState, Spinner } from '../../components/ui';
+import { cambiosService } from '../cambios/cambios.service';
+import { ListaCambios } from '../cambios/ListaCambios';
+import { SolicitarCambioModal } from '../cambios/SolicitarCambioModal';
 import { mapsUrl } from '../../core/format/mapas';
 import { describirAsignacion } from '../clientes/asignaciones';
 import { sitiosService } from '../clientes/clientes.service';
@@ -17,6 +21,14 @@ const accion =
  */
 export function MisSitiosPage() {
   const mios = useQuery({ queryKey: sitiosService.keys.mios, queryFn: sitiosService.mios });
+  const [pidiendo, setPidiendo] = useState(false);
+  // Cambios de turno (TC-22): lo que pidió, lo que le aprobaron y lo que lo involucra.
+  const params = { page: 1, limit: 8 };
+  const cambios = useQuery({
+    queryKey: cambiosService.keys.list(params),
+    queryFn: () => cambiosService.list(params),
+    refetchInterval: 60_000,
+  });
 
   return (
     <>
@@ -83,7 +95,27 @@ export function MisSitiosPage() {
             </Card>
           ))
         )}
+
+        <Card>
+          <CardHeader
+            title="Cambios de turno"
+            subtitle="Pide que te cubran o mueve tu descanso"
+            actions={
+              <Button size="sm" icon={<ArrowRightLeft className="size-4" />} onClick={() => setPidiendo(true)}>
+                Solicitar
+              </Button>
+            }
+          />
+          {cambios.isPending ? (
+            <div className="flex justify-center py-6 text-brand-600">
+              <Spinner className="size-5" />
+            </div>
+          ) : (
+            <ListaCambios cambios={cambios.data?.items ?? []} esGuardia />
+          )}
+        </Card>
       </div>
+      {pidiendo && <SolicitarCambioModal comoGuardia onClose={() => setPidiendo(false)} />}
     </>
   );
 }

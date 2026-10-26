@@ -13,3 +13,5 @@ export * from './schemas/asistencia';
 export * from './schemas/turnos';
 export * from './schemas/bitacora';
 export * from './schemas/coberturas';
+export * from './schemas/informes';
+export * from './schemas/cambios';

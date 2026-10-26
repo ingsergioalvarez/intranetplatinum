@@ -5,6 +5,36 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-26 #17 — Cambios de turno (DA-54, TC-22)
+
+#### Añadido
+
+- Módulo `cambios` (`/api/cambios-turno`): el guardia pide, el supervisor aprueba (o hace el cambio directo); tipos cubrir y mover descanso, con motivo; cancelar y deshacer; avisos y bitácora. Tablas `cambios_turno` y `pausas_turno`.
+- Las pausas por cambio de turno las respetan vigilancia (faltas), tablero, reporte oficial, candidatos de cobertura y el próximo turno del guardia.
+- Web: "Cambios de turno" (por aprobar / todos) en Asistencia, con contador; sección y botón "Solicitar" en Mis sitios del guardia.
+
+### Sesión 2026-10-26 #16 — Checar sin señal y app instalable (DA-53, AS2-01..AS2-04, F4-01)
+
+#### Añadido
+
+- PWA con `vite-plugin-pwa`: manifest, iconos, service worker; los modelos de reconocimiento se guardan al abrir el Checador.
+- Cola de checadas sin conexión en IndexedDB (`core/offline`), envío automático en orden y sin duplicados, aviso "Sin conexión" y "Pendiente de enviar", y qué sigue calculado en el celular.
+- Reloj corregido con la hora del servidor; la marca guarda hora del celular, de recepción y desfase (`recibida_en`, `hora_celular`, `desfase_seg`) y alertas `enviada_sin_conexion` / `hora_desfasada`.
+- Sin conexión, lo no corregible (lejos, GPS débil, rostro dudoso) se registra con alerta; el servidor verifica el rostro al recibir.
+- El guardia abre la app sin señal con su perfil guardado.
+
+### Sesión 2026-10-26 #15 — Reporte oficial de asistencia (DA-52, TC-42)
+
+#### Añadido
+
+- Reporte de asistencia personal y general (periodo libre ≤ 31 días), congelado con folio `ASIS-AAAA-NNNNNN`, huella SHA-256, QR y verificación pública `/verificar/:folio`; reemplazo por folio nuevo e idempotencia por huella (`apps/api/src/modules/informes`, tabla `informes_asistencia`).
+- PDF oficial corporativo (pdfkit) y Excel de trabajo no oficial (exceljs); dependencias `pdfkit`, `qrcode`, `exceljs`.
+- Web: "Reportes emitidos" (tabla de solo lectura con columna Acciones: Ver · PDF · Excel), "Nuevo reporte", vista del reporte congelado, página pública de verificación, botón "Reporte" y sección en la ficha del guardia. `DataTable` acepta `actionsHeader`; `ApiClient.blob` para descargas con sesión.
+
+#### Notas
+
+- `npm audit`: `uuid@8.3.2` (moderado) llega por exceljs; solo afecta a `v3/v5/v6` con búfer, que no se usan.
+
 ### Sesión 2026-10-23 / 2026-10-26 #14 — Reportes, Relevo de Consignas y Portal de Clientes (REP-01..REP-09, P-05, DA-47, DA-48)
 
 Detalle en [REPORTES.md](docs/REPORTES.md) y [DECISIONES.md](docs/DECISIONES.md).

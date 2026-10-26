@@ -11,3 +11,6 @@ uploads/
 
 # Prisma (código generado)
 apps/api/src/generated/
+
+# PWA en desarrollo
+dev-dist/

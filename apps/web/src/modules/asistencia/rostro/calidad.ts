@@ -172,10 +172,10 @@ export function evaluarPose(
     const arriba = objetivo.sentido === 'arriba';
     if (arriba ? relativo > 0.85 : relativo < 1.15) {
       mirada = 'desviada';
-      instruccion ??= arriba ? 'Mira un poco hacia arriba' : 'Baja un poco la cabeza';
+      instruccion ??= arriba ? 'Inclina la cabeza un poco hacia arriba' : 'Baja un poco la cabeza';
     } else if (arriba ? relativo < 0.55 : relativo > 1.5) {
       mirada = 'desviada';
-      instruccion ??= arriba ? 'No tanto: sube un poco menos' : 'No tanto: baja un poco menos';
+      instruccion ??= arriba ? 'No tanto: inclina la cabeza un poco menos' : 'No tanto: baja un poco menos';
     }
   }
   return { posicion, mirada, instruccion, giro };

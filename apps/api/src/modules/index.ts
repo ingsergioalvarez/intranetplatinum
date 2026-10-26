@@ -5,11 +5,13 @@ import { asistenciaModule } from './asistencia';
 import { authModule } from './auth';
 import { avisosModule } from './avisos';
 import { bitacoraModule } from './bitacora';
+import { cambiosModule } from './cambios';
 import { categoriasModule } from './categorias';
 import { clientesModule } from './clientes';
 import { coberturasModule } from './coberturas';
 import { gruposModule } from './grupos';
 import { healthModule } from './health';
+import { informesModule } from './informes';
 import { reportesModule } from './reportes';
 import { sitiosModule } from './sitios';
 import { turnosModule } from './turnos';
@@ -23,6 +25,7 @@ export const modules: AppModule[] = [
   clientesModule,
   sitiosModule,
   coberturasModule,
+  cambiosModule,
   turnosModule,
   gruposModule,
   categoriasModule,
@@ -31,5 +34,6 @@ export const modules: AppModule[] = [
   avisosModule,
   asistenciaModule,
   bitacoraModule,
+  informesModule,
   adminModule,
 ];

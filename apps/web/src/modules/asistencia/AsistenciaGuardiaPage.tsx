@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronLeft,
+  FileText,
   ChevronRight,
   Lock,
   MapPin,
@@ -34,6 +35,7 @@ import {
   Badge,
   Button,
   Card,
+  CardHeader,
   DataTable,
   EmptyState,
   Modal,
@@ -47,6 +49,8 @@ import { describirAsignacion } from '../clientes/asignaciones';
 import { asistenciaService } from './asistencia.service';
 import { CerrarJornadaModal } from './CerrarJornadaModal';
 import { BitacoraGuardia, ListaEventos, type FiltroBitacora } from './BitacoraGuardia';
+import { NuevoInformeModal } from '../informes/NuevoInformeModal';
+import { TablaInformes } from '../informes/TablaInformes';
 import { EstadoJornada } from './EstadoJornada';
 import { formatDia, formatDuracion, formatHora, formatMes, horasEsperadas, moverMes } from './formato';
 import { HoraMarca } from './HoraMarca';
@@ -239,6 +243,8 @@ export function AsistenciaGuardiaPage() {
   // Admin y supervisor pueden cerrar una jornada sin salida (DA-49).
   const puedeCerrar = user?.rol === ROLES.ADMIN || user?.rol === ROLES.SUPERVISOR;
   const [cerrando, setCerrando] = useState<Jornada | null>(null);
+  // Reporte oficial de asistencia de este guardia (DA-52).
+  const [reportando, setReportando] = useState(false);
   // Jornada de la que se ven sus incidencias (se recalculan de la bitácora al comentar o justificar).
   const [conIncidencias, setConIncidencias] = useState<Jornada | null>(null);
 
@@ -307,7 +313,21 @@ export function AsistenciaGuardiaPage() {
       <PageHeader
         title={ficha.data?.guardia.nombre ?? 'Guardia'}
         subtitle={ficha.data?.guardia.email}
-        actions={selectorMes}
+        actions={
+          <>
+            {selectorMes}
+            {puedeCerrar && (
+              <Button
+                variant="secondary"
+                icon={<FileText className="size-4" />}
+                aria-label="Reporte de asistencia"
+                onClick={() => setReportando(true)}
+              >
+                <span className="hidden sm:inline">Reporte</span>
+              </Button>
+            )}
+          </>
+        }
       />
 
       {ficha.isPending ? (
@@ -425,8 +445,25 @@ export function AsistenciaGuardiaPage() {
                 onFiltro={verBitacora}
               />
             )}
+
+            {puedeCerrar && (
+              <Card>
+                <CardHeader
+                  title="Reportes emitidos"
+                  subtitle="Reportes oficiales de asistencia de este guardia"
+                />
+                <TablaInformes guardiaId={id} filtros={false} />
+              </Card>
+            )}
           </section>
         </div>
+      )}
+
+      {reportando && (
+        <NuevoInformeModal
+          guardia={{ id, nombre: ficha.data?.guardia.nombre ?? 'Guardia' }}
+          onClose={() => setReportando(false)}
+        />
       )}
 
       {cerrando && (

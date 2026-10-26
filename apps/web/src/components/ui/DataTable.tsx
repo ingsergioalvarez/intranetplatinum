@@ -22,6 +22,8 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   /** Acciones por fila (botones), visibles en tabla y tarjeta. */
   actions?: (row: T) => ReactNode;
+  /** Título visible de la columna de acciones (por omisión va vacía, solo con aria-label). */
+  actionsHeader?: string;
 }
 
 /** Tabla en escritorio y lista de tarjetas en celular, con la misma definición de columnas. */
@@ -34,6 +36,7 @@ export function DataTable<T>({
   emptyDescription,
   onRowClick,
   actions,
+  actionsHeader,
 }: DataTableProps<T>) {
   if (loading) {
     return (
@@ -98,7 +101,15 @@ export function DataTable<T>({
                   {c.header}
                 </th>
               ))}
-              {actions && <th className="px-4 py-3" aria-label="Acciones" />}
+              {actions && (
+                <th
+                  scope="col"
+                  className={cn('px-4 py-3', actionsHeader && 'text-right font-semibold text-slate-600')}
+                  aria-label={actionsHeader ? undefined : 'Acciones'}
+                >
+                  {actionsHeader}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">

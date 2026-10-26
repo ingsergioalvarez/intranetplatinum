@@ -419,6 +419,14 @@ export class PrismaSitiosRepository extends SitiosRepository {
       );
     }
 
+    const ayer = new Date(fechaADate(hoy).getTime() - 86_400_000);
+    const enDosSemanas = new Date(fechaADate(hoy).getTime() + 15 * 86_400_000);
+    const pausas = (
+      await getPrisma().pausaTurno.findMany({
+        where: { usuarioId, fecha: { gte: ayer, lte: enDosSemanas } },
+        select: { fecha: true },
+      })
+    ).map((p) => dateAFecha(p.fecha));
     const vistos = new Set<number>();
     return rows
       .filter((r) => (vistos.has(r.sitio.id) ? false : (vistos.add(r.sitio.id), true)))
@@ -451,6 +459,7 @@ export class PrismaSitiosRepository extends SitiosRepository {
           hasta: fecha(hasta),
           sitio: { ...sitio, lat: lat === null ? null : Number(lat), lng: lng === null ? null : Number(lng) },
           cliente,
+          pausas,
         }),
       );
   }

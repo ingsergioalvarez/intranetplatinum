@@ -1,11 +1,13 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { KeyRound, LogOut, ShieldCheck } from 'lucide-react';
+import { Ellipsis, KeyRound, LogOut, ShieldCheck } from 'lucide-react';
 import { ROL_DESCRIPCIONES, type BandejaAvisos } from '@platinum/shared';
 import { api } from '../../core/api';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
-import { cn } from '../ui';
+import { Modal, cn } from '../ui';
+import { useSincronizacion } from '../../core/offline/sincronizar';
 import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
 import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
 import { Campanita } from './Campanita';
@@ -133,9 +135,18 @@ function Topbar() {
   );
 }
 
+const MAX_BARRA = 5;
+
 function BottomNav() {
-  const items = useVisibleNav().slice(0, 5);
+  const todos = useVisibleNav();
   const reportesNoLeidos = useReportesNoLeidos();
+  const { pathname } = useLocation();
+  const [masAbierto, setMasAbierto] = useState(false);
+  // Si no caben todos, la barra lleva los primeros y el resto va en la hoja "Más".
+  const desborda = todos.length > MAX_BARRA;
+  const items = desborda ? todos.slice(0, MAX_BARRA - 1) : todos;
+  const resto = desborda ? todos.slice(MAX_BARRA - 1) : [];
+  const enResto = resto.some((i) => (i.to === '/' ? pathname === '/' : pathname.startsWith(i.to)));
 
   return (
     <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white md:hidden">
@@ -177,13 +188,57 @@ function BottomNav() {
             </li>
           );
         })}
+        {desborda && (
+          <li className="flex-1">
+            <button
+              type="button"
+              onClick={() => setMasAbierto(true)}
+              aria-haspopup="dialog"
+              className="flex h-16 w-full flex-col items-center justify-center gap-0.5 text-[11px]"
+            >
+              <div
+                className={cn(
+                  'flex h-8 w-14 items-center justify-center rounded-full transition-colors',
+                  enResto ? 'bg-brand-700 text-white' : 'text-slate-500',
+                )}
+              >
+                <Ellipsis className="size-6" />
+              </div>
+              <span className={enResto ? 'font-bold text-brand-700' : 'font-medium text-slate-500'}>Más</span>
+            </button>
+          </li>
+        )}
       </ul>
+      <Modal open={masAbierto} onClose={() => setMasAbierto(false)} title="Más módulos" size="sm">
+        <ul className="-mx-2 space-y-1">
+          {resto.map(({ to, label, icon: Icon }) => (
+            <li key={to}>
+              <NavLink
+                to={to}
+                onClick={() => setMasAbierto(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex h-12 items-center gap-3 rounded-lg px-3 text-base font-medium',
+                    isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 active:bg-slate-100',
+                  )
+                }
+              >
+                <Icon className="size-5" />
+                {label}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </Modal>
     </nav>
   );
 }
 
 /** Estructura principal: sidebar en escritorio; topbar + navegación inferior en celular. */
 export function AppShell() {
+  // Envía las checadas guardadas sin conexión al abrir la app y al volver la señal (AS2-02).
+  const user = useAuthStore((s) => s.user);
+  useSincronizacion(user?.rol === 'guardia' ? user.id : undefined);
   return (
     <div className="flex min-h-dvh">
       <Sidebar />

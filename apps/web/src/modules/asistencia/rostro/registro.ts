@@ -9,7 +9,7 @@ import type { Objetivo } from './calidad';
 export const PASOS_REGISTRO: { texto: string; objetivo: (previas: Captura[]) => Objetivo }[] = [
   { texto: 'Mira de frente', objetivo: () => ({ tipo: 'frente' }) },
   {
-    texto: 'Mira un poco hacia arriba',
+    texto: 'Inclina la cabeza un poco hacia arriba',
     objetivo: (previas) => ({ tipo: 'vertical', sentido: 'arriba', base: previas[0]?.cabeceo ?? null }),
   },
   { texto: 'Gira un poco hacia la flecha', objetivo: () => ({ tipo: 'lado', signo: 1 }) },

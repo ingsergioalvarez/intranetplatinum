@@ -335,6 +335,8 @@ export interface MiSitio {
   cliente: { id: number; nombreComercial: string };
   /** Cubre este sitio (DA-39): mientras dura, sus sitios propios quedan en pausa. */
   cobertura?: { id: number; motivo: string; cubreA: string | null } | null;
+  /** Días próximos en que no le toca por un cambio de turno aprobado (TC-22). */
+  pausas?: string[];
 }
 
 // ---------- Grupos de guardias (F2-06) ----------

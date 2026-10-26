@@ -1550,3 +1550,71 @@ describe('asistencia: avisos con lógica, por umbral o por patrón (DA-33)', () 
     ]);
   });
 });
+
+describe('asistencia: marcas hechas sin conexión (AS2-02, AS2-04)', () => {
+  const hora = (min: number) => new Date(ahora.getTime() + min * 60_000).toISOString();
+
+  it('la marca entra con la hora que estimó el celular y queda marcada "sin conexión"', async () => {
+    ahora = new Date('2026-10-20T14:30:00.000Z'); // llega 90 min después de lo que checó
+    const capturada = hora(-90);
+    const res = await marcar(10, marca('entrada', PLAZA, 15, { capturadaEn: capturada, horaCelular: capturada }));
+    expect(res.status).toBe(201);
+    expect(res.body.data.registradaEn).toBe(capturada);
+    expect(res.body.data.alertas).toContain('enviada_sin_conexion');
+    expect(res.body.data.alertas).not.toContain('hora_desfasada');
+    expect(repo.marcas[0]).toMatchObject({ recibidaEn: ahora, desfaseSeg: 0 });
+  });
+
+  it('no acepta una hora en el futuro: usa la de recepción', async () => {
+    const futura = hora(60);
+    const res = await marcar(10, marca('entrada', PLAZA, 15, { capturadaEn: futura }));
+    expect(res.body.data.registradaEn).toBe(ahora.toISOString());
+  });
+
+  it('si el reloj del celular no coincide con el corregido, alerta de hora desfasada', async () => {
+    const res = await marcar(
+      10,
+      marca('entrada', PLAZA, 15, { capturadaEn: hora(-10), horaCelular: hora(-10 + 60) }),
+    );
+    expect(res.body.data.alertas).toEqual(expect.arrayContaining(['enviada_sin_conexion', 'hora_desfasada']));
+    expect((repo.marcas[0] as unknown as { desfaseSeg: number }).desfaseSeg).toBe(3600);
+  });
+
+  it('en línea, un reloj desfasado también se alerta', async () => {
+    const res = await marcar(10, marca('entrada', PLAZA, 15, { horaCelular: hora(-30) }));
+    expect(res.body.data.alertas).toEqual(['hora_desfasada']);
+  });
+
+  it('más de 72 h para llegar: se marca como sospechosa', async () => {
+    const res = await marcar(10, marca('entrada', PLAZA, 15, { capturadaEn: hora(-73 * 60) }));
+    expect(res.body.data.alertas).toContain('hora_desfasada');
+  });
+
+  it('sin conexión, estar lejos o con GPS débil se registra con alerta en vez de rechazarse', async () => {
+    const lejos = { lat: PLAZA.lat + 0.002, lng: PLAZA.lng };
+    const res = await marcar(10, marca('entrada', lejos, 250, { capturadaEn: hora(-5) }));
+    expect(res.status).toBe(201);
+    expect(res.body.data.alertas).toEqual(
+      expect.arrayContaining(['enviada_sin_conexion', 'fuera_de_rango', 'gps_impreciso']),
+    );
+  });
+
+  it('sin conexión, un rostro que no coincide se registra con alerta (y en línea se rechaza)', async () => {
+    const otro = CARA_DE[11] ?? CARA_DE[10].map((x) => x + 1);
+    const enLinea = await marcar(10, marca('entrada'), { descriptor: otro });
+    expect(enLinea.status).toBeGreaterThanOrEqual(409);
+    const sinConexion = await marcar(10, marca('entrada', PLAZA, 15, { capturadaEn: hora(-5) }), {
+      descriptor: otro,
+    });
+    expect(sinConexion.status).toBe(201);
+    expect(sinConexion.body.data.alertas).toContain('rostro_no_coincide');
+  });
+
+  it('reenviar la misma marca no la duplica', async () => {
+    const b = marca('entrada', PLAZA, 15, { capturadaEn: hora(-5) });
+    await marcar(10, b);
+    const otra = await marcar(10, b);
+    expect(otra.status).toBe(201);
+    expect(repo.marcas).toHaveLength(1);
+  });
+});

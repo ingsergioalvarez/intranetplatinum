@@ -105,6 +105,15 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
         },
       });
     }
+    // Días sin turno por un cambio de turno aprobado (TC-22): no cuentan como falta.
+    const sinTurno = await getPrisma().pausaTurno.findMany({
+      where: { fecha: { gte: fechaADate(desde), lte: fechaADate(hasta) } },
+      select: { usuarioId: true, fecha: true },
+    });
+    for (const p of sinTurno) {
+      const f = dateAFecha(p.fecha);
+      pausas.set(p.usuarioId, [...(pausas.get(p.usuarioId) ?? []), { desde: f, hasta: f }]);
+    }
     for (const t of turnos) if (!t.coberturaId) t.pausas = pausas.get(t.guardia.id);
     return turnos;
   }

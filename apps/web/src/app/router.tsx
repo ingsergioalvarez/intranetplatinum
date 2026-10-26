@@ -21,10 +21,16 @@ import { AsistenciaPage } from '../modules/asistencia/AsistenciaPage';
 import { RostrosPendientesPage } from '../modules/asistencia/RostrosPendientesPage';
 import { IncidenciasPage } from '../modules/asistencia/IncidenciasPage';
 import { MarcarPage } from '../modules/asistencia/MarcarPage';
+import { CambiosTurnoPage } from '../modules/cambios/CambiosTurnoPage';
+import { InformeVerPage } from '../modules/informes/InformeVerPage';
+import { ReportesEmitidosPage } from '../modules/informes/ReportesEmitidosPage';
+import { VerificarInformePage } from '../modules/informes/VerificarInformePage';
 import { MisMarcasPage } from '../modules/asistencia/MisMarcasPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  // Pública: la abre el QR del reporte de asistencia (DA-52).
+  { path: '/verificar/:folio', element: <VerificarInformePage /> },
   {
     path: '/cambiar-password',
     element: (
@@ -79,6 +85,30 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.ASISTENCIA_ROSTROS}>
             <IncidenciasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/cambios',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+            <CambiosTurnoPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/reportes',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+            <ReportesEmitidosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/reportes/:id',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+            <InformeVerPage />
           </ProtectedRoute>
         ),
       },

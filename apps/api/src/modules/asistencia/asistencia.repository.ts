@@ -53,8 +53,11 @@ export interface NuevaMarcacion {
   rostroIntentos?: number | null;
   programadaEntrada?: Date | null;
   programadaSalida?: Date | null;
-  /** Solo para cierres por un supervisor: la hora de salida indicada (si no, la del servidor). */
+  /** Cierres por un supervisor o marcas hechas sin conexión: la hora indicada (si no, la del servidor). */
   registradaEn?: Date;
+  recibidaEn?: Date;
+  horaCelular?: Date | null;
+  desfaseSeg?: number | null;
   ip?: string;
   userAgent?: string;
 }
@@ -416,6 +419,15 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
       },
     });
     const cubren = new Set(coberturas.map((c) => c.usuario.id));
+    // Cambio de turno aprobado (TC-22): ese día no le toca su turno.
+    const pausados = new Set(
+      (
+        await getPrisma().pausaTurno.findMany({
+          where: { fecha: fechaADate(fecha) },
+          select: { usuarioId: true },
+        })
+      ).map((p) => p.usuarioId),
+    );
     // Un guardia aparece una vez (con su primer sitio), llegue directo o por grupo, y solo si ese día
     // le toca trabajar según su horario (DA-45).
     const vistos = new Map<number, GuardiaAsignado>();
@@ -444,7 +456,7 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
       const directos = usuario && usuario.activo && !usuario.deletedAt ? [usuario] : [];
       const delGrupo = grupo?.integrantes.map((i) => i.usuario) ?? [];
       for (const { id, nombre, email } of [...directos, ...delGrupo]) {
-        if (!vistos.has(id) && !cubren.has(id)) {
+        if (!vistos.has(id) && !cubren.has(id) && !pausados.has(id)) {
           vistos.set(id, { guardia: { id, nombre, email }, sitio, horaInicio, horas: r.horas });
         }
       }

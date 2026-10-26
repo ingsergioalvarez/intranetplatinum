@@ -23,7 +23,7 @@ export const TEXTO_GESTO: Record<Gesto, string> = {
   abrir_boca: 'Abre la boca',
   girar_izq: 'Gira la cabeza hacia la flecha',
   girar_der: 'Gira la cabeza hacia la flecha',
-  mirar_arriba: 'Mira hacia arriba',
+  mirar_arriba: 'Inclina la cabeza hacia arriba',
   asentir: 'Baja la cabeza',
 };
 

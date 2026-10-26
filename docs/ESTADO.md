@@ -2,7 +2,7 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-10-26
+**Última actualización:** 2026-10-26 (reporte oficial de asistencia, DA-52, sin commit aún)
 **Fase actual:** Módulo de Reportes, Relevo de Consignas y Portal de Clientes (Fases 1 a 5, REP-01..REP-09, P-05) terminado y verificado.
 **Última tarea terminada:** REP-09 (Portal de clientes con vista de reportes, comentarios con foto, asistencia ejecutiva con avatar, retardos y desglose de comidas, campanita en tiempo real sincronizada y permisos en BD).
 **Tarea en progreso:** ninguna. Todo el bloque de reportes y portal de clientes está en verde.

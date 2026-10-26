@@ -126,7 +126,7 @@
 
 | ID    | Tarea                                          | Alcance | Criterio de aceptación                   | Estado |
 | ----- | ---------------------------------------------- | ------- | ---------------------------------------- | ------ |
-| F4-01 | PWA instalable (manifest, service worker)      | A-04    | Instalable en Android/iOS                | [ ]    |
+| F4-01 | PWA instalable (manifest, service worker)      | A-04    | Instalable en Android/iOS                | [x]    |
 | F4-02 | Cola offline de reportes (IndexedDB + sync)    | P-04    | Reporte sin señal se envía al reconectar | [ ]    |
 | F4-03 | Pruebas (unit api, e2e flujos críticos)        | —       | CI en verde                              | [ ]    |
 | F4-04 | Despliegue (VPS, Nginx, PM2, HTTPS, respaldos) | —       | Producción accesible por HTTPS           | [ ]    |
