@@ -27,9 +27,17 @@ export const RADIO_GEOCERCA_M = 100;
 export const JORNADA_MAX_HORAS = 30;
 
 /** Qué se puede marcar después de cada tipo (la salida también se permite sin cerrar la comida). */
+/** La comida dura 1 h para todos (DA-47). */
+export const COMIDA_MIN = 60;
+/** Sin regresar de comer a los 90 min: un aviso al supervisor (DA-47). */
+export const COMIDA_AVISO_SUPERVISOR_MIN = 90;
+
+/** Comidas por turno (DA-47): hasta 12 h, una; turnos más largos (24 h), dos. Sin horario, una. */
+export const comidasDelTurno = (horas: number | null) => (horas && horas > 12 ? 2 : 1);
+
 export const SIGUIENTES_MARCAS: Record<TipoMarcacion, TipoMarcacion[]> = {
-  entrada: ['inicio_comida', 'salida'],
-  inicio_comida: ['fin_comida', 'salida'],
+  entrada: ['inicio_comida'],
+  inicio_comida: ['fin_comida'],
   fin_comida: ['salida'],
   salida: ['entrada'],
 };
@@ -364,8 +372,12 @@ export interface Marcacion {
 /** Entrada con sus marcas de comida y salida. */
 export interface Jornada {
   entrada: Marcacion;
+  /** Primera comida (las pantallas que muestran una sola). */
   inicioComida: Marcacion | null;
   finComida: Marcacion | null;
+  /** Todas sus comidas en orden (DA-47) y cuántas le tocan según su turno. */
+  comidas: { inicio: Marcacion; fin: Marcacion | null }[];
+  comidasPermitidas: number;
   salida: Marcacion | null;
   sitio: { id: number; nombre: string } | null;
   /** Alertas de cualquiera de sus marcas, sin repetir. */
@@ -409,6 +421,7 @@ export interface GuardiaResumen {
   id: number;
   nombre: string;
   email: string;
+  foto?: string | null;
 }
 
 /**

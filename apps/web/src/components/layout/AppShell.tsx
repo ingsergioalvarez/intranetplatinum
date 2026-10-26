@@ -1,13 +1,30 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { KeyRound, LogOut, ShieldCheck } from 'lucide-react';
-import { ROL_DESCRIPCIONES } from '@platinum/shared';
+import { ROL_DESCRIPCIONES, type BandejaAvisos } from '@platinum/shared';
+import { api } from '../../core/api';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
 import { cn } from '../ui';
 import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
-import { VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
+import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
 import { Campanita } from './Campanita';
 import { navItems } from './navItems';
+
+function useReportesNoLeidos() {
+  const bandeja = useQuery({
+    queryKey: ['avisos'],
+    queryFn: () => api.get<BandejaAvisos>('/avisos'),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
+  return (
+    bandeja.data?.items.filter(
+      (a) => !a.leido && (a.reporteId != null || a.tipo.startsWith('reporte_')),
+    ).length ?? 0
+  );
+}
 
 function useVisibleNav() {
   const user = useAuthStore((s) => s.user);
@@ -30,6 +47,7 @@ function Brand({ className }: { className?: string }) {
 function Sidebar() {
   const items = useVisibleNav();
   const user = useAuthStore((s) => s.user);
+  const reportesNoLeidos = useReportesNoLeidos();
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-brand-900 text-white md:flex">
@@ -38,22 +56,33 @@ function Sidebar() {
         <Campanita />
       </div>
       <nav className="flex-1 space-y-1 px-3 py-2">
-        {items.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive ? 'bg-brand-700 text-white' : 'text-brand-100 hover:bg-brand-800 hover:text-white',
-              )
-            }
-          >
-            <Icon className="size-5" />
-            {label}
-          </NavLink>
-        ))}
+        {items.map(({ to, label, icon: Icon }) => {
+          const tieneBadge = to === '/reportes' && reportesNoLeidos > 0;
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  isActive ? 'bg-brand-700 text-white' : 'text-brand-100 hover:bg-brand-800 hover:text-white',
+                )
+              }
+            >
+              <Icon className="size-5 shrink-0" />
+              <span className="flex-1 truncate">{label}</span>
+              {tieneBadge && (
+                <span
+                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white leading-none shadow-xs"
+                  aria-label={`${reportesNoLeidos} novedades`}
+                >
+                  {reportesNoLeidos > 99 ? '99+' : reportesNoLeidos}
+                </span>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
       {user && (
         <div className="border-t border-brand-800 p-4">
@@ -109,26 +138,41 @@ function Topbar() {
 
 function BottomNav() {
   const items = useVisibleNav().slice(0, 5);
+  const reportesNoLeidos = useReportesNoLeidos();
+
   return (
     <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white md:hidden">
       <ul className="flex">
-        {items.map(({ to, label, icon: Icon }) => (
-          <li key={to} className="flex-1">
-            <NavLink
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium',
-                  isActive ? 'text-brand-700' : 'text-slate-500',
-                )
-              }
-            >
-              <Icon className="size-6" />
-              {label}
-            </NavLink>
-          </li>
-        ))}
+        {items.map(({ to, label, icon: Icon }) => {
+          const tieneBadge = to === '/reportes' && reportesNoLeidos > 0;
+          return (
+            <li key={to} className="flex-1">
+              <NavLink
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) =>
+                  cn(
+                    'flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium',
+                    isActive ? 'text-brand-700' : 'text-slate-500',
+                  )
+                }
+              >
+                <div className="relative flex items-center justify-center">
+                  <Icon className="size-6" />
+                  {tieneBadge && (
+                    <span
+                      className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white leading-none shadow-xs"
+                      aria-label={`${reportesNoLeidos} novedades`}
+                    >
+                      {reportesNoLeidos > 99 ? '99+' : reportesNoLeidos}
+                    </span>
+                  )}
+                </div>
+                <span>{label}</span>
+              </NavLink>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );
@@ -150,6 +194,7 @@ export function AppShell() {
       <BottomNav />
       <BienvenidaRostro />
       <VentanaTurno />
+      <VentanaComida />
     </div>
   );
 }

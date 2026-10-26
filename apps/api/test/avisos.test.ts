@@ -24,6 +24,11 @@ class MemoryAvisos extends AvisosRepository {
     return true;
   }
   async marcarTodos() {}
+  guardias: number[] = [];
+
+  async guardiasDelSitio() {
+    return this.guardias;
+  }
   async supervisores() {
     return [1, 2]; // admin y supervisor
   }
@@ -34,8 +39,12 @@ class MemoryAvisos extends AvisosRepository {
     this.correos.push(reporteId);
     return 1;
   }
+  clientes: number[] = [];
+  async usuariosDelCliente() {
+    return this.clientes;
+  }
   destinatarios() {
-    return this.avisos.map((a) => a.usuarioId).sort();
+    return this.avisos.map((a) => a.usuarioId).sort((a, b) => a - b);
   }
 }
 
@@ -90,6 +99,12 @@ describe('reglas de aviso (D-016)', () => {
     await notificador.reporteCreado(reporte(), 2);
     expect(repo.destinatarios()).toEqual([1]);
   });
+
+  it('notifica también a los compañeros guardias del mismo sitio', async () => {
+    repo.guardias = [4, 5];
+    await notificador.reporteCreado(reporte(), 3);
+    expect(repo.destinatarios()).toEqual([1, 2, 4, 5]);
+  });
 });
 
 describe('avisos de seguimiento', () => {
@@ -110,6 +125,23 @@ describe('avisos de seguimiento', () => {
     repo.avisos = [];
     await notificador.comentarioAgregado(reporte(), 2, 'Sofía');
     expect(repo.destinatarios()).toEqual([1, 3]);
+  });
+
+  it('notifica a los usuarios del cliente en portal y sincroniza la campanita', async () => {
+    repo.clientes = [15];
+    // Cuando el supervisor comenta, el cliente y el guardia reciben aviso
+    await notificador.comentarioAgregado(reporte(), 2, 'Supervisor Carlos');
+    expect(repo.destinatarios()).toEqual([1, 3, 15]);
+
+    // Cuando el cliente comenta, supervisores y el guardia que reportó reciben aviso
+    repo.avisos = [];
+    await notificador.comentarioAgregado(reporte(), 15, 'Cliente Torre');
+    expect(repo.destinatarios()).toEqual([1, 2, 3]);
+
+    // Cambio de estatus avisa al cliente y a quien reportó
+    repo.avisos = [];
+    await notificador.estatusCambiado(reporte(), 'resuelto', 2);
+    expect(repo.destinatarios()).toEqual([3, 15]);
   });
 
   it('un fallo al avisar no rompe la operación del reporte', async () => {

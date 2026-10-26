@@ -307,7 +307,8 @@ describe('POST /api/auth/cambiar-password', () => {
     expect(me.status).toBe(403);
     expect(me.body.error.code).toBe('PASSWORD_CHANGE_REQUIRED');
 
-    const cambio = await cambiar(token, { actual: PASSWORD, nueva: NUEVA });
+    // Con contraseña temporal no es necesario enviar la actual (D-012).
+    const cambio = await cambiar(token, { nueva: NUEVA });
     expect(cambio.status).toBe(200);
     expect(cambio.body.data.user.debeCambiarPassword).toBe(false);
     expect(refreshCookie(cambio)).toBeTruthy();
@@ -318,6 +319,26 @@ describe('POST /api/auth/cambiar-password', () => {
       .get('/api/health/me')
       .set('Authorization', `Bearer ${cambio.body.data.accessToken}`);
     expect(me2.status).toBe(200);
+  });
+
+  it('con contraseña temporal: rechaza si la nueva contraseña es igual a la temporal', async () => {
+    repo.usuarios[0].debeCambiarPassword = true;
+    const res = await login();
+    const token = res.body.data.accessToken;
+    const cambio = await cambiar(token, { nueva: PASSWORD });
+    expect(cambio.status).toBe(400);
+    expect(cambio.body.error.details).toEqual([
+      { path: 'nueva', message: 'La nueva contraseña debe ser distinta a la actual' },
+    ]);
+  });
+
+  it('cambio voluntario: rechaza si no se envía la contraseña actual', async () => {
+    const { body } = await login();
+    const res = await cambiar(body.data.accessToken, { nueva: NUEVA });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual([
+      { path: 'actual', message: 'Escribe tu contraseña actual' },
+    ]);
   });
 
   it('cierra las demás sesiones y la nueva contraseña funciona', async () => {

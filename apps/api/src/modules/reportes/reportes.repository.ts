@@ -8,6 +8,7 @@ import type {
   ReporteResumen,
   SitioReportable,
 } from '@platinum/shared';
+import { fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
 import { asignadaA } from '../clientes/clientes.repository';
@@ -17,7 +18,13 @@ export type Visibilidad =
   | { tipo: 'todos' }
   /** Reportes de sus sitios con asignación vigente hoy + los que él creó. */
   | { tipo: 'guardia'; usuarioId: number; hoy: string }
+  | { tipo: 'cliente'; clienteId: number }
   | { tipo: 'ninguno' };
+
+export type RestriccionSitio =
+  | { tipo: 'guardia'; usuarioId: number; hoy: string }
+  | { tipo: 'cliente'; clienteId: number }
+  | null;
 
 export type ReporteFiltroData = Omit<ReporteFiltro, 'page' | 'limit' | 'desde' | 'hasta' | 'mios'> & {
   creadoPorId?: number;
@@ -87,9 +94,9 @@ export abstract class ReportesRepository {
   /** Sitio activo de cliente vigente; con `guardiaId`, además asignado hoy a ese guardia. */
   abstract sitioParaReportar(
     sitioId: number,
-    guardia: { usuarioId: number; hoy: string } | null,
+    filtro: RestriccionSitio,
   ): Promise<{ id: number; clienteId: number } | null>;
-  abstract sitiosReportables(guardia: { usuarioId: number; hoy: string } | null): Promise<SitioReportable[]>;
+  abstract sitiosReportables(filtro: RestriccionSitio): Promise<SitioReportable[]>;
   abstract categoriaActiva(id: number): Promise<boolean>;
 }
 
@@ -139,11 +146,25 @@ function whereVisibilidad(v: Visibilidad): Prisma.ReporteWhereInput {
       return {};
     case 'ninguno':
       return { id: -1 };
+    case 'cliente':
+      return { clienteId: v.clienteId };
     case 'guardia':
       return {
         OR: [
           { creadoPorId: v.usuarioId },
           { sitio: { asignaciones: { some: asignadaA(v.usuarioId, v.hoy) } } },
+          {
+            sitio: {
+              coberturas: {
+                some: {
+                  usuarioId: v.usuarioId,
+                  canceladaEn: null,
+                  desde: { lte: fechaADate(v.hoy) },
+                  hasta: { gte: fechaADate(v.hoy) },
+                },
+              },
+            },
+          },
         ],
       };
   }
@@ -164,16 +185,43 @@ function whereFiltro(f: ReporteFiltroData): Prisma.ReporteWhereInput {
         ...(f.creadoEntre.hasta && { lt: f.creadoEntre.hasta }),
       },
     }),
-    ...(f.q && { AND: [{ OR: [{ folio: { contains: f.q } }, { titulo: { contains: f.q } }] }] }),
+    ...(f.q && {
+      AND: [
+        {
+          OR: [
+            { folio: { contains: f.q } },
+            { titulo: { contains: f.q } },
+            { creadoPor: { nombre: { contains: f.q } } },
+          ],
+        },
+      ],
+    }),
   };
 }
 
 const sitioReportableWhere = (
-  guardia: { usuarioId: number; hoy: string } | null,
+  filtro: RestriccionSitio,
 ): Prisma.SitioWhereInput => ({
   deletedAt: null,
   cliente: { deletedAt: null, estatus: 'activo' },
-  ...(guardia && { asignaciones: { some: asignadaA(guardia.usuarioId, guardia.hoy) } }),
+  ...(filtro?.tipo === 'cliente' && {
+    clienteId: filtro.clienteId,
+  }),
+  ...(filtro?.tipo === 'guardia' && {
+    OR: [
+      { asignaciones: { some: asignadaA(filtro.usuarioId, filtro.hoy) } },
+      {
+        coberturas: {
+          some: {
+            usuarioId: filtro.usuarioId,
+            canceladaEn: null,
+            desde: { lte: fechaADate(filtro.hoy) },
+            hasta: { gte: fechaADate(filtro.hoy) },
+          },
+        },
+      },
+    ],
+  }),
 });
 
 // ---------- Implementación Prisma ----------
@@ -284,16 +332,16 @@ export class PrismaReportesRepository extends ReportesRepository {
     });
   }
 
-  async sitioParaReportar(sitioId: number, guardia: { usuarioId: number; hoy: string } | null) {
+  async sitioParaReportar(sitioId: number, filtro: RestriccionSitio) {
     return getPrisma().sitio.findFirst({
-      where: { id: sitioId, ...sitioReportableWhere(guardia) },
+      where: { id: sitioId, ...sitioReportableWhere(filtro) },
       select: { id: true, clienteId: true },
     });
   }
 
-  async sitiosReportables(guardia: { usuarioId: number; hoy: string } | null) {
+  async sitiosReportables(filtro: RestriccionSitio) {
     return getPrisma().sitio.findMany({
-      where: sitioReportableWhere(guardia),
+      where: sitioReportableWhere(filtro),
       select: {
         id: true,
         nombre: true,

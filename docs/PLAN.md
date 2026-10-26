@@ -55,7 +55,7 @@
 | P-02 | Roles y permisos (admin, supervisor, guardia, cliente) | Incluido en F1                 |
 | P-03 | Auditoría de acciones                                  | Incluido en F1                 |
 | P-04 | Modo offline para guardias                             | Fase 4 (ver D-001)             |
-| P-05 | Portal de clientes                                     | Fase 5 (ver D-002)             |
+| P-05 | Portal de clientes                                     | Terminado en Fase 5 (REP-09)   |
 | P-06 | Aprobación de supervisor antes de notificar            | Descartado (D-003, D-016)      |
 | P-07 | WhatsApp, dashboard, PDF, SLA                          | Fase 5                         |
 
@@ -135,7 +135,7 @@
 
 | ID    | Tarea                                        | Alcance | Estado |
 | ----- | -------------------------------------------- | ------- | ------ |
-| F5-01 | Portal de clientes (solo lectura + comentar) | P-05    | [ ]    |
+| F5-01 | Portal de clientes (solo lectura + comentar) | P-05    | [x]    |
 | F5-02 | Notificación por WhatsApp                    | P-07    | [ ]    |
 | F5-03 | Dashboard de métricas                        | P-07    | [ ]    |
 | F5-04 | Exportar reporte a PDF                       | P-07    | [ ]    |
@@ -175,10 +175,11 @@ Estatus de reporte: `abierto → notificado → en_proceso → resuelto → cerr
 
 ## 5. Matriz de permisos
 
-| Acción        | Admin | Supervisor | Guardia      | Cliente        |
-| ------------- | ----- | ---------- | ------------ | -------------- |
-| Usuarios      | CRUD  | Ver        | —            | —              |
-| Clientes      | CRUD  | CRUD       | —            | —              |
-| Crear reporte | Sí    | Sí         | Sus sitios   | —              |
-| Seguimiento   | Sí    | Sí         | Sus reportes | Comentar (F5)  |
-| Ver reportes  | Todos | Todos      | Sus sitios   | Los suyos (F5) |
+| Acción         | Admin | Supervisor          | Guardia      | Cliente                     |
+| -------------- | ----- | ------------------- | ------------ | --------------------------- |
+| Usuarios       | CRUD  | Ver                 | —            | —                           |
+| Clientes       | CRUD  | CRUD                | —            | —                           |
+| Crear reporte  | Sí    | Sí                  | Sus sitios   | —                           |
+| Seguimiento    | Sí    | Sí                  | Sus reportes | Comentar / fotos (F5)       |
+| Ver reportes   | Todos | Todos               | Sus sitios   | Los suyos (F5)              |
+| Ver asistencia | Todos | Sus sitios/guardias | Sus marcas   | Sus guardias asignados (F5) |

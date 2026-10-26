@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, ChevronLeft, ChevronRight, MapPin, Send } from 'lucide-react';
 import {
@@ -13,6 +13,7 @@ import {
   type ReporteDetalle,
 } from '@platinum/shared';
 import { ApiError, mensajeDeError } from '../../core/api';
+import { formatFechaHora } from '../../core/format/fechas';
 import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import {
   Button,
@@ -27,7 +28,8 @@ import {
   cn,
   toast,
 } from '../../components/ui';
-import { IconoCategoria } from './etiquetas';
+import { nombreCategoria } from './categoriaIconos';
+import { IconoCategoria, PrioridadBadge } from './etiquetas';
 import { categoriasService, reportesService } from './reportes.service';
 
 const PASOS = ['Sitio', 'Categoría', 'Prioridad', 'Fotos', 'Detalle'] as const;
@@ -85,19 +87,27 @@ export function NuevoReportePage() {
   const [errores, setErrores] = useState<Record<string, string | undefined>>({});
   const [creado, setCreado] = useState<ReporteDetalle | null>(null);
 
+  const [searchParams] = useSearchParams();
+  const paramSitioId = searchParams.get('sitioId') ? Number(searchParams.get('sitioId')) : null;
+
   const sitios = useQuery({ queryKey: reportesService.keys.sitios, queryFn: reportesService.sitios });
   const categorias = useQuery({
     queryKey: categoriasService.keys.arbol(false),
     queryFn: () => categoriasService.arbol(false),
   });
 
-  // Con un solo sitio asignado, se elige solo y se empieza en la categoría.
+  // Con un solo sitio asignado o si viene por parámetro en la URL, se elige solo y se empieza en la categoría.
   useEffect(() => {
-    if (sitios.data?.length === 1 && sitioId === null) {
-      setSitioId(sitios.data[0].id);
-      setPaso(1);
+    if (sitios.data && sitioId === null) {
+      if (paramSitioId && sitios.data.some((s) => s.id === paramSitioId)) {
+        setSitioId(paramSitioId);
+        setPaso(1);
+      } else if (sitios.data.length === 1) {
+        setSitioId(sitios.data[0].id);
+        setPaso(1);
+      }
     }
-  }, [sitios.data, sitioId]);
+  }, [sitios.data, sitioId, paramSitioId]);
 
   const enviar = useMutation({
     mutationFn: async () => {
@@ -116,6 +126,7 @@ export function NuevoReportePage() {
     },
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: reportesService.keys.all });
+      void qc.invalidateQueries({ queryKey: ['avisos'] });
       setCreado(r);
     },
     onError: (e) => {
@@ -156,22 +167,70 @@ export function NuevoReportePage() {
   const sitio = sitios.data?.find((s) => s.id === sitioId);
 
   if (creado) {
+    const primeraFoto = creado.evidencias[0];
     return (
-      <Card className="mx-auto max-w-lg">
-        <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-          <CheckCircle2 className="size-14 text-emerald-600" />
-          <h1 className="text-xl font-bold text-slate-900">Reporte enviado</h1>
-          <p className="text-slate-600">
-            Folio <span className="font-mono font-semibold text-slate-900">{creado.folio}</span>
-          </p>
-          <p className="text-sm text-slate-500">Tu supervisor ya puede verlo y darle seguimiento.</p>
-          <div className="mt-4 flex w-full flex-col gap-2">
-            <Button size="lg" onClick={() => navigate(`/reportes/${creado.id}`, { replace: true })}>
-              Ver reporte
+      <Card className="mx-auto max-w-lg overflow-hidden">
+        <div className="border-b border-emerald-100 bg-emerald-50/80 px-6 py-6 text-center">
+          <div className="mx-auto mb-2.5 flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <CheckCircle2 className="size-7" />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900">Reporte registrado</h1>
+          <p className="mt-0.5 text-xs text-slate-600">Guardado formalmente en la intranet</p>
+        </div>
+
+        <div className="space-y-4 p-5">
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            <div className="flex items-center justify-between border-b border-slate-200/70 pb-2.5">
+              <div>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  Folio oficial
+                </span>
+                <p className="font-mono text-base font-bold text-slate-900">{creado.folio}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  Fecha y hora
+                </span>
+                <p className="text-xs font-medium text-slate-700">{formatFechaHora(creado.createdAt)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {primeraFoto && (
+                <div className="size-16 shrink-0 overflow-hidden rounded-lg border border-slate-300 bg-slate-200">
+                  <img src={primeraFoto.url} alt="" className="size-full object-cover" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <PrioridadBadge prioridad={creado.prioridad} />
+                  <span className="text-xs text-slate-500">· {nombreCategoria(creado.categoria)}</span>
+                </div>
+                <p className="truncate text-sm font-semibold text-slate-900">{creado.titulo}</p>
+                <p className="truncate text-xs text-slate-600">
+                  {creado.sitio.nombre} · {creado.cliente.nombreComercial}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2.5 rounded-lg border border-sky-200/80 bg-sky-50/80 p-3 text-xs text-sky-800">
+            <span className="text-base leading-none">ℹ️</span>
+            <p>Tu supervisor ya recibió el aviso en su campanita y dará seguimiento oficial por este medio.</p>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <Button size="lg" fullWidth onClick={() => navigate(`/reportes/${creado.id}`, { replace: true })}>
+              Ver reporte y seguimiento
             </Button>
-            <Button size="lg" variant="secondary" onClick={reiniciar}>
+            <Button size="lg" variant="secondary" fullWidth onClick={reiniciar}>
               Hacer otro reporte
             </Button>
+            <div className="pt-1 text-center">
+              <Link to="/" className="text-xs font-medium text-slate-500 hover:text-slate-800">
+                Volver al inicio
+              </Link>
+            </div>
           </div>
         </div>
       </Card>

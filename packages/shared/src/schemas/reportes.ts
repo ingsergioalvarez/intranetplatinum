@@ -86,6 +86,7 @@ export const reporteFiltroSchema = paginationQuerySchema.extend({
   clienteId: idOpcional,
   sitioId: idOpcional,
   categoriaId: idOpcional,
+  creadoPorId: idOpcional,
   desde: fechaSchema.optional(),
   hasta: fechaSchema.optional(),
   /** Solo los creados por el usuario en sesión. */

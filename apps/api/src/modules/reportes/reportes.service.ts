@@ -26,7 +26,7 @@ import {
   type AuthUser,
 } from '../../core';
 import { notificadorNulo, type NotificadorReportes } from '../avisos/notificador';
-import type { EvidenciaRow, FotoNueva, ReportesRepository, Visibilidad } from './reportes.repository';
+import type { EvidenciaRow, FotoNueva, ReportesRepository, RestriccionSitio, Visibilidad } from './reportes.repository';
 
 /** Archivo recibido por multer (en memoria). */
 export interface ArchivoSubido {
@@ -91,9 +91,9 @@ export class ReportesService extends BaseService {
     };
   }
 
-  /** Sitios donde el usuario puede reportar: el guardia, solo los asignados hoy. */
+  /** Sitios donde el usuario puede reportar o filtrar según su rol. */
   sitiosReportables(user: AuthUser): Promise<SitioReportable[]> {
-    return this.repo.sitiosReportables(this.restriccionGuardia(user));
+    return this.repo.sitiosReportables(this.restriccionSitios(user));
   }
 
   // ---------- Alta (F3-04) ----------
@@ -107,7 +107,7 @@ export class ReportesService extends BaseService {
         { path: 'categoriaId', message: 'Categoría no disponible' },
       ]);
     }
-    const sitio = await this.repo.sitioParaReportar(data.sitioId, this.restriccionGuardia(user));
+    const sitio = await this.repo.sitioParaReportar(data.sitioId, this.restriccionSitios(user));
     if (!sitio) {
       throw HttpError.badRequest('Datos inválidos', [
         { path: 'sitioId', message: 'No puedes reportar en este sitio' },
@@ -189,16 +189,22 @@ export class ReportesService extends BaseService {
 
   private visibilidad(user: AuthUser): Visibilidad {
     if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) return { tipo: 'todos' };
-    // El rol cliente verá los de su empresa con el portal (F5-01).
+    if (user.rol === ROLES.CLIENTE && user.clienteId && tienePermiso(user, PERMISOS.REPORTES_VER_PROPIOS)) {
+      return { tipo: 'cliente', clienteId: user.clienteId };
+    }
     if (user.rol === ROLES.GUARDIA && tienePermiso(user, PERMISOS.REPORTES_VER_PROPIOS)) {
       return { tipo: 'guardia', usuarioId: user.id, hoy: this.hoy() };
     }
     return { tipo: 'ninguno' };
   }
 
-  /** Quien no ve todos los reportes (guardia) solo reporta en sus sitios asignados hoy. */
-  private restriccionGuardia(user: AuthUser) {
-    return tienePermiso(user, PERMISOS.REPORTES_VER_TODOS) ? null : { usuarioId: user.id, hoy: this.hoy() };
+  /** Sitios que puede consultar/reportar según su rol. */
+  private restriccionSitios(user: AuthUser): RestriccionSitio {
+    if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) return null;
+    if (user.rol === ROLES.CLIENTE && user.clienteId) {
+      return { tipo: 'cliente', clienteId: user.clienteId };
+    }
+    return { tipo: 'guardia', usuarioId: user.id, hoy: this.hoy() };
   }
 
   /** Máximo de fotos y tipo real por firma de bytes (no por la extensión). */

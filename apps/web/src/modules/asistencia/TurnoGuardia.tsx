@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { CalendarClock, CircleCheck, MapPin, Moon, Shuffle, Timer } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CalendarClock, CircleCheck, MapPin, Moon, Shuffle, Timer, Utensils } from 'lucide-react';
 import {
+  COMIDA_MIN,
   PERMISOS,
   RADIO_GEOCERCA_M,
   ROLES,
@@ -10,10 +11,11 @@ import {
   type EstadoAsistencia,
   type TurnoDelGuardia,
 } from '@platinum/shared';
-import { Button, Modal, Spinner, cn } from '../../components/ui';
+import { Button, Modal, Spinner, cn, toast } from '../../components/ui';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { asistenciaService } from './asistencia.service';
 import { formatDia, formatHora } from './formato';
+import { nuevoIdMarca, obtenerUbicacion } from './ubicacion';
 
 /** `85 m`, `1.2 km` */
 const distanciaTexto = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`);
@@ -224,6 +226,91 @@ export function VentanaTurno() {
         <p className="text-sm text-slate-600">Sales {cuando(turno.salida)}</p>
         <NotaCobertura turno={turno} />
       </div>
+    </Modal>
+  );
+}
+
+/**
+ * Hora de comida vencida (DA-47): al pasar 1 h desde que salió a comer, una ventana con
+ * [Regresar de comer] para cerrarla con un toque (sin foto; toma el GPS). "Ahora no" la oculta
+ * hasta que vuelva a abrir la app.
+ */
+export function VentanaComida() {
+  const user = useAuthStore((s) => s.user);
+  const esGuardia = hasRole(user, [ROLES.GUARDIA]) && hasPermission(user, PERMISOS.ASISTENCIA_MARCAR);
+  const qc = useQueryClient();
+  const [, setTic] = useState(0);
+  const [cerrada, setCerrada] = useState<number | null>(null);
+  const estado = useQuery({
+    queryKey: asistenciaService.keys.estado,
+    queryFn: asistenciaService.estado,
+    enabled: esGuardia,
+    refetchInterval: 60_000,
+  });
+  // Se revisa cada 30 s aunque el estado no cambie (la hora sí).
+  useEffect(() => {
+    const t = setInterval(() => setTic((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const regresar = useMutation({
+    mutationFn: async () => {
+      const ubicacion = await obtenerUbicacion({ fresca: true });
+      return asistenciaService.marcar({ idCliente: nuevoIdMarca(), tipo: 'fin_comida', ...ubicacion });
+    },
+    onSuccess: () => {
+      toast.success('Regreso de comida checado');
+      void qc.invalidateQueries({ queryKey: asistenciaService.keys.all });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'No se pudo checar'),
+  });
+
+  const j = estado.data?.jornada;
+  const comida = j && !j.salida ? j.comidas.at(-1) : undefined;
+  const abierta = comida && !comida.fin ? comida : null;
+  const min = abierta ? Math.floor((Date.now() - Date.parse(abierta.inicio.registradaEn)) / 60_000) : 0;
+  const clave = abierta && `asistencia.ventanaComida.${abierta.inicio.id}`;
+  let omitida = false;
+  try {
+    omitida = !!clave && sessionStorage.getItem(clave) === '1';
+  } catch {
+    // Sin almacenamiento: se sigue mostrando.
+  }
+  if (!esGuardia || !abierta || min < COMIDA_MIN || omitida || cerrada === abierta.inicio.id) return null;
+
+  const ahoraNo = () => {
+    try {
+      sessionStorage.setItem(clave!, '1');
+    } catch {
+      // Sin almacenamiento: solo se cierra por ahora.
+    }
+    setCerrada(abierta.inicio.id);
+  };
+  return (
+    <Modal
+      open
+      onClose={ahoraNo}
+      size="sm"
+      title="Ya pasó tu hora de comida"
+      description={`Saliste a comer a las ${formatHora(abierta.inicio.registradaEn)} (hace ${min} min)`}
+      footer={
+        <>
+          <Button variant="secondary" onClick={ahoraNo}>
+            Ahora no
+          </Button>
+          <Button
+            icon={<Utensils className="size-4" />}
+            loading={regresar.isPending}
+            onClick={() => regresar.mutate()}
+          >
+            Regresar de comer
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-slate-600">
+        Si ya regresaste, regístralo aquí con un toque. Si pasa mucho tiempo sin registrarlo, se le avisa a tu
+        supervisor.
+      </p>
     </Modal>
   );
 }

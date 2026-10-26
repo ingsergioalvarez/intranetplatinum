@@ -18,9 +18,15 @@ export type AlcanceFn = (user: AuthUser) => Promise<Alcance | null>;
 const DIAS_RECIENTES = 31;
 
 export const alcanceConPrisma: AlcanceFn = async (user) => {
-  if (user.rol !== ROLES.SUPERVISOR) return null;
+  if (user.rol !== ROLES.SUPERVISOR && user.rol !== ROLES.CLIENTE) return null;
   const db = getPrisma();
-  const sitios = await db.sitio.findMany({ where: { supervisorId: user.id }, select: { id: true } });
+  let sitios: { id: number }[] = [];
+  if (user.rol === ROLES.SUPERVISOR) {
+    sitios = await db.sitio.findMany({ where: { supervisorId: user.id }, select: { id: true } });
+  } else if (user.rol === ROLES.CLIENTE) {
+    if (!user.clienteId) return { sitioIds: new Set(), guardiaIds: new Set() };
+    sitios = await db.sitio.findMany({ where: { clienteId: user.clienteId }, select: { id: true } });
+  }
   const sitioIds = sitios.map((s) => s.id);
   if (sitioIds.length === 0) return { sitioIds: new Set(), guardiaIds: new Set() };
   const hoy = fechaADate(hoyISO());

@@ -5,6 +5,52 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-23 / 2026-10-26 #14 — Reportes, Relevo de Consignas y Portal de Clientes (REP-01..REP-09, P-05, DA-47, DA-48)
+
+Detalle en [REPORTES.md](docs/REPORTES.md) y [DECISIONES.md](docs/DECISIONES.md).
+
+#### Añadido
+
+- **Fase 1 (REP-01):** Claridad en horario programado de asistencia: etiquetas "Entra a las <hora>" y "Sale a las <hora>" en `HoraMarca.tsx`.
+- **Fase 2 (REP-02..REP-05):**
+  - Comprobante visual oficial tras enviar reporte con folio, primera foto, sitio, prioridad y hora de servidor (`NuevoReportePage.tsx`).
+  - Rediseño de ficha oficial de reporte en 2 columnas (7/12 ficha/evidencias y 5/12 seguimiento), semáforo de prioridad y visor modal de alta resolución (`ReporteDetallePage.tsx`, `Galeria.tsx`).
+  - Hilo de seguimiento bidireccional con invalidación en tiempo real y campanita de avisos.
+  - Pestañas del guardia ("Mis reportes" vs "Del sitio: [Nombre]"), banner de sitio con enlace directo y píldoras rápidas de estatus en `ReportesPage.tsx`.
+  - Supervisor / Admin: columna "Reportó" y filtro por usuario creador en `/reportes`.
+- **Fase 3 (REP-06 / DA-46):** Coberturas en selector de sitios y visibilidad: guardias con cobertura activa hoy pueden reportar en el sitio cubierto sin fallas de autorización.
+- **Fase 4 (REP-07, REP-08):**
+  - Verificación interactiva de relevo de 3 activos críticos (**Celular del sitio**, **Llaves** y **Teléfono fijo**) al checar entrada y salida con `RelevoTurnoModal.tsx`.
+  - Detección de novedades: descripción obligatoria y uploader de evidencias fotográficas, levantando reporte automático de alta prioridad.
+  - Resumen visual en entrada con novedades del turno saliente y exclusión de auto-reportes.
+  - Apertura ágil directa de la cámara biométrica tras verificación conforme.
+- **Fase 5 (REP-09 / P-05 / DA-48 Portal de Clientes):**
+  - Rol `cliente` dotado con permisos granulares `[reportes.ver_propios, reportes.seguimiento, asistencia.ver]`.
+  - Alcance multi-inquilino en backend filtrado por `clienteId` en reportes y asistencia de sus sitios y guardias asignados.
+  - Hilo de comentarios y subida de fotografías de seguimiento para clientes en sus reportes.
+  - Monitoreo ejecutivo de asistencia (`/asistencia`) para clientes: avatar/foto oficial del guardia, hora programada vs real, retardo en píldora (`+X min`), desglose compacto de comidas (`1ª`, `2ª` y `en curso`), salida y horas trabajadas.
+  - Blindaje y privacidad: ocultamiento de incidencias de fraude biométrico, bitácora disciplinaria y modal de registro facial de 5 fotos.
+  - Notificaciones en tiempo real en la campanita (`🔔`) y contador numérico en badge rojo.
+- **Control de comidas (DA-47):** Contador de comidas adaptado a turnos de 24 h (hasta 2 comidas), validación de jornada activa y nomenclatura compacta `[1ª]` / `[2ª]`.
+- **Registro facial ágil (DA-44):** Captura automática de las 5 tomas de autoregistro al mantener la pose estable durante 1 s (`calidad.armado`), sin requerir parpadeo forzado.
+
+#### Corregido (revisión de Claude, 2026-10-26)
+
+- **Seguridad del portal de clientes:** la bitácora disciplinaria quedó solo para admin y supervisor (el cliente podía leerla y justificar faltas); la asistencia del día y la ficha del guardia ya no entregan al cliente alertas biométricas, resultado del reconocimiento ni el rostro registrado, ni jornadas o sitios de otros clientes (antes solo se escondían en la pantalla).
+- **Salida y comidas (DA-47):** para checar salida hay que iniciar y terminar la comida (dos en turnos de 24 h); antes se podía salir sin haber comido o con la comida abierta.
+- Recordatorios de comida (DA-47): aviso al guardia a la mitad del turno y al vencer su hora con ventana "Regresar de comer", aviso al supervisor a los 90 min y si no registró comida.
+
+#### Corregido
+
+- Base de datos: sincronización de matriz de permisos para el rol `cliente` (`npm run db:seed`) para habilitar acceso a `/asistencia` y `/reportes`.
+- Consejos de cámara: se respeta la preferencia "No volver a mostrar en este dispositivo" para `ConsejosCamara.tsx`.
+
+#### Verificado
+
+- `npm test`: 219 de 219 pruebas pasando en Vitest.
+- `npm run typecheck`: 0 errores de TypeScript en todos los paquetes.
+- `npm run lint`: 0 advertencias o errores.
+
 ### Sesión 2026-10-22 #13 — Control de asistencia (A-17), fases 1 y 1B
 
 Detalle de decisiones en [ASISTENCIA.md](docs/ASISTENCIA.md) (DA-28 a DA-46).

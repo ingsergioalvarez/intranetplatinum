@@ -38,7 +38,7 @@ export function HoraMarca({ jornada: j, tipo }: { jornada: Jornada; tipo: 'entra
           )}
           title={tipo === 'entrada' ? 'Hora de entrada programada' : 'Hora de salida programada'}
         >
-          Debía {formatHora(programada)}
+          {tipo === 'entrada' ? 'Entra a las' : 'Sale a las'} {formatHora(programada)}
           {marca && fuera && ` · ${minutos(tipo === 'entrada' ? diferencia : -diferencia)}`}
         </span>
       )}

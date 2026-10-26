@@ -7,6 +7,8 @@ export interface AuthUser {
   permisos: string[];
   /** Contraseña temporal pendiente de cambiar (D-012). */
   debeCambiarPassword?: boolean;
+  clienteId?: number | null;
+  clienteNombre?: string | null;
 }
 
 export interface ValidatedRequestData {

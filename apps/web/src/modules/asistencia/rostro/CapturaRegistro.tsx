@@ -8,7 +8,7 @@ import { PASOS_REGISTRO } from './registro';
 /**
  * Toma de las fotos del registro de rostro a pantalla completa (guía por ángulo, miniaturas y
  * "Guardar"). La usan el supervisor (en persona) y el guardia (autoregistro). Cada foto se toma
- * al parpadear con la cara dentro del óvalo (prueba de vida).
+ * automáticamente al sostener la pose dentro del óvalo (prueba de vida por giros 3D).
  */
 export function CapturaRegistro({
   titulo,

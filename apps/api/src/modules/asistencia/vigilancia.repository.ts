@@ -1,6 +1,7 @@
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { turnoDeDb } from '../sitios/sitios.repository';
+import { ComidasRepository } from './comidas';
 import { diasDeDb, diasSelect } from '../turnos/dias';
 import { PrismaAsistenciaRepository, type DestinoRevision } from './asistencia.repository';
 import {
@@ -155,6 +156,29 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
     const e = await getPrisma().eventoBitacora.findUnique({ where: { id }, select: { datos: true } });
     const previos = (e?.datos ?? {}) as Record<string, string | number | boolean | null>;
     await getPrisma().eventoBitacora.update({ where: { id }, data: { datos: { ...previos, ...datos } } });
+  }
+
+  revisoresDe(destino: DestinoRevision) {
+    return this.asistencia.revisoresDe(destino);
+  }
+}
+
+/** Recordatorios de comida (DA-47). */
+export class PrismaComidasRepository extends ComidasRepository {
+  private readonly asistencia = new PrismaAsistenciaRepository();
+
+  jornadasDesde(desde: Date, hasta: Date) {
+    return this.asistencia.jornadasDeTodos(desde, hasta);
+  }
+
+  async marcarEnviado(clave: string) {
+    try {
+      await getPrisma().avisoEnviado.create({ data: { clave } });
+      return true;
+    } catch {
+      // Ya existía: el aviso se envió antes.
+      return false;
+    }
   }
 
   revisoresDe(destino: DestinoRevision) {

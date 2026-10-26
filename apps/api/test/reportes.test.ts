@@ -5,6 +5,9 @@ import {
   ROLES,
   TRANSICIONES_ESTATUS,
   type EstatusReporte,
+  type Paginated,
+  type PaginationQuery,
+  type ReporteResumen,
   type Rol,
 } from '@platinum/shared';
 import {
@@ -23,6 +26,8 @@ import {
   type FotoNueva,
   type NuevoSeguimiento,
   type ReporteDetalleRow,
+  type ReporteFiltroData,
+  type RestriccionSitio,
   type Visibilidad,
 } from '../src/modules/reportes/reportes.repository';
 import { ReportesService } from '../src/modules/reportes/reportes.service';
@@ -122,7 +127,11 @@ class MemoryReportesRepository extends ReportesRepository {
     this.creados.push(fotos);
     return { id: 1, folio: 'PLT-2026-000001' };
   }
-  async findPaged() {
+  override async findPaged(
+    _filtro: ReporteFiltroData,
+    _visibilidad: Visibilidad,
+    _pag: PaginationQuery,
+  ): Promise<Paginated<ReporteResumen>> {
     return { items: [], total: 0, page: 1, limit: 20 };
   }
   async findDetalle(): Promise<ReporteDetalleRow> {
@@ -157,15 +166,19 @@ class MemoryReportesRepository extends ReportesRepository {
     };
   }
   async puedeVer(_id: number, v: Visibilidad) {
-    return v.tipo === 'todos' || (v.tipo === 'guardia' && this.visibleParaGuardia);
+    return (
+      v.tipo === 'todos' ||
+      (v.tipo === 'guardia' && this.visibleParaGuardia) ||
+      (v.tipo === 'cliente' && v.clienteId === 1)
+    );
   }
   async agregarSeguimiento(_id: number, s: NuevoSeguimiento) {
     if (this.falla) throw new Error('BD caída');
     this.seguimientos.push(s);
     return 1;
   }
-  async sitioParaReportar(_id: number, guardia: { usuarioId: number } | null) {
-    return guardia && guardia.usuarioId === 99 ? null : { id: 1, clienteId: 1 };
+  async sitioParaReportar(_id: number, filtro: RestriccionSitio) {
+    return filtro?.tipo === 'guardia' && filtro.usuarioId === 99 ? null : { id: 1, clienteId: 1 };
   }
   async sitiosReportables() {
     return [];
@@ -183,7 +196,7 @@ const usuario = (id: number, rol: Rol): AuthUser => ({
 });
 const GUARDIA = usuario(3, ROLES.GUARDIA);
 const SUPERVISOR = usuario(2, ROLES.SUPERVISOR);
-const CLIENTE = usuario(5, ROLES.CLIENTE);
+const CLIENTE: AuthUser = { ...usuario(5, ROLES.CLIENTE), clienteId: 1 };
 const datos = {
   sitioId: 1,
   categoriaId: 2,
@@ -239,10 +252,12 @@ describe('alta de reporte', () => {
 });
 
 describe('visibilidad y seguimiento', () => {
-  it('guardia sin acceso al sitio recibe 404; cliente aún no ve reportes (F5)', async () => {
+  it('guardia sin acceso al sitio y cliente de otra empresa reciben 404', async () => {
     repo.visibleParaGuardia = false;
+    const OTRO_CLIENTE: AuthUser = { ...usuario(6, ROLES.CLIENTE), clienteId: 99 };
     expect(await codigo(service.detalle(GUARDIA, 1))).toBe('404');
-    expect(await codigo(service.detalle(CLIENTE, 1))).toBe('404');
+    expect(await codigo(service.detalle(OTRO_CLIENTE, 1))).toBe('404');
+    expect(await codigo(service.detalle(CLIENTE, 1))).toBe('OK');
     expect(await codigo(service.detalle(SUPERVISOR, 1))).toBe('OK');
   });
 
@@ -272,5 +287,34 @@ describe('visibilidad y seguimiento', () => {
   it('mismo estatus actual no cuenta como cambio', async () => {
     await service.agregarSeguimiento(SUPERVISOR, 1, { estatus: 'abierto', comentario: 'Revisado' }, []);
     expect(repo.seguimientos.at(-1)).toMatchObject({ estatusAnterior: null, estatusNuevo: null });
+  });
+
+  it('permite filtrar por creadoPorId', async () => {
+    let capturado: ReporteFiltroData | null = null;
+    repo.findPaged = async (f: ReporteFiltroData) => {
+      capturado = f;
+      return { items: [], total: 0, page: 1, limit: 20 };
+    };
+    await service.list(SUPERVISOR, { page: 1, limit: 20, creadoPorId: 5 });
+    expect(capturado).toMatchObject({ creadoPorId: 5 });
+  });
+
+  it('el cliente puede ver los reportes de su empresa y comentar en seguimiento', async () => {
+    // El cliente puede consultar el detalle de su reporte
+    const detalle = await service.detalle(CLIENTE, 1);
+    expect(detalle.folio).toBe('PLT-2026-000001');
+    expect(detalle.acciones.comentar).toBe(true);
+    expect(detalle.acciones.estatusPermitidos).toEqual([]);
+
+    // El cliente puede agregar un comentario de seguimiento
+    await service.agregarSeguimiento(CLIENTE, 1, { comentario: 'Confirmamos que ya quedó atendido' }, []);
+    expect(repo.seguimientos.at(-1)).toMatchObject({
+      usuarioId: CLIENTE.id,
+      comentario: 'Confirmamos que ya quedó atendido',
+      estatusNuevo: null,
+    });
+
+    // El cliente no tiene permiso para cambiar estatus (403)
+    expect(await codigo(service.agregarSeguimiento(CLIENTE, 1, { estatus: 'cerrado' }, []))).toBe('403');
   });
 });

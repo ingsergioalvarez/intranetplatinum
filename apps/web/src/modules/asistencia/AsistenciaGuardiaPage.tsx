@@ -19,6 +19,7 @@ import {
   incidenciaCuenta,
   incidenciaPendiente,
   PERMISOS,
+  ROLES,
   TIPOS_EVENTO_BITACORA,
   type EventoBitacora,
   type GuardiaResumen,
@@ -63,10 +64,11 @@ const MARGEN_ROSTRO_MS = 2 * 3_600_000;
  */
 function incidenciasDeJornada(j: Jornada, eventos: EventoBitacora[] | undefined) {
   const marcas = new Set(
-    [j.entrada, j.inicioComida, j.finComida, j.salida].flatMap((m) => (m ? [m.id] : [])),
+    [j.entrada, ...j.comidas.flatMap((c) => [c.inicio, c.fin]), j.salida].flatMap((m) => (m ? [m.id] : [])),
   );
   const desde = Date.parse(j.entrada.registradaEn) - MARGEN_ROSTRO_MS;
-  const fin = j.salida ?? j.finComida ?? j.inicioComida ?? j.entrada;
+  const ultima = j.comidas.at(-1);
+  const fin = j.salida ?? ultima?.fin ?? ultima?.inicio ?? j.entrada;
   const hasta = Date.parse(fin.registradaEn) + MARGEN_ROSTRO_MS;
   return (eventos ?? []).filter((e) => {
     const clase = claseIncidencia(e.tipo);
@@ -120,6 +122,7 @@ function EstadoConIncidencias({
 const columnasAsistencia = (
   eventos: EventoBitacora[] | undefined,
   onIncidencias: (j: Jornada) => void,
+  esCliente = false,
 ): Column<Jornada>[] => [
   {
     key: 'dia',
@@ -139,13 +142,28 @@ const columnasAsistencia = (
   },
   {
     key: 'comida',
-    header: 'Comida',
+    header: 'Comidas',
     className: 'tabular-nums',
     render: (j) =>
-      j.inicioComida ? (
-        <span className="whitespace-nowrap">
-          {hora(j.inicioComida.registradaEn)}
-          <span className="block text-xs text-slate-500">a {hora(j.finComida?.registradaEn)}</span>
+      j.comidas.length ? (
+        <span className="block space-y-1">
+          {j.comidas.map((c, i) => (
+            <span key={c.inicio.id} className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700">
+              <span className="rounded bg-slate-100 px-1 py-0.5 text-[11px] font-semibold text-slate-600">
+                {i + 1}ª
+              </span>
+              <span>
+                {hora(c.inicio.registradaEn)} –{' '}
+                {c.fin ? (
+                  hora(c.fin.registradaEn)
+                ) : !j.salida ? (
+                  <span className="font-medium text-amber-700">en curso</span>
+                ) : (
+                  '—'
+                )}
+              </span>
+            </span>
+          ))}
         </span>
       ) : (
         '—'
@@ -176,13 +194,16 @@ const columnasAsistencia = (
   {
     key: 'estado',
     header: 'Estado',
-    render: (j) => (
-      <EstadoConIncidencias
-        jornada={j}
-        incidencias={incidenciasDeJornada(j, eventos)}
-        onAbrir={() => onIncidencias(j)}
-      />
-    ),
+    render: (j) =>
+      esCliente ? (
+        <EstadoJornada jornada={j} />
+      ) : (
+        <EstadoConIncidencias
+          jornada={j}
+          incidencias={incidenciasDeJornada(j, eventos)}
+          onAbrir={() => onIncidencias(j)}
+        />
+      ),
   },
 ];
 
@@ -192,11 +213,13 @@ const columnasAsistencia = (
  * Bitácora (todo lo que le pasó, con comentarios y justificaciones). En celular, todo en columna.
  */
 export function AsistenciaGuardiaPage() {
+  const user = useAuthStore((s) => s.user);
+  const esCliente = user?.rol === ROLES.CLIENTE;
   const id = Number(useParams().id);
   const [params, setParams] = useSearchParams();
   const mesActual = hoyLocal().slice(0, 7);
   const mes = /^\d{4}-\d{2}$/.test(params.get('mes') ?? '') ? params.get('mes')! : mesActual;
-  const vista: Vista = params.get('vista') === 'bitacora' ? 'bitacora' : 'asistencia';
+  const vista: Vista = esCliente ? 'asistencia' : params.get('vista') === 'bitacora' ? 'bitacora' : 'asistencia';
   const filtro: FiltroBitacora = {
     categoria: CATEGORIAS_BITACORA.find((c) => c === params.get('cat')) ?? null,
     clase: CLASES_INCIDENCIA.find((c) => c === params.get('clase')) ?? null,
@@ -216,6 +239,7 @@ export function AsistenciaGuardiaPage() {
     queryKey: asistenciaService.keys.bitacora(id, mes),
     queryFn: () => asistenciaService.bitacora(id, mes),
     placeholderData: keepPreviousData,
+    enabled: !esCliente,
   });
 
   /** Cambia parámetros de la URL conservando los demás (null los quita). */
@@ -295,31 +319,33 @@ export function AsistenciaGuardiaPage() {
           </aside>
 
           <section className="min-w-0 space-y-3">
-            <div role="tablist" aria-label="Vista" className="flex gap-1 rounded-xl bg-slate-200/60 p-1">
-              {(
-                [
-                  ['asistencia', 'Asistencia'],
-                  ['bitacora', 'Bitácora'],
-                ] as const
-              ).map(([v, label]) => (
-                <button
-                  key={v}
-                  type="button"
-                  role="tab"
-                  aria-selected={vista === v}
-                  onClick={() => verVista(v)}
-                  className={cn(
-                    'flex-1 rounded-lg px-5 py-2 text-sm font-medium lg:flex-none',
-                    vista === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900',
-                  )}
-                >
-                  {label}
-                  {v === 'bitacora' && !!bitacora.data?.length && (
-                    <span className="ml-1.5 text-xs text-slate-500">{bitacora.data.length}</span>
-                  )}
-                </button>
-              ))}
-            </div>
+            {!esCliente && (
+              <div role="tablist" aria-label="Vista" className="flex gap-1 rounded-xl bg-slate-200/60 p-1">
+                {(
+                  [
+                    ['asistencia', 'Asistencia'],
+                    ['bitacora', 'Bitácora'],
+                  ] as const
+                ).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="tab"
+                    aria-selected={vista === v}
+                    onClick={() => verVista(v)}
+                    className={cn(
+                      'flex-1 rounded-lg px-5 py-2 text-sm font-medium lg:flex-none',
+                      vista === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900',
+                    )}
+                  >
+                    {label}
+                    {v === 'bitacora' && !!bitacora.data?.length && (
+                      <span className="ml-1.5 text-xs text-slate-500">{bitacora.data.length}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {vista === 'asistencia' ? (
               ficha.data.jornadas.length === 0 ? (
@@ -328,10 +354,10 @@ export function AsistenciaGuardiaPage() {
                 <>
                   <div className="space-y-3 md:hidden">
                     {ficha.data.jornadas.map((j) => {
-                      const incidencias = incidenciasDeJornada(j, bitacora.data);
+                      const incidencias = esCliente ? [] : incidenciasDeJornada(j, bitacora.data);
                       return (
                         <div key={j.entrada.id} className="space-y-1.5">
-                          <JornadaCard jornada={j} detalle miniaturas rostro={ficha.data.rostro} />
+                          <JornadaCard jornada={j} detalle miniaturas rostro={esCliente ? null : ficha.data.rostro} />
                           {incidencias.length > 0 && (
                             <BotonIncidencias
                               incidencias={incidencias}
@@ -344,7 +370,7 @@ export function AsistenciaGuardiaPage() {
                   </div>
                   <Card className="hidden md:block">
                     <DataTable
-                      columns={columnasAsistencia(bitacora.data, setConIncidencias)}
+                      columns={columnasAsistencia(bitacora.data, setConIncidencias, esCliente)}
                       rows={ficha.data.jornadas}
                       rowKey={(j) => j.entrada.id}
                       onRowClick={setAbierta}
@@ -493,12 +519,66 @@ function ResumenMes({
   onAsistencia: () => void;
   onBitacora: (f: Partial<FiltroBitacora>) => void;
 }) {
+  const user = useAuthStore((s) => s.user);
+  const esCliente = user?.rol === ROLES.CLIENTE;
   const dias = new Set(jornadas.map((j) => new Date(j.entrada.registradaEn).toDateString())).size;
   const minutos = jornadas.reduce(
     (t, j) =>
       j.salida ? t + (Date.parse(j.salida.registradaEn) - Date.parse(j.entrada.registradaEn)) / 60_000 : t,
     0,
   );
+
+  if (esCliente) {
+    const retardos = jornadas.filter((j) => (j.retardoMin ?? 0) > 10).length;
+    const comidasTomadas = jornadas.reduce((acc, j) => acc + j.comidas.length, 0);
+    const datosCliente: {
+      label: string;
+      valor: number | string | undefined;
+      alerta?: boolean;
+      onClick: () => void;
+    }[] = [
+      { label: 'Días trabajados', valor: dias, onClick: onAsistencia },
+      { label: 'Horas', valor: `${Math.floor(minutos / 60)} h`, onClick: onAsistencia },
+      { label: 'Retardos', valor: retardos, alerta: retardos > 0, onClick: onAsistencia },
+      { label: 'Comidas registradas', valor: comidasTomadas, onClick: onAsistencia },
+    ];
+    return (
+      <Card className="p-3">
+        <p className="mb-2 text-xs font-medium tracking-wide text-slate-500 uppercase">
+          Resumen de {formatMes(mes).toLowerCase()}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {datosCliente.map((d) => {
+            const marcado = d.alerta && typeof d.valor === 'number' && d.valor > 0;
+            return (
+              <button
+                key={d.label}
+                type="button"
+                onClick={d.onClick}
+                className={cn(
+                  'rounded-lg px-3 py-2 text-left ring-1 ring-inset',
+                  marcado
+                    ? 'bg-amber-50 ring-amber-200 hover:bg-amber-100'
+                    : 'ring-slate-200 hover:bg-slate-50',
+                )}
+              >
+                <span
+                  className={cn(
+                    'block text-xl font-bold tabular-nums',
+                    marcado ? 'text-amber-800' : 'text-slate-900',
+                  )}
+                >
+                  {d.valor ?? '…'}
+                </span>
+                <span className="text-xs text-slate-600">{d.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+    );
+  }
+
   const cuenta = (tipo: TipoEventoBitacora) =>
     eventos?.filter((e) => e.tipo === tipo && incidenciaCuenta(e)).length;
   const justificados = eventos?.filter((e) => e.justificacion).length ?? 0;
@@ -587,35 +667,50 @@ function ResumenMes({
 /** Foto de referencia del registro (para comparar con las de cada marca). */
 function Referencia({ guardia, rostro }: { guardia: GuardiaResumen; rostro: RostroRegistro | null }) {
   const [viendo, setViendo] = useState(false);
-  const puedeRevisar = hasPermission(
-    useAuthStore((s) => s.user),
-    PERMISOS.ASISTENCIA_ROSTROS,
-  );
+  const user = useAuthStore((s) => s.user);
+  const esCliente = user?.rol === ROLES.CLIENTE;
+  const puedeRevisar = hasPermission(user, PERMISOS.ASISTENCIA_ROSTROS);
+  const foto = rostro?.fotoUrl || guardia.foto;
 
   return (
     <>
       <Card className="flex items-center gap-3 p-3">
-        {rostro ? (
-          <button
-            type="button"
-            onClick={() => setViendo(true)}
-            aria-label="Ver las fotos del registro"
-            className="shrink-0"
-          >
+        {foto ? (
+          esCliente ? (
             <img
-              src={rostro.fotoUrl}
-              alt="Rostro registrado"
-              className="size-20 -scale-x-100 rounded-xl object-cover ring-1 ring-slate-200"
+              src={foto}
+              alt="Guardia asignado"
+              className="size-20 shrink-0 rounded-xl object-cover ring-1 ring-slate-200"
             />
-          </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setViendo(true)}
+              aria-label="Ver las fotos del registro"
+              className="shrink-0"
+            >
+              <img
+                src={foto}
+                alt="Rostro registrado"
+                className="size-20 -scale-x-100 rounded-xl object-cover ring-1 ring-slate-200"
+              />
+            </button>
+          )
         ) : (
           <span className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
             <UserRound className="size-9" />
           </span>
         )}
         <div className="min-w-0 space-y-1">
-          <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Rostro de referencia</p>
-          {rostro ? (
+          <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+            {esCliente ? 'Guardia asignado' : 'Rostro de referencia'}
+          </p>
+          {esCliente ? (
+            <>
+              <p className="font-semibold text-slate-900 truncate">{guardia.nombre}</p>
+              <p className="text-xs text-slate-500 truncate">{guardia.email}</p>
+            </>
+          ) : rostro ? (
             <>
               <EstadoRostroBadge estado={rostro.estado} />
               <p className="text-sm text-slate-600">
@@ -631,7 +726,7 @@ function Referencia({ guardia, rostro }: { guardia: GuardiaResumen; rostro: Rost
         </div>
       </Card>
 
-      {rostro && (
+      {!esCliente && rostro && (
         <Modal
           open={viendo}
           onClose={() => setViendo(false)}

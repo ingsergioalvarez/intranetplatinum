@@ -146,7 +146,8 @@ export class AuthService extends BaseService {
 
   /**
    * Cambio de contraseña propio (también el obligatorio tras una temporal, D-012).
-   * Cierra todas las sesiones del usuario y emite una nueva para este dispositivo.
+   * Con contraseña temporal no se exige la contraseña actual (ya la comprobó en el login).
+   * En cambio voluntario sí es obligatoria. Cierra todas las sesiones del usuario y emite una nueva.
    */
   async cambiarPassword(
     usuarioId: number,
@@ -155,10 +156,30 @@ export class AuthService extends BaseService {
   ): Promise<IssuedSession> {
     const usuario = await this.repo.findUsuarioById(usuarioId);
     if (!usuario || !usuario.activo || usuario.deletedAt) throw HttpError.unauthorized();
-    if (!(await verifyPassword(actual, usuario.passwordHash))) {
-      throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [
-        { path: 'actual', message: 'La contraseña actual no es correcta' },
-      ]);
+
+    const tieneActual = Boolean(actual && actual.trim());
+    if (usuario.debeCambiarPassword) {
+      if (tieneActual && !(await verifyPassword(actual!, usuario.passwordHash))) {
+        throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [
+          { path: 'actual', message: 'La contraseña actual no es correcta' },
+        ]);
+      }
+      if (await verifyPassword(nueva, usuario.passwordHash)) {
+        throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [
+          { path: 'nueva', message: 'La nueva contraseña debe ser distinta a la actual' },
+        ]);
+      }
+    } else {
+      if (!tieneActual) {
+        throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [
+          { path: 'actual', message: 'Escribe tu contraseña actual' },
+        ]);
+      }
+      if (!(await verifyPassword(actual!, usuario.passwordHash))) {
+        throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [
+          { path: 'actual', message: 'La contraseña actual no es correcta' },
+        ]);
+      }
     }
 
     await this.repo.actualizarPassword(usuario.id, await hashPassword(nueva));
@@ -239,6 +260,8 @@ export class AuthService extends BaseService {
       rol: u.rol,
       permisos: u.permisos,
       debeCambiarPassword: u.debeCambiarPassword,
+      clienteId: u.clienteId ?? null,
+      clienteNombre: u.clienteNombre ?? null,
     });
   }
 
@@ -250,6 +273,8 @@ export class AuthService extends BaseService {
       rol: u.rol,
       permisos: u.permisos,
       debeCambiarPassword: u.debeCambiarPassword,
+      clienteId: u.clienteId ?? null,
+      clienteNombre: u.clienteNombre ?? null,
     };
   }
 }

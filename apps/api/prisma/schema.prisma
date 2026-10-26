@@ -729,6 +729,8 @@ enum TipoEventoBitacora {
   grupo_baja
   cobertura
   cobertura_cancelada
+  comida_sin_cierre
+  sin_comida
 }
 
 /// Bitácora del guardia (DA-41): control interno de supervisores y admin. Cada evento se guarda al
@@ -841,4 +843,13 @@ model Cobertura {
   @@index([cubreAId])
   @@index([creadaPorId])
   @@map("coberturas")
+}
+
+/// Avisos automáticos ya enviados (DA-47): evita repetir un recordatorio en cada revisión. La clave
+/// dice qué y de qué marca, p. ej. `comida-guardia:123`.
+model AvisoEnviado {
+  clave     String   @id @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("avisos_enviados")
 }

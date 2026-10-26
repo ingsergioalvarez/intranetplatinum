@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import {
   PERMISOS,
+  ROLES,
   bitacoraQuerySchema,
   comentarioBitacoraSchema,
   decidirFaltaSchema,
@@ -20,6 +21,7 @@ import {
   PrismaAuditLogger,
   authenticate,
   requirePermission,
+  requireRoles,
   validate,
   type AppModule,
 } from '../../core';
@@ -114,7 +116,13 @@ export function createBitacoraModule({
   const id = idParamSchema;
 
   const router = Router();
-  router.use(authenticate, requirePermission(PERMISOS.ASISTENCIA_VER));
+  // Control interno: solo admin y supervisor. El permiso de ver asistencia no basta porque el rol
+  // cliente también lo tiene (portal de clientes, DA-48) y no debe ver la bitácora disciplinaria.
+  router.use(
+    authenticate,
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    requirePermission(PERMISOS.ASISTENCIA_VER),
+  );
   // Incidencias de todos (DA-42): por guardia y lista general.
   router.get('/incidencias/guardias', validate({ query: bitacoraQuerySchema }), c.incidenciasPorGuardia);
   router.get('/incidencias', validate({ query: incidenciasMesQuerySchema }), c.incidencias);

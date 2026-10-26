@@ -14,6 +14,8 @@ export interface UsuarioAuth {
   bloqueadoHasta: Date | null;
   rol: Rol;
   permisos: Permiso[];
+  clienteId?: number | null;
+  clienteNombre?: string | null;
 }
 
 export interface RefreshTokenRecord {
@@ -54,6 +56,7 @@ export abstract class AuthRepository {
 
 const usuarioAuthInclude = {
   rol: { include: { permisos: { include: { permiso: true } } } },
+  cliente: { select: { id: true, nombreComercial: true } },
 } as const;
 
 export class PrismaAuthRepository extends AuthRepository {
@@ -130,6 +133,8 @@ export class PrismaAuthRepository extends AuthRepository {
     intentosFallidos: number;
     bloqueadoHasta: Date | null;
     rol: { clave: string; permisos: { permiso: { clave: string } }[] };
+    clienteId?: number | null;
+    cliente?: { id: number; nombreComercial: string } | null;
   }): UsuarioAuth {
     return {
       id: u.id,
@@ -143,6 +148,8 @@ export class PrismaAuthRepository extends AuthRepository {
       bloqueadoHasta: u.bloqueadoHasta,
       rol: u.rol.clave as Rol,
       permisos: u.rol.permisos.map((rp) => rp.permiso.clave as Permiso),
+      clienteId: u.clienteId ?? u.cliente?.id ?? null,
+      clienteNombre: u.cliente?.nombreComercial ?? null,
     };
   }
 }

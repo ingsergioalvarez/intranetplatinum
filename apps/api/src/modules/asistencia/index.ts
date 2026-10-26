@@ -34,7 +34,8 @@ import { AsistenciaController } from './asistencia.controller';
 import { AsistenciaRepository, PrismaAsistenciaRepository } from './asistencia.repository';
 import { AsistenciaService, type LlegadaFn, type MisSitiosFn } from './asistencia.service';
 import { VigilanciaTurnos } from './vigilancia';
-import { PrismaVigilanciaRepository } from './vigilancia.repository';
+import { RecordatoriosComida } from './comidas';
+import { PrismaComidasRepository, PrismaVigilanciaRepository } from './vigilancia.repository';
 
 interface AsistenciaModuleDeps {
   repo?: AsistenciaRepository;
@@ -146,17 +147,20 @@ export function createAsistenciaModule({
 export const asistenciaModule = createAsistenciaModule();
 
 /**
- * Revisa cada minuto los turnos que empezaron sin entrada (DA-45): avisos y faltas. Una revisión no
+ * Revisa cada minuto los turnos que empezaron sin entrada (DA-45): avisos y faltas; y las comidas
+ * (DA-47). Una revisión no
  * empieza si la anterior sigue corriendo.
  */
 export function iniciarVigilanciaTurnos() {
   const vigilancia = new VigilanciaTurnos(new PrismaVigilanciaRepository(), avisarConPrisma);
+  const comidas = new RecordatoriosComida(new PrismaComidasRepository(), avisarConPrisma, bitacoraConPrisma);
   let corriendo = false;
   const revisar = async () => {
     if (corriendo) return;
     corriendo = true;
     try {
       await vigilancia.revisar();
+      await comidas.revisar();
     } catch (err) {
       console.error('[vigilancia] Falló la revisión de turnos', err);
     } finally {

@@ -42,7 +42,9 @@ export function JornadaCard({
   const [abierta, setAbierta] = useState(false);
   const [foto, setFoto] = useState<Marcacion | null>(null);
   const enCurso = jornadaEnCurso(j);
-  const marcas = [j.entrada, j.inicioComida, j.finComida, j.salida].filter((m): m is Marcacion => m !== null);
+  const marcas = [j.entrada, ...j.comidas.flatMap((c) => [c.inicio, c.fin]), j.salida].filter(
+    (m): m is Marcacion => m !== null,
+  );
   // Marcó con el rostro pendiente y después se aprobó: ya no es alerta (AS1-14).
   const aprobadoEn = marcas.find((m) => m.rostroAprobadoEn)?.rostroAprobadoEn ?? null;
 
@@ -74,13 +76,13 @@ export function JornadaCard({
         )}
       </div>
 
-      {(j.inicioComida || j.finComida) && (
-        <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-600">
+      {j.comidas.map((c, i) => (
+        <p key={c.inicio.id} className="mt-2 flex items-center gap-1.5 text-sm text-slate-600">
           <Coffee className="size-4" />
-          Comida {j.inicioComida ? formatHora(j.inicioComida.registradaEn) : '—'} –{' '}
-          {j.finComida ? formatHora(j.finComida.registradaEn) : enCurso ? 'en curso' : 'sin cierre'}
+          Comida{j.comidas.length > 1 ? ` ${i + 1}` : ''} {formatHora(c.inicio.registradaEn)} –{' '}
+          {c.fin ? formatHora(c.fin.registradaEn) : enCurso ? 'en curso' : 'sin cierre'}
         </p>
-      )}
+      ))}
 
       {miniaturas && marcas.some((m) => m.foto) && (
         <ul className="mt-3 flex gap-3">

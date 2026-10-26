@@ -51,6 +51,7 @@ import { pedirSensorInclinacion } from './rostro/inclinacion';
 import { TurnoGuardiaCard } from './TurnoGuardia';
 import { formatDiaLargo, formatHora } from './formato';
 import { precargarMotor } from './rostro/motor';
+import { RelevoTurnoModal } from './RelevoTurnoModal';
 import { SinUbicacionError, nuevoIdMarca, obtenerUbicacion, type Ubicacion } from './ubicacion';
 
 const BOTONES: { tipo: TipoMarcacion; icon: LucideIcon }[] = [
@@ -159,6 +160,8 @@ export function MarcarPage() {
   const [resultado, setResultado] = useState<Marcacion | null>(null);
   /** Entrada o salida en curso con la cámara (AS1-08). */
   const [camara, setCamara] = useState<'entrada' | 'salida' | null>(null);
+  /** Modal de entrega y recepción de consignas (REP-07, REP-08). */
+  const [relevo, setRelevo] = useState<'entrada' | 'salida' | null>(null);
   /** Consejos antes de abrir la cámara (quitarse lentes, buena luz...). */
   const [consejos, setConsejos] = useState<'entrada' | 'salida' | null>(null);
   const [ahora, setAhora] = useState(() => new Date());
@@ -189,23 +192,23 @@ export function MarcarPage() {
     return () => clearInterval(t);
   }, [gpsBloquea, actualizarUbicacion]);
 
-  /** Entrada o salida con foto: consejos (si no los ocultó) y luego la cámara. */
   const abrirCamara = (tipo: 'entrada' | 'salida') => {
-    if (debeMostrarConsejos()) return setConsejos(tipo);
+    if (debeMostrarConsejos()) {
+      setConsejos(tipo);
+      return;
+    }
     pedirSensorInclinacion();
     setCamara(tipo);
   };
 
-  // Desde la ventana "Tu turno empieza" (DA-40): abre directo "Checar entrada" cuando ya se sabe la
-  // ubicación y nada lo impide.
+  // Desde la ventana "Tu turno empieza" (DA-40): abre directo la confirmación de relevo de entrada.
   const [params, setParams] = useSearchParams();
   const pideEntrada = params.get('checar') === 'entrada';
   useEffect(() => {
     if (!pideEntrada || !estado.data || ubic.estado === 'buscando') return;
     setParams({}, { replace: true });
     if (ubic.estado === 'ok' && !gpsBloquea && estado.data.permitidas.includes('entrada')) {
-      if (debeMostrarConsejos()) setConsejos('entrada');
-      else setCamara('entrada');
+      setRelevo('entrada');
     }
   }, [pideEntrada, estado.data, ubic.estado, gpsBloquea, setParams]);
 
@@ -272,16 +275,19 @@ export function MarcarPage() {
             const permitido =
               data.permitidas.includes(tipo) && !bloqueado && !(gps && TIPOS_CON_FOTO.includes(tipo));
             const principal = permitido && tipo === data.permitidas[0];
+
             return (
               <button
                 key={tipo}
                 type="button"
                 disabled={!permitido}
-                onClick={() =>
-                  TIPOS_CON_FOTO.includes(tipo)
-                    ? abrirCamara(tipo as 'entrada' | 'salida')
-                    : setPendiente(tipo)
-                }
+                onClick={() => {
+                  if (tipo === 'entrada' || tipo === 'salida') {
+                    setRelevo(tipo);
+                  } else {
+                    setPendiente(tipo);
+                  }
+                }}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-xl px-4 font-semibold transition-colors',
                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500',
@@ -294,6 +300,33 @@ export function MarcarPage() {
               >
                 <Icon className={principal ? 'size-6' : 'size-5'} />
                 {ACCION[tipo]}
+                {/* Turnos de 24 h: dos comidas (DA-47). Solo mostrar conteo si la jornada está activa */}
+                {tipo === 'inicio_comida' &&
+                  !data.permitidas.includes('entrada') &&
+                  data.jornada &&
+                  !data.jornada.salida &&
+                  data.jornada.comidasPermitidas > 1 && (
+                    <span className="text-sm font-normal opacity-80">
+                      ({Math.min(
+                        data.jornada.comidas.filter((c) => c.fin !== null).length + 1,
+                        data.jornada.comidasPermitidas,
+                      )}{' '}
+                      de {data.jornada.comidasPermitidas})
+                    </span>
+                  )}
+                {/* Indicador de salida bloqueada por comida pendiente */}
+                {tipo === 'salida' &&
+                  !data.permitidas.includes('salida') &&
+                  !data.permitidas.includes('entrada') &&
+                  data.jornada &&
+                  !data.jornada.salida && (
+                    <span className="ml-auto text-xs font-normal opacity-70">
+                      {data.jornada.comidasPermitidas > 1 &&
+                      data.jornada.comidas.filter((c) => c.fin !== null).length > 0
+                        ? `Falta comida (${data.jornada.comidas.filter((c) => c.fin !== null).length}/${data.jornada.comidasPermitidas})`
+                        : 'Primero registra tu comida'}
+                    </span>
+                  )}
               </button>
             );
           })}
@@ -361,6 +394,26 @@ export function MarcarPage() {
             setCamara(null);
             setResultado(marca);
             void queryClient.invalidateQueries({ queryKey: asistenciaService.keys.all });
+            void queryClient.invalidateQueries({ queryKey: ['reportes'] });
+          }}
+        />
+      )}
+
+      {relevo && (
+        <RelevoTurnoModal
+          tipo={relevo}
+          sitio={
+            data.jornada?.sitio ??
+            (referencia?.nombre ? data.sitios.find((s) => s.nombre === referencia.nombre) : null) ??
+            data.sitios[0] ??
+            null
+          }
+          ubicacion={ubicacion}
+          onCancelar={() => setRelevo(null)}
+          onContinuar={() => {
+            const t = relevo;
+            setRelevo(null);
+            abrirCamara(t);
           }}
         />
       )}
@@ -492,12 +545,20 @@ function Aviso({
 /** Marcas de la jornada actual (o la última de las últimas horas). */
 function HoyCard({ data }: { data: EstadoAsistencia }) {
   const j = data.jornada;
-  const filas: { tipo: TipoMarcacion; marca: Marcacion | null }[] = j
+  const varias = !!j && j.comidasPermitidas > 1;
+  const comidas = j ? (j.comidas.length ? j.comidas : [{ inicio: null, fin: null }]) : [];
+  const filas: { clave: string; texto: string; marca: Marcacion | null }[] = j
     ? [
-        { tipo: 'entrada', marca: j.entrada },
-        { tipo: 'inicio_comida', marca: j.inicioComida },
-        { tipo: 'fin_comida', marca: j.finComida },
-        { tipo: 'salida', marca: j.salida },
+        { clave: 'entrada', texto: TIPO_MARCACION_LABEL.entrada, marca: j.entrada },
+        ...comidas.flatMap((c, i) => [
+          {
+            clave: `inicio-${i}`,
+            texto: `Salió a comer${varias ? ` (${i + 1})` : ''}`,
+            marca: c.inicio,
+          },
+          { clave: `fin-${i}`, texto: `Regresó de comer${varias ? ` (${i + 1})` : ''}`, marca: c.fin },
+        ]),
+        { clave: 'salida', texto: TIPO_MARCACION_LABEL.salida, marca: j.salida },
       ]
     : [];
 
@@ -506,11 +567,9 @@ function HoyCard({ data }: { data: EstadoAsistencia }) {
       <CardHeader title="Hoy" subtitle={j?.sitio?.nombre} />
       {j ? (
         <ul className="divide-y divide-slate-100">
-          {filas.map(({ tipo, marca }) => (
-            <li key={tipo} className="flex items-center justify-between px-4 py-2.5 text-sm">
-              <span className={marca ? 'text-slate-800' : 'text-slate-400'}>
-                {TIPO_MARCACION_LABEL[tipo]}
-              </span>
+          {filas.map(({ clave, texto, marca }) => (
+            <li key={clave} className="flex items-center justify-between px-4 py-2.5 text-sm">
+              <span className={marca ? 'text-slate-800' : 'text-slate-400'}>{texto}</span>
               <span className="flex items-center gap-1.5 font-medium tabular-nums">
                 {marca ? formatHora(marca.registradaEn) : '—'}
                 {marca &&

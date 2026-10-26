@@ -93,7 +93,7 @@ export const router = createBrowserRouter([
       {
         path: 'reportes',
         element: (
-          <ProtectedRoute permiso={PERMISOS.REPORTES_CREAR}>
+          <ProtectedRoute permiso={PERMISOS.REPORTES_VER_PROPIOS}>
             <ReportesPage />
           </ProtectedRoute>
         ),

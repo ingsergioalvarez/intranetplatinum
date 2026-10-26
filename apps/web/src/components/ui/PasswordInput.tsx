@@ -3,14 +3,17 @@ import { Eye, EyeOff } from 'lucide-react';
 import { cn } from './cn';
 import { Input } from './Input';
 
-type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { invalid?: boolean };
+type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
+  invalid?: boolean;
+  defaultVisible?: boolean;
+};
 
 /** Campo de contraseña con botón para mostrar/ocultar (útil al escribir en celular). */
 export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(function PasswordInput(
-  { className, ...rest },
+  { className, defaultVisible = false, ...rest },
   ref,
 ) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(defaultVisible);
   return (
     <div className="relative">
       <Input

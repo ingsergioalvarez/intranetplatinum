@@ -38,34 +38,54 @@ export class NotificadorAvisos implements NotificadorReportes {
   async reporteCreado(r: ReporteAviso, actorId: number) {
     await this.seguro('reporteCreado', async () => {
       const destino = resolverDestino(await this.repo.reglasDelCliente(r.cliente.id), r.prioridad);
+      const hoy = new Date().toISOString().slice(0, 10);
+      const guardiasSitio = await this.repo.guardiasDelSitio(r.sitio.id, hoy);
+      const destinatarios = new Set<number>();
+
       if (avisaASupervisor(destino)) {
-        await this.repo.crear(this.sin(await this.repo.supervisores(), actorId), {
+        for (const sup of await this.repo.supervisores()) destinatarios.add(sup);
+      }
+      // Notifica también a los compañeros asignados a este sitio
+      for (const g of guardiasSitio) destinatarios.add(g);
+      // Notifica a los usuarios del portal del cliente
+      if (avisaACliente(destino)) {
+        for (const c of await this.repo.usuariosDelCliente(r.cliente.id)) destinatarios.add(c);
+      }
+
+      destinatarios.delete(actorId);
+
+      if (destinatarios.size > 0) {
+        await this.repo.crear(Array.from(destinatarios), {
           tipo: 'reporte_nuevo',
           reporteId: r.id,
           mensaje: `${r.folio} · ${PRIORIDAD_REPORTE_LABEL[r.prioridad]}: ${r.titulo} (${r.sitio.nombre}, ${r.cliente.nombreComercial})`,
         });
       }
+
       // El correo sale cuando haya SMTP (F3-07); mientras, queda en cola.
       if (avisaACliente(destino)) await this.repo.encolarCorreosCliente(r.id, r.cliente.id);
     });
   }
 
   async estatusCambiado(r: ReporteAviso, nuevo: EstatusReporte, actorId: number) {
-    await this.seguro('estatusCambiado', () =>
-      this.repo.crear(this.sin([r.creadoPor.id], actorId), {
+    await this.seguro('estatusCambiado', async () => {
+      const clientes = await this.repo.usuariosDelCliente(r.cliente.id);
+      const destinatarios = [...new Set([r.creadoPor.id, ...clientes])];
+      await this.repo.crear(this.sin(destinatarios, actorId), {
         tipo: 'reporte_estatus',
         reporteId: r.id,
         mensaje: `${r.folio} ahora está "${ESTATUS_REPORTE_LABEL[nuevo]}": ${r.titulo}`,
-      }),
-    );
+      });
+    });
   }
 
-  /** Comentario sin cambio de estatus: avisa a quien da seguimiento y a quien reportó (salvo al autor). */
+  /** Comentario sin cambio de estatus: avisa a supervisores, a quien reportó y a usuarios del cliente (salvo al autor). */
   async comentarioAgregado(r: ReporteAviso, actorId: number, actorNombre: string) {
     await this.seguro('comentarioAgregado', async () => {
       const destino = resolverDestino(await this.repo.reglasDelCliente(r.cliente.id), r.prioridad);
       const supervisores = avisaASupervisor(destino) ? await this.repo.supervisores() : [];
-      const destinatarios = [...new Set([...supervisores, r.creadoPor.id])];
+      const clientes = await this.repo.usuariosDelCliente(r.cliente.id);
+      const destinatarios = [...new Set([...supervisores, r.creadoPor.id, ...clientes])];
       await this.repo.crear(this.sin(destinatarios, actorId), {
         tipo: 'reporte_comentario',
         reporteId: r.id,

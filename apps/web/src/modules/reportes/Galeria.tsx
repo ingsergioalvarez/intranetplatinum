@@ -14,7 +14,11 @@ export function Galeria({ fotos, compacta }: { fotos: Evidencia[]; compacta?: bo
   return (
     <>
       <div
-        className={compacta ? 'flex flex-wrap gap-2' : 'grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6'}
+        className={
+          compacta
+            ? 'flex flex-wrap gap-2 pt-1'
+            : 'grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4'
+        }
       >
         {fotos.map((f, i) => (
           <button
@@ -23,12 +27,17 @@ export function Galeria({ fotos, compacta }: { fotos: Evidencia[]; compacta?: bo
             onClick={() => setAbierta(i)}
             className={
               compacta
-                ? 'size-20 overflow-hidden rounded-lg bg-slate-100'
-                : 'aspect-square overflow-hidden rounded-lg bg-slate-100'
+                ? 'size-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 hover:opacity-90'
+                : 'group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm hover:border-slate-300'
             }
             aria-label={`Ver foto ${i + 1} de ${fotos.length}`}
           >
-            <img src={f.url} alt="" loading="lazy" className="size-full object-cover" />
+            <img
+              src={f.url}
+              alt=""
+              loading="lazy"
+              className="size-full object-cover transition-transform group-hover:scale-105"
+            />
           </button>
         ))}
       </div>

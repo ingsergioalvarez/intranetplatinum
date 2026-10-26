@@ -450,7 +450,7 @@ describe('asistencia: jornada completa', () => {
     expect(entrada.body.data.distanciaM).toBeLessThan(20);
 
     let estado = await request(app).get('/api/asistencia/estado').set('Authorization', token(10));
-    expect(estado.body.data.permitidas).toEqual(['inicio_comida', 'salida']);
+    expect(estado.body.data.permitidas).toEqual(['inicio_comida']);
 
     avanzar(5);
     expect((await marcar(10, marca('inicio_comida'))).status).toBe(201);
@@ -475,10 +475,24 @@ describe('asistencia: jornada completa', () => {
     expect(res.body.data.sitio.nombre).toBe('Hotel Sur');
   });
 
-  it('la salida se permite aunque no cierre la comida', async () => {
+  it('no permite checar salida hasta completar las horas de comida', async () => {
     await marcar(10, marca('entrada'));
+    const intentoSalidaDirecta = await marcar(10, marca('salida'));
+    expect(intentoSalidaDirecta.status).toBe(409);
+    expect(intentoSalidaDirecta.body.error.message).toBe(
+      'Debes registrar tus horas de comida antes de checar tu salida.',
+    );
+
     await marcar(10, marca('inicio_comida'));
-    expect((await marcar(10, marca('salida'))).status).toBe(201);
+    const intentoSalidaEnComida = await marcar(10, marca('salida'));
+    expect(intentoSalidaEnComida.status).toBe(409);
+    expect(intentoSalidaEnComida.body.error.message).toBe(
+      'Debes registrar tus horas de comida antes de checar tu salida.',
+    );
+
+    await marcar(10, marca('fin_comida'));
+    const salidaOk = await marcar(10, marca('salida'));
+    expect(salidaOk.status).toBe(201);
   });
 });
 
@@ -550,6 +564,7 @@ describe('asistencia: GPS obligatorio en entrada y salida (DA-36)', () => {
     const comida = await marcar(10, marca('inicio_comida', lejos, 250));
     expect(comida.status).toBe(201);
     expect(comida.body.data.alertas).toEqual(['fuera_de_rango', 'gps_impreciso']);
+    await marcar(10, marca('fin_comida'));
     const salida = await marcar(10, marca('salida', lejos));
     expect(salida.body.error.message).toBe(
       'Estás a 222 m de Plaza Norte. Acércate al sitio (máximo 100 m) para registrar tu salida.',
@@ -692,7 +707,10 @@ describe('asistencia: registro de rostro (AS1-02)', () => {
     expect(repo.marcas.find((m) => m.id === entrada.body.data.id)!.fotoClave).not.toBeNull();
     expect((await borrar('admin')).status).toBe(404);
 
-    avanzar(9);
+    avanzar(4);
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
+    avanzar(5);
     const salida = await marcar(10, marca('salida'));
     expect(salida.body.data.alertas).toContain('sin_rostro_registrado');
   });
@@ -707,6 +725,8 @@ describe('asistencia: mis marcas', () => {
   it('agrupa por jornada y filtra por mes (zona del negocio)', async () => {
     ahora = new Date('2026-09-30T13:00:00.000Z');
     await marcar(10, marca('entrada'));
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
     avanzar(8);
     await marcar(10, marca('salida'));
     ahora = new Date('2026-10-20T13:00:00.000Z');
@@ -743,6 +763,7 @@ describe('asistencia: vista de admin / supervisor (AS1-07)', () => {
     await marcar(11, marca('entrada')); // Bodega: sitio sin ubicación y sin rostro registrado
     avanzar(8);
     await marcar(10, marca('inicio_comida', PLAZA, 300)); // GPS impreciso
+    await marcar(10, marca('fin_comida'));
     await marcar(10, marca('salida'));
   });
 
@@ -1158,7 +1179,13 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     expect((await marcar(10, marca('entrada'))).body.data.alertas).toEqual(['retardo']);
     expect(retardos()).toHaveLength(0);
 
-    avanzar(24); // otra jornada, al día siguiente 07:37
+    avanzar(6);
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
+    avanzar(12);
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
+    avanzar(6); // otra jornada, al día siguiente 07:37
     avanzar(25 / 60);
     await marcar(10, marca('salida'));
     await marcar(10, marca('entrada'));
@@ -1188,6 +1215,8 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
   it('salida anticipada: más de 10 min antes de la hora programada', async () => {
     HORARIOS = { 1: { turno: '12x12', horaInicio: '07:00', horaFin: '19:00' } };
     await marcar(10, marca('entrada'));
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
     avanzar(11.5); // 18:30
     expect((await marcar(10, marca('salida'))).body.data.alertas).toEqual(['salida_anticipada']);
     expect(repo.avisos.find((a) => a.tipo === 'marca_alerta')?.mensaje).toBe(
@@ -1209,6 +1238,8 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     const res = await marcar(10, marca('entrada', PLAZA, 15, { sinLentes: true }));
     expect(res.status).toBe(201);
     expect(res.body.data.alertas).toEqual(['sin_lentes_declarado']);
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
     avanzar(1);
     expect((await marcar(10, marca('salida', PLAZA, 15, { sinLentes: false }))).body.data.alertas).toEqual(
       [],
@@ -1251,6 +1282,64 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     });
   });
 
+  it('dos comidas en turnos de 24 h; una en turnos de 12 h (DA-47)', async () => {
+    HORARIOS = { 1: { horas: 24, horaInicio: '07:00', horaFin: '07:00', dias: { tipo: 'diario' } } };
+    await marcar(10, marca('entrada'));
+    for (const tipo of ['inicio_comida', 'fin_comida', 'inicio_comida', 'fin_comida']) {
+      avanzar(1);
+      expect((await marcar(10, marca(tipo))).status).toBe(201);
+    }
+    avanzar(1);
+    expect((await marcar(10, marca('inicio_comida'))).status).toBe(409);
+    const [j] = (await request(app).get('/api/asistencia/mias?mes=2026-10').set('Authorization', token(10)))
+      .body.data;
+    expect(j).toMatchObject({ comidasPermitidas: 2 });
+    expect(j.comidas).toHaveLength(2);
+  });
+
+  it('para checar salida hay que iniciar y terminar la comida, aunque sea en segundos (DA-47)', async () => {
+    HORARIOS = { 1: { horas: 12, horaInicio: '07:00', horaFin: '19:00', dias: { tipo: 'diario' } } };
+    await marcar(10, marca('entrada'));
+    // Sin comida: no puede salir; solo puede iniciarla.
+    avanzar(1);
+    const sinComida = await marcar(10, marca('salida'));
+    expect(sinComida.status).toBe(409);
+    expect(sinComida.body.error.message).toBe(
+      'Debes registrar tus horas de comida antes de checar tu salida.',
+    );
+    // Con la comida abierta tampoco: debe terminarla.
+    await marcar(10, marca('inicio_comida'));
+    expect((await marcar(10, marca('salida'))).status).toBe(409);
+    const estado = await request(app).get('/api/asistencia/estado').set('Authorization', token(10));
+    expect(estado.body.data.permitidas).toEqual(['fin_comida']);
+    // Terminada la comida, ya puede salir.
+    await marcar(10, marca('fin_comida'));
+    expect((await marcar(10, marca('salida'))).status).toBe(201);
+  });
+
+  it('turno de 24 h: debe hacer las dos comidas antes de salir (DA-47)', async () => {
+    HORARIOS = { 1: { horas: 24, horaInicio: '07:00', horaFin: '07:00', dias: { tipo: 'diario' } } };
+    await marcar(10, marca('entrada'));
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
+    // Una de dos: aún no puede salir.
+    expect((await marcar(10, marca('salida'))).status).toBe(409);
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
+    expect((await marcar(10, marca('salida'))).status).toBe(201);
+  });
+
+  it('turno de 12 h: solo una comida', async () => {
+    HORARIOS = { 1: { horas: 12, horaInicio: '07:00', horaFin: '19:00', dias: { tipo: 'diario' } } };
+    await marcar(10, marca('entrada'));
+    avanzar(1);
+    await marcar(10, marca('inicio_comida'));
+    avanzar(1);
+    await marcar(10, marca('fin_comida'));
+    avanzar(1);
+    expect((await marcar(10, marca('inicio_comida'))).status).toBe(409);
+  });
+
   it('sin horario en la asignación no hay programada ni retardo', async () => {
     avanzar(5);
     await marcar(10, marca('entrada'));
@@ -1286,6 +1375,10 @@ describe('asistencia: avisos con lógica, por umbral o por patrón (DA-33)', () 
     const inicio = new Date(ahora);
     ahora = new Date(inicio.getTime() + tarde * 60_000);
     await marcar(10, marca('entrada'));
+    ahora = new Date(inicio.getTime() + 6 * 3_600_000);
+    await marcar(10, marca('inicio_comida'));
+    ahora = new Date(inicio.getTime() + 7 * 3_600_000);
+    await marcar(10, marca('fin_comida'));
     ahora = new Date(inicio.getTime() + (12 * 60 - antes) * 60_000);
     await marcar(10, marca('salida'));
     ahora = new Date(inicio.getTime() + 24 * 3_600_000); // mismo horario al día siguiente

@@ -767,8 +767,8 @@ export function EscanerRostro({
           if (armado && titularRef.current) {
             baseRef.current ??= medidasRostro(puntos, w, h);
             nuevoGesto(ahora);
-          } else if (armado && parpadeoRef.current.actualizar(aperturaOjos(puntos, w, h))) {
-            void capturar(true);
+          } else if (armado) {
+            void capturar(false);
           } else if (!armado && listo) {
             // Mientras se estabiliza se aprenden la apertura normal de los ojos y las medidas de la cara.
             parpadeoRef.current.actualizar(aperturaOjos(puntos, w, h));
@@ -814,7 +814,7 @@ export function EscanerRostro({
                                   ? 'El rostro frente a la cámara no es el titular de esta cuenta'
                                   : 'Verificando que seas el titular…'
                                 : armado
-                                  ? '¡Listo! Parpadea para tomar la foto'
+                                  ? '¡Listo! Tomando foto…'
                                   : 'No te muevas…')),
         };
       }
@@ -1058,8 +1058,8 @@ export function EscanerRostro({
               >
                 {calidad.armado ? (
                   <>
-                    <OjoParpadeando />
-                    <span className="font-semibold">¡Listo! Parpadea</span>
+                    <CircleCheck className="size-5 text-emerald-400" />
+                    <span className="font-semibold">¡Listo! Tomando foto…</span>
                   </>
                 ) : (
                   <>

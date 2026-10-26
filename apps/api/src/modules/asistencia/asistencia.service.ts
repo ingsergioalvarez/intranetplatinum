@@ -43,6 +43,7 @@ import {
   type EstadoTurno,
   trabajaEl,
   type TurnoDelGuardia,
+  comidasDelTurno,
 } from '@platinum/shared';
 import {
   AuditLogger,
@@ -189,6 +190,10 @@ export function armarJornadas(rows: MarcacionRow[], estados: EstadosRostros = ne
           entrada: m,
           inicioComida: null,
           finComida: null,
+          comidas: [],
+          comidasPermitidas: comidasDelTurno(
+            programada ? (Date.parse(programada.salida) - Date.parse(programada.entrada)) / 3_600_000 : null,
+          ),
           salida: null,
           sitio: r.sitio,
           alertas: [...m.alertas],
@@ -202,8 +207,15 @@ export function armarJornadas(rows: MarcacionRow[], estados: EstadosRostros = ne
     const e = r.entradaId !== null ? porEntrada.get(r.entradaId) : undefined;
     if (!e) continue;
     const j = e.jornada;
-    if (r.tipo === 'inicio_comida') j.inicioComida = m;
-    if (r.tipo === 'fin_comida') j.finComida = m;
+    if (r.tipo === 'inicio_comida') {
+      j.comidas.push({ inicio: m, fin: null });
+      j.inicioComida ??= m;
+    }
+    if (r.tipo === 'fin_comida') {
+      const abierta = j.comidas.at(-1);
+      if (abierta && !abierta.fin) abierta.fin = m;
+      if (j.comidas.length === 1) j.finComida = m;
+    }
     if (r.tipo === 'salida') {
       j.salida = m;
       if (e.entrada.programadaSalida)
@@ -368,7 +380,9 @@ const fueraDeOrden = (tipo: TipoMarcacion, permitidas: TipoMarcacion[]) => {
         ? 'Primero registra tu entrada.'
         : tipo === 'fin_comida'
           ? 'Primero registra el inicio de tu comida.'
-          : 'Esta marca ya no se puede registrar en tu jornada actual.';
+          : tipo === 'salida' && (permitidas.includes('inicio_comida') || permitidas.includes('fin_comida'))
+            ? 'Debes registrar tus horas de comida antes de checar tu salida.'
+            : 'Esta marca ya no se puede registrar en tu jornada actual.';
   return new HttpError(409, 'MARCA_FUERA_DE_ORDEN', mensaje);
 };
 
@@ -1270,7 +1284,10 @@ export class AsistenciaService extends BaseService {
     const conJornada: FilaAsistencia[] = (await this.jornadas(rows)).map((jornada) => {
       const guardia = guardiaDe.get(jornada.entrada.id)!;
       return {
-        guardia,
+        guardia: {
+          ...guardia,
+          foto: jornada.entrada.foto ?? guardia.foto ?? null,
+        },
         sitio: jornada.sitio,
         jornada,
         cobertura: !!jornada.sitio && cubre.get(guardia.id) === jornada.sitio.id,
@@ -1332,7 +1349,15 @@ export class AsistenciaService extends BaseService {
   /** Qué puede marcar según su última jornada (SIGUIENTES_MARCAS). */
   private permitidas(jornada: MarcacionRow[]): TipoMarcacion[] {
     if (jornada.length === 0 || !this.reciente(jornada[0])) return ['entrada'];
-    return SIGUIENTES_MARCAS[jornada[jornada.length - 1].tipo];
+    const ultima = jornada[jornada.length - 1].tipo;
+    if (ultima === 'salida') return SIGUIENTES_MARCAS.salida;
+    // La salida exige haber iniciado y terminado la(s) comida(s) del turno, aunque sea en segundos:
+    // así se obliga a registrarla (si de verdad comió es otro asunto) y queda constancia (DA-47).
+    if (ultima === 'inicio_comida') return ['fin_comida'];
+    const { programadaEntrada: e, programadaSalida: s } = jornada[0];
+    const completadas = jornada.filter((m) => m.tipo === 'fin_comida').length;
+    const horas = e && s ? (s.getTime() - e.getTime()) / 3_600_000 : null;
+    return completadas < comidasDelTurno(horas) ? ['inicio_comida'] : ['salida'];
   }
 
   /** Una entrada sigue "abierta" hasta JORNADA_MAX_HORAS después. */

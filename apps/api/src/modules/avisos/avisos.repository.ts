@@ -18,9 +18,13 @@ export abstract class AvisosRepository {
   abstract marcarTodos(usuarioId: number): Promise<void>;
   /** Usuarios activos que dan seguimiento: con permiso `reportes.estatus` (supervisores y admin). */
   abstract supervisores(): Promise<number[]>;
+  /** Guardias asignados (directos o por grupo) o cubriendo el sitio hoy. */
+  abstract guardiasDelSitio(sitioId: number, hoy: string): Promise<number[]>;
   abstract reglasDelCliente(clienteId: number): Promise<ReglasAviso>;
   /** Deja en cola (pendiente) un correo por contacto con `recibe_notificaciones` y correo. Devuelve cuántos. */
   abstract encolarCorreosCliente(reporteId: number, clienteId: number): Promise<number>;
+  /** Usuarios activos con rol cliente asociados a esta empresa. */
+  abstract usuariosDelCliente(clienteId: number): Promise<number[]>;
 }
 
 export class PrismaAvisosRepository extends AvisosRepository {
@@ -89,6 +93,51 @@ export class PrismaAvisosRepository extends AvisosRepository {
     return rows.map((r) => r.id);
   }
 
+  async guardiasDelSitio(sitioId: number, hoy: string): Promise<number[]> {
+    const prisma = getPrisma();
+    const hoyDate = new Date(`${hoy}T00:00:00.000Z`);
+    const [asignaciones, coberturas] = await Promise.all([
+      prisma.sitioGuardia.findMany({
+        where: {
+          sitioId,
+          AND: [
+            { desde: { lte: hoyDate } },
+            { OR: [{ hasta: null }, { hasta: { gte: hoyDate } }] },
+          ],
+        },
+        select: {
+          usuarioId: true,
+          grupo: {
+            select: {
+              integrantes: { select: { usuarioId: true } },
+            },
+          },
+        },
+      }),
+      prisma.cobertura.findMany({
+        where: {
+          sitioId,
+          canceladaEn: null,
+          desde: { lte: new Date() },
+          hasta: { gte: new Date() },
+        },
+        select: { usuarioId: true },
+      }),
+    ]);
+
+    const ids = new Set<number>();
+    for (const a of asignaciones) {
+      if (a.usuarioId) ids.add(a.usuarioId);
+      if (a.grupo) {
+        for (const i of a.grupo.integrantes) ids.add(i.usuarioId);
+      }
+    }
+    for (const c of coberturas) {
+      ids.add(c.usuarioId);
+    }
+    return Array.from(ids);
+  }
+
   async reglasDelCliente(clienteId: number): Promise<ReglasAviso> {
     const c = await getPrisma().cliente.findUniqueOrThrow({
       where: { id: clienteId },
@@ -111,5 +160,17 @@ export class PrismaAvisosRepository extends AvisosRepository {
       data: contactos.map((c) => ({ reporteId, contactoId: c.id, canal: 'email' as const })),
     });
     return contactos.length;
+  }
+
+  async usuariosDelCliente(clienteId: number): Promise<number[]> {
+    const rows = await getPrisma().usuario.findMany({
+      where: {
+        clienteId,
+        activo: true,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
   }
 }

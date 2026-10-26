@@ -19,10 +19,10 @@ export const passwordSchema = z
 
 export const cambiarPasswordSchema = z
   .object({
-    actual: z.string().min(1, 'Escribe tu contraseña actual').max(200),
+    actual: z.string().max(200).optional(),
     nueva: passwordSchema,
   })
-  .refine((d) => d.nueva !== d.actual, {
+  .refine((d) => !d.actual || d.nueva !== d.actual, {
     path: ['nueva'],
     message: 'La nueva contraseña debe ser distinta a la actual',
   });
@@ -38,6 +38,8 @@ export interface SessionUser {
   permisos: Permiso[];
   /** Tiene contraseña temporal: solo puede cambiarla (D-012). */
   debeCambiarPassword: boolean;
+  clienteId?: number | null;
+  clienteNombre?: string | null;
 }
 
 /** Respuesta de `POST /auth/login` y `POST /auth/refresh`. El refresh token viaja en cookie httpOnly. */

@@ -43,7 +43,33 @@ function moverDia(fecha: string, delta: number) {
 const hora = (iso: string | undefined) => (iso ? formatHora(iso) : '—');
 
 const columns: Column<FilaAsistencia>[] = [
-  { key: 'guardia', header: 'Guardia', mobile: 'title', render: (f) => f.guardia.nombre },
+  {
+    key: 'guardia',
+    header: 'Guardia',
+    mobile: 'title',
+    render: (f) => {
+      const foto = f.guardia.foto || f.jornada?.entrada?.foto;
+      return (
+        <div className="flex items-center gap-2.5">
+          {foto ? (
+            <img
+              src={foto}
+              alt={f.guardia.nombre}
+              className="size-8 shrink-0 rounded-full object-cover ring-1 ring-slate-200"
+            />
+          ) : (
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-xs text-brand-800">
+              {f.guardia.nombre.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <span className="font-medium text-slate-900 block truncate">{f.guardia.nombre}</span>
+            <span className="text-xs text-slate-500 block truncate">{f.guardia.email}</span>
+          </div>
+        </div>
+      );
+    },
+  },
   {
     key: 'sitio',
     header: 'Sitio',
@@ -66,16 +92,33 @@ const columns: Column<FilaAsistencia>[] = [
     render: ({ jornada: j }) => (j ? <HoraMarca jornada={j} tipo="entrada" /> : '—'),
   },
   {
-    key: 'inicioComida',
-    header: 'Inicio comida',
+    key: 'comidas',
+    header: 'Comidas',
     className: 'tabular-nums',
-    render: ({ jornada: j }) => hora(j?.inicioComida?.registradaEn),
-  },
-  {
-    key: 'finComida',
-    header: 'Fin comida',
-    className: 'tabular-nums',
-    render: ({ jornada: j }) => hora(j?.finComida?.registradaEn),
+    render: ({ jornada: j }) =>
+      j?.comidas.length ? (
+        <span className="block space-y-1">
+          {j.comidas.map((c, i) => (
+            <span key={c.inicio.id} className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700">
+              <span className="rounded bg-slate-100 px-1 py-0.5 text-[11px] font-semibold text-slate-600">
+                {i + 1}ª
+              </span>
+              <span>
+                {hora(c.inicio.registradaEn)} –{' '}
+                {c.fin ? (
+                  hora(c.fin.registradaEn)
+                ) : !j.salida ? (
+                  <span className="font-medium text-amber-700">en curso</span>
+                ) : (
+                  '—'
+                )}
+              </span>
+            </span>
+          ))}
+        </span>
+      ) : (
+        '—'
+      ),
   },
   {
     key: 'salida',
