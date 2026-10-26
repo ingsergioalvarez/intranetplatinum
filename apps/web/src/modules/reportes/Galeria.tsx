@@ -15,9 +15,7 @@ export function Galeria({ fotos, compacta }: { fotos: Evidencia[]; compacta?: bo
     <>
       <div
         className={
-          compacta
-            ? 'flex flex-wrap gap-2 pt-1'
-            : 'grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4'
+          compacta ? 'flex flex-wrap gap-2 pt-1' : 'grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4'
         }
       >
         {fotos.map((f, i) => (

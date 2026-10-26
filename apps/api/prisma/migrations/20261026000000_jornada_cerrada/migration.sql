@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `bitacora_eventos` MODIFY `tipo` ENUM('retardo', 'salida_anticipada', 'comida_fuera', 'racha', 'falta', 'no_se_presento', 'incidencia_rostro', 'rostro_registrado', 'rostro_aprobado', 'rostro_rechazado', 'rostro_eliminado', 'asignacion', 'asignacion_cambio', 'asignacion_fin', 'grupo_alta', 'grupo_baja', 'cobertura', 'cobertura_cancelada', 'comida_sin_cierre', 'sin_comida', 'jornada_cerrada') NOT NULL;

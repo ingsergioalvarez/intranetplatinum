@@ -20,17 +20,14 @@ function useReportesNoLeidos() {
   });
 
   return (
-    bandeja.data?.items.filter(
-      (a) => !a.leido && (a.reporteId != null || a.tipo.startsWith('reporte_')),
-    ).length ?? 0
+    bandeja.data?.items.filter((a) => !a.leido && (a.reporteId != null || a.tipo.startsWith('reporte_')))
+      .length ?? 0
   );
 }
 
 function useVisibleNav() {
   const user = useAuthStore((s) => s.user);
-  return navItems.filter(
-    (i) => (!i.devOnly || import.meta.env.DEV) && hasPermission(user, i.permiso) && hasRole(user, i.roles),
-  );
+  return navItems.filter((i) => hasPermission(user, i.permiso) && hasRole(user, i.roles));
 }
 
 function Brand({ className }: { className?: string }) {
@@ -50,12 +47,12 @@ function Sidebar() {
   const reportesNoLeidos = useReportesNoLeidos();
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col bg-brand-900 text-white md:flex">
+    <aside className="hidden w-64 shrink-0 flex-col bg-brand-900 text-white md:sticky md:top-0 md:flex md:h-dvh md:self-start">
       <div className="flex h-16 items-center justify-between pl-5 pr-3">
         <Brand />
         <Campanita />
       </div>
-      <nav className="flex-1 space-y-1 px-3 py-2">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
         {items.map(({ to, label, icon: Icon }) => {
           const tieneBadge = to === '/reportes' && reportesNoLeidos > 0;
           return (
@@ -150,25 +147,32 @@ function BottomNav() {
               <NavLink
                 to={to}
                 end={to === '/'}
-                className={({ isActive }) =>
-                  cn(
-                    'flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium',
-                    isActive ? 'text-brand-700' : 'text-slate-500',
-                  )
-                }
+                className="flex h-16 flex-col items-center justify-center gap-0.5 text-[11px]"
               >
-                <div className="relative flex items-center justify-center">
-                  <Icon className="size-6" />
-                  {tieneBadge && (
-                    <span
-                      className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white leading-none shadow-xs"
-                      aria-label={`${reportesNoLeidos} novedades`}
+                {({ isActive }) => (
+                  <>
+                    {/* La pestaña activa se pinta: ícono en una píldora azul y etiqueta en negritas. */}
+                    <div
+                      className={cn(
+                        'relative flex h-8 w-14 items-center justify-center rounded-full transition-colors',
+                        isActive ? 'bg-brand-700 text-white' : 'text-slate-500',
+                      )}
                     >
-                      {reportesNoLeidos > 99 ? '99+' : reportesNoLeidos}
+                      <Icon className="size-6" />
+                      {tieneBadge && (
+                        <span
+                          className="absolute -top-0.5 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] leading-none font-bold text-white shadow-xs ring-2 ring-white"
+                          aria-label={`${reportesNoLeidos} novedades`}
+                        >
+                          {reportesNoLeidos > 99 ? '99+' : reportesNoLeidos}
+                        </span>
+                      )}
+                    </div>
+                    <span className={isActive ? 'font-bold text-brand-700' : 'font-medium text-slate-500'}>
+                      {label}
                     </span>
-                  )}
-                </div>
-                <span>{label}</span>
+                  </>
+                )}
               </NavLink>
             </li>
           );

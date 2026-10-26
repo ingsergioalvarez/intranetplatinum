@@ -57,7 +57,6 @@ Intranet para Platinum Agency (seguridad física intramuros). Uso principal en *
   - Botones solo-ícono en celular (texto con `hidden sm:inline`): siempre `aria-label`.
   - Cuadrículas en celular: usar `grid-cols-1` explícito (si no, textos con `truncate` ensanchan la columna y aparece scroll horizontal).
   - Tailwind 4: tema en `src/index.css` (`brand-*`, `platinum-*`). Usar `pb-safe`/`pt-safe` para áreas seguras del celular.
-  - Catálogo visual en `/ui` (solo desarrollo).
   - Sesión: `authService` (`core/auth/AuthService.ts`) hace login/refresh/logout contra `/api/auth/*`; `main.tsx` llama `restore()` al arrancar. `ProtectedRoute` acepta `permiso` y `roles`.
   - Verificación visual: capturas a 360px y 1440px con Edge headless (`playwright-core`, channel `msedge`) instalado fuera del repo.
 

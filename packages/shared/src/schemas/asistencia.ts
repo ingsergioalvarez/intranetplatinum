@@ -53,6 +53,7 @@ export const ALERTAS_MARCACION = [
   'retardo',
   'salida_anticipada',
   'sin_lentes_declarado',
+  'cerrada_por_supervisor',
 ] as const;
 export type AlertaMarcacion = (typeof ALERTAS_MARCACION)[number];
 
@@ -66,6 +67,7 @@ export const ALERTA_MARCACION_LABEL: Record<AlertaMarcacion, string> = {
   rostro_rechazado: 'El rostro con el que marcó fue rechazado',
   retardo: 'Retardo',
   salida_anticipada: 'Salida anticipada',
+  cerrada_por_supervisor: 'Jornada cerrada por un supervisor',
   sin_lentes_declarado: 'Dijo que no traía lentes (el sistema detectó lentes)',
 };
 
@@ -345,6 +347,17 @@ export const marcacionCreateSchema = z.object({
 export type MarcacionCreate = z.input<typeof marcacionCreateSchema>;
 export type MarcacionCreateData = z.output<typeof marcacionCreateSchema>;
 
+/**
+ * Cerrar la jornada de un guardia que no pudo checar su salida (DA-49): admin o supervisor registran
+ * la salida con motivo obligatorio y la hora (por omisión, la programada si ya pasó, o ahora).
+ */
+export const cerrarJornadaSchema = z.object({
+  motivo: z.string().trim().min(3, 'Escribe el motivo').max(255, 'Máximo 255 caracteres'),
+  /** Hora de salida (ISO); entre la entrada y ahora. */
+  salidaEn: z.iso.datetime({ offset: true }).optional(),
+});
+export type CerrarJornadaInput = z.infer<typeof cerrarJornadaSchema>;
+
 export const misMarcasQuerySchema = z.object({
   mes: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Mes inválido (AAAA-MM)'),
 });
@@ -442,6 +455,29 @@ export interface FilaAsistencia {
   cobertura?: boolean;
 }
 
+/**
+ * Tablero del día para admin y supervisor (DA-51): lo que necesita atención ahora. Una jornada
+ * cuenta en una sola clase.
+ * - `sin_llegar`: le tocaba entrar y no ha checado (no se presentó o ya es falta).
+ * - `sin_salida`: su jornada ya debió terminar y sigue abierta.
+ * - `comida_abierta`: salió a comer y no regresa (más de 1 h).
+ */
+export const CLASES_TABLERO = ['sin_llegar', 'sin_salida', 'comida_abierta'] as const;
+export type ClaseTablero = (typeof CLASES_TABLERO)[number];
+
+export interface TableroItem {
+  clase: ClaseTablero;
+  /** La fila de asistencia (con `turno` si no llegó, o `jornada` si ya checó). */
+  fila: FilaAsistencia;
+  /** Minutos desde la hora de entrada (sin llegar), desde que debió salir o desde que salió a comer. */
+  minutos: number;
+}
+
+export interface TableroAsistencia {
+  fecha: string;
+  items: TableroItem[];
+}
+
 /** Ficha de un guardia: sus jornadas del mes (solo lectura, DA-08). */
 export interface AsistenciaGuardia {
   guardia: GuardiaResumen;
@@ -450,6 +486,22 @@ export interface AsistenciaGuardia {
   jornadas: Jornada[];
   /** Sitios y horarios que tiene hoy (directos o por grupo). */
   asignaciones: MiSitio[];
+}
+
+/** Lo que se borraría al eliminar definitivamente un sitio (solo admin, DA-50). */
+export interface HistorialSitio {
+  asignaciones: number;
+  marcas: number;
+  reportes: number;
+  coberturas: number;
+}
+
+/** Lo que se borraría al eliminar definitivamente un cliente con sus sitios (solo admin, DA-50). */
+export interface HistorialCliente extends HistorialSitio {
+  sitios: number;
+  contactos: number;
+  /** Usuarios del portal de este cliente: no se borran, quedan sin cliente. */
+  usuariosPortal: number;
 }
 
 /** Lo que se borraría al eliminar definitivamente a un usuario (solo admin). */

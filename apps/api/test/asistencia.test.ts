@@ -79,10 +79,13 @@ class MemoryAsistenciaRepository extends AsistenciaRepository {
       programadaSalida: data.programadaSalida ?? null,
       id: this.marcas.length + 1,
       sitio,
-      registradaEn: this.reloj(),
+      registradaEn: data.registradaEn ?? this.reloj(),
     };
     this.marcas.push(marca);
     return marca;
+  }
+  async findMarca(id: number) {
+    return this.marcas.find((m) => m.id === id) ?? null;
   }
   async jornadasDeTodos(desde: Date, hasta: Date) {
     const ids = this.marcas
@@ -98,6 +101,8 @@ class MemoryAsistenciaRepository extends AsistenciaRepository {
       .map(([id, [sitioId]]) => ({
         guardia: guardia(Number(id)),
         sitio: { id: sitioId, nombre: SITIOS.get(sitioId)!.nombre },
+        horaInicio: HORARIOS[sitioId]?.horaInicio ?? null,
+        horas: HORARIOS[sitioId]?.horas ?? null,
       }));
   }
   async findGuardia(usuarioId: number) {
@@ -1327,6 +1332,130 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     await marcar(10, marca('inicio_comida'));
     await marcar(10, marca('fin_comida'));
     expect((await marcar(10, marca('salida'))).status).toBe(201);
+  });
+
+  describe('cerrar la jornada de un guardia que no pudo checar su salida (DA-49)', () => {
+    const cerrar = (id: number, body: object, usuarioId = 5, rol = 'supervisor') =>
+      request(app)
+        .post(`/api/asistencia/jornadas/${id}/cerrar`)
+        .set('Authorization', token(usuarioId, rol as 'supervisor'))
+        .send(body);
+
+    it('el supervisor registra la salida con motivo; queda marcada, en bitácora, y se avisa al guardia', async () => {
+      HORARIOS = { 1: { horas: 12, horaInicio: '07:00', horaFin: '19:00', dias: { tipo: 'diario' } } };
+      await marcar(10, marca('entrada'));
+      const entradaId = repo.marcas[0].id;
+      avanzar(14); // ya pasó la hora de salida programada (7 p.m.)
+
+      const res = await cerrar(entradaId, { motivo: 'Se le descompuso el teléfono' });
+      expect(res.status).toBe(204);
+
+      const salida = repo.marcas.at(-1)!;
+      expect(salida).toMatchObject({
+        tipo: 'salida',
+        usuarioId: 10,
+        entradaId,
+        alertas: ['cerrada_por_supervisor'],
+      });
+      // Sin hora indicada: la salida programada (7:00 p.m. CDMX = 01:00 UTC del día siguiente).
+      expect(salida.registradaEn.toISOString()).toBe('2026-10-21T01:00:00.000Z');
+      expect(bitacora.at(-1)).toMatchObject({ tipo: 'jornada_cerrada', usuarioIds: [10], actorId: 5 });
+      expect(bitacora.at(-1)!.detalle).toContain('Se le descompuso el teléfono');
+      expect(audit.acciones()).toContain('asistencia.cerrar_jornada');
+      expect(repo.avisos.at(-1)).toMatchObject({ usuarioIds: [10], tipo: 'marca_alerta' });
+
+      // El guardia ya puede checar su siguiente entrada, y no se puede cerrar dos veces.
+      const estado = await request(app).get('/api/asistencia/estado').set('Authorization', token(10));
+      expect(estado.body.data.permitidas).toEqual(['entrada']);
+      expect((await cerrar(entradaId, { motivo: 'Otra vez' })).status).toBe(409);
+    });
+
+    it('motivo obligatorio, hora válida y solo admin o supervisor', async () => {
+      await marcar(10, marca('entrada'));
+      const entradaId = repo.marcas[0].id;
+      avanzar(2);
+      expect((await cerrar(entradaId, { motivo: '' })).status).toBe(400);
+      // Antes de su entrada o en el futuro.
+      const antes = await cerrar(entradaId, { motivo: 'Prueba', salidaEn: '2026-10-20T10:00:00.000Z' });
+      expect(antes.status).toBe(400);
+      expect(antes.body.error.details[0].path).toBe('salidaEn');
+      expect(
+        (await cerrar(entradaId, { motivo: 'Prueba', salidaEn: '2026-10-22T10:00:00.000Z' })).status,
+      ).toBe(400);
+      // El guardia no puede cerrarse la jornada solo.
+      expect((await cerrar(entradaId, { motivo: 'Prueba' }, 10, 'guardia')).status).toBe(403);
+      // Una checada que no es entrada no es una jornada.
+      expect((await cerrar(9999, { motivo: 'Prueba' })).status).toBe(404);
+      // El admin sí, con la hora indicada.
+      const ok = await cerrar(
+        entradaId,
+        { motivo: 'Cierre por prueba', salidaEn: '2026-10-20T14:30:00.000Z' },
+        1,
+        'admin',
+      );
+      expect(ok.status).toBe(204);
+      expect(repo.marcas.at(-1)!.registradaEn.toISOString()).toBe('2026-10-20T14:30:00.000Z');
+    });
+  });
+
+  describe('tablero del día para admin y supervisor (DA-51)', () => {
+    const tablero = (id = 5, rol = 'supervisor') =>
+      request(app)
+        .get('/api/asistencia/tablero')
+        .set('Authorization', token(id, rol as 'supervisor'));
+    const ORDEN = ['sin_llegar', 'sin_salida', 'comida_abierta'];
+    /** [clase, guardia] ordenado por clase y guardia (los empates se ordenan por nombre). */
+    const resumen = async () =>
+      (await tablero()).body.data.items
+        .map((i: { clase: string; fila: { guardia: { id: number } } }) => [i.clase, i.fila.guardia.id])
+        .sort(
+          (x: [string, number], y: [string, number]) =>
+            ORDEN.indexOf(x[0]) - ORDEN.indexOf(y[0]) || x[1] - y[1],
+        );
+
+    it('quién no llegó, jornadas que ya debieron cerrarse y comidas sin cierre', async () => {
+      HORARIOS = { 1: { horas: 12, horaInicio: '07:00', horaFin: '19:00', dias: { tipo: 'diario' } } };
+      // 7:20: Juan (10) y el guardia 13 debían entrar a las 7:00 y no han checado.
+      avanzar(20 / 60);
+      expect(await resumen()).toEqual([
+        ['sin_llegar', 10],
+        ['sin_llegar', 13],
+      ]);
+
+      // Juan llega: solo falta el 13. Más tarde sale a comer y no regresa en más de 1 h.
+      await marcar(10, marca('entrada'));
+      expect(await resumen()).toEqual([['sin_llegar', 13]]);
+      avanzar(3);
+      await marcar(10, marca('inicio_comida'));
+      avanzar(0.9);
+      expect((await resumen()).filter(([c]: string[]) => c === 'comida_abierta')).toEqual([]);
+      avanzar(0.3);
+      expect(await resumen()).toEqual([
+        ['sin_llegar', 13],
+        ['comida_abierta', 10],
+      ]);
+
+      // Regresa de comer; pasada su salida programada (7:00 p.m.) más la tolerancia, queda sin cerrar.
+      await marcar(10, marca('fin_comida'));
+      expect((await resumen()).map(([c]: string[]) => c)).toEqual(['sin_llegar']);
+      avanzar(8);
+      expect(await resumen()).toEqual([
+        ['sin_llegar', 13],
+        ['sin_salida', 10],
+      ]);
+
+      // Un supervisor le cierra la jornada: ya no aparece.
+      await request(app)
+        .post(`/api/asistencia/jornadas/${repo.marcas[0].id}/cerrar`)
+        .set('Authorization', token(5, 'supervisor'))
+        .send({ motivo: 'Se olvidó de checar' });
+      expect(await resumen()).toEqual([['sin_llegar', 13]]);
+    });
+
+    it('solo admin y supervisor; el guardia no', async () => {
+      expect((await tablero(10, 'guardia')).status).toBe(403);
+      expect((await tablero(1, 'admin')).status).toBe(200);
+    });
   });
 
   it('turno de 12 h: solo una comida', async () => {

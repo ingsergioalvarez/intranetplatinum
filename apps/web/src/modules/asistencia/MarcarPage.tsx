@@ -49,6 +49,7 @@ import { ConsejosCamara } from './rostro/ConsejosCamara';
 import { debeMostrarConsejos } from './rostro/consejos';
 import { pedirSensorInclinacion } from './rostro/inclinacion';
 import { TurnoGuardiaCard } from './TurnoGuardia';
+import { useAuthStore } from '../../core/auth/authStore';
 import { formatDiaLargo, formatHora } from './formato';
 import { precargarMotor } from './rostro/motor';
 import { RelevoTurnoModal } from './RelevoTurnoModal';
@@ -147,6 +148,7 @@ function bloqueoGps(referencia: ReturnType<typeof sitioDeReferencia>, ubicacion:
 /** Pantalla del guardia para marcar entrada, comida y salida (A-17, AS1-03). */
 export function MarcarPage() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const estado = useQuery({ queryKey: asistenciaService.keys.estado, queryFn: asistenciaService.estado });
   // Si le toca entrada o salida (con cámara), el reconocimiento se carga y calienta desde ya.
   const conCamara = estado.data?.permitidas.some((t) => TIPOS_CON_FOTO.includes(t)) ?? false;
@@ -257,7 +259,7 @@ export function MarcarPage() {
 
   return (
     <>
-      <PageHeader title="Checador" subtitle={formatDiaLargo(ahora)} />
+      <PageHeader title={`Hola, ${user?.nombre ?? ''}`} subtitle={formatDiaLargo(ahora)} />
 
       <div className="max-w-md space-y-4">
         <TurnoGuardiaCard estado={data} />
@@ -307,7 +309,8 @@ export function MarcarPage() {
                   !data.jornada.salida &&
                   data.jornada.comidasPermitidas > 1 && (
                     <span className="text-sm font-normal opacity-80">
-                      ({Math.min(
+                      (
+                      {Math.min(
                         data.jornada.comidas.filter((c) => c.fin !== null).length + 1,
                         data.jornada.comidasPermitidas,
                       )}{' '}

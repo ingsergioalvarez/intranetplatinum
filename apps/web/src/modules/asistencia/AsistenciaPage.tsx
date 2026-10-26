@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -21,6 +21,7 @@ import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { asistenciaService } from './asistencia.service';
 import { formatDuracion, formatHora, horasEsperadas } from './formato';
+import { CerrarJornadaModal } from './CerrarJornadaModal';
 import { EstadoJornada } from './EstadoJornada';
 import { HoraMarca } from './HoraMarca';
 import { EnviarCubrirModal } from '../clientes/EnviarCubrirModal';
@@ -99,7 +100,10 @@ const columns: Column<FilaAsistencia>[] = [
       j?.comidas.length ? (
         <span className="block space-y-1">
           {j.comidas.map((c, i) => (
-            <span key={c.inicio.id} className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700">
+            <span
+              key={c.inicio.id}
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700"
+            >
               <span className="rounded bg-slate-100 px-1 py-0.5 text-[11px] font-semibold text-slate-600">
                 {i + 1}ª
               </span>
@@ -155,6 +159,7 @@ export function AsistenciaPage() {
   // Falta o no se presentó: el supervisor o el admin pueden enviar a alguien a cubrir (DA-39).
   const puedeCubrir = useAuthStore((s) => s.user?.rol === ROLES.ADMIN || s.user?.rol === ROLES.SUPERVISOR);
   const [cubrir, setCubrir] = useState<FilaAsistencia | null>(null);
+  const [cerrando, setCerrando] = useState<FilaAsistencia | null>(null);
   const [fecha, setFecha] = useState(hoy);
   const [busqueda, setBusqueda] = useState('');
   const [soloAlertas, setSoloAlertas] = useState(false);
@@ -258,19 +263,32 @@ export function AsistenciaPage() {
             onRowClick={(f) => navigate(`/asistencia/guardias/${f.guardia.id}?mes=${fecha.slice(0, 7)}`)}
             actions={
               puedeCubrir
-                ? (f) =>
-                    f.sitio &&
-                    (f.turno?.estado === 'falta' || f.turno?.estado === 'no_se_presento') && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        icon={<Shuffle className="size-4" />}
-                        onClick={() => setCubrir(f)}
-                      >
-                        <span className="hidden sm:inline">Enviar a cubrir</span>
-                        <span className="sm:hidden">Cubrir</span>
-                      </Button>
-                    )
+                ? (f) => (
+                    <>
+                      {f.sitio && (f.turno?.estado === 'falta' || f.turno?.estado === 'no_se_presento') && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon={<Shuffle className="size-4" />}
+                          onClick={() => setCubrir(f)}
+                        >
+                          <span className="hidden sm:inline">Enviar a cubrir</span>
+                          <span className="sm:hidden">Cubrir</span>
+                        </Button>
+                      )}
+                      {f.jornada && !f.jornada.salida && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon={<LogOut className="size-4" />}
+                          onClick={() => setCerrando(f)}
+                        >
+                          <span className="hidden sm:inline">Cerrar jornada</span>
+                          <span className="sm:hidden">Cerrar</span>
+                        </Button>
+                      )}
+                    </>
+                  )
                 : undefined
             }
             emptyTitle="Sin guardias"
@@ -284,6 +302,13 @@ export function AsistenciaPage() {
           <Pagination page={page} limit={LIMIT} total={lista.data.total} onPageChange={setPage} />
         )}
       </Card>
+      {cerrando?.jornada && (
+        <CerrarJornadaModal
+          jornada={cerrando.jornada}
+          guardia={cerrando.guardia.nombre}
+          onClose={() => setCerrando(null)}
+        />
+      )}
       {cubrir?.sitio && (
         <EnviarCubrirModal
           sitio={cubrir.sitio}

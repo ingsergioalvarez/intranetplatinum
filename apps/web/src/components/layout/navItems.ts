@@ -4,7 +4,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Home,
-  LayoutGrid,
+  MapPin,
   Tags,
   Timer,
   Users,
@@ -20,17 +20,23 @@ export interface NavItem {
   permiso?: Permiso;
   /** Si se define, solo lo ven estos roles (aunque el admin tenga el permiso). */
   roles?: Rol[];
-  /** Solo visible en desarrollo. */
-  devOnly?: boolean;
 }
 
 /** Menú principal. El orden es el de la navegación inferior en celular (máx. 5). */
 export const navItems: NavItem[] = [
-  { label: 'Inicio', to: '/', icon: Home },
+  // El guardia entra directo al Checador, así que no tiene Inicio (DA-51).
+  { label: 'Inicio', to: '/', icon: Home, roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.CLIENTE] },
   {
     label: 'Checador',
     to: '/marcar',
     icon: Timer,
+    permiso: PERMISOS.ASISTENCIA_MARCAR,
+    roles: [ROLES.GUARDIA],
+  },
+  {
+    label: 'Mis sitios',
+    to: '/mis-sitios',
+    icon: MapPin,
     permiso: PERMISOS.ASISTENCIA_MARCAR,
     roles: [ROLES.GUARDIA],
   },
@@ -40,5 +46,4 @@ export const navItems: NavItem[] = [
   { label: 'Grupos', to: '/grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
   { label: 'Usuarios', to: '/usuarios', icon: Users, permiso: PERMISOS.USUARIOS_VER },
   { label: 'Catálogos', to: '/catalogos/categorias', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
-  { label: 'Componentes', to: '/ui', icon: LayoutGrid, devOnly: true },
 ];

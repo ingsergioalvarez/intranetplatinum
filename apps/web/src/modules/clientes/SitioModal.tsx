@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Crosshair, MapPinOff, RotateCcw } from 'lucide-react';
-import { RADIO_SITIO_DEFAULT_M, sitioSchema, type Sitio } from '@platinum/shared';
+import { Crosshair, MapPinOff, RotateCcw, Trash2 } from 'lucide-react';
+import { RADIO_SITIO_DEFAULT_M, ROLES, sitioSchema, type Sitio } from '@platinum/shared';
 import { mensajeDeError } from '../../core/api';
+import { useAuthStore } from '../../core/auth/authStore';
 import { useForm } from '../../core/forms/useForm';
 import {
   Button,
@@ -15,6 +16,7 @@ import {
   toast,
 } from '../../components/ui';
 import { clientesService, sitiosService } from './clientes.service';
+import { EliminarSitioDialog } from './EliminarSitioClienteDialogs';
 
 type Accion = 'baja' | 'reactivar';
 
@@ -35,6 +37,9 @@ export function SitioModal({
   const deBaja = !!sitio?.deletedAt;
   const [confirmar, setConfirmar] = useState<Accion | null>(null);
   const [ubicando, setUbicando] = useState(false);
+  // Solo el admin puede borrar definitivamente (DA-50).
+  const esAdmin = useAuthStore((s) => s.user?.rol === ROLES.ADMIN);
+  const [eliminando, setEliminando] = useState(false);
   const form = useForm({
     nombre: sitio?.nombre ?? '',
     direccion: sitio?.direccion ?? '',
@@ -134,25 +139,38 @@ export function SitioModal({
         readOnly={soloLectura}
         secondaryAction={
           !esNuevo &&
-          !readOnly &&
-          (deBaja ? (
-            <Button
-              variant="secondary"
-              icon={<RotateCcw className="size-4" />}
-              onClick={() => setConfirmar('reactivar')}
-            >
-              Reactivar sitio
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              className="text-red-700 hover:bg-red-50"
-              icon={<MapPinOff className="size-4" />}
-              onClick={() => setConfirmar('baja')}
-            >
-              Dar de baja
-            </Button>
-          ))
+          !readOnly && (
+            <div className="flex flex-wrap gap-2">
+              {deBaja ? (
+                <Button
+                  variant="secondary"
+                  icon={<RotateCcw className="size-4" />}
+                  onClick={() => setConfirmar('reactivar')}
+                >
+                  Reactivar sitio
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="text-red-700 hover:bg-red-50"
+                  icon={<MapPinOff className="size-4" />}
+                  onClick={() => setConfirmar('baja')}
+                >
+                  Dar de baja
+                </Button>
+              )}
+              {esAdmin && (
+                <Button
+                  variant="ghost"
+                  className="text-red-700 hover:bg-red-50"
+                  icon={<Trash2 className="size-4" />}
+                  onClick={() => setEliminando(true)}
+                >
+                  Eliminar
+                </Button>
+              )}
+            </div>
+          )
         }
       >
         <FormField label="Nombre del sitio" required error={errors.nombre}>
@@ -214,6 +232,20 @@ export function SitioModal({
           </Button>
         )}
       </FormModal>
+
+      {sitio && eliminando && (
+        <EliminarSitioDialog
+          sitio={sitio}
+          onCancel={() => setEliminando(false)}
+          onEliminado={() => {
+            void refrescar();
+            void qc.invalidateQueries({ queryKey: ['sitios'] });
+            void qc.invalidateQueries({ queryKey: ['asistencia'] });
+            void qc.invalidateQueries({ queryKey: ['reportes'] });
+            onClose();
+          }}
+        />
+      )}
 
       {sitio && (
         <ConfirmDialog

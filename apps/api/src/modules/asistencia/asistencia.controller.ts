@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import type {
   AsistenciaDiaQuery,
+  CerrarJornadaInput,
   ConclusionIncidencia,
   IdParam,
   IncidenciaCreateInput,
@@ -87,6 +88,22 @@ export class AsistenciaController extends BaseController {
   mias = async (req: Request, res: Response) => {
     const { mes } = this.query<{ mes: string }>(req);
     return this.ok(res, await this.service.misJornadas(this.currentUser(req).id, mes));
+  };
+
+  /** Tablero del día para admin y supervisor (DA-51). */
+  tablero = async (req: Request, res: Response) => {
+    return this.ok(res, await this.service.tablero(await this.alcance(req)));
+  };
+
+  /** Admin o supervisor cierran la jornada de un guardia que no pudo checar su salida (DA-49). */
+  cerrarJornada = async (req: Request, res: Response) => {
+    await this.service.cerrarJornada(
+      this.params<IdParam>(req).id,
+      this.body<CerrarJornadaInput>(req),
+      this.accionCtx(req),
+      await this.alcance(req),
+    );
+    return this.noContent(res);
   };
 
   private esCliente(req: Request) {

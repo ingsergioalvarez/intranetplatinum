@@ -4,6 +4,7 @@ import {
   PERMISOS,
   ROLES,
   asistenciaDiaQuerySchema,
+  cerrarJornadaSchema,
   idParamSchema,
   incidenciaCreateSchema,
   incidenciasQuerySchema,
@@ -105,6 +106,16 @@ export function createAsistenciaModule({
     ver,
     validate({ params: idParamSchema, query: misMarcasQuerySchema }),
     c.guardia,
+  );
+  // Tablero del día (DA-51): quién no llegó, jornadas sin cerrar, comidas sin cierre.
+  router.get('/tablero', requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR), ver, c.tablero);
+  // Cerrar la jornada de un guardia que no pudo checar su salida (DA-49).
+  router.post(
+    '/jornadas/:id/cerrar',
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    ver,
+    validate({ params: idParamSchema, body: cerrarJornadaSchema }),
+    c.cerrarJornada,
   );
   // Rostros de los guardias (AS1-02): revisión del autoregistro y registro en persona.
   router.get('/rostros/pendientes', rostros, c.rostrosPendientes);

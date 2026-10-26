@@ -1,95 +1,114 @@
+import { Link, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import type { HealthStatus } from '@platinum/shared';
-import { api } from '../../core/api';
-import { useAuthStore } from '../../core/auth/authStore';
-import { PageHeader } from '../../components/layout/AppShell';
-import { Link } from 'react-router-dom';
-import { ArrowRight, ClipboardCheck, ClipboardList, ClipboardPlus } from 'lucide-react';
 import { ROLES } from '@platinum/shared';
-import { Badge, Card, CardBody, CardHeader } from '../../components/ui';
-import { MisSitiosCard } from './MisSitiosCard';
+import { PageHeader } from '../../components/layout/AppShell';
+import { Card, CardHeader, EmptyState, Spinner } from '../../components/ui';
+import { useAuthStore } from '../../core/auth/authStore';
+import { formatFechaHora, hoyLocal } from '../../core/format/fechas';
+import { asistenciaService } from '../asistencia/asistencia.service';
+import { EstadoJornada } from '../asistencia/EstadoJornada';
+import { formatDiaLargo } from '../asistencia/formato';
+import { Avatar } from '../clientes/AsignarTurnoModal';
+import { reportesService } from '../reportes/reportes.service';
+import { TableroPage } from './TableroPage';
 
+/**
+ * Inicio según el rol (DA-51): el guardia entra directo al Checador; admin y supervisor ven el
+ * tablero del día; el cliente, un resumen de sus reportes y de sus guardias hoy.
+ */
 export function InicioPage() {
+  const rol = useAuthStore((s) => s.user?.rol);
+  if (rol === ROLES.GUARDIA) return <Navigate to="/marcar" replace />;
+  if (rol === ROLES.CLIENTE) return <ResumenCliente />;
+  return <TableroPage />;
+}
+
+/** Resumen del portal de clientes: reportes abiertos y asistencia de hoy de sus guardias. */
+function ResumenCliente() {
   const user = useAuthStore((s) => s.user);
-  const health = useQuery({ queryKey: ['health'], queryFn: () => api.get<HealthStatus>('/health') });
+  const filtro = { estatus: 'abierto', page: 1, limit: 4 };
+  const reportes = useQuery({
+    queryKey: reportesService.keys.list(filtro),
+    queryFn: () => reportesService.list(filtro),
+  });
+  const params = { fecha: hoyLocal(), page: 1, limit: 8 };
+  const dia = useQuery({
+    queryKey: asistenciaService.keys.dia(params),
+    queryFn: () => asistenciaService.dia(params),
+  });
 
   return (
     <>
       <PageHeader
         title={`Hola, ${user?.nombre ?? ''}`}
-        subtitle={
-          user?.rol === ROLES.CLIENTE && user?.clienteNombre
-            ? `Portal de Cliente · ${user.clienteNombre}`
-            : 'Bienvenido a la intranet de Platinum Agency'
-        }
+        subtitle={`${user?.clienteNombre ? `Portal de Cliente · ${user.clienteNombre} · ` : ''}${formatDiaLargo(new Date())}`}
       />
-      {user?.rol === ROLES.CLIENTE && (
-        <div className="mb-4 grid gap-4 sm:grid-cols-2">
-          <Link
-            to="/reportes"
-            className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-300 hover:shadow-md"
-          >
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-                  <ClipboardList className="size-5" />
-                </span>
-                <span className="font-semibold text-slate-900 group-hover:text-brand-700">Reportes de tus sitios</span>
-              </div>
-              <p className="text-xs text-slate-500">
-                Consulta los reportes oficiales generados en tus instalaciones, fotos de evidencia y seguimiento en tiempo real.
-              </p>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader
+            title={`Reportes abiertos${reportes.data ? ` (${reportes.data.total})` : ''}`}
+            actions={
+              <Link to="/reportes" className="text-sm font-medium text-brand-700">
+                Ver todos
+              </Link>
+            }
+          />
+          {reportes.isPending ? (
+            <div className="flex justify-center py-8 text-brand-600">
+              <Spinner className="size-6" />
             </div>
-            <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
-              Ver reportes <ArrowRight className="size-3.5" />
-            </span>
-          </Link>
-
-          <Link
-            to="/asistencia"
-            className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-300 hover:shadow-md"
-          >
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                  <ClipboardCheck className="size-5" />
-                </span>
-                <span className="font-semibold text-slate-900 group-hover:text-emerald-700">Monitoreo de Asistencia</span>
-              </div>
-              <p className="text-xs text-slate-500">
-                Supervisa las entradas, salidas y comidas de los guardias asignados a tus sitios, con foto y puntualidad.
-              </p>
-            </div>
-            <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
-              Ver asistencia <ArrowRight className="size-3.5" />
-            </span>
-          </Link>
-        </div>
-      )}
-      {user?.rol === ROLES.GUARDIA && (
-        <div className="mb-4 space-y-4">
-          <Link
-            to="/reportes/nuevo"
-            className="flex items-center justify-center gap-3 rounded-xl bg-brand-700 px-4 py-5 text-lg font-semibold text-white shadow-sm active:bg-brand-900"
-          >
-            <ClipboardPlus className="size-6" /> Nuevo reporte
-          </Link>
-          <MisSitiosCard />
-        </div>
-      )}
-      <Card>
-        <CardHeader title="Estado del sistema" />
-        <CardBody className="flex items-center justify-between text-sm">
-          <span className="text-slate-600">API</span>
-          {health.isLoading ? (
-            <Badge>Consultando…</Badge>
-          ) : health.isError ? (
-            <Badge tone="danger">Sin conexión</Badge>
+          ) : !reportes.data?.items.length ? (
+            <EmptyState title="Sin reportes abiertos" />
           ) : (
-            <Badge tone="success">En línea · v{health.data?.version}</Badge>
+            <ul className="divide-y divide-slate-100">
+              {reportes.data.items.map((r) => (
+                <li key={r.id}>
+                  <Link to={`/reportes/${r.id}`} className="block px-4 py-3 hover:bg-slate-50">
+                    <p className="truncate font-medium text-slate-900">{r.titulo}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      {r.folio} · {r.sitio.nombre} · {formatFechaHora(r.createdAt)}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
-        </CardBody>
-      </Card>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Guardias hoy"
+            actions={
+              <Link to="/asistencia" className="text-sm font-medium text-brand-700">
+                Ver asistencia
+              </Link>
+            }
+          />
+          {dia.isPending ? (
+            <div className="flex justify-center py-8 text-brand-600">
+              <Spinner className="size-6" />
+            </div>
+          ) : !dia.data?.items.length ? (
+            <EmptyState title="Sin guardias hoy" />
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {dia.data.items.map((f) => (
+                <li
+                  key={`${f.guardia.id}-${f.jornada?.entrada.id ?? 'sin'}`}
+                  className="flex items-center gap-3 px-4 py-2.5"
+                >
+                  <Avatar foto={f.guardia.foto} nombre={f.guardia.nombre} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-slate-900">{f.guardia.nombre}</p>
+                    <p className="truncate text-xs text-slate-500">{f.sitio?.nombre}</p>
+                  </div>
+                  <EstadoJornada jornada={f.jornada} turno={f.turno} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
     </>
   );
 }

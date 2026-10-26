@@ -23,6 +23,22 @@ class AdminController extends BaseController {
     return this.ok(res, await this.service.historial(this.params<IdParam>(req).id));
   };
 
+  historialSitio = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.historialSitio(this.params<IdParam>(req).id));
+
+  historialCliente = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.historialCliente(this.params<IdParam>(req).id));
+
+  eliminarSitio = async (req: Request, res: Response) => {
+    await this.service.eliminarSitio(this.params<IdParam>(req).id, this.accionCtx(req));
+    return this.noContent(res);
+  };
+
+  eliminarCliente = async (req: Request, res: Response) => {
+    await this.service.eliminarCliente(this.params<IdParam>(req).id, this.accionCtx(req));
+    return this.noContent(res);
+  };
+
   eliminarUsuario = async (req: Request, res: Response) => {
     await this.service.eliminarUsuario(this.params<IdParam>(req).id, this.accionCtx(req));
     return this.noContent(res);
@@ -35,7 +51,7 @@ interface AdminModuleDeps {
   audit?: AuditLogger;
 }
 
-/** Acciones exclusivas del rol admin (no del supervisor): eliminar usuarios definitivamente. */
+/** Acciones exclusivas del rol admin (no del supervisor): eliminar usuarios, sitios y clientes definitivamente. */
 export function createAdminModule({
   repo = new PrismaAdminRepository(),
   storage = new LocalStorageService(),
@@ -48,6 +64,11 @@ export function createAdminModule({
   router.use(authenticate, requireRoles(ROLES.ADMIN));
   router.get('/usuarios/:id/historial', id, c.historial);
   router.delete('/usuarios/:id', id, c.eliminarUsuario);
+  // Sitios y clientes: borrado definitivo con su historial (DA-50).
+  router.get('/sitios/:id/historial', id, c.historialSitio);
+  router.delete('/sitios/:id', id, c.eliminarSitio);
+  router.get('/clientes/:id/historial', id, c.historialCliente);
+  router.delete('/clientes/:id', id, c.eliminarCliente);
 
   return { name: 'admin', basePath: 'admin', router };
 }

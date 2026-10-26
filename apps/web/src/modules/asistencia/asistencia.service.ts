@@ -4,6 +4,8 @@ import type {
   Marcacion,
   AsistenciaGuardia,
   ConclusionIncidencia,
+  CerrarJornadaInput,
+  TableroAsistencia,
   DecisionFalta,
   EventoBitacora,
   IncidenciasDeGuardia,
@@ -28,6 +30,7 @@ export const asistenciaService = {
     pendientes: ['asistencia', 'rostros-pendientes'] as const,
     incidencias: (params: ListParams) => ['asistencia', 'incidencias', params] as const,
     incidencia: (id: number) => ['asistencia', 'incidencia', id] as const,
+    tablero: ['asistencia', 'tablero'] as const,
     bitacora: (id: number, mes: string) => ['asistencia', 'bitacora', id, mes] as const,
     incidenciasPorGuardia: (mes: string) => ['asistencia', 'incidencias-guardias', mes] as const,
     incidenciasMes: (params: ListParams) => ['asistencia', 'incidencias-mes', params] as const,
@@ -81,6 +84,11 @@ export const asistenciaService = {
   comentarEvento: (id: number, texto: string) =>
     api.post<EventoBitacora>(`/bitacora/eventos/${id}/comentarios`, { texto }),
   /** Falta con llegada tarde: aceptar la asistencia o dejar la falta (DA-45). */
+  /** Tablero del día para admin y supervisor (DA-51). */
+  tablero: () => api.get<TableroAsistencia>('/asistencia/tablero'),
+  /** Cerrar la jornada de un guardia que no pudo checar su salida (DA-49). */
+  cerrarJornada: (entradaId: number, data: CerrarJornadaInput) =>
+    api.post<void>(`/asistencia/jornadas/${entradaId}/cerrar`, data),
   decidirFalta: (id: number, decision: DecisionFalta) =>
     api.post<EventoBitacora>(`/bitacora/eventos/${id}/decidir`, { decision }),
   justificarEvento: (id: number, motivo: string) =>

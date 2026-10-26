@@ -180,9 +180,7 @@ export function ReporteDetallePage() {
             <CardHeader
               title="Seguimiento Oficial"
               subtitle={
-                r.seguimientos.length === 1
-                  ? '1 actualización'
-                  : `${r.seguimientos.length} actualizaciones`
+                r.seguimientos.length === 1 ? '1 actualización' : `${r.seguimientos.length} actualizaciones`
               }
             />
             <div className="p-4 pt-2">

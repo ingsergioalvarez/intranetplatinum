@@ -10,6 +10,7 @@ import {
   MapPin,
   ShieldAlert,
   UserRound,
+  LogOut,
 } from 'lucide-react';
 import {
   CATEGORIAS_BITACORA,
@@ -44,6 +45,7 @@ import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { formatFecha, hoyLocal } from '../../core/format/fechas';
 import { describirAsignacion } from '../clientes/asignaciones';
 import { asistenciaService } from './asistencia.service';
+import { CerrarJornadaModal } from './CerrarJornadaModal';
 import { BitacoraGuardia, ListaEventos, type FiltroBitacora } from './BitacoraGuardia';
 import { EstadoJornada } from './EstadoJornada';
 import { formatDia, formatDuracion, formatHora, formatMes, horasEsperadas, moverMes } from './formato';
@@ -148,7 +150,10 @@ const columnasAsistencia = (
       j.comidas.length ? (
         <span className="block space-y-1">
           {j.comidas.map((c, i) => (
-            <span key={c.inicio.id} className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700">
+            <span
+              key={c.inicio.id}
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700"
+            >
               <span className="rounded bg-slate-100 px-1 py-0.5 text-[11px] font-semibold text-slate-600">
                 {i + 1}ª
               </span>
@@ -219,7 +224,11 @@ export function AsistenciaGuardiaPage() {
   const [params, setParams] = useSearchParams();
   const mesActual = hoyLocal().slice(0, 7);
   const mes = /^\d{4}-\d{2}$/.test(params.get('mes') ?? '') ? params.get('mes')! : mesActual;
-  const vista: Vista = esCliente ? 'asistencia' : params.get('vista') === 'bitacora' ? 'bitacora' : 'asistencia';
+  const vista: Vista = esCliente
+    ? 'asistencia'
+    : params.get('vista') === 'bitacora'
+      ? 'bitacora'
+      : 'asistencia';
   const filtro: FiltroBitacora = {
     categoria: CATEGORIAS_BITACORA.find((c) => c === params.get('cat')) ?? null,
     clase: CLASES_INCIDENCIA.find((c) => c === params.get('clase')) ?? null,
@@ -227,6 +236,9 @@ export function AsistenciaGuardiaPage() {
     tipo: TIPOS_EVENTO_BITACORA.find((t) => t === params.get('tipo')) ?? null,
   };
   const [abierta, setAbierta] = useState<Jornada | null>(null);
+  // Admin y supervisor pueden cerrar una jornada sin salida (DA-49).
+  const puedeCerrar = user?.rol === ROLES.ADMIN || user?.rol === ROLES.SUPERVISOR;
+  const [cerrando, setCerrando] = useState<Jornada | null>(null);
   // Jornada de la que se ven sus incidencias (se recalculan de la bitácora al comentar o justificar).
   const [conIncidencias, setConIncidencias] = useState<Jornada | null>(null);
 
@@ -335,7 +347,9 @@ export function AsistenciaGuardiaPage() {
                     onClick={() => verVista(v)}
                     className={cn(
                       'flex-1 rounded-lg px-5 py-2 text-sm font-medium lg:flex-none',
-                      vista === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900',
+                      vista === v
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900',
                     )}
                   >
                     {label}
@@ -357,7 +371,12 @@ export function AsistenciaGuardiaPage() {
                       const incidencias = esCliente ? [] : incidenciasDeJornada(j, bitacora.data);
                       return (
                         <div key={j.entrada.id} className="space-y-1.5">
-                          <JornadaCard jornada={j} detalle miniaturas rostro={esCliente ? null : ficha.data.rostro} />
+                          <JornadaCard
+                            jornada={j}
+                            detalle
+                            miniaturas
+                            rostro={esCliente ? null : ficha.data.rostro}
+                          />
                           {incidencias.length > 0 && (
                             <BotonIncidencias
                               incidencias={incidencias}
@@ -374,6 +393,21 @@ export function AsistenciaGuardiaPage() {
                       rows={ficha.data.jornadas}
                       rowKey={(j) => j.entrada.id}
                       onRowClick={setAbierta}
+                      actions={
+                        puedeCerrar
+                          ? (j) =>
+                              !j.salida && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  icon={<LogOut className="size-4" />}
+                                  onClick={() => setCerrando(j)}
+                                >
+                                  Cerrar jornada
+                                </Button>
+                              )
+                          : undefined
+                      }
                     />
                   </Card>
                   <p className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -393,6 +427,14 @@ export function AsistenciaGuardiaPage() {
             )}
           </section>
         </div>
+      )}
+
+      {cerrando && (
+        <CerrarJornadaModal
+          jornada={cerrando}
+          guardia={ficha.data?.guardia.nombre ?? 'el guardia'}
+          onClose={() => setCerrando(null)}
+        />
       )}
 
       <Modal

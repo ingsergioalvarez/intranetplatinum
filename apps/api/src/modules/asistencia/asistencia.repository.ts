@@ -53,6 +53,8 @@ export interface NuevaMarcacion {
   rostroIntentos?: number | null;
   programadaEntrada?: Date | null;
   programadaSalida?: Date | null;
+  /** Solo para cierres por un supervisor: la hora de salida indicada (si no, la del servidor). */
+  registradaEn?: Date;
   ip?: string;
   userAgent?: string;
 }
@@ -184,6 +186,7 @@ export abstract class AsistenciaRepository {
   abstract coordenadasSitio(sitioId: number): Promise<{ lat: number; lng: number; radioM: number } | null>;
   abstract nombreSitio(sitioId: number): Promise<string | null>;
   abstract crear(data: NuevaMarcacion): Promise<MarcacionRow>;
+  abstract findMarca(id: number): Promise<MarcacionRow | null>;
   // ---- Vista de admin / supervisor (AS1-07) ----
   /** Jornadas de todos los guardias cuya entrada cae en [desde, hasta), con sus marcas. */
   abstract jornadasDeTodos(desde: Date, hasta: Date): Promise<MarcacionGuardiaRow[]>;
@@ -347,6 +350,11 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
   async crear(data: NuevaMarcacion) {
     const r = await getPrisma().marcacion.create({ data, select });
     return toRow(r);
+  }
+
+  async findMarca(id: number) {
+    const r = await getPrisma().marcacion.findUnique({ where: { id }, select });
+    return r && toRow(r);
   }
 
   async jornadasDeTodos(desde: Date, hasta: Date) {

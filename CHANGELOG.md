@@ -34,6 +34,12 @@ Detalle en [REPORTES.md](docs/REPORTES.md) y [DECISIONES.md](docs/DECISIONES.md)
 - **Control de comidas (DA-47):** Contador de comidas adaptado a turnos de 24 h (hasta 2 comidas), validación de jornada activa y nomenclatura compacta `[1ª]` / `[2ª]`.
 - **Registro facial ágil (DA-44):** Captura automática de las 5 tomas de autoregistro al mantener la pose estable durante 1 s (`calidad.armado`), sin requerir parpadeo forzado.
 
+#### Añadido (2026-10-26)
+
+- **Inicio por rol y "Mis sitios"** (DA-51): el guardia entra directo al Checador (con saludo) y tiene la pestaña "Mis sitios"; admin y supervisor, un tablero del día con lo que necesita atención (sin llegar, sin salida, comidas sin cierre, incidencias y reportes abiertos); el cliente, un resumen de sus reportes y guardias. Se quitan la pantalla de componentes (`/ui`) y "Estado del sistema".
+- **Cerrar la jornada de un guardia** (DA-49): admin o supervisor registran su salida con motivo y hora cuando no pudo checarla; queda marcada, en auditoría y bitácora, y se le avisa al guardia.
+- **Borrar definitivamente sitios y clientes** (DA-50, solo admin): con el historial que se perdería y confirmación escrita; el diálogo de usuarios usa ahora el mismo componente. Verificado contra MySQL real con una transacción revertida.
+
 #### Corregido (revisión de Claude, 2026-10-26)
 
 - **Seguridad del portal de clientes:** la bitácora disciplinaria quedó solo para admin y supervisor (el cliente podía leerla y justificar faltas); la asistencia del día y la ficha del guardia ya no entregan al cliente alertas biométricas, resultado del reconocimiento ni el rostro registrado, ni jornadas o sitios de otros clientes (antes solo se escondían en la pantalla).

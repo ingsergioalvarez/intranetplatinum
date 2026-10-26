@@ -1,9 +1,9 @@
-import { COMIDA_AVISO_SUPERVISOR_MIN, COMIDA_MIN, horaLegible } from '@platinum/shared';
-import { env } from '../../config/env';
+import { COMIDA_AVISO_SUPERVISOR_MIN, COMIDA_MIN } from '@platinum/shared';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import type { DestinoRevision, MarcacionGuardiaRow } from './asistencia.repository';
 import { armarJornadas } from './asistencia.service';
+import { horaLocal } from './formato';
 
 /** Datos para los recordatorios de comida (DA-47). */
 export abstract class ComidasRepository {
@@ -79,6 +79,8 @@ export class RecordatoriosComida {
         }
       }
 
+      // Si un supervisor cerró la jornada (el guardia no pudo checar) no se le reclama la comida.
+      if (j.salida?.alertas.includes('cerrada_por_supervisor')) continue;
       if (!j.programada) continue;
       const entrada = Date.parse(j.programada.entrada);
       const salida = Date.parse(j.programada.salida);
@@ -130,15 +132,4 @@ export class RecordatoriosComida {
       }
     }
   }
-}
-
-/** `1:05 p.m.` en la zona del negocio. */
-function horaLocal(iso: string) {
-  const hhmm = new Intl.DateTimeFormat('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: env.APP_TIMEZONE,
-  }).format(new Date(iso));
-  return horaLegible(hhmm);
 }

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   AVISO_RETARDO_MIN,
   PATRON_SALIDA_MIN,
@@ -44,6 +45,10 @@ import {
   trabajaEl,
   type TurnoDelGuardia,
   comidasDelTurno,
+  type CerrarJornadaInput,
+  COMIDA_MIN,
+  type TableroAsistencia,
+  type TableroItem,
 } from '@platinum/shared';
 import {
   AuditLogger,
@@ -59,6 +64,7 @@ import {
 } from '../../core';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
+import { horaLocal } from './formato';
 import { MIN_FALTA, MIN_NO_SE_PRESENTO } from './vigilancia';
 import type {
   AsistenciaRepository,
@@ -364,6 +370,9 @@ function sitioDeLaEntrada(sitios: SitioMarcable[], punto: { lat: number; lng: nu
   const tocan = sitios.filter((s) => leTocaAhora(s, ahora));
   return sitioMasCercano(tocan.length ? tocan : sitios, punto);
 }
+
+/** Una jornada cuenta como "sin salida" en el tablero 30 min después de su salida programada. */
+const TABLERO_SALIDA_TOLERANCIA_MIN = 30;
 
 /** `85 m`, `2.3 km` */
 const distanciaTexto = (m: number) => (m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`);
@@ -1252,6 +1261,80 @@ export class AsistenciaService extends BaseService {
     }
   }
 
+  /**
+   * Cierra la jornada de un guardia que no pudo checar su salida (DA-49): registra una salida a su
+   * nombre, marcada "cerrada por un supervisor", con motivo obligatorio. Las checadas no se editan:
+   * se agrega esta. Queda en auditoría y en la bitácora, y se le avisa al guardia.
+   */
+  async cerrarJornada(
+    entradaId: number,
+    { motivo, salidaEn }: CerrarJornadaInput,
+    ctx: AccionCtx,
+    alcance: Alcance | null = null,
+  ): Promise<void> {
+    const entrada = await this.repo.findMarca(entradaId);
+    if (!entrada || entrada.tipo !== 'entrada') throw HttpError.notFound('Jornada no encontrada');
+    exigirGuardia(alcance, entrada.usuarioId);
+    const desde = entrada.registradaEn;
+    const [fila] = armarJornadas(
+      await this.repo.jornadasEntre(entrada.usuarioId, desde, new Date(desde.getTime() + 1)),
+    );
+    if (!fila || fila.salida) throw HttpError.conflict('La jornada ya tiene su salida');
+
+    const ahora = this.ahora();
+    const programada = entrada.programadaSalida;
+    // Por omisión: la salida programada si ya pasó; si no, ahora.
+    const hora = salidaEn ? new Date(salidaEn) : programada && programada <= ahora ? programada : ahora;
+    const ultima = [fila.entrada, ...fila.comidas.flatMap((c) => [c.inicio, c.fin])]
+      .flatMap((m) => (m ? [Date.parse(m.registradaEn)] : []))
+      .reduce((a, b) => Math.max(a, b));
+    if (hora.getTime() < ultima) {
+      throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [
+        { path: 'salidaEn', message: 'La salida no puede ser antes de su última checada' },
+      ]);
+    }
+    if (hora.getTime() > ahora.getTime() + 60_000) {
+      throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [
+        { path: 'salidaEn', message: 'La salida no puede ser en el futuro' },
+      ]);
+    }
+
+    await this.repo.crear({
+      idCliente: randomUUID(),
+      usuarioId: entrada.usuarioId,
+      sitioId: entrada.sitio?.id ?? null,
+      entradaId: entrada.id,
+      tipo: 'salida',
+      lat: entrada.lat,
+      lng: entrada.lng,
+      precisionM: 0,
+      distanciaM: null,
+      alertas: ['cerrada_por_supervisor'],
+      registradaEn: hora,
+    });
+    const sitio = entrada.sitio?.nombre ?? 'su sitio';
+    const quien = (await this.repo.findUsuarioRostro(ctx.actorId))?.nombre ?? 'Un supervisor';
+    await this.audit.registrarAccion(ctx, 'asistencia.cerrar_jornada', 'marcaciones', entrada.id, {
+      guardiaId: entrada.usuarioId,
+      sitio,
+      salida: hora.toISOString(),
+      motivo,
+    });
+    await this.bitacora({
+      usuarioIds: [entrada.usuarioId],
+      tipo: 'jornada_cerrada',
+      detalle: `${quien} cerró su jornada en ${sitio}: salida a las ${horaLocal(hora)}. Motivo: ${motivo}`,
+      marcacionId: entrada.id,
+      sitioId: entrada.sitio?.id ?? null,
+      actorId: ctx.actorId,
+    });
+    await this.avisarGuardia(entrada.usuarioId, {
+      tipo: 'marca_alerta',
+      mensaje: `${quien} cerró tu jornada en ${sitio} (salida a las ${horaLocal(hora)}). Motivo: ${motivo}`,
+      ruta: '/marcar',
+    });
+  }
+
   /** Jornadas del guardia cuya entrada cae en el mes `AAAA-MM` (zona del negocio). */
   async misJornadas(usuarioId: number, mes: string): Promise<Jornada[]> {
     const [a, m] = mes.split('-').map(Number);
@@ -1331,6 +1414,58 @@ export class AsistenciaService extends BaseService {
       );
 
     return { items: filas.slice((page - 1) * limit, page * limit), total: filas.length, page, limit };
+  }
+
+  /**
+   * Tablero del día (DA-51): quién no llegó, jornadas que ya debieron cerrarse y comidas sin cierre.
+   * El supervisor solo ve sus sitios y guardias.
+   */
+  async tablero(alcance: Alcance | null = null): Promise<TableroAsistencia> {
+    const fecha = this.hoy();
+    const ahora = this.ahora();
+    const t = ahora.getTime();
+    const items: TableroItem[] = [];
+
+    // No han llegado: lo que ya calcula la asistencia del día.
+    const dia = await this.dia({ fecha, page: 1, limit: 1000 }, alcance);
+    for (const fila of dia.items) {
+      const e = fila.turno?.estado;
+      if (!fila.jornada && (e === 'falta' || e === 'no_se_presento')) {
+        items.push({
+          clase: 'sin_llegar',
+          fila,
+          minutos: Math.floor((t - Date.parse(fila.turno!.entrada)) / 60_000),
+        });
+      }
+    }
+
+    // Jornadas abiertas de las últimas 30 h (turnos de 24 h y un margen).
+    const rows = await this.repo.jornadasDeTodos(new Date(t - 30 * 3_600_000), new Date(t + 60_000));
+    const guardiaDe = new Map(rows.filter((r) => r.tipo === 'entrada').map((r) => [r.id, r.usuario]));
+    for (const jornada of await this.jornadas(rows)) {
+      const guardia = guardiaDe.get(jornada.entrada.id);
+      if (!guardia || jornada.salida) continue;
+      if (
+        alcance &&
+        !(jornada.sitio ? alcance.sitioIds.has(jornada.sitio.id) : alcance.guardiaIds.has(guardia.id))
+      ) {
+        continue;
+      }
+      const fila: FilaAsistencia = { guardia, sitio: jornada.sitio, jornada };
+      const salida = jornada.programada ? Date.parse(jornada.programada.salida) : null;
+      const abierta = jornada.comidas.at(-1);
+      if (salida !== null && t - salida >= TABLERO_SALIDA_TOLERANCIA_MIN * 60_000) {
+        items.push({ clase: 'sin_salida', fila, minutos: Math.floor((t - salida) / 60_000) });
+      } else if (abierta && !abierta.fin) {
+        const min = Math.floor((t - Date.parse(abierta.inicio.registradaEn)) / 60_000);
+        if (min >= COMIDA_MIN) items.push({ clase: 'comida_abierta', fila, minutos: min });
+      }
+    }
+
+    // Primero quien no llegó, luego jornadas sin cerrar y comidas; dentro de cada clase, lo más viejo.
+    const orden = { sin_llegar: 0, sin_salida: 1, comida_abierta: 2 };
+    items.sort((a, b) => orden[a.clase] - orden[b.clase] || b.minutos - a.minutos);
+    return { fecha, items };
   }
 
   /** Ficha de un guardia: sus jornadas del mes `AAAA-MM` (AS1-07). */

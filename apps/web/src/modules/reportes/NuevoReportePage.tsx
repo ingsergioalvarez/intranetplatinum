@@ -216,7 +216,9 @@ export function NuevoReportePage() {
 
           <div className="flex items-start gap-2.5 rounded-lg border border-sky-200/80 bg-sky-50/80 p-3 text-xs text-sky-800">
             <span className="text-base leading-none">ℹ️</span>
-            <p>Tu supervisor ya recibió el aviso en su campanita y dará seguimiento oficial por este medio.</p>
+            <p>
+              Tu supervisor ya recibió el aviso en su campanita y dará seguimiento oficial por este medio.
+            </p>
           </div>
 
           <div className="space-y-2 pt-1">

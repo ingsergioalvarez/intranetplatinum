@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BellRing,
@@ -16,8 +16,9 @@ import {
   Users,
   XCircle,
   UserCog,
+  Trash2,
 } from 'lucide-react';
-import { PERMISOS, type Contacto, type Sitio } from '@platinum/shared';
+import { PERMISOS, ROLES, type Contacto, type Sitio } from '@platinum/shared';
 import { ApiError, mensajeDeError } from '../../core/api';
 import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { mapsUrl } from '../../core/format/mapas';
@@ -33,6 +34,7 @@ import {
 } from '../../components/ui';
 import { ClienteModal } from './ClienteModal';
 import { ContactoModal } from './ContactoModal';
+import { EliminarClienteDialog } from './EliminarSitioClienteDialogs';
 import { EstatusClienteBadge } from './EstatusClienteBadge';
 import { ReglasAvisoCard } from './ReglasAviso';
 import { CoberturaSitioModal } from './CoberturaSitioModal';
@@ -60,6 +62,8 @@ export function ClienteDetallePage() {
   const id = Number(useParams().id);
   const qc = useQueryClient();
   const yo = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
+  const [eliminando, setEliminando] = useState(false);
   const [abierto, setAbierto] = useState<Abierto | null>(null);
   const [confirmarBaja, setConfirmarBaja] = useState(false);
 
@@ -148,6 +152,16 @@ export function ClienteDetallePage() {
               onClick={() => setConfirmarBaja(true)}
             >
               {deBaja ? 'Reactivar' : 'Dar de baja'}
+            </Button>
+          )}
+          {yo?.rol === ROLES.ADMIN && (
+            <Button
+              variant="ghost"
+              className="text-red-700 hover:bg-red-50"
+              icon={<Trash2 className="size-4" />}
+              onClick={() => setEliminando(true)}
+            >
+              Eliminar
             </Button>
           )}
         </div>
@@ -386,6 +400,19 @@ export function ClienteDetallePage() {
         />
       )}
 
+      {eliminando && (
+        <EliminarClienteDialog
+          cliente={{ id: c.id, nombre: c.nombreComercial }}
+          onCancel={() => setEliminando(false)}
+          onEliminado={() => {
+            void qc.invalidateQueries({ queryKey: clientesService.keys.all });
+            void qc.invalidateQueries({ queryKey: ['sitios'] });
+            void qc.invalidateQueries({ queryKey: ['asistencia'] });
+            void qc.invalidateQueries({ queryKey: ['reportes'] });
+            navigate('/clientes', { replace: true });
+          }}
+        />
+      )}
       <ConfirmDialog
         open={confirmarBaja}
         title={deBaja ? 'Reactivar cliente' : 'Dar de baja al cliente'}

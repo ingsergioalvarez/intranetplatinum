@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import type { Express } from 'express';
-import { PERMISOS_POR_ROL, type HistorialUsuario, type Rol } from '@platinum/shared';
+import {
+  PERMISOS_POR_ROL,
+  type HistorialCliente,
+  type HistorialSitio,
+  type HistorialUsuario,
+  type Rol,
+} from '@platinum/shared';
 import { createApp } from '../src/app';
 import { StorageService, signAccessToken } from '../src/core';
 import { createAdminModule } from '../src/modules/admin';
@@ -23,6 +29,41 @@ class MemoryAdminRepository extends AdminRepository {
     const archivos = this.usuarios.get(id)!.archivos;
     this.usuarios.delete(id);
     return archivos;
+  }
+
+  sitios = new Map([[7, { id: 7, nombre: 'POETAS', clienteId: 3 }]]);
+  clientes = new Map([[3, { id: 3, nombre: 'CMC NETWORK' }]]);
+  borrados: string[] = [];
+  async findSitio(id: number) {
+    return this.sitios.get(id) ?? null;
+  }
+  async findCliente(id: number) {
+    return this.clientes.get(id) ?? null;
+  }
+  async historialSitio(): Promise<HistorialSitio> {
+    return { asignaciones: 2, marcas: 40, reportes: 3, coberturas: 1 };
+  }
+  async historialCliente(): Promise<HistorialCliente> {
+    return {
+      asignaciones: 2,
+      marcas: 40,
+      reportes: 3,
+      coberturas: 1,
+      sitios: 2,
+      contactos: 1,
+      usuariosPortal: 1,
+    };
+  }
+  async eliminarSitio(id: number) {
+    this.sitios.delete(id);
+    this.borrados.push(`sitio-${id}`);
+    return ['reportes/a.jpg', 'asistencia/b.jpg'];
+  }
+  async eliminarCliente(id: number) {
+    this.clientes.delete(id);
+    this.sitios.clear();
+    this.borrados.push(`cliente-${id}`);
+    return ['reportes/c.jpg'];
   }
 }
 
@@ -108,5 +149,49 @@ describe('admin: eliminar usuario definitivamente', () => {
     repo.usuarios.set(3, { ...repo.usuarios.get(1)!, id: 3, email: 'u3@x.mx' });
     repo.usuarios.get(3)!.activo = false; // admin 3 dado de baja: el 1 sigue siendo el único activo
     expect((await eliminar(1, 'admin', 3)).status).toBe(409);
+  });
+});
+
+describe('admin: eliminar sitios y clientes definitivamente (DA-50)', () => {
+  const como = (rol: Rol, actor = 1) => ({
+    get: (u: string) => request(app).get(`/api/admin${u}`).set('Authorization', token(actor, rol)),
+    delete: (u: string) => request(app).delete(`/api/admin${u}`).set('Authorization', token(actor, rol)),
+  });
+
+  it('solo el admin; el supervisor no', async () => {
+    expect((await como('supervisor').delete('/sitios/7')).status).toBe(403);
+    expect((await como('supervisor').delete('/clientes/3')).status).toBe(403);
+    expect((await como('supervisor').get('/sitios/7/historial')).status).toBe(403);
+    expect(repo.borrados).toEqual([]);
+  });
+
+  it('muestra lo que se perderá', async () => {
+    expect((await como('admin').get('/sitios/7/historial')).body.data).toEqual({
+      asignaciones: 2,
+      marcas: 40,
+      reportes: 3,
+      coberturas: 1,
+    });
+    expect((await como('admin').get('/clientes/3/historial')).body.data).toMatchObject({
+      sitios: 2,
+      contactos: 1,
+      usuariosPortal: 1,
+    });
+    expect((await como('admin').get('/sitios/99/historial')).status).toBe(404);
+  });
+
+  it('elimina el sitio, borra sus archivos y lo deja en auditoría', async () => {
+    expect((await como('admin').delete('/sitios/7')).status).toBe(204);
+    expect(repo.borrados).toEqual(['sitio-7']);
+    expect(storage.eliminados).toEqual(['reportes/a.jpg', 'asistencia/b.jpg']);
+    expect(audit.acciones()).toEqual(['sitios.eliminar_definitivo']);
+    expect((await como('admin').delete('/sitios/7')).status).toBe(404);
+  });
+
+  it('elimina el cliente con todo lo suyo y lo deja en auditoría', async () => {
+    expect((await como('admin').delete('/clientes/3')).status).toBe(204);
+    expect(storage.eliminados).toEqual(['reportes/c.jpg']);
+    expect(audit.acciones()).toEqual(['clientes.eliminar_definitivo']);
+    expect((await como('admin').delete('/clientes/3')).status).toBe(404);
   });
 });

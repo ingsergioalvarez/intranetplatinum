@@ -79,6 +79,7 @@ const ICONO: Record<TipoEventoBitacora, typeof Clock> = {
   cobertura_cancelada: Shuffle,
   comida_sin_cierre: Utensils,
   sin_comida: Utensils,
+  jornada_cerrada: LogOut,
 };
 
 /** Color del ícono: rojo lo grave, ámbar lo de asistencia, verde lo bueno, gris lo administrativo. */

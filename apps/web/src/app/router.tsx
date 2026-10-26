@@ -5,7 +5,7 @@ import { ProtectedRoute } from '../core/auth/ProtectedRoute';
 import { CambiarPasswordPage } from '../modules/auth/CambiarPasswordPage';
 import { LoginPage } from '../modules/auth/LoginPage';
 import { InicioPage } from '../modules/inicio/InicioPage';
-import { UiShowcasePage } from '../modules/dev/UiShowcasePage';
+import { MisSitiosPage } from '../modules/inicio/MisSitiosPage';
 import { UsuariosPage } from '../modules/usuarios/UsuariosPage';
 import { ClienteDetallePage } from '../modules/clientes/ClienteDetallePage';
 import { ClientesPage } from '../modules/clientes/ClientesPage';
@@ -42,6 +42,14 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <InicioPage /> },
+      {
+        path: 'mis-sitios',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_MARCAR} roles={[ROLES.GUARDIA]}>
+            <MisSitiosPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'marcar',
         element: (
@@ -156,7 +164,6 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      ...(import.meta.env.DEV ? [{ path: 'ui', element: <UiShowcasePage /> }] : []),
       { path: '*', element: <NotFoundPage /> },
     ],
   },

@@ -62,13 +62,7 @@ export interface RelevoTurnoModalProps {
  * Valida los 3 activos críticos del inmueble (Celular, Llaves y Teléfono fijo).
  * Si hay novedades, levanta automáticamente un reporte oficial con evidencias fotográficas.
  */
-export function RelevoTurnoModal({
-  tipo,
-  sitio,
-  ubicacion,
-  onCancelar,
-  onContinuar,
-}: RelevoTurnoModalProps) {
+export function RelevoTurnoModal({ tipo, sitio, ubicacion, onCancelar, onContinuar }: RelevoTurnoModalProps) {
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [estados, setEstados] = useState<Record<string, EstadoActivo>>({
@@ -386,9 +380,7 @@ export function RelevoTurnoModal({
               icon={<ShieldCheck className="size-4" />}
               onClick={handleSubmit}
             >
-              {esSalida
-                ? 'Registrar novedad y checar salida'
-                : 'Registrar novedad y checar entrada'}
+              {esSalida ? 'Registrar novedad y checar salida' : 'Registrar novedad y checar entrada'}
             </Button>
           ) : (
             <Button icon={<ChevronRight className="size-4" />} onClick={handleSubmit}>

@@ -230,9 +230,7 @@ export function ReportesPage() {
   };
 
   const nombreSitioGuardia =
-    sitios.data && sitios.data.length === 1
-      ? `Del sitio: ${sitios.data[0].nombre}`
-      : 'Del sitio';
+    sitios.data && sitios.data.length === 1 ? `Del sitio: ${sitios.data[0].nombre}` : 'Del sitio';
 
   return (
     <>
@@ -305,9 +303,7 @@ export function ReportesPage() {
                 {sitioActivo.cliente.nombreComercial}
               </span>
             </div>
-            {sitioActivo.direccion && (
-              <p className="text-xs text-slate-600">{sitioActivo.direccion}</p>
-            )}
+            {sitioActivo.direccion && <p className="text-xs text-slate-600">{sitioActivo.direccion}</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {hasPermission(yo, PERMISOS.REPORTES_CREAR) && (
@@ -373,7 +369,11 @@ export function ReportesPage() {
           </div>
 
           {/* Píldoras de estatus rápidas */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5" role="group" aria-label="Filtro rápido por estatus">
+          <div
+            className="flex flex-wrap items-center gap-1.5 pt-0.5"
+            role="group"
+            aria-label="Filtro rápido por estatus"
+          >
             {PILDORAS_ESTATUS.map((p) => {
               const activo = estatus === p.valor;
               return (

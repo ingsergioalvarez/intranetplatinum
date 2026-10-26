@@ -731,6 +731,7 @@ enum TipoEventoBitacora {
   cobertura_cancelada
   comida_sin_cierre
   sin_comida
+  jornada_cerrada
 }
 
 /// Bitácora del guardia (DA-41): control interno de supervisores y admin. Cada evento se guarda al
