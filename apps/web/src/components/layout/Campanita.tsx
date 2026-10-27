@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
+  CalendarDays,
   BellOff,
   CheckCheck,
   ClipboardList,
@@ -43,6 +44,7 @@ const TIPO: Record<TipoAviso, { titulo: string; icono: typeof Bell; tono: Tono }
   retardo: { titulo: 'Retardo', icono: Clock, tono: 'ambar' },
   marca_alerta: { titulo: 'Marca con alerta', icono: TriangleAlert, tono: 'ambar' },
   horas_extra: { titulo: 'Horas extra', icono: Clock, tono: 'ambar' },
+  cobertura: { titulo: 'Turno sin cubrir', icono: CalendarDays, tono: 'rojo' },
   // Para el guardia (DA-34)
   rostro_aprobado: { titulo: 'Rostro aprobado', icono: UserCheck, tono: 'verde' },
   rostro_rechazado: { titulo: 'Rostro rechazado', icono: UserX, tono: 'rojo' },

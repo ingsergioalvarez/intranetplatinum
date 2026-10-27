@@ -5,6 +5,20 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-27 #19 — Calendario de cobertura (DA-56, AS6-01..AS6-04)
+
+#### Añadido
+
+- Módulo `cobertura` (`GET /api/cobertura` por sitio y `GET /api/cobertura/resumen` de todos, máx. 62 días; admin y supervisor, este solo en sus sitios): por día y turno del sitio (misma hora y duración) indica quién cubre y el estado: cubierto, cobertura, con horas extra, sin cubrir (sin asignar, no se presentó o falta), sin registro o sin turno. Días pasados con lo que realmente pasó (entradas, faltas, horas extra); futuros con lo planeado (patrón, descansos movidos, coberturas). Un turno que terminó ya no se exige.
+- Web: **Asistencia → Calendario** (`/asistencia/calendario`): mes por sitio con una línea por turno, "Solo huecos" y detalle del día (bottom-sheet en celular); vista **Todos los sitios** (próximos 14 días, un renglón por sitio). El botón Calendario muestra los turnos sin cubrir. Desde un hueco, "Asignar quién cubre" abre el flujo de cubrir existente con el día, la hora y el guardia que faltó ya puestos, y el calendario se actualiza.
+- Aviso al supervisor (campanita, tipo nuevo `cobertura`, migración `20261027020000_aviso_cobertura`) con los turnos sin cubrir de los próximos 7 días: una vez al día por sitio, con enlace al día en el calendario; sin supervisor, al admin.
+- Esquemas compartidos `cobertura.ts` y `duracionPatronMin`. 25 pruebas nuevas (306 en total tras AS6-01, 311 ahora).
+
+#### Notas
+
+- Con datos reales (solo lectura) ya muestra la contradicción de "falta" en el turno siguiente de un guardia con turno de 24 h y horas extra; se resuelve en AS6-05 a AS6-07.
+- Un sitio con turno parcial (p. ej. solo lunes a viernes) marca "sin cubrir" los demás días, igual que el calendario de 7 días del sitio.
+
 ### Sesión 2026-10-27 #18 — Horas extra (DA-55, AS5-01..AS5-05)
 
 #### Añadido

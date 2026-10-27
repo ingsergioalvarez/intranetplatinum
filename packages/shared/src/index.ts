@@ -16,3 +16,4 @@ export * from './schemas/coberturas';
 export * from './schemas/informes';
 export * from './schemas/cambios';
 export * from './schemas/horasExtra';
+export * from './schemas/cobertura';

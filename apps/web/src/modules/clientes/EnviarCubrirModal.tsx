@@ -86,6 +86,8 @@ export function EnviarCubrirModal({
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: coberturasService.keys.all });
       void qc.invalidateQueries({ queryKey: ['asistencia'] });
+      // El calendario de cobertura (AS6) cambia: el hueco pasa a cobertura.
+      void qc.invalidateQueries({ queryKey: ['cobertura'] });
       toast.success(`${r.cobertura.guardia.nombre} cubrirá ${sitio.nombre}`);
       if (r.advertencia) toast.warning(`${r.advertencia}; quedó registrado`);
       onClose();

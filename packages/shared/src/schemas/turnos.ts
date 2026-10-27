@@ -197,6 +197,9 @@ function duracionMin(a: PatronTurno): number | null {
   return (minutos(a.horaFin) - minutos(a.horaInicio) + 1440) % 1440 || 1440;
 }
 
+/** Duración en minutos del turno de una asignación (null si no se puede saber). */
+export const duracionPatronMin = (a: PatronTurno) => duracionMin(a);
+
 /** ¿El turno empieza ese día? */
 export function trabajaEl(fecha: string, a: PatronTurno): boolean {
   if (fecha < a.desde || (a.hasta && fecha > a.hasta)) return false;

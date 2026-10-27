@@ -532,6 +532,7 @@ enum TipoAviso {
   // Marca registrada con alerta: fuera del sitio o salida anticipada.
   marca_alerta
   horas_extra
+  cobertura
 }
 
 /// Aviso dentro de la app (campanita) para un usuario.

@@ -61,6 +61,7 @@ export const TIPOS_AVISO = [
   'retardo',
   'marca_alerta',
   'horas_extra',
+  'cobertura',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 

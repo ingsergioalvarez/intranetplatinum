@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRightLeft, ChevronLeft, ChevronRight, FileText, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, FileText, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -20,6 +20,8 @@ import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { cambiosService } from '../cambios/cambios.service';
+import { coberturaService } from '../cobertura/cobertura.service';
+import { rangoProximos } from '../cobertura/estados';
 import { horasExtraService } from '../horas-extra/horasExtra.service';
 import { asistenciaService } from './asistencia.service';
 import { formatDuracion, formatHora, horasEsperadas } from './formato';
@@ -196,6 +198,7 @@ export function AsistenciaPage() {
               <BotonRostrosPendientes />
               <BotonCambios />
               <BotonHorasExtra />
+              <BotonCalendario />
               <Link
                 to="/asistencia/reportes"
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset hover:bg-slate-50"
@@ -353,6 +356,29 @@ function BotonRostrosPendientes() {
       {n > 0 && (
         <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
       )}
+    </Link>
+  );
+}
+
+/** Acceso al calendario de cobertura con el número de turnos sin cubrir en los próximos días (AS6). */
+function BotonCalendario() {
+  const rango = rangoProximos(hoyLocal());
+  const resumen = useQuery({
+    queryKey: coberturaService.keys.resumen(rango),
+    queryFn: () => coberturaService.resumen(rango),
+    refetchInterval: 60_000,
+  });
+  const n = resumen.data?.sinCubrir ?? 0;
+  return (
+    <Link
+      to="/asistencia/calendario"
+      className={cn(
+        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
+        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
+      )}
+    >
+      <CalendarDays className="size-4" /> Calendario
+      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
     </Link>
   );
 }
