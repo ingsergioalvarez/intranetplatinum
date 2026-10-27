@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, CircleCheck, LogOut, Shuffle } from 'lucide-react';
-import { horaLegible, type TableroItem } from '@platinum/shared';
+import { ChevronRight, CircleCheck, LogOut, Route, Shuffle } from 'lucide-react';
+import { ESTADO_HORA_EXTRA_LABEL, horaLegible, type TableroItem } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import { Button, Card, CardHeader, EmptyState, Spinner, cn } from '../../components/ui';
 import { useAuthStore } from '../../core/auth/authStore';
@@ -34,7 +34,12 @@ function texto(i: TableroItem) {
       : `No se ha presentado: debía entrar a las ${debia} (hace ${duracion(i.minutos)})`;
   }
   if (i.clase === 'sin_salida') {
-    return `Sin salida: debió salir a las ${horaLegible(hora24(fila.jornada!.programada!.salida))} (hace ${duracion(i.minutos)})`;
+    const salida = horaLegible(hora24(fila.jornada!.programada!.salida));
+    // Con horas extra no es un olvido: sigue en turno (AS6-07).
+    if (i.horaExtra && i.horaExtra !== 'rechazada') {
+      return `Sigue en turno: pasó su hora de salida (${salida}) hace ${duracion(i.minutos)} · horas extra ${ESTADO_HORA_EXTRA_LABEL[i.horaExtra].toLowerCase()}`;
+    }
+    return `Sin salida: debió salir a las ${salida} (hace ${duracion(i.minutos)})`;
   }
   return `Salió a comer a las ${formatHora(fila.jornada!.comidas.at(-1)!.inicio.registradaEn)} y no regresa (${duracion(i.minutos)})`;
 }
@@ -158,14 +163,24 @@ export function TableroPage() {
                     </Button>
                   )}
                   {i.clase === 'sin_salida' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      icon={<LogOut className="size-4" />}
-                      onClick={() => setCerrar(i)}
-                    >
-                      Cerrar jornada
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {i.horaExtra === 'abierta' && (
+                        <Link
+                          to="/asistencia/casos"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-sm font-medium text-white hover:bg-brand-800"
+                        >
+                          <Route className="size-4" /> Plan de cobertura
+                        </Link>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={<LogOut className="size-4" />}
+                        onClick={() => setCerrar(i)}
+                      >
+                        Cerrar jornada
+                      </Button>
+                    </div>
                   )}
                   {i.clase === 'comida_abierta' && (
                     <Link

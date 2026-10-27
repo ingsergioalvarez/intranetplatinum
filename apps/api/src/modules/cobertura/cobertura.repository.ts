@@ -17,6 +17,8 @@ export abstract class CoberturaRepository {
 
 /** Margen antes de la primera hora del rango para las entradas de quien llega temprano. */
 const MARGEN_MS = 3 * 3_600_000;
+/** Una jornada abierta cuenta hasta 30 h después de su entrada (turnos de 24 h y un margen). */
+const JORNADA_MS = 30 * 3_600_000;
 
 export class PrismaCoberturaRepository extends CoberturaRepository {
   async sitio(id: number) {
@@ -32,22 +34,29 @@ export class PrismaCoberturaRepository extends CoberturaRepository {
         where: { sitioId, programadaEntrada: { gte: inicio, lt: fin } },
         select: { usuarioId: true, programadaEntrada: true, entradaId: true, noSePresentoEn: true, faltaEn: true },
       }),
+      // También las de las últimas horas antes del rango: una jornada abierta puede cubrir el primer turno.
       db.marcacion.findMany({
-        where: {
-          sitioId,
-          tipo: 'entrada',
-          registradaEn: { gte: new Date(inicio.getTime() - MARGEN_MS), lt: fin },
-        },
-        select: { usuarioId: true, registradaEn: true },
+        where: { sitioId, tipo: 'entrada', registradaEn: { gte: new Date(inicio.getTime() - JORNADA_MS), lt: fin } },
+        select: { id: true, usuarioId: true, registradaEn: true },
       }),
       db.horaExtra.findMany({
         where: { sitioId, estado: { not: 'rechazada' }, fecha: { gte: fechaADate(desde), lte: fechaADate(hasta) } },
         select: { usuarioId: true, fecha: true },
       }),
     ]);
+    const salidas = await db.marcacion.findMany({
+      where: { entradaId: { in: entradas.map((e) => e.id) }, tipo: { in: ['salida', 'salida_extra'] } },
+      select: { entradaId: true, registradaEn: true },
+    });
+    const ultimaSalida = new Map<number, Date>();
+    for (const x of salidas) {
+      const previa = ultimaSalida.get(x.entradaId!);
+      if (!previa || x.registradaEn > previa) ultimaSalida.set(x.entradaId!, x.registradaEn);
+    }
     return {
       turnosDia,
-      entradas,
+      entradas: entradas.filter((e) => e.registradaEn.getTime() >= inicio.getTime() - MARGEN_MS),
+      jornadas: entradas.map((e) => ({ usuarioId: e.usuarioId, desde: e.registradaEn, hasta: ultimaSalida.get(e.id) ?? null })),
       extras: extras.map((x) => ({ usuarioId: x.usuarioId, fecha: dateAFecha(x.fecha) })),
     };
   }

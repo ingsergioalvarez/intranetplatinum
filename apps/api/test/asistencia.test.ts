@@ -15,6 +15,7 @@ import {
 import { createApp } from '../src/app';
 import { StorageService, signAccessToken } from '../src/core';
 import { createAsistenciaModule } from '../src/modules/asistencia';
+import { sinHorasExtra } from '../src/modules/horas-extra/puerto';
 import {
   AsistenciaRepository,
   type FiltroIncidencias,
@@ -377,6 +378,11 @@ const revisar = (usuarioId: number, accion: 'aprobar' | 'rechazar', motivo?: str
     .set('Authorization', token(5, 'supervisor'))
     .send(motivo ? { motivo } : {});
 
+/** "Hoy" del servicio (en las pruebas no avanza solo con el reloj). */
+let HOY = '2026-10-20';
+/** Si la jornada anterior tuvo horas extra (AS6-07). */
+let TUVO_EXTRAS = false;
+
 const avanzar = (horas: number) => {
   ahora = new Date(ahora.getTime() + horas * 3_600_000);
 };
@@ -384,6 +390,8 @@ const avanzar = (horas: number) => {
 beforeEach(() => {
   bitacora = [];
   HORARIOS = {};
+  HOY = '2026-10-20';
+  TUVO_EXTRAS = false;
   ahora = new Date('2026-10-20T13:00:00.000Z'); // 07:00 en CDMX
   repo = new MemoryAsistenciaRepository(SITIOS, () => ahora);
   storage = new MemoryStorage();
@@ -412,7 +420,8 @@ beforeEach(() => {
       storage,
       audit,
       ahora: () => ahora,
-      hoy: () => '2026-10-20',
+      hoy: () => HOY,
+      extras: { ...sinHorasExtra, tuvoHorasExtra: async () => TUVO_EXTRAS },
       bitacora: async (e) => void bitacora.push(e),
       alcance: sinAlcance,
       llegada: async () => undefined,
@@ -1209,6 +1218,23 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     expect(bitacora[0]).toMatchObject({ usuarioIds: [10], marcacionId: repo.marcas[0].id, sitioId: 1 });
   });
 
+  it('si venía de horas extra (salió después de la hora de este turno), su entrada no es retardo (AS6-07)', async () => {
+    HORARIOS = { 1: { horas: 12, horaInicio: '07:00', horaFin: '19:00', dias: { tipo: 'diario' } } };
+    await marcar(10, marca('entrada'));
+    await marcar(10, marca('inicio_comida'));
+    await marcar(10, marca('fin_comida'));
+    // Se queda toda la noche (horas extra): sale a las 7:25 del día siguiente y entra a su turno de las 7:00.
+    TUVO_EXTRAS = true;
+    avanzar(24 + 25 / 60);
+    expect((await marcar(10, marca('salida'))).status).toBe(201);
+    const entrada = await marcar(10, marca('entrada'));
+    expect(entrada.status).toBe(201);
+    expect(entrada.body.data.alertas).not.toContain('retardo');
+    const [nueva] = (await mias(10)).body.data;
+    expect(nueva.retardoMin).toBe(0);
+    expect(retardos()).toHaveLength(0);
+  });
+
   it('turno de noche de 12 h: la entrada cercana a medianoche toma el día correcto', async () => {
     HORARIOS = { 1: { turno: '12x12', horaInicio: '20:00', horaFin: '08:00' } };
     ahora = new Date('2026-10-21T01:55:00.000Z'); // 19:55 del 20 en CDMX
@@ -1450,6 +1476,24 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
         .set('Authorization', token(5, 'supervisor'))
         .send({ motivo: 'Se olvidó de checar' });
       expect(await resumen()).toEqual([['sin_llegar', 13]]);
+    });
+
+    it('quien sigue en su jornada cuando empieza su turno siguiente no sale "sin llegar": solo "sin salida" (AS6-07)', async () => {
+      HORARIOS = { 1: { horas: 12, horaInicio: '07:00', horaFin: '19:00', dias: { tipo: 'diario' } } };
+      await marcar(10, marca('entrada'));
+      await marcar(10, marca('inicio_comida'));
+      await marcar(10, marca('fin_comida'));
+      // Al día siguiente a las 7:20 sigue sin marcar su salida: antes salía además como "no se presentó".
+      avanzar(24 + 20 / 60);
+      HOY = '2026-10-21';
+      expect(await resumen()).toEqual([
+        ['sin_llegar', 13],
+        ['sin_salida', 10],
+      ]);
+      const dia = await request(app).get('/api/asistencia/dia').query({ fecha: '2026-10-21' }).set('Authorization', token(5, 'supervisor'));
+      const fila = dia.body.data.items.find((f: { guardia: { id: number } }) => f.guardia.id === 10);
+      expect(fila.turno).toBeUndefined();
+      expect(fila.jornada.salida).toBeNull();
     });
 
     it('solo admin y supervisor; el guardia no', async () => {

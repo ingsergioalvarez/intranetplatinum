@@ -168,6 +168,22 @@ describe('cobertura por sitio y turno (AS6-01)', () => {
       expect(celda(r, '2026-10-26', DIA)).toMatchObject({ estado: 'extra', guardias: [{ extra: true }] });
     });
 
+    it('quien sigue en su jornada anterior (horas extra) cuando empieza su turno cuenta como presente, no como falta (AS6-07)', () => {
+      // Entró el 26 a las 8:00 y no ha cerrado: su turno del 27 a las 8:00 empezó con él en el sitio.
+      const r = calcular(juan, {
+        ...VACIO,
+        jornadas: [{ usuarioId: 1, desde: en('2026-10-26T14:00:00Z'), hasta: null }],
+        extras: [{ usuarioId: 1, fecha: '2026-10-26' }],
+      }, en('2026-10-27T15:00:00Z'));
+      expect(celda(r, '2026-10-27', DIA)).toMatchObject({ estado: 'cubierto', guardias: [{ situacion: 'presente' }] });
+      // Si había cerrado antes de la hora del turno, ya no cuenta como cubierto por esa jornada.
+      const cerrada = calcular(juan, {
+        ...VACIO,
+        jornadas: [{ usuarioId: 1, desde: en('2026-10-26T14:00:00Z'), hasta: en('2026-10-27T02:00:00Z') }],
+      }, en('2026-10-27T15:00:00Z'));
+      expect(celda(cerrada, '2026-10-27', DIA).estado).toBe('sin_cubrir');
+    });
+
     it('si falta el guardia pero lo cubre otro que sí llegó, queda como cobertura', () => {
       const r = calcular(
         [...juan, turno(3, 'Luis', patron('08:00', 12, diario, { tipo: 'temporal', desde: '2026-10-26', hasta: '2026-10-26' }), { asignacionId: null, coberturaId: 9 })],

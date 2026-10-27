@@ -98,6 +98,7 @@ model Usuario {
   cambiosResueltos     CambioTurno[]        @relation("CambioResolvio")
   horasExtra           HoraExtra[]          @relation("HoraExtraDe")
   horasExtraResueltas  HoraExtra[]          @relation("HoraExtraResolvio")
+  casosCobertura       CasoCobertura[]      @relation("CasoGuardia")
   pausasTurno          PausaTurno[]
   bitacora             EventoBitacora[]     @relation("BitacoraDe")
   bitacoraActor        EventoBitacora[]     @relation("BitacoraActor")
@@ -227,33 +228,34 @@ model ClienteContacto {
 }
 
 model Sitio {
-  id           Int                 @id @default(autoincrement())
-  clienteId    Int                 @map("cliente_id")
-  nombre       String              @db.VarChar(150)
-  direccion    String?             @db.VarChar(300)
-  referencias  String?             @db.VarChar(300)
-  lat          Decimal?            @db.Decimal(10, 7)
-  lng          Decimal?            @db.Decimal(10, 7)
+  id             Int                 @id @default(autoincrement())
+  clienteId      Int                 @map("cliente_id")
+  nombre         String              @db.VarChar(150)
+  direccion      String?             @db.VarChar(300)
+  referencias    String?             @db.VarChar(300)
+  lat            Decimal?            @db.Decimal(10, 7)
+  lng            Decimal?            @db.Decimal(10, 7)
   /// Radio de la geocerca en metros: fuera de él no se marca entrada ni salida (DA-36).
-  radioM       Int                 @default(100) @map("radio_m")
+  radioM         Int                 @default(100) @map("radio_m")
   /// Supervisor del sitio (DA-45): recibe sus avisos y solo él (y el admin) ve sus guardias.
-  supervisorId Int?                @map("supervisor_id")
-  createdAt    DateTime            @default(now()) @map("created_at")
-  updatedAt    DateTime            @updatedAt @map("updated_at")
+  supervisorId   Int?                @map("supervisor_id")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
   // Baja lógica: los reportes (F3) siguen referenciando el sitio.
-  deletedAt    DateTime?           @map("deleted_at")
-  cliente      Cliente             @relation(fields: [clienteId], references: [id])
-  supervisor   Usuario?            @relation("SitiosSupervisados", fields: [supervisorId], references: [id], onDelete: SetNull)
-  asignaciones SitioGuardia[]
-  reportes     Reporte[]
-  marcaciones  Marcacion[]
-  incidencias  IncidenciaRostro[]
-  bitacora     EventoBitacora[]
-  turnosDia    TurnoDia[]
-  coberturas   Cobertura[]
-  informes     InformeAsistencia[]
-  cambiosTurno CambioTurno[]
-  horasExtra   HoraExtra[]
+  deletedAt      DateTime?           @map("deleted_at")
+  cliente        Cliente             @relation(fields: [clienteId], references: [id])
+  supervisor     Usuario?            @relation("SitiosSupervisados", fields: [supervisorId], references: [id], onDelete: SetNull)
+  asignaciones   SitioGuardia[]
+  reportes       Reporte[]
+  marcaciones    Marcacion[]
+  incidencias    IncidenciaRostro[]
+  bitacora       EventoBitacora[]
+  turnosDia      TurnoDia[]
+  coberturas     Cobertura[]
+  informes       InformeAsistencia[]
+  cambiosTurno   CambioTurno[]
+  horasExtra     HoraExtra[]
+  casosCobertura CasoCobertura[]
 
   @@index([clienteId, deletedAt])
   @@index([supervisorId])
@@ -611,6 +613,7 @@ model Marcacion {
   bitacora          EventoBitacora[]
   turnosDia         TurnoDia[]
   horaExtra         HoraExtra?
+  casoCobertura     CasoCobertura?
 
   @@index([usuarioId, registradaEn])
   @@index([entradaId])
@@ -983,16 +986,78 @@ model CambioTurno {
 
 /// Día en que un guardia no trabaja aunque su horario diga que sí (por un cambio de turno aprobado).
 model PausaTurno {
-  id        Int         @id @default(autoincrement())
-  usuarioId Int         @map("usuario_id")
-  fecha     DateTime    @db.Date
-  cambioId  Int         @map("cambio_id")
-  usuario   Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  cambio    CambioTurno @relation(fields: [cambioId], references: [id], onDelete: Cascade)
+  id        Int            @id @default(autoincrement())
+  usuarioId Int            @map("usuario_id")
+  fecha     DateTime       @db.Date
+  /// Cambio de turno que la creó; o el caso de cobertura (AS6) cuando es el descanso de un plan.
+  cambioId  Int?           @map("cambio_id")
+  casoId    Int?           @map("caso_id")
+  usuario   Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  cambio    CambioTurno?   @relation(fields: [cambioId], references: [id], onDelete: Cascade)
+  caso      CasoCobertura? @relation(fields: [casoId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, fecha])
   @@index([cambioId])
+  @@index([casoId])
   @@map("pausas_turno")
+}
+
+enum EstadoCasoCobertura {
+  en_espera
+  resuelto
+  cancelado
+}
+
+enum DecisionCasoCobertura {
+  en_camino
+  no_llegara
+  otro_cubre
+}
+
+enum SiguienteTurnoCaso {
+  normal
+  descansa
+}
+
+/// Plan del supervisor cuando un guardia sigue en el sitio porque su relevo no llega (AS6, DA-56):
+/// qué pasa con el relevo, con el siguiente turno del guardia y quién cubre el hueco. Uno por jornada.
+model CasoCobertura {
+  id                 Int                   @id @default(autoincrement())
+  /// Jornada (entrada) del guardia que se queda.
+  entradaId          Int                   @unique @map("entrada_id")
+  guardiaId          Int                   @map("guardia_id")
+  sitioId            Int                   @map("sitio_id")
+  /// Guardia que no llegó y turno que debía cubrir.
+  relevoId           Int?                  @map("relevo_id")
+  relevoInicio       DateTime?             @map("relevo_inicio")
+  estado             EstadoCasoCobertura   @default(en_espera)
+  decision           DecisionCasoCobertura
+  siguiente          SiguienteTurnoCaso?
+  /// Horas de descanso que el supervisor agrega a las del patrón.
+  descansoExtraHoras Int                   @default(0) @map("descanso_extra_horas")
+  /// Hasta cuándo cubre el guardia (fin del turno que cubre).
+  finCubierto        DateTime?             @map("fin_cubierto")
+  /// "Descansa": cuándo vuelve a trabajar.
+  regresaEn          DateTime?             @map("regresa_en")
+  /// "Lo trabaja normal": aquí terminan las horas extra (empieza su turno).
+  limiteExtra        DateTime?             @map("limite_extra")
+  /// Cobertura que cubre el hueco o el turno del relevo.
+  coberturaId        Int?                  @map("cobertura_id")
+  resueltoPorId      Int?                  @map("resuelto_por_id")
+  /// Cuándo se vuelve a preguntar al supervisor ("viene en camino").
+  reconsultarEn      DateTime?             @map("reconsultar_en")
+  nota               String?               @db.VarChar(255)
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  guardia            Usuario               @relation("CasoGuardia", fields: [guardiaId], references: [id], onDelete: Cascade)
+  sitio              Sitio                 @relation(fields: [sitioId], references: [id], onDelete: Cascade)
+  entrada            Marcacion             @relation(fields: [entradaId], references: [id], onDelete: Cascade)
+  pausas             PausaTurno[]
+
+  @@index([guardiaId])
+  @@index([sitioId])
+  @@index([estado])
+  @@map("casos_cobertura")
 }
 
 enum OrigenHoraExtra {

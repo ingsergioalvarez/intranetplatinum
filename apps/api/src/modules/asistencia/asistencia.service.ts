@@ -207,7 +207,11 @@ export function armarJornadas(rows: MarcacionRow[], estados: EstadosRostros = ne
           sitio: r.sitio,
           alertas: [...m.alertas],
           programada,
-          retardoMin: r.programadaEntrada ? minutosEntre(r.programadaEntrada, r.registradaEn) : null,
+          retardoMin: r.programadaEntrada
+            ? m.alertas.includes('viene_de_horas_extra')
+              ? 0
+              : minutosEntre(r.programadaEntrada, r.registradaEn)
+            : null,
           salidaAnticipadaMin: null,
         },
       });
@@ -441,6 +445,7 @@ export class AsistenciaService extends BaseService {
       jornada: vigente ? (await this.jornadas(rows))[0] : null,
       permitidas: await this.permitidasAhora(rows),
       horaExtra: vigente ? await this.extras.paraGuardia(rows[0], rows.find((m) => m.tipo === 'salida') ?? null) : null,
+      plan: vigente ? await this.extras.plan(rows[0].id) : null,
       sitios,
       rostro: miRostro,
       turnoActual: actual,
@@ -555,7 +560,18 @@ export class AsistenciaService extends BaseService {
     if (data.precisionM > radio) alertas.push('gps_impreciso');
     if (data.sinLentes) alertas.push('sin_lentes_declarado');
     // Retardo y salida anticipada con tolerancia (DA-33).
-    const retardoMin = programada ? minutosEntre(programada.entrada, ahora) : null;
+    let retardoMin = programada ? minutosEntre(programada.entrada, ahora) : null;
+    // Venía de horas extra (su salida fue después de la hora de este turno): no hay retardo (AS6-07).
+    const ultimaMarca = jornada.at(-1);
+    if (
+      programada &&
+      (ultimaMarca?.tipo === 'salida' || ultimaMarca?.tipo === 'salida_extra') &&
+      ultimaMarca.registradaEn.getTime() >= programada.entrada.getTime() &&
+      (await this.extras.tuvoHorasExtra(jornada[0].id))
+    ) {
+      retardoMin = 0;
+      alertas.push('viene_de_horas_extra');
+    }
     if (retardoMin !== null && retardoMin > TOLERANCIA_RETARDO_MIN) alertas.push('retardo');
     const salidaProgramada = data.tipo === 'salida' ? jornada[0].programadaSalida : null;
     if (salidaProgramada && minutosEntre(ahora, salidaProgramada) >= SALIDA_ANTICIPADA_MIN) {
@@ -1423,8 +1439,22 @@ export class AsistenciaService extends BaseService {
     });
     const marcaron = new Set(conJornada.map((f) => f.guardia.id));
     const ahora = this.ahora();
+    // Hoy: quien sigue en una jornada que empezó antes (horas extra) no "no se presentó" a su turno de hoy
+    // (AS6-07): se muestra su jornada abierta.
+    const enCurso: FilaAsistencia[] = [];
+    if (fecha === this.hoy()) {
+      const recientes = await this.repo.jornadasDeTodos(new Date(ahora.getTime() - 30 * 3_600_000), new Date(ahora.getTime() + 60_000));
+      const deQuien = new Map<number, MarcacionGuardiaRow['usuario']>();
+      for (const r of recientes) if (r.tipo === 'entrada') deQuien.set(r.id, r.usuario);
+      for (const j of await this.jornadas(recientes)) {
+        const g = deQuien.get(j.entrada.id);
+        if (!g || j.salida || marcaron.has(g.id) || enCurso.some((f) => f.guardia.id === g.id)) continue;
+        enCurso.push({ guardia: { ...g, foto: j.entrada.foto ?? g.foto ?? null }, sitio: j.sitio, jornada: j });
+      }
+    }
+    const sigueTrabajando = new Set(enCurso.map((f) => f.guardia.id));
     const sinMarcas: FilaAsistencia[] = asignados
-      .filter((a) => !marcaron.has(a.guardia.id))
+      .filter((a) => !marcaron.has(a.guardia.id) && !sigueTrabajando.has(a.guardia.id))
       .map(({ guardia, sitio, horaInicio, horas, cobertura }) => ({
         guardia,
         sitio,
@@ -1434,7 +1464,7 @@ export class AsistenciaService extends BaseService {
       }));
 
     const texto = q?.toLowerCase();
-    const filas = [...conJornada, ...sinMarcas]
+    const filas = [...conJornada, ...enCurso, ...sinMarcas]
       // Supervisor: solo sus sitios y sus guardias (DA-45).
       .filter(
         (f) =>
@@ -1500,11 +1530,18 @@ export class AsistenciaService extends BaseService {
       const salida = jornada.programada ? Date.parse(jornada.programada.salida) : null;
       const abierta = jornada.comidas.at(-1);
       if (salida !== null && t - salida >= TABLERO_SALIDA_TOLERANCIA_MIN * 60_000) {
-        items.push({ clase: 'sin_salida', fila, minutos: Math.floor((t - salida) / 60_000) });
+        items.push({ clase: 'sin_salida', fila, minutos: Math.floor((t - salida) / 60_000), horaExtra: null });
       } else if (abierta && !abierta.fin) {
         const min = Math.floor((t - Date.parse(abierta.inicio.registradaEn)) / 60_000);
         if (min >= COMIDA_MIN) items.push({ clase: 'comida_abierta', fila, minutos: min });
       }
+    }
+
+    // Si ya tiene horas extra, la tarjeta lo dice (AS6-07): sigue en turno, no es un olvido.
+    const sinSalida = items.filter((i) => i.clase === 'sin_salida');
+    if (sinSalida.length) {
+      const estados = await this.extras.estados(sinSalida.map((i) => i.fila.jornada!.entrada.id));
+      for (const i of sinSalida) i.horaExtra = estados.get(i.fila.jornada!.entrada.id) ?? null;
     }
 
     // Primero quien no llegó, luego jornadas sin cerrar y comidas; dentro de cada clase, lo más viejo.

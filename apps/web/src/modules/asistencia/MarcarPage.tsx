@@ -55,6 +55,7 @@ import { useAuthStore } from '../../core/auth/authStore';
 import { formatDiaLargo, formatHora } from './formato';
 import { precargarMotor } from './rostro/motor';
 import { HorasExtraGuardia } from './HorasExtraGuardia';
+import { PlanDelDia } from './PlanDelDia';
 import { RelevoTurnoModal } from './RelevoTurnoModal';
 import { SinUbicacionError, nuevoIdMarca, obtenerUbicacion, type Ubicacion } from './ubicacion';
 import { ApiError } from '../../core/api';
@@ -331,9 +332,11 @@ export function MarcarPage() {
           onReintentar={() => void actualizarUbicacion()}
         />
 
+        {data.plan && <PlanDelDia plan={data.plan} />}
         {data.horaExtra && (
           <HorasExtraGuardia
             extra={data.horaExtra}
+            conPlan={data.plan?.estado === 'resuelto'}
             ubicacion={ubicacion}
             dentroDelSitio={
               referencia?.tieneCoords && referencia.distanciaM !== null

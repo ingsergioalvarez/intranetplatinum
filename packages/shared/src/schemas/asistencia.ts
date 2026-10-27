@@ -2,7 +2,8 @@ import { z } from 'zod';
 import type { MiSitio, TipoAsignacion, Turno } from './clientes';
 import type { DiasTurno } from './turnos';
 import { fechaSchema } from './comunes';
-import type { HoraExtraGuardia } from './horasExtra';
+import type { PlanGuardia } from './casosCobertura';
+import type { EstadoHoraExtra, HoraExtraGuardia } from './horasExtra';
 import { paginationQuerySchema } from './pagination';
 
 // ---------- Control de asistencia (A-17, docs/ASISTENCIA.md) ----------
@@ -60,6 +61,7 @@ export const ALERTAS_MARCACION = [
   'cerrada_por_supervisor',
   'enviada_sin_conexion',
   'hora_desfasada',
+  'viene_de_horas_extra',
 ] as const;
 export type AlertaMarcacion = (typeof ALERTAS_MARCACION)[number];
 
@@ -76,6 +78,7 @@ export const ALERTA_MARCACION_LABEL: Record<AlertaMarcacion, string> = {
   cerrada_por_supervisor: 'Jornada cerrada por un supervisor',
   enviada_sin_conexion: 'Checada hecha sin conexión y enviada después',
   hora_desfasada: 'La hora del celular no coincide con la del servidor',
+  viene_de_horas_extra: 'Venía de horas extra: su entrada no cuenta como retardo',
   sin_lentes_declarado: 'Dijo que no traía lentes (el sistema detectó lentes)',
 };
 
@@ -441,6 +444,8 @@ export interface EstadoAsistencia {
   proximoTurno: TurnoDelGuardia | null;
   /** Horas extra de la jornada: la pregunta "¿sigues en turno?" y su solicitud (AS5). */
   horaExtra: HoraExtraGuardia | null;
+  /** El plan que dejó el supervisor si sigue en el sitio por un relevo que no llegó (AS6-08). */
+  plan: PlanGuardia | null;
 }
 
 // ---------- Vista de admin / supervisor (AS1-07) ----------
@@ -495,6 +500,8 @@ export interface TableroItem {
   fila: FilaAsistencia;
   /** Minutos desde la hora de entrada (sin llegar), desde que debió salir o desde que salió a comer. */
   minutos: number;
+  /** Estado de sus horas extra, si ya pasó su hora de salida y sigue en el sitio (AS6-07). */
+  horaExtra?: EstadoHoraExtra | null;
 }
 
 export interface TableroAsistencia {

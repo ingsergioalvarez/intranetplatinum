@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, FileText, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -20,6 +20,7 @@ import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { cambiosService } from '../cambios/cambios.service';
+import { casosService } from '../casos/casos.service';
 import { coberturaService } from '../cobertura/cobertura.service';
 import { rangoProximos } from '../cobertura/estados';
 import { horasExtraService } from '../horas-extra/horasExtra.service';
@@ -198,6 +199,7 @@ export function AsistenciaPage() {
               <BotonRostrosPendientes />
               <BotonCambios />
               <BotonHorasExtra />
+              <BotonCasos />
               <BotonCalendario />
               <Link
                 to="/asistencia/reportes"
@@ -356,6 +358,30 @@ function BotonRostrosPendientes() {
       {n > 0 && (
         <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
       )}
+    </Link>
+  );
+}
+
+/** Acceso a "Casos de cobertura" con el número de los que esperan un plan (AS6-05). */
+function BotonCasos() {
+  const casos = useQuery({
+    queryKey: casosService.keys.lista,
+    queryFn: casosService.lista,
+    refetchInterval: 60_000,
+  });
+  const n = casos.data?.pendientes ?? 0;
+  // Sin casos no hace falta el botón: aparece cuando hay un guardia esperando a su relevo.
+  if (!casos.data || casos.data.items.length === 0) return null;
+  return (
+    <Link
+      to="/asistencia/casos"
+      className={cn(
+        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
+        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
+      )}
+    >
+      <Route className="size-4" /> Casos de cobertura
+      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
     </Link>
   );
 }

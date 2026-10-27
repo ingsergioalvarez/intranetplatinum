@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, Timer } from 'lucide-react';
 import { duracionExtra, type HoraExtraGuardia } from '@platinum/shared';
-import { Button, Modal, toast } from '../../components/ui';
+import { Button, ConfirmDialog, Modal, toast } from '../../components/ui';
 import { mensajeDeError } from '../../core/api';
+import { casosService } from '../casos/casos.service';
 import { horasExtraService } from '../horas-extra/horasExtra.service';
 import { asistenciaService } from './asistencia.service';
 import { formatHora } from './formato';
@@ -27,14 +28,18 @@ export function HorasExtraGuardia({
   extra,
   ubicacion,
   dentroDelSitio,
+  conPlan = false,
 }: {
   extra: HoraExtraGuardia;
+  /** El supervisor ya dejó el plan: no tiene caso decir que no puede quedarse. */
+  conPlan?: boolean;
   ubicacion: Ubicacion | null;
   /** Dentro del radio del sitio con la ubicación actual; null si no se puede saber. */
   dentroDelSitio: boolean | null;
 }) {
   const queryClient = useQueryClient();
   const [dijoNo, setDijoNo] = useState(() => yaDijoNo(extra.entradaId));
+  const [confirmandoNoPuedo, setConfirmandoNoPuedo] = useState(false);
   const fin = formatHora(new Date(extra.finProgramado));
 
   const extender = useMutation({
@@ -51,6 +56,15 @@ export function HorasExtraGuardia({
     onError: (e) => toast.error(mensajeDeError(e)),
   });
 
+  const noPuedo = useMutation({
+    mutationFn: () => casosService.noPuedo(),
+    onSuccess: () => {
+      toast.success('Avisamos a tu supervisor para que mande a otro guardia');
+      setConfirmandoNoPuedo(false);
+    },
+    onError: (e) => toast.error(mensajeDeError(e)),
+  });
+
   const { solicitud } = extra;
   if (solicitud?.estado === 'abierta') {
     return (
@@ -59,7 +73,21 @@ export function HorasExtraGuardia({
         <div>
           <p className="font-medium">Extendiste tu horario desde las {formatHora(new Date(solicitud.desde))}</p>
           <p>Tu supervisor ya fue avisado. Cuando termines, checa tu salida.</p>
+          {!conPlan && (
+            <Button className="mt-2" size="sm" variant="secondary" onClick={() => setConfirmandoNoPuedo(true)}>
+              No puedo quedarme
+            </Button>
+          )}
         </div>
+        <ConfirmDialog
+          open={confirmandoNoPuedo}
+          title="¿No puedes quedarte?"
+          description="Le avisamos a tu supervisor para que mande a otro guardia. Quédate en tu puesto hasta que llegue."
+          confirmLabel="Avisar a mi supervisor"
+          loading={noPuedo.isPending}
+          onConfirm={() => noPuedo.mutate()}
+          onCancel={() => setConfirmandoNoPuedo(false)}
+        />
       </div>
     );
   }

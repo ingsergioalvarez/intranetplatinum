@@ -16,6 +16,7 @@ import {
   type HorasExtraPagina,
   type HorasExtraQuery,
   type OpcionesHorasExtra,
+  type PlanGuardia,
   type ReporteHorasExtra,
   type ReporteHorasExtraQuery,
   type ResolverHoraExtraInput,
@@ -42,7 +43,7 @@ import type {
   HorasExtraRepository,
   SitioExtra,
 } from './horasExtra.repository';
-import type { HorasExtraPuerto } from './puerto';
+import type { CasoDeJornada, HorasExtraPuerto } from './puerto';
 
 const MIN = 60_000;
 const HORA = 3_600_000;
@@ -71,6 +72,8 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     private readonly avisar: AvisarUsuarios = sinAvisos,
     private readonly bitacora: RegistrarBitacora = sinBitacora,
     private readonly ahora: () => Date = () => new Date(),
+    /** Plan de cobertura de la jornada (AS6): con "no llegará" las horas se aprueban solas. */
+    private readonly casoDe: CasoDeJornada = async () => null,
   ) {
     super();
   }
@@ -438,6 +441,33 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     };
   }
 
+  async plan(entradaId: number): Promise<PlanGuardia | null> {
+    const c = await this.casoDe(entradaId);
+    if (!c || c.estado === 'cancelado') return null;
+    return {
+      estado: c.estado,
+      decision: c.decision,
+      cubreHasta: c.finCubierto?.toISOString() ?? null,
+      siguiente: c.siguiente,
+      vuelveA: c.regresaEn?.toISOString() ?? null,
+      limiteExtra: c.limiteExtra?.toISOString() ?? null,
+      nota: c.nota,
+    };
+  }
+
+  async tuvoHorasExtra(entradaId: number) {
+    return (await this.repo.porEntrada(entradaId)) !== null;
+  }
+
+  async estados(entradaIds: number[]) {
+    const mapa = new Map<number, EstadoHoraExtra>();
+    for (const id of entradaIds) {
+      const r = await this.repo.porEntrada(id);
+      if (r) mapa.set(id, r.estado);
+    }
+    return mapa;
+  }
+
   async puedeSalidaFinal(entradaId: number) {
     const rec = await this.repo.porEntrada(entradaId);
     if (rec?.estado !== 'abierta' || rec.origen !== 'guardia_extiende') return false;
@@ -460,8 +490,14 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
 
     if (rec) {
       if (rec.estado !== 'abierta' && rec.estado !== 'sin_salida') return;
+      const caso = await this.casoDe(entrada.id);
+      // El supervisor mandó que se quedara ("no llegará"): se aprueban solas, hasta donde empieza su turno normal.
+      const plan = caso?.estado === 'resuelto' && caso.decision === 'no_llegara' ? caso : null;
       const desde = descanso ? entrada.registradaEn : rec.desde;
-      const hasta = hora.getTime() < desde.getTime() ? desde : hora;
+      let hasta = hora.getTime() < desde.getTime() ? desde : hora;
+      if (plan?.limiteExtra && plan.limiteExtra.getTime() > desde.getTime() && hasta.getTime() > plan.limiteExtra.getTime()) {
+        hasta = plan.limiteExtra;
+      }
       const minutos = minutosEntre(desde, hasta);
       const sinExtra = !descanso && (minutos <= 0 || (rec.origen === 'jornada_abierta' && minutos <= TOLERANCIA_EXTRA_MIN));
       if (sinExtra) {
@@ -472,10 +508,25 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
         desde,
         hasta,
         minutos,
-        estado: 'por_aprobar',
+        estado: plan ? 'aprobada' : 'por_aprobar',
         origen: descanso ? 'cobertura_descanso' : rec.origen === 'jornada_abierta' ? 'salida_tardia' : rec.origen,
+        ...(plan ? { resueltoPorId: plan.resueltoPorId, resueltoEn: this.ahora(), notaResolucion: 'Aprobadas con el plan de cobertura' } : {}),
       };
       const nueva = await this.repo.actualizar(rec.id, cambios);
+      if (plan) {
+        await this.registrar(
+          nueva,
+          `Terminó sus horas extra en ${nueva.sitio.nombre}: ${duracionExtra(minutos)} aprobadas con el plan de cobertura (${horaLocal(desde)} a ${horaLocal(hasta)})`,
+          { minutos, casoId: plan.id },
+          plan.resueltoPorId,
+        );
+        await this.avisar([nueva.guardia.id], {
+          tipo: 'horas_extra',
+          mensaje: `Tus horas extra del ${fechaCorta(nueva.fecha)} en ${nueva.sitio.nombre} (${duracionExtra(minutos)}) quedaron aprobadas con el plan de tu supervisor`,
+          ruta: '/marcar',
+        });
+        return;
+      }
       await this.registrar(
         nueva,
         `Terminó sus horas extra en ${nueva.sitio.nombre}: ${duracionExtra(minutos)} por aprobar (${horaLocal(desde)} a ${horaLocal(hasta)})`,

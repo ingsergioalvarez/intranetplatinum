@@ -68,6 +68,13 @@ export abstract class VigilanciaRepository {
   ): Promise<void>;
   /** A quién avisar (supervisor del sitio; sin supervisor, el admin). */
   abstract revisoresDe(destino: DestinoRevision): Promise<number[]>;
+  /**
+   * ¿Estaba trabajando en ese instante? Una jornada que empezó antes y no se cerró, o que se cerró después
+   * de ese instante (se quedó en horas extra): su turno siguiente no es falta ni retardo (AS6-07).
+   */
+  async trabajandoEn(_usuarioId: number, _instante: Date): Promise<boolean> {
+    return false;
+  }
 }
 
 /** Aviso al guardia sin entrada (DA-45). */
@@ -126,6 +133,8 @@ export class VigilanciaTurnos {
     const existente = await this.repo.findTurnoDia(t.guardia.id, programada);
     if (existente?.faltaEn || existente?.entradaId) return;
     if (await this.repo.huboEntrada(t.guardia.id, new Date(programada.getTime() - ANTES_MS), ahora)) return;
+    // Sigue en la jornada anterior (horas extra): su turno empezó con él en el sitio.
+    if (await this.repo.trabajandoEn(t.guardia.id, programada)) return;
     const fila =
       existente ??
       (await this.repo.crearTurnoDia({

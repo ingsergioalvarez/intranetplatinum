@@ -21,6 +21,8 @@ const DIARIO_8: PatronTurno = {
 class MemoryVigilanciaRepository extends VigilanciaRepository {
   turnos: TurnoProgramado[] = [];
   entradas: { usuarioId: number; en: Date }[] = [];
+  /** Guardias que seguían en una jornada abierta al empezar su turno (horas extra). */
+  trabajando = new Set<number>();
   filas: (TurnoDiaRow & { sitio: string })[] = [];
   eventos: (EventoVigilancia & { id: number })[] = [];
 
@@ -29,6 +31,9 @@ class MemoryVigilanciaRepository extends VigilanciaRepository {
   }
   async huboEntrada(usuarioId: number, desde: Date, hasta: Date) {
     return this.entradas.some((e) => e.usuarioId === usuarioId && e.en >= desde && e.en <= hasta);
+  }
+  async trabajandoEn(usuarioId: number) {
+    return this.trabajando.has(usuarioId);
   }
   async findTurnoDia(usuarioId: number, programada: Date) {
     return (
@@ -179,5 +184,16 @@ describe('vigilancia de turnos sin entrada (DA-45)', () => {
     await vigilancia.revisar();
     expect(avisos).toEqual([]);
     expect(repo.eventos).toEqual([]);
+  });
+
+  it('si seguía en su jornada anterior (horas extra) cuando empezó su turno, no es "no se presentó" ni falta (AS6-07)', async () => {
+    repo.trabajando.add(10);
+    for (const h of ['14:05', '14:15', '16:00']) {
+      ahora = a(h);
+      await vigilancia.revisar();
+    }
+    expect(avisos).toEqual([]);
+    expect(repo.eventos).toEqual([]);
+    expect(repo.filas).toEqual([]);
   });
 });

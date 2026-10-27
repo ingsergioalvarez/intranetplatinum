@@ -5,6 +5,22 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-27 #20 — Caso de cobertura, descanso por patrón y sin falta en horas extra (DA-56, AS6-05..AS6-08)
+
+#### Añadido
+
+- **Caso de cobertura** (módulo `casos-cobertura`, `/api/casos-cobertura`, tabla `casos_cobertura`, migración `20261027030000_casos_cobertura`): cuando un guardia sigue en el sitio porque su relevo no llegó (o dijo que sigue en turno), el supervisor (o el admin) deja el plan completo desde el inicio en Asistencia → **Casos de cobertura**: (1) el relevo viene en camino (se vuelve a preguntar a las 2 h), no llegará (el guardia cubre ese turno) o se manda a otro guardia; (2) si el guardia cubre, su siguiente turno lo trabaja normal o descansa; (3) quién cubre el hueco (sin elegir a nadie el sitio queda en rojo en el calendario). Con "no llegará" sus horas extra se aprueban solas al marcar su salida (hasta donde empieza su turno normal) y el plan queda en auditoría, bitácora y avisos (campanita) a supervisor y guardia.
+- **Descanso por patrón** (`plan.ts`): regresa = fin de lo que cubre + el descanso del patrón (24 h en 24x24, 12 h en 12x12…) + lo que agregue el supervisor (solo agregar); si regresa a la mitad de un turno entra tarde y termina a la hora original (no se recorre); sus turnos saltados quedan en pausa y el hueco se cubre con una cobertura. Aviso de cansancio al supervisor (más de 16 h seguidas).
+- **Sin falta ni retardo en horas extra (AS6-07)**: la vigilancia no marca "no se presentó" ni falta a quien seguía en su jornada cuando empezó su turno siguiente; el tablero muestra una sola tarjeta por guardia ("Sigue en turno… horas extra") con "Plan de cobertura" y "Cerrar jornada"; su entrada al venir de horas extra no cuenta como retardo (alerta `viene_de_horas_extra`); el calendario lo cuenta como presente.
+- **Plan de hoy (AS6-08)**: el guardia ve en el Checador hasta cuándo cubre, qué pasa con su siguiente turno y cuándo se presenta; botón "No puedo quedarme" (avisa al supervisor).
+- 34 pruebas nuevas (345 en total).
+
+#### Límites conocidos
+
+- El relevo ausente se detecta por la vigilancia de turnos (turno sin entrada con "no se presentó"); si el guardia solo dice que sigue en turno y no hay relevo registrado, el caso aparece en la lista sin relevo y el supervisor decide.
+- "Descansa" solo lo ve la vigilancia y el calendario a partir de las pausas del plan; el reporte oficial no cambia.
+- El plan no se puede editar una vez confirmado (hay que cancelar las coberturas desde Coberturas).
+
 ### Sesión 2026-10-27 #19 — Calendario de cobertura (DA-56, AS6-01..AS6-04)
 
 #### Añadido

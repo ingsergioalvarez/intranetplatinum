@@ -23,6 +23,8 @@ export interface RealesCobertura {
     faltaEn: Date | null;
   }[];
   entradas: { usuarioId: number; registradaEn: Date }[];
+  /** Jornadas del sitio con su entrada y su salida final (null = sigue abierta), para quien sigue en horas extra. */
+  jornadas?: { usuarioId: number; desde: Date; hasta: Date | null }[];
   /** Horas extra no rechazadas, por guardia y día de la jornada. */
   extras: { usuarioId: number; fecha: string }[];
 }
@@ -92,7 +94,11 @@ function situacionDe(
   const fila = turnosDia.get(`${guardiaId}|${inicio.getTime()}`);
   const hasta = inicio.getTime() + Math.min(durMin, DESPUES_MAX_MIN) * 60_000;
   const entro = (entradasDe.get(guardiaId) ?? []).some((e) => e.getTime() >= inicio.getTime() - ANTES_MS && e.getTime() < hasta);
-  if (fila?.entradaId || entro) return 'presente';
+  // Seguía en una jornada que empezó antes y no había cerrado cuando empezó este turno (horas extra).
+  const continua = (reales.jornadas ?? []).some(
+    (j) => j.usuarioId === guardiaId && j.desde.getTime() <= inicio.getTime() && (!j.hasta || j.hasta.getTime() > inicio.getTime()),
+  );
+  if (fila?.entradaId || entro || continua) return 'presente';
   if (fila?.faltaEn) return 'falta';
   if (fila?.noSePresentoEn) return 'ausente';
   if (min < MIN_NO_SE_PRESENTO) return 'programado';

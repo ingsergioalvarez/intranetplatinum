@@ -16,6 +16,7 @@ import {
   type NuevaHoraExtra,
 } from '../src/modules/horas-extra/horasExtra.repository';
 import { HorasExtraService } from '../src/modules/horas-extra/horasExtra.service';
+import type { CasoRow } from '../src/modules/casos-cobertura/casos.repository';
 import type { Alcance } from '../src/modules/sitios/alcance';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
 
@@ -521,5 +522,83 @@ describe('horas extra: reporte (AS5-05)', () => {
     expect(juan).toMatchObject({ guardia: { nombre: 'Juan' }, aprobadasMin: 150, pendientesMin: 720 });
     expect(juan.registros).toHaveLength(2);
     expect((await sup().get('/reporte?desde=2026-10-31&hasta=2026-10-01')).status).toBe(400);
+  });
+});
+
+describe('horas extra: con el plan del supervisor (AS6-05, AS6-08)', () => {
+  const caso = (extra: Partial<CasoRow> = {}): CasoRow => ({
+    id: 7,
+    entradaId: 100,
+    guardiaId: 10,
+    sitioId: 1,
+    relevoId: 11,
+    relevoInicio: null,
+    estado: 'resuelto',
+    decision: 'no_llegara',
+    siguiente: 'normal',
+    descansoExtraHoras: 0,
+    finCubierto: en('2026-10-27T14:00:00Z'),
+    regresaEn: null,
+    limiteExtra: en('2026-10-27T04:00:00Z'),
+    coberturaId: null,
+    resueltoPorId: 5,
+    reconsultarEn: null,
+    nota: null,
+    ...extra,
+  });
+  const conPlan = (c: CasoRow | null) =>
+    new HorasExtraService(
+      repo,
+      async () => TURNOS,
+      async () => [{ sitio: { id: 1, nombre: 'POETAS' } }] as never,
+      audit,
+      async (usuarioIds, a) => void avisos.push({ usuarioIds, mensaje: a.mensaje }),
+      async (e) => void bitacora.push(e),
+      () => ahora,
+      async () => c,
+    );
+
+  it('con "no llegará" las horas se aprueban solas y terminan donde empieza su turno normal', async () => {
+    ahora = en('2026-10-27T02:20:00Z');
+    await guardia().post('/extender', {});
+    avisos.length = 0;
+    // Marca su salida a las 5:00Z, pero su turno normal empieza a las 4:00Z: lo extra es de 2:00 a 4:00.
+    await conPlan(caso()).alSalir({ entrada: marca(ENTRADA_LUNES), salida: salida('2026-10-27T05:00:00Z') });
+    expect(repo.filas[0]).toMatchObject({ estado: 'aprobada', minutos: 120, resueltoPor: expect.any(String), notaResolucion: 'Aprobadas con el plan de cobertura' });
+    expect(repo.filas[0].hasta).toEqual(en('2026-10-27T04:00:00Z'));
+    // No se vuelve a pedir la aprobación al supervisor; se le dice al guardia.
+    expect(avisos).toEqual([{ usuarioIds: [10], mensaje: expect.stringContaining('quedaron aprobadas con el plan') }]);
+    expect(bitacora.at(-1)).toMatchObject({ tipo: 'horas_extra', actorId: 5 });
+  });
+
+  it('con "descansa" no hay tope: se aprueban las horas que trabajó', async () => {
+    ahora = en('2026-10-27T02:20:00Z');
+    await guardia().post('/extender', {});
+    await conPlan(caso({ siguiente: 'descansa', limiteExtra: null })).alSalir({ entrada: marca(ENTRADA_LUNES), salida: salida('2026-10-27T05:00:00Z') });
+    expect(repo.filas[0]).toMatchObject({ estado: 'aprobada', minutos: 180 });
+  });
+
+  it('con "viene en camino" o sin plan siguen por aprobar como siempre', async () => {
+    ahora = en('2026-10-27T02:20:00Z');
+    await guardia().post('/extender', {});
+    await conPlan(caso({ decision: 'en_camino', estado: 'en_espera', limiteExtra: null })).alSalir({
+      entrada: marca(ENTRADA_LUNES),
+      salida: salida('2026-10-27T05:00:00Z'),
+    });
+    expect(repo.filas[0]).toMatchObject({ estado: 'por_aprobar', minutos: 180 });
+  });
+
+  it('el guardia ve su plan: hasta cuándo cubre, qué pasa con su siguiente turno y cuándo regresa', async () => {
+    expect(await conPlan(null).plan(100)).toBeNull();
+    expect(await conPlan(caso({ estado: 'cancelado' })).plan(100)).toBeNull();
+    expect(await conPlan(caso({ siguiente: 'descansa', regresaEn: en('2026-10-28T14:00:00Z') })).plan(100)).toEqual({
+      estado: 'resuelto',
+      decision: 'no_llegara',
+      cubreHasta: '2026-10-27T14:00:00.000Z',
+      siguiente: 'descansa',
+      vuelveA: '2026-10-28T14:00:00.000Z',
+      limiteExtra: '2026-10-27T04:00:00.000Z',
+      nota: null,
+    });
   });
 });

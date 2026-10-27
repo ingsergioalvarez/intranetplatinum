@@ -118,6 +118,26 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
     return turnos;
   }
 
+  async trabajandoEn(usuarioId: number, instante: Date) {
+    const db = getPrisma();
+    const entrada = await db.marcacion.findFirst({
+      where: {
+        usuarioId,
+        tipo: 'entrada',
+        registradaEn: { lte: instante, gte: new Date(instante.getTime() - 30 * 3_600_000) },
+      },
+      orderBy: { registradaEn: 'desc' },
+      select: { id: true },
+    });
+    if (!entrada) return false;
+    const salida = await db.marcacion.findFirst({
+      where: { entradaId: entrada.id, tipo: { in: ['salida', 'salida_extra'] } },
+      orderBy: { registradaEn: 'desc' },
+      select: { registradaEn: true },
+    });
+    return !salida || salida.registradaEn.getTime() >= instante.getTime();
+  }
+
   async huboEntrada(usuarioId: number, desde: Date, hasta: Date) {
     const n = await getPrisma().marcacion.count({
       where: { usuarioId, tipo: 'entrada', registradaEn: { gte: desde, lte: hasta } },
