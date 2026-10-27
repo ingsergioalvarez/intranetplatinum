@@ -15,6 +15,10 @@
 4. Piloto con 2 o 3 guardias reales; probar el reporte de asistencia y horas extra con datos reales.
 5. Después: correo (SMTP) y recuperación de contraseña, notificaciones push (TC-21), respaldos y revisión de seguridad.
 
+## Por revisar
+
+- Botón "No puedo quedarme" del guardia (Checador, tarjeta de horas extra abiertas): lo agregué sin que se pidiera (AS6-08). Se deja por ahora; el usuario decidirá después si se queda o se quita.
+
 ## Bloqueos / pendientes del usuario
 
 - Dominio y VPS para publicar; certificado de confianza para instalar la PWA en el celular.
