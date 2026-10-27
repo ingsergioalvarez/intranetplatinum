@@ -45,7 +45,7 @@
 | A-14 | Seguimiento de reportes                                                                                    | Usuario 2026-10-12 | F3-05, F3-06        | Terminado        |
 | A-15 | Notificación a clientes                                                                                    | Usuario 2026-10-12 | F3-07..F3-10        | Pendiente        |
 | A-16 | Plan trazable, changelog y memoria de sesión                                                               | Usuario 2026-10-12 | F0-00               | Terminado        |
-| A-17 | Control de asistencia con reconocimiento facial (plan en [ASISTENCIA.md](ASISTENCIA.md))                   | Usuario 2026-10-20 | AS1-01..AS4-02      | En progreso      |
+| A-17 | Control de asistencia con reconocimiento facial (plan en [ASISTENCIA.md](ASISTENCIA.md))                   | Usuario 2026-10-20 | AS1-01..AS6-08      | En progreso      |
 
 ### Alcances propuestos (sugeridos, sin confirmar)
 

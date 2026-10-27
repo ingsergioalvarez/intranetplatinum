@@ -96,6 +96,8 @@ model Usuario {
   cambiosPedidos       CambioTurno[]        @relation("CambioPidio")
   cambiosCubre         CambioTurno[]        @relation("CambioCubre")
   cambiosResueltos     CambioTurno[]        @relation("CambioResolvio")
+  horasExtra           HoraExtra[]          @relation("HoraExtraDe")
+  horasExtraResueltas  HoraExtra[]          @relation("HoraExtraResolvio")
   pausasTurno          PausaTurno[]
   bitacora             EventoBitacora[]     @relation("BitacoraDe")
   bitacoraActor        EventoBitacora[]     @relation("BitacoraActor")
@@ -251,6 +253,7 @@ model Sitio {
   coberturas   Cobertura[]
   informes     InformeAsistencia[]
   cambiosTurno CambioTurno[]
+  horasExtra   HoraExtra[]
 
   @@index([clienteId, deletedAt])
   @@index([supervisorId])
@@ -528,6 +531,7 @@ enum TipoAviso {
   retardo
   // Marca registrada con alerta: fuera del sitio o salida anticipada.
   marca_alerta
+  horas_extra
 }
 
 /// Aviso dentro de la app (campanita) para un usuario.
@@ -559,6 +563,8 @@ enum TipoMarcacion {
   inicio_comida
   fin_comida
   salida
+  /// Salida final de las horas extra (AS5): no cambia la salida de la jornada normal.
+  salida_extra
 }
 
 /// Marca de asistencia. Inmutable (DA-08): solo se inserta; no hay rutas para editar ni borrar.
@@ -603,6 +609,7 @@ model Marcacion {
   rostro            RostroGuardia?   @relation(fields: [rostroId], references: [id], onDelete: SetNull)
   bitacora          EventoBitacora[]
   turnosDia         TurnoDia[]
+  horaExtra         HoraExtra?
 
   @@index([usuarioId, registradaEn])
   @@index([entradaId])
@@ -746,6 +753,7 @@ enum TipoEventoBitacora {
   comida_sin_cierre
   sin_comida
   jornada_cerrada
+  horas_extra
 }
 
 /// Bitácora del guardia (DA-41): control interno de supervisores y admin. Cada evento se guarda al
@@ -984,4 +992,56 @@ model PausaTurno {
   @@unique([usuarioId, fecha])
   @@index([cambioId])
   @@map("pausas_turno")
+}
+
+enum OrigenHoraExtra {
+  salida_tardia
+  guardia_extiende
+  jornada_abierta
+  cobertura_descanso
+  captura_supervisor
+}
+
+enum EstadoHoraExtra {
+  abierta
+  por_aprobar
+  aprobada
+  rechazada
+  sin_salida
+}
+
+/// Horas extra (AS5, DA-55): tiempo fuera de la jornada normal, en su propia tabla. Solo horas; nada
+/// cuenta hasta que un supervisor o admin lo aprueba. Una por jornada (`entrada_id`); las capturas
+/// del supervisor no llevan entrada.
+model HoraExtra {
+  id             Int             @id @default(autoincrement())
+  usuarioId      Int             @map("usuario_id")
+  sitioId        Int             @map("sitio_id")
+  entradaId      Int?            @unique @map("entrada_id")
+  /// Día de la jornada.
+  fecha          DateTime        @db.Date
+  desde          DateTime
+  hasta          DateTime?
+  minutos        Int?
+  origen         OrigenHoraExtra
+  estado         EstadoHoraExtra
+  /// Motivo de una captura del supervisor.
+  motivo         String?         @db.VarChar(255)
+  resueltoPorId  Int?            @map("resuelto_por_id")
+  resueltoEn     DateTime?       @map("resuelto_en")
+  notaResolucion String?         @map("nota_resolucion") @db.VarChar(255)
+  /// Cuándo se avisó a los admins por falta de respuesta del supervisor.
+  escaladaEn     DateTime?       @map("escalada_en")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  usuario        Usuario         @relation("HoraExtraDe", fields: [usuarioId], references: [id], onDelete: Cascade)
+  resueltoPor    Usuario?        @relation("HoraExtraResolvio", fields: [resueltoPorId], references: [id], onDelete: SetNull)
+  sitio          Sitio           @relation(fields: [sitioId], references: [id], onDelete: Cascade)
+  entrada        Marcacion?      @relation(fields: [entradaId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId, fecha])
+  @@index([sitioId, fecha])
+  @@index([estado])
+  @@index([resueltoPorId])
+  @@map("horas_extra")
 }

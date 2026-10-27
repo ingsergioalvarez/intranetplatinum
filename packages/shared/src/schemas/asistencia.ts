@@ -2,11 +2,12 @@ import { z } from 'zod';
 import type { MiSitio, TipoAsignacion, Turno } from './clientes';
 import type { DiasTurno } from './turnos';
 import { fechaSchema } from './comunes';
+import type { HoraExtraGuardia } from './horasExtra';
 import { paginationQuerySchema } from './pagination';
 
 // ---------- Control de asistencia (A-17, docs/ASISTENCIA.md) ----------
 
-export const TIPOS_MARCACION = ['entrada', 'inicio_comida', 'fin_comida', 'salida'] as const;
+export const TIPOS_MARCACION = ['entrada', 'inicio_comida', 'fin_comida', 'salida', 'salida_extra'] as const;
 export type TipoMarcacion = (typeof TIPOS_MARCACION)[number];
 
 export const TIPO_MARCACION_LABEL: Record<TipoMarcacion, string> = {
@@ -14,6 +15,7 @@ export const TIPO_MARCACION_LABEL: Record<TipoMarcacion, string> = {
   inicio_comida: 'Inicio de comida',
   fin_comida: 'Fin de comida',
   salida: 'Salida',
+  salida_extra: 'Salida final (horas extra)',
 };
 
 /** Radio de la geocerca del sitio si no tiene uno propio (DA-02, DA-36). */
@@ -40,6 +42,8 @@ export const SIGUIENTES_MARCAS: Record<TipoMarcacion, TipoMarcacion[]> = {
   inicio_comida: ['fin_comida'],
   fin_comida: ['salida'],
   salida: ['entrada'],
+  // La salida final de las horas extra solo se habilita si extendió su horario (AS5).
+  salida_extra: ['entrada'],
 };
 
 export const ALERTAS_MARCACION = [
@@ -96,7 +100,7 @@ export const PATRON_SEGUIDOS = 3;
 // ---------- Reconocimiento facial (AS1-02, AS1-08) ----------
 
 /** Marcas que llevan foto con reconocimiento (la comida no, DA-07). */
-export const TIPOS_CON_FOTO: TipoMarcacion[] = ['entrada', 'salida'];
+export const TIPOS_CON_FOTO: TipoMarcacion[] = ['entrada', 'salida', 'salida_extra'];
 /** Valores del vector facial de face-api.js. */
 export const DESCRIPTOR_LONGITUD = 128;
 /** Distancia máxima para considerar que es la misma persona (face-api usa 0.6; aquí más estricto). */
@@ -184,7 +188,7 @@ export const MOTIVOS_GRAVES: readonly MotivoIncidencia[] = [
  * (con su vector, el servidor dice si es otro guardia) o gesto no completado. DA-28, DA-29, DA-30.
  */
 export const incidenciaCreateSchema = z.object({
-  tipo: z.enum(['entrada', 'salida'], 'Tipo de marca inválido'),
+  tipo: z.enum(['entrada', 'salida', 'salida_extra'], 'Tipo de marca inválido'),
   motivo: z.enum(['pantalla', 'no_titular', 'reto_fallido'], 'Motivo inválido'),
   descriptor: desdeJson(descriptorSchema).optional(),
 });
@@ -435,6 +439,8 @@ export interface EstadoAsistencia {
   turnoActual: TurnoDelGuardia | null;
   /** Siguiente turno si ahora no está en turno (hasta 14 días). */
   proximoTurno: TurnoDelGuardia | null;
+  /** Horas extra de la jornada: la pregunta "¿sigues en turno?" y su solicitud (AS5). */
+  horaExtra: HoraExtraGuardia | null;
 }
 
 // ---------- Vista de admin / supervisor (AS1-07) ----------

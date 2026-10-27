@@ -11,6 +11,7 @@ import { clientesModule } from './clientes';
 import { coberturasModule } from './coberturas';
 import { gruposModule } from './grupos';
 import { healthModule } from './health';
+import { horasExtraModule } from './horas-extra';
 import { informesModule } from './informes';
 import { reportesModule } from './reportes';
 import { sitiosModule } from './sitios';
@@ -35,5 +36,6 @@ export const modules: AppModule[] = [
   asistenciaModule,
   bitacoraModule,
   informesModule,
+  horasExtraModule,
   adminModule,
 ];

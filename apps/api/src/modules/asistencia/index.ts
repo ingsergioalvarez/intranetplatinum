@@ -30,6 +30,8 @@ import {
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { avisarConPrisma } from '../avisos/avisar';
 import { alcanceConPrisma, type AlcanceFn } from '../sitios/alcance';
+import { crearServicioHorasExtra } from '../horas-extra';
+import { sinHorasExtra, type HorasExtraPuerto } from '../horas-extra/puerto';
 import { PrismaSitiosRepository } from '../sitios/sitios.repository';
 import { AsistenciaController } from './asistencia.controller';
 import { AsistenciaRepository, PrismaAsistenciaRepository } from './asistencia.repository';
@@ -48,6 +50,8 @@ interface AsistenciaModuleDeps {
   bitacora?: RegistrarBitacora;
   alcance?: AlcanceFn;
   llegada?: LlegadaFn;
+  /** Horas extra (AS5); en pruebas, sin ellas. */
+  extras?: HorasExtraPuerto;
 }
 
 /**
@@ -69,9 +73,10 @@ export function createAsistenciaModule({
       guardia,
       entrada,
     ),
+  extras = sinHorasExtra,
 }: AsistenciaModuleDeps = {}): AppModule {
   const c = new AsistenciaController(
-    new AsistenciaService(repo, misSitios, storage, audit, ahora, hoy, bitacora, llegada),
+    new AsistenciaService(repo, misSitios, storage, audit, ahora, hoy, bitacora, llegada, extras),
     alcance,
   );
   const marcar = requirePermission(PERMISOS.ASISTENCIA_MARCAR);
@@ -155,7 +160,7 @@ export function createAsistenciaModule({
   return { name: 'asistencia', basePath: 'asistencia', router };
 }
 
-export const asistenciaModule = createAsistenciaModule();
+export const asistenciaModule = createAsistenciaModule({ extras: crearServicioHorasExtra() });
 
 /**
  * Revisa cada minuto los turnos que empezaron sin entrada (DA-45): avisos y faltas; y las comidas
@@ -165,6 +170,7 @@ export const asistenciaModule = createAsistenciaModule();
 export function iniciarVigilanciaTurnos() {
   const vigilancia = new VigilanciaTurnos(new PrismaVigilanciaRepository(), avisarConPrisma);
   const comidas = new RecordatoriosComida(new PrismaComidasRepository(), avisarConPrisma, bitacoraConPrisma);
+  const horasExtra = crearServicioHorasExtra();
   let corriendo = false;
   const revisar = async () => {
     if (corriendo) return;
@@ -172,6 +178,7 @@ export function iniciarVigilanciaTurnos() {
     try {
       await vigilancia.revisar();
       await comidas.revisar();
+      await horasExtra.revisar();
     } catch (err) {
       console.error('[vigilancia] Falló la revisión de turnos', err);
     } finally {

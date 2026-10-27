@@ -67,7 +67,8 @@ export function aplicarPendientes(estado: EstadoAsistencia, pendientes: MarcaPen
       }
     }
     ultima = jornada;
-    if (p.tipo === 'salida') jornada = null;
+    // La salida final de las horas extra no cambia la jornada: solo cierra el ciclo.
+    if (p.tipo === 'salida' || p.tipo === 'salida_extra') jornada = null;
   });
 
   const abierta = jornada as Jornada | null;

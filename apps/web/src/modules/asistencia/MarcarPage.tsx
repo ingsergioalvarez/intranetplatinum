@@ -54,6 +54,7 @@ import { TurnoGuardiaCard } from './TurnoGuardia';
 import { useAuthStore } from '../../core/auth/authStore';
 import { formatDiaLargo, formatHora } from './formato';
 import { precargarMotor } from './rostro/motor';
+import { HorasExtraGuardia } from './HorasExtraGuardia';
 import { RelevoTurnoModal } from './RelevoTurnoModal';
 import { SinUbicacionError, nuevoIdMarca, obtenerUbicacion, type Ubicacion } from './ubicacion';
 import { ApiError } from '../../core/api';
@@ -67,6 +68,8 @@ const BOTONES: { tipo: TipoMarcacion; icon: LucideIcon }[] = [
   { tipo: 'inicio_comida', icon: Coffee },
   { tipo: 'fin_comida', icon: Utensils },
   { tipo: 'salida', icon: LogOut },
+  // Solo aparece si extendió su horario después de checar su salida (AS5).
+  { tipo: 'salida_extra', icon: LogOut },
 ];
 
 const CONFIRMAR: Record<TipoMarcacion, string> = {
@@ -74,6 +77,7 @@ const CONFIRMAR: Record<TipoMarcacion, string> = {
   inicio_comida: '¿Salir a comer?',
   fin_comida: '¿Regresar de comer?',
   salida: '¿Checar tu salida?',
+  salida_extra: '¿Checar tu salida final?',
 };
 
 /** Texto de cada botón del checador (DA-43). */
@@ -82,6 +86,7 @@ const ACCION: Record<TipoMarcacion, string> = {
   inicio_comida: 'Salir a comer',
   fin_comida: 'Regresar de comer',
   salida: 'Checar salida',
+  salida_extra: 'Checar salida final',
 };
 
 /** Título al terminar: "Entrada checada". */
@@ -90,6 +95,7 @@ const CHECADA: Record<TipoMarcacion, string> = {
   inicio_comida: 'Salida a comer checada',
   fin_comida: 'Regreso de comer checado',
   salida: 'Salida checada',
+  salida_extra: 'Salida final checada',
 };
 
 type EstadoUbicacion =
@@ -156,7 +162,12 @@ function bloqueoGps(referencia: ReturnType<typeof sitioDeReferencia>, ubicacion:
 export function MarcarPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const estado = useQuery({ queryKey: asistenciaService.keys.estado, queryFn: asistenciaService.estado });
+  const estado = useQuery({
+    queryKey: asistenciaService.keys.estado,
+    queryFn: asistenciaService.estado,
+    // Para que la pregunta de horas extra aparezca sola al pasar la hora de salida (AS5).
+    refetchInterval: () => (navigator.onLine ? 60_000 : false),
+  });
   // Lo que ya checó sin conexión cuenta para saber qué sigue, aunque aún no llegue al servidor (AS2-02).
   const cola = useCola(user?.id);
   const enLinea = useEnLinea();
@@ -175,11 +186,11 @@ export function MarcarPage() {
   const [pendiente, setPendiente] = useState<TipoMarcacion | null>(null);
   const [resultado, setResultado] = useState<Marcacion | null>(null);
   /** Entrada o salida en curso con la cámara (AS1-08). */
-  const [camara, setCamara] = useState<'entrada' | 'salida' | null>(null);
+  const [camara, setCamara] = useState<'entrada' | 'salida' | 'salida_extra' | null>(null);
   /** Modal de entrega y recepción de consignas (REP-07, REP-08). */
   const [relevo, setRelevo] = useState<'entrada' | 'salida' | null>(null);
   /** Consejos antes de abrir la cámara (quitarse lentes, buena luz...). */
-  const [consejos, setConsejos] = useState<'entrada' | 'salida' | null>(null);
+  const [consejos, setConsejos] = useState<'entrada' | 'salida' | 'salida_extra' | null>(null);
   const [ahora, setAhora] = useState(() => new Date());
 
   const actualizarUbicacion = useCallback(async () => {
@@ -208,7 +219,7 @@ export function MarcarPage() {
     return () => clearInterval(t);
   }, [gpsBloquea, actualizarUbicacion]);
 
-  const abrirCamara = (tipo: 'entrada' | 'salida') => {
+  const abrirCamara = (tipo: 'entrada' | 'salida' | 'salida_extra') => {
     // Sin rostro registrado: primero la ventana que lo explica (con la guía del teléfono).
     if (estadoData && (estadoData.rostro.estado === 'sin_registro' || estadoData.rostro.estado === 'rechazado')) {
       pedirBienvenidaRostro();
@@ -320,8 +331,22 @@ export function MarcarPage() {
           onReintentar={() => void actualizarUbicacion()}
         />
 
+        {data.horaExtra && (
+          <HorasExtraGuardia
+            extra={data.horaExtra}
+            ubicacion={ubicacion}
+            dentroDelSitio={
+              referencia?.tieneCoords && referencia.distanciaM !== null
+                ? referencia.distanciaM <= referencia.radioM
+                : referencia && !referencia.tieneCoords
+                  ? true
+                  : null
+            }
+          />
+        )}
+
         <div className="space-y-2">
-          {BOTONES.map(({ tipo, icon: Icon }) => {
+          {BOTONES.filter(({ tipo }) => tipo !== 'salida_extra' || data.permitidas.includes(tipo)).map(({ tipo, icon: Icon }) => {
             // Entrada y salida requieren estar en el sitio; la comida no (DA-36).
             const permitido =
               data.permitidas.includes(tipo) && !bloqueado && !(gps && TIPOS_CON_FOTO.includes(tipo));
@@ -335,6 +360,9 @@ export function MarcarPage() {
                 onClick={() => {
                   if (tipo === 'entrada' || tipo === 'salida') {
                     setRelevo(tipo);
+                  } else if (tipo === 'salida_extra') {
+                    // La salida final no lleva consignas: ya las entregó en su salida.
+                    abrirCamara(tipo);
                   } else {
                     setPendiente(tipo);
                   }

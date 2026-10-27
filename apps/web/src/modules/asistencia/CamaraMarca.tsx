@@ -38,7 +38,7 @@ export function CamaraMarca({
   motivoRechazo = null,
   guardarSinConexion,
 }: {
-  tipo: 'entrada' | 'salida';
+  tipo: 'entrada' | 'salida' | 'salida_extra';
   sitio: string | null;
   onCerrar: () => void;
   onRegistrada: (m: Marcacion) => void;

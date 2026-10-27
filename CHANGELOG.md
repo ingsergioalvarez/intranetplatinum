@@ -5,6 +5,22 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-27 #18 — Horas extra (DA-55, AS5-01..AS5-05)
+
+#### Añadido
+
+- Tabla `horas_extra` (misma BD; no toca las jornadas ni el reporte oficial) y marca `salida_extra` (salida final). Módulo `horas-extra` (`/api/horas-extra`): lista con contador de pendientes, aprobar, rechazar con motivo, fijar la hora de salida, captura manual del supervisor y reporte por guardia y periodo.
+- Qué cuenta: salida más de 15 min tarde, jornada sin salida, el guardia que dice que sigue en turno (botón "Extender mi horario", con salida final si ya había marcado) y trabajo en día de descanso (un descanso movido con cambio de turno aprobado no cuenta). Solo horas, sin tarifas. Nada cuenta sin aprobación.
+- Vigilancia cada minuto: abre el registro a la hora de salida + 15 min, lo marca "sin salida" pasado el límite de la jornada y sube el aviso a los admins si el supervisor no responde en 12 h.
+- Todo en auditoría, en la bitácora del guardia (solo admin y supervisor) y con avisos en la campanita a ambos lados.
+- Web: pregunta "¿Sigues en turno?" y botón "Extender mi horario" en Checador; sección Horas extra (Por aprobar, Todas, Reporte) con contador en Asistencia.
+- Migración `20261027010000_horas_extra`. 24 pruebas nuevas.
+
+#### Límites conocidos
+
+- Si el guardia marca su salida normal, se queda y nunca abre la app, el sistema no se entera: el respaldo es la captura manual del supervisor.
+- Extender el horario requiere conexión. Sin exportación a Excel del reporte de horas extra todavía.
+
 ### Sesión 2026-10-26 #17 — Cambios de turno (DA-54, TC-22)
 
 #### Añadido

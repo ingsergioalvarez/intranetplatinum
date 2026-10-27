@@ -42,6 +42,7 @@ const TIPO: Record<TipoAviso, { titulo: string; icono: typeof Bell; tono: Tono }
   rostro_reto: { titulo: 'Gesto no completado', icono: Hand, tono: 'ambar' },
   retardo: { titulo: 'Retardo', icono: Clock, tono: 'ambar' },
   marca_alerta: { titulo: 'Marca con alerta', icono: TriangleAlert, tono: 'ambar' },
+  horas_extra: { titulo: 'Horas extra', icono: Clock, tono: 'ambar' },
   // Para el guardia (DA-34)
   rostro_aprobado: { titulo: 'Rostro aprobado', icono: UserCheck, tono: 'verde' },
   rostro_rechazado: { titulo: 'Rostro rechazado', icono: UserX, tono: 'rojo' },

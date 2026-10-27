@@ -65,6 +65,7 @@ import {
   type RequestContext,
 } from '../../core';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
+import { sinHorasExtra, type HorasExtraPuerto } from '../horas-extra/puerto';
 import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
 import { horaLocal } from './formato';
 import { MIN_FALTA, MIN_NO_SE_PRESENTO } from './vigilancia';
@@ -417,6 +418,8 @@ export class AsistenciaService extends BaseService {
     private readonly bitacora: RegistrarBitacora = sinBitacora,
     /** Liga la entrada a un turno sin entrada (falta con llegada tarde, DA-45). */
     private readonly alLlegar: LlegadaFn = async () => undefined,
+    /** Horas extra (AS5): pregunta al guardia, salida final y registro al salir. */
+    private readonly extras: HorasExtraPuerto = sinHorasExtra,
   ) {
     super();
   }
@@ -432,10 +435,12 @@ export class AsistenciaService extends BaseService {
       motivoRechazo: rostro?.estado === 'rechazado' ? rostro.motivoRechazo : null,
     };
     const { actual, proximo } = turnosDelGuardia(sitios, this.ahora());
+    const vigente = rows.length > 0 && this.reciente(rows[0]);
     return {
       // La última jornada se muestra mientras siga dentro del límite de horas (resumen "Hoy").
-      jornada: rows.length && this.reciente(rows[0]) ? (await this.jornadas(rows))[0] : null,
-      permitidas: this.permitidas(rows),
+      jornada: vigente ? (await this.jornadas(rows))[0] : null,
+      permitidas: await this.permitidasAhora(rows),
+      horaExtra: vigente ? await this.extras.paraGuardia(rows[0], rows.find((m) => m.tipo === 'salida') ?? null) : null,
       sitios,
       rostro: miRostro,
       turnoActual: actual,
@@ -465,7 +470,7 @@ export class AsistenciaService extends BaseService {
     }
 
     const jornada = await this.repo.ultimaJornada(usuarioId);
-    const permitidas = this.permitidas(jornada);
+    const permitidas = await this.permitidasAhora(jornada);
     if (!permitidas.includes(data.tipo)) throw fueraDeOrden(data.tipo, permitidas);
 
     const punto = { lat: data.lat, lng: data.lng };
@@ -631,6 +636,14 @@ export class AsistenciaService extends BaseService {
     } catch (err) {
       if (evidencia) await this.storage.eliminar(evidencia.fotoClave).catch(() => undefined);
       throw err;
+    }
+    if (data.tipo === 'salida' || data.tipo === 'salida_extra') {
+      await this.extras
+        .alSalir({
+          entrada: jornada[0],
+          salida: { registradaEn: marca.registradaEn, final: data.tipo === 'salida_extra', porSupervisor: false },
+        })
+        .catch((err) => console.error('[asistencia] No se pudieron registrar las horas extra', err));
     }
     if (data.tipo === 'entrada') {
       const guardia = (await this.repo.findUsuarioRostro(usuarioId))?.nombre ?? 'Un guardia';
@@ -1341,6 +1354,9 @@ export class AsistenciaService extends BaseService {
       alertas: ['cerrada_por_supervisor'],
       registradaEn: hora,
     });
+    await this.extras
+      .alSalir({ entrada, salida: { registradaEn: hora, final: false, porSupervisor: true } })
+      .catch((err) => console.error('[asistencia] No se pudieron registrar las horas extra', err));
     const sitio = entrada.sitio?.nombre ?? 'su sitio';
     const quien = (await this.repo.findUsuarioRostro(ctx.actorId))?.nombre ?? 'Un supervisor';
     await this.audit.registrarAccion(ctx, 'asistencia.cerrar_jornada', 'marcaciones', entrada.id, {
@@ -1514,7 +1530,7 @@ export class AsistenciaService extends BaseService {
   private permitidas(jornada: MarcacionRow[]): TipoMarcacion[] {
     if (jornada.length === 0 || !this.reciente(jornada[0])) return ['entrada'];
     const ultima = jornada[jornada.length - 1].tipo;
-    if (ultima === 'salida') return SIGUIENTES_MARCAS.salida;
+    if (ultima === 'salida' || ultima === 'salida_extra') return SIGUIENTES_MARCAS.salida;
     // La salida exige haber iniciado y terminado la(s) comida(s) del turno, aunque sea en segundos:
     // así se obliga a registrarla (si de verdad comió es otro asunto) y queda constancia (DA-47).
     if (ultima === 'inicio_comida') return ['fin_comida'];
@@ -1522,6 +1538,19 @@ export class AsistenciaService extends BaseService {
     const completadas = jornada.filter((m) => m.tipo === 'fin_comida').length;
     const horas = e && s ? (s.getTime() - e.getTime()) / 3_600_000 : null;
     return completadas < comidasDelTurno(horas) ? ['inicio_comida'] : ['salida'];
+  }
+
+  /** Las marcas permitidas, con la salida final si extendió su horario después de marcar su salida (AS5). */
+  private async permitidasAhora(jornada: MarcacionRow[]): Promise<TipoMarcacion[]> {
+    const base = this.permitidas(jornada);
+    if (
+      jornada.at(-1)?.tipo === 'salida' &&
+      this.reciente(jornada[0]) &&
+      (await this.extras.puedeSalidaFinal(jornada[0].id))
+    ) {
+      return ['salida_extra'];
+    }
+    return base;
   }
 
   /** Una entrada sigue "abierta" hasta JORNADA_MAX_HORAS después. */

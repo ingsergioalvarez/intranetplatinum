@@ -22,6 +22,7 @@ import { RostrosPendientesPage } from '../modules/asistencia/RostrosPendientesPa
 import { IncidenciasPage } from '../modules/asistencia/IncidenciasPage';
 import { MarcarPage } from '../modules/asistencia/MarcarPage';
 import { CambiosTurnoPage } from '../modules/cambios/CambiosTurnoPage';
+import { HorasExtraPage } from '../modules/horas-extra/HorasExtraPage';
 import { InformeVerPage } from '../modules/informes/InformeVerPage';
 import { ReportesEmitidosPage } from '../modules/informes/ReportesEmitidosPage';
 import { VerificarInformePage } from '../modules/informes/VerificarInformePage';
@@ -93,6 +94,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
             <CambiosTurnoPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/horas-extra',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+            <HorasExtraPage />
           </ProtectedRoute>
         ),
       },
