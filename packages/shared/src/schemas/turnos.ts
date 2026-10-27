@@ -35,6 +35,40 @@ export const diasTurnoSchema = z.discriminatedUnion(
   'Elige qué días trabaja',
 );
 
+/**
+ * Borrar un turno que está asignado: por cada sitio activo que lo usa hay que elegir el turno nuevo que
+ * lo reemplaza (los guardias pasan a ese turno y se les avisa). Sin asignaciones se borra directo.
+ */
+export const eliminarTurnoSchema = z
+  .object({
+    reemplazos: z
+      .array(z.object({ sitioId: z.coerce.number().int().positive(), turnoId: z.coerce.number().int().positive() }))
+      .max(300)
+      .default([]),
+  })
+  .default({ reemplazos: [] });
+export type EliminarTurnoInput = z.input<typeof eliminarTurnoSchema>;
+export type EliminarTurnoData = z.output<typeof eliminarTurnoSchema>;
+
+/** Un sitio que usa un turno (para decir a dónde está asignado antes de borrarlo). */
+export interface UsoTurnoSitio {
+  sitio: { id: number; nombre: string };
+  /** Sitio y cliente activos: si lo está, hay que elegir un turno que lo reemplace. */
+  activo: boolean;
+  /** Es de quien consulta (siempre en el admin); un supervisor no cambia sitios de otro. */
+  propio: boolean;
+  /** Guardias o grupos asignados con este turno. */
+  asignados: string[];
+}
+
+export interface UsoTurno {
+  turno: { id: number; nombre: string };
+  sitios: UsoTurnoSitio[];
+  puedeBorrar: boolean;
+  /** Por qué no puede borrarlo quien consulta. */
+  motivo: string | null;
+}
+
 /** Horas que se ofrecen como atajo (el supervisor puede poner otras). */
 export const HORAS_SUGERIDAS = [24, 12, 8] as const;
 

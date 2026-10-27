@@ -24,13 +24,18 @@ import {
   TurnosRepository,
   type HorarioTurno,
   type UsoDelTurno,
+  type UsoDetalle,
 } from '../src/modules/turnos/turnos.repository';
+import type { Alcance } from '../src/modules/sitios/alcance';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
 
 class MemoryTurnosRepository extends TurnosRepository {
   turnos: (TurnoData & { id: number; activo: boolean })[] = [];
   usosPorTurno = new Map<number, UsoDelTurno[]>();
   copias: (HorarioTurno & { id: number })[] = [];
+  /** Asignaciones con su sitio (para borrar con reemplazo). */
+  detalle = new Map<number, UsoDetalle[]>();
+  reasignaciones: { id: number; sitioId: number; nuevoId: number }[] = [];
 
   private dto(t: TurnoData & { id: number; activo: boolean }): TurnoCatalogo {
     return {
@@ -66,6 +71,12 @@ class MemoryTurnosRepository extends TurnosRepository {
   async usos(id: number) {
     return this.usosPorTurno.get(id) ?? [];
   }
+  async usosDetalle(id: number) {
+    return this.detalle.get(id) ?? [];
+  }
+  async reasignar(id: number, _hoy: string, sitioId: number, nuevo: TurnoCatalogo) {
+    this.reasignaciones.push({ id, sitioId, nuevoId: nuevo.id });
+  }
   async copiarHorario(id: number, _hoy: string, { horas, horaEntrada, dias }: HorarioTurno) {
     this.copias.push({ id, horas, horaEntrada, dias });
   }
@@ -79,6 +90,7 @@ let audit: MemoryAuditLogger;
 let avisos: { usuarioIds: number[]; mensaje: string }[];
 let bitacora: EventoNuevo[];
 let app: ReturnType<typeof createApp>;
+let alcance: Alcance | null;
 
 const token = (rol: Rol) =>
   `Bearer ${signAccessToken({ id: 2, email: 'u2@x.mx', rol, permisos: PERMISOS_POR_ROL[rol] })}`;
@@ -96,6 +108,7 @@ beforeEach(() => {
   audit = new MemoryAuditLogger();
   avisos = [];
   bitacora = [];
+  alcance = null;
   app = createApp([
     createTurnosModule({
       repo,
@@ -103,6 +116,7 @@ beforeEach(() => {
       hoy: () => '2026-10-22',
       avisar: async (usuarioIds, { mensaje }) => void avisos.push({ usuarioIds, mensaje }),
       bitacora: async (e) => void bitacora.push(e),
+      alcance: async (u) => (u.rol === ROLES.SUPERVISOR ? alcance : null),
     }),
   ]);
 });
@@ -190,24 +204,102 @@ describe('catálogo de turnos (DA-37)', () => {
     const guardia = await request(app).get('/api/turnos').set('Authorization', token(ROLES.GUARDIA));
     expect(guardia.status).toBe(403);
   });
+});
 
-  it('solo el admin borra un turno aunque esté en uso, sin avisar a los guardias', async () => {
+describe('borrar un turno (supervisor o admin)', () => {
+  const nuevo = { nombre: '24 h · 8:00 a.m.', horas: 24, horaEntrada: '08:00', dias: UNO_Y_UNO };
+  const POETAS = { id: 1, nombre: 'POETAS', supervisorId: 2 };
+  const NORTE = { id: 2, nombre: 'Plaza Norte', supervisorId: 9 };
+  const uso = (sitio: typeof POETAS, activo = true, asignado = 'Diego', usuarioId: number | null = 3): UsoDetalle => ({
+    asignacionId: sitio.id * 10,
+    sitio,
+    activo,
+    asignado,
+    usuarioId,
+    integrantes: [],
+  });
+  const borrar = (rol: Rol, id: number, body?: object) =>
+    request(app).delete(`/api/turnos/${id}`).set('Authorization', token(rol)).send(body);
+
+  beforeEach(async () => {
     await sup().post('', nuevo);
-    repo.usosPorTurno.set(1, [
-      { asignacionId: 10, sitio: 'POETAS', usuarioId: 3, integrantes: [], grupo: null },
-    ]);
-    const supervisor = await request(app)
-      .delete('/api/turnos/1')
-      .set('Authorization', token(ROLES.SUPERVISOR));
-    expect(supervisor.status).toBe(403);
-    const admin = await request(app).delete('/api/turnos/1').set('Authorization', token(ROLES.ADMIN));
-    expect(admin.status).toBe(204);
-    expect(repo.turnos).toEqual([]);
+    await sup().post('', { ...nuevo, nombre: 'Día 12 h', horas: 12, dias: DIARIO });
+    alcance = { sitioIds: new Set([1]), guardiaIds: new Set([3]) };
+  });
+
+  it('sin asignaciones el supervisor lo borra directo', async () => {
+    expect((await borrar(ROLES.SUPERVISOR, 1)).status).toBe(204);
+    expect(repo.turnos.map((t) => t.id)).toEqual([2]);
     expect(avisos).toEqual([]);
+    expect(audit.eventos.at(-1)).toMatchObject({ accion: 'turnos.eliminar', datos: { reemplazos: [] } });
+  });
+
+  it('antes de borrar, el sistema dice a dónde está asignado', async () => {
+    repo.detalle.set(1, [uso(POETAS), uso(POETAS, true, 'Cuadrilla A', null), uso({ ...NORTE }, true, 'Ana', 4), uso({ id: 3, nombre: 'Viejo', supervisorId: 2 }, false)]);
+    const res = await sup().get('/1/uso');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      turno: { id: 1 },
+      puedeBorrar: false,
+      motivo: expect.stringContaining('Plaza Norte'),
+      sitios: [
+        { sitio: { nombre: 'POETAS' }, activo: true, propio: true, asignados: ['Diego', 'Cuadrilla A'] },
+        { sitio: { nombre: 'Plaza Norte' }, activo: true, propio: false, asignados: ['Ana'] },
+        { sitio: { nombre: 'Viejo' }, activo: false },
+      ],
+    });
+  });
+
+  it('asignado a un sitio activo: pide el turno nuevo; con él, reasigna, avisa a los guardias y borra', async () => {
+    repo.detalle.set(1, [{ ...uso(POETAS), usuarioId: 3 }, { ...uso(POETAS, true, 'Cuadrilla A', null), integrantes: [5, 6] }]);
+    const sin = await borrar(ROLES.SUPERVISOR, 1);
+    expect(sin.status).toBe(409);
+    expect(sin.body.error.message).toContain('Elige el turno nuevo de POETAS');
+    expect(repo.turnos.map((t) => t.id)).toEqual([1, 2]);
+
+    const ok = await borrar(ROLES.SUPERVISOR, 1, { reemplazos: [{ sitioId: 1, turnoId: 2 }] });
+    expect(ok.status).toBe(204);
+    expect(repo.reasignaciones).toEqual([{ id: 1, sitioId: 1, nuevoId: 2 }]);
+    expect(repo.turnos.map((t) => t.id)).toEqual([2]);
+    expect(avisos).toEqual([{ usuarioIds: [3, 5, 6], mensaje: expect.stringContaining('ahora es "Día 12 h"') }]);
+    expect(bitacora[0]).toMatchObject({ tipo: 'asignacion_cambio', usuarioIds: [3, 5, 6], sitioId: 1 });
     expect(audit.eventos.at(-1)).toMatchObject({
       accion: 'turnos.eliminar',
-      datos: { asignacionesQueLoUsaban: 1 },
+      datos: { reemplazos: [{ sitio: 'POETAS', turno: 'Día 12 h' }] },
     });
+  });
+
+  it('un sitio dado de baja no necesita reemplazo', async () => {
+    repo.detalle.set(1, [uso({ id: 3, nombre: 'Viejo', supervisorId: 2 }, false)]);
+    expect((await borrar(ROLES.SUPERVISOR, 1)).status).toBe(204);
+    expect(repo.reasignaciones).toEqual([]);
+    expect(audit.eventos.at(-1)).toMatchObject({ datos: { sitiosDeBaja: ['Viejo'] } });
+  });
+
+  it('el reemplazo debe ser otro turno activo que exista', async () => {
+    repo.detalle.set(1, [uso(POETAS)]);
+    expect((await borrar(ROLES.SUPERVISOR, 1, { reemplazos: [{ sitioId: 1, turnoId: 1 }] })).status).toBe(400);
+    expect((await borrar(ROLES.SUPERVISOR, 1, { reemplazos: [{ sitioId: 1, turnoId: 99 }] })).status).toBe(400);
+    repo.turnos.find((t) => t.id === 2)!.activo = false;
+    expect((await borrar(ROLES.SUPERVISOR, 1, { reemplazos: [{ sitioId: 1, turnoId: 2 }] })).status).toBe(400);
+    expect(repo.turnos.map((t) => t.id)).toEqual([1, 2]);
+  });
+
+  it('el supervisor no cambia sitios de otro supervisor; el admin sí', async () => {
+    repo.detalle.set(1, [uso(POETAS), uso(NORTE, true, 'Ana', 4)]);
+    const res = await borrar(ROLES.SUPERVISOR, 1, { reemplazos: [{ sitioId: 1, turnoId: 2 }, { sitioId: 2, turnoId: 2 }] });
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toContain('Plaza Norte');
+    expect(repo.turnos.map((t) => t.id)).toEqual([1, 2]);
+
+    const admin = await borrar(ROLES.ADMIN, 1, { reemplazos: [{ sitioId: 1, turnoId: 2 }, { sitioId: 2, turnoId: 2 }] });
+    expect(admin.status).toBe(204);
+    expect(repo.reasignaciones.map((r) => r.sitioId)).toEqual([1, 2]);
+  });
+
+  it('el guardia no puede borrar ni consultar', async () => {
+    expect((await borrar(ROLES.GUARDIA, 1)).status).toBe(403);
+    expect((await request(app).get('/api/turnos/1/uso').set('Authorization', token(ROLES.GUARDIA))).status).toBe(403);
   });
 });
 

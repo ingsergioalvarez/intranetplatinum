@@ -5,6 +5,18 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-27 #21 — Turnos en el menú y borrado con reemplazo (A-18, DA-57)
+
+#### Añadido
+
+- **Turnos** como entrada del menú para admin y supervisor (`/catalogos/turnos`); se quita la pestaña de Catálogos y el subtítulo dice que ahí se crean y editan los horarios y que en cada sitio solo se elige cuál usa. Enlace "Administrar turnos" en la ventana de turnos de cada sitio.
+- **Borrar un turno** (admin y supervisor): `GET /api/turnos/:id/uso` dice a qué sitios está asignado; `DELETE /api/turnos/:id` con `reemplazos` por sitio. Sin asignaciones se borra directo; si está asignado hay que elegir el turno nuevo de cada sitio activo (los guardias pasan a él y se les avisa); los sitios de baja no lo necesitan. El supervisor solo cambia sus sitios (si lo usa un sitio activo de otro supervisor, lo borra el admin).
+- 6 pruebas nuevas (351 en total).
+
+#### Cambiado
+
+- Antes solo el admin borraba un turno (aunque estuviera asignado, dejando a los guardias con su copia del horario); ahora todos piden turno nuevo para los sitios activos.
+
 ### Sesión 2026-10-27 #20 — Caso de cobertura, descanso por patrón y sin falta en horas extra (DA-56, AS6-05..AS6-08)
 
 #### Añadido

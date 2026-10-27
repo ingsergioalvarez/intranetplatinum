@@ -46,6 +46,7 @@
 | A-15 | Notificación a clientes                                                                                    | Usuario 2026-10-12 | F3-07..F3-10        | Pendiente        |
 | A-16 | Plan trazable, changelog y memoria de sesión                                                               | Usuario 2026-10-12 | F0-00               | Terminado        |
 | A-17 | Control de asistencia con reconocimiento facial (plan en [ASISTENCIA.md](ASISTENCIA.md))                   | Usuario 2026-10-20 | AS1-01..AS6-08      | En progreso      |
+| A-18 | Administrar los turnos desde el menú (admin y supervisor); borrar un turno asignado eligiendo el turno nuevo | Usuario 2026-10-27 | A-18 (ver DA-57)    | Terminado        |
 
 ### Alcances propuestos (sugeridos, sin confirmar)
 

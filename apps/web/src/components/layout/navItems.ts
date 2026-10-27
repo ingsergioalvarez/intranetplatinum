@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardCheck,
   ClipboardList,
+  Clock,
   Home,
   MapPin,
   Tags,
@@ -45,5 +46,12 @@ export const navItems: NavItem[] = [
   { label: 'Clientes', to: '/clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
   { label: 'Grupos', to: '/grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
   { label: 'Usuarios', to: '/usuarios', icon: Users, permiso: PERMISOS.USUARIOS_VER },
+  {
+    label: 'Turnos',
+    to: '/catalogos/turnos',
+    icon: Clock,
+    permiso: PERMISOS.CATALOGOS_ADMINISTRAR,
+    roles: [ROLES.ADMIN, ROLES.SUPERVISOR],
+  },
   { label: 'Catálogos', to: '/catalogos/categorias', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
 ];

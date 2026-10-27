@@ -3,16 +3,17 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Clock, Trash2 } from 'lucide-react';
 import {
   HORAS_SUGERIDAS,
-  ROLES,
+  PERMISOS,
   textoDias,
   turnoSchema,
   type DiasTurno,
   type TurnoCatalogo,
 } from '@platinum/shared';
 import { mensajeDeError } from '../../core/api';
-import { useAuthStore } from '../../core/auth/authStore';
+import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { Button, ConfirmDialog, FormField, FormModal, Input, cn, toast } from '../../components/ui';
 import { sitiosService } from '../clientes/clientes.service';
+import { BorrarTurnoModal } from './BorrarTurnoModal';
 import { nombreSugerido, textoHorario } from './turnos.texto';
 import { turnosService } from './turnos.service';
 
@@ -50,7 +51,8 @@ export function TurnoModal({
   onGuardado?: (t: TurnoCatalogo) => void;
 }) {
   const qc = useQueryClient();
-  const esAdmin = useAuthStore((s) => s.user?.rol === ROLES.ADMIN);
+  // Borrar: admin y supervisor (si está asignado, eligen el turno que lo reemplaza).
+  const puedeBorrar = hasPermission(useAuthStore((s) => s.user), PERMISOS.CLIENTES_BAJA);
   const d = turno?.dias;
   const [horas, setHoras] = useState(String(turno?.horas ?? 24));
   const [hora, setHora] = useState(turno?.horaEntrada ?? '');
@@ -103,19 +105,6 @@ export function TurnoModal({
     },
     onError: (e) => toast.error(mensajeDeError(e)),
   });
-  const eliminar = useMutation({
-    mutationFn: () => turnosService.eliminar(turno!.id),
-    onSuccess: () => {
-      refrescar();
-      toast.success('Turno eliminado');
-      onClose();
-    },
-    onError: (e) => {
-      setConfirmar(null);
-      toast.error(mensajeDeError(e));
-    },
-  });
-
   const datos = () => {
     const r = turnoSchema.safeParse({ nombre, horas, horaEntrada: hora, dias });
     if (r.success) {
@@ -149,13 +138,13 @@ export function TurnoModal({
         secondaryAction={
           turno && (
             <div className="flex gap-2">
-              {esAdmin && (
+              {puedeBorrar && (
                 <Button
                   variant="danger"
                   icon={<Trash2 className="size-4" />}
                   onClick={() => setConfirmar('eliminar')}
                 >
-                  Eliminar
+                  Borrar
                 </Button>
               )}
               {(turno.enUso === 0 || !turno.activo) && (
@@ -312,20 +301,16 @@ export function TurnoModal({
         }}
         onCancel={() => setConfirmar(null)}
       />
-      <ConfirmDialog
-        open={confirmar === 'eliminar'}
-        title={`¿Eliminar "${turno?.nombre}"?`}
-        description={
-          turno?.enUso
-            ? `Está asignado ${turno.enUso === 1 ? 'una vez' : `${turno.enUso} veces`}. Los guardias seguirán con su horario actual hasta que les asignes otro (no se les avisa). Esto no se puede deshacer.`
-            : 'Nadie lo usa. Esto no se puede deshacer.'
-        }
-        confirmLabel="Eliminar"
-        variant="danger"
-        loading={eliminar.isPending}
-        onConfirm={() => eliminar.mutate()}
-        onCancel={() => setConfirmar(null)}
-      />
+      {confirmar === 'eliminar' && turno && (
+        <BorrarTurnoModal
+          turno={turno}
+          onClose={() => setConfirmar(null)}
+          onBorrado={() => {
+            refrescar();
+            onClose();
+          }}
+        />
+      )}
     </>
   );
 }

@@ -4,7 +4,6 @@ import { CalendarDays, Clock, Plus } from 'lucide-react';
 import { textoDias, type TurnoCatalogo } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import { Badge, Button, Card, EmptyState, Spinner, cn } from '../../components/ui';
-import { PestanasCatalogos } from './PestanasCatalogos';
 import { TurnoModal } from './TurnoModal';
 import { textoHorario } from './turnos.texto';
 import { turnosService } from './turnos.service';
@@ -16,10 +15,9 @@ export function TurnosPage() {
 
   return (
     <>
-      <PestanasCatalogos />
       <PageHeader
         title="Turnos"
-        subtitle="Jornadas que se asignan a guardias y grupos en cada sitio"
+        subtitle="Aquí creas y editas los horarios; en cada sitio solo eliges cuál usa"
         actions={
           <Button icon={<Plus className="size-4" />} onClick={() => setEditando('nuevo')}>
             Nuevo turno

@@ -13,6 +13,18 @@ export interface UsoDelTurno {
   grupo: string | null;
 }
 
+/** Una asignación que usa el turno, con su sitio (para decir a dónde está asignado). */
+export interface UsoDetalle {
+  asignacionId: number;
+  sitio: { id: number; nombre: string; supervisorId: number | null };
+  /** Sitio y cliente activos. */
+  activo: boolean;
+  /** Nombre del guardia o del grupo. */
+  asignado: string;
+  usuarioId: number | null;
+  integrantes: number[];
+}
+
 /** Horario de un turno (lo que se copia a sus asignaciones). */
 export interface HorarioTurno {
   horas: number;
@@ -30,6 +42,10 @@ export abstract class TurnosRepository {
   abstract setActivo(id: number, activo: boolean): Promise<void>;
   /** Asignaciones vigentes o programadas que usan el turno. */
   abstract usos(id: number, hoy: string): Promise<UsoDelTurno[]>;
+  /** Asignaciones vigentes o programadas que usan el turno, con su sitio. */
+  abstract usosDetalle(id: number, hoy: string): Promise<UsoDetalle[]>;
+  /** Pasa las asignaciones de un sitio de este turno a otro (con el horario del nuevo). */
+  abstract reasignar(id: number, hoy: string, sitioId: number, nuevo: TurnoCatalogo): Promise<void>;
   /** Copia el horario del turno a sus asignaciones vigentes o programadas. */
   abstract copiarHorario(id: number, hoy: string, horario: HorarioTurno): Promise<void>;
   /**
@@ -140,6 +156,55 @@ export class PrismaTurnosRepository extends TurnosRepository {
       integrantes: r.grupo?.integrantes.map((i) => i.usuarioId) ?? [],
       grupo: r.grupo?.nombre ?? null,
     }));
+  }
+
+  async usosDetalle(id: number, hoy: string) {
+    const rows = await getPrisma().sitioGuardia.findMany({
+      where: { turnoId: id, ...vigentes(hoy) },
+      orderBy: { id: 'asc' },
+      select: {
+        id: true,
+        usuarioId: true,
+        usuario: { select: { nombre: true } },
+        sitio: {
+          select: {
+            id: true,
+            nombre: true,
+            supervisorId: true,
+            deletedAt: true,
+            cliente: { select: { deletedAt: true, estatus: true } },
+          },
+        },
+        grupo: {
+          select: {
+            nombre: true,
+            integrantes: { where: { usuario: { activo: true, deletedAt: null } }, select: { usuarioId: true } },
+          },
+        },
+      },
+    });
+    return rows.map((r) => ({
+      asignacionId: r.id,
+      sitio: { id: r.sitio.id, nombre: r.sitio.nombre, supervisorId: r.sitio.supervisorId },
+      activo: !r.sitio.deletedAt && !r.sitio.cliente.deletedAt && r.sitio.cliente.estatus === 'activo',
+      asignado: r.usuario?.nombre ?? r.grupo?.nombre ?? 'Sin nombre',
+      usuarioId: r.usuarioId,
+      integrantes: r.grupo?.integrantes.map((i) => i.usuarioId) ?? [],
+    }));
+  }
+
+  async reasignar(id: number, hoy: string, sitioId: number, nuevo: TurnoCatalogo) {
+    await getPrisma().sitioGuardia.updateMany({
+      where: { turnoId: id, sitioId, ...vigentes(hoy) },
+      data: {
+        turnoId: nuevo.id,
+        horas: nuevo.horas,
+        horaInicio: nuevo.horaEntrada,
+        horaFin: horaSalida(nuevo.horas, nuevo.horaEntrada),
+        ...diasADb(nuevo.dias),
+        turno: null,
+      },
+    });
   }
 
   async copiarHorario(id: number, hoy: string, { horas, horaEntrada, dias }: HorarioTurno) {

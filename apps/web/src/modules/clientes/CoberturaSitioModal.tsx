@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -337,6 +338,14 @@ export function CoberturaSitioModal({
               >
                 Agregar turno al sitio
               </Button>
+            )}
+            {editable && (
+              <p className="text-center text-sm text-slate-500">
+                ¿No está el horario que necesitas?{' '}
+                <Link to="/catalogos/turnos" className="font-medium text-brand-700 hover:underline">
+                  Administrar turnos
+                </Link>
+              </p>
             )}
 
             {activas.some((a) => a.horaInicio) && (
