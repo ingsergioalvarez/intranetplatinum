@@ -85,14 +85,15 @@ export const ESTADO_INCIDENCIA_LABEL: Record<EstadoIncidencia, string> = {
 
 /**
  * Falta atenderla: la de rostro, mientras no se revise; la de asistencia, mientras no se justifique
- * ni se comente.
+ * (una nota no la atiende; las que no se pueden justificar sí salen con una nota).
  */
 export function incidenciaPendiente(
   e: Pick<EventoBitacora, 'tipo' | 'incidencia' | 'justificacion' | 'comentarios' | 'decision'>,
 ) {
   const clase = claseIncidencia(e.tipo);
   if (clase === 'rostro') return !e.incidencia?.revisadaEn;
-  return clase === 'asistencia' && !e.justificacion && !e.decision && e.comentarios.length === 0;
+  if (clase !== 'asistencia' || e.justificacion || e.decision) return false;
+  return TIPOS_JUSTIFICABLES.includes(e.tipo) || e.comentarios.length === 0;
 }
 
 /** Cuenta en el resumen y en reportes: no justificada, y si es falta, que no se aceptó la asistencia. */

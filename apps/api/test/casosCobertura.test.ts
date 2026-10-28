@@ -222,6 +222,51 @@ describe('casos de cobertura: el supervisor deja el plan (AS6-05)', () => {
     expect(avisos.find((x) => x.usuarioIds[0] === 10)?.mensaje).toContain('lo trabajas normal');
   });
 
+  it('"no llegará": el supervisor elige hasta qué hora se queda y esa hora manda en el plan', async () => {
+    const res = await sup().post('/100/resolver', {
+      decision: 'no_llegara',
+      siguiente: 'normal',
+      finCubierto: '2026-10-27T05:00:00.000Z',
+    });
+    expect(res.status).toBe(200);
+    expect(repo.caso).toMatchObject({ finCubierto: en('2026-10-27T05:00:00Z') });
+    expect((await sup().get('/100/vista-previa?finCubierto=2026-10-27T05:00:00.000Z')).body.data.finCubierto).toBe('2026-10-27T05:00:00.000Z');
+    expect(avisos.find((x) => x.usuarioIds[0] === 10)?.mensaje).toContain('marca tu salida');
+  });
+
+  it('"no llegará": si la hora ya pasó (la elegida o la del turno del relevo) no deja guardar el plan', async () => {
+    // La hora elegida ya pasó.
+    let res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T02:10:00.000Z' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual([{ path: 'finCubierto', message: expect.stringContaining('ya pasó') }]);
+    // El turno del relevo terminaba 14:00Z y ya son las 15:00Z: hay que decir hasta cuándo se queda.
+    ahora = en('2026-10-27T15:00:00Z');
+    res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details[0]).toMatchObject({ path: 'finCubierto' });
+    expect(repo.caso).toBeNull();
+    // Antes de su hora de salida tampoco.
+    ahora = en('2026-10-27T02:30:00Z');
+    res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T01:00:00.000Z' });
+    expect(res.status).toBe(400);
+  });
+
+  it('pasada la hora autorizada sin salida se avisa una sola vez al guardia y al supervisor', async () => {
+    await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T05:00:00.000Z' });
+    avisos.length = 0;
+    await servicio.revisar();
+    expect(avisos).toEqual([]);
+    ahora = en('2026-10-27T05:01:00Z');
+    await servicio.revisar();
+    expect(avisos).toEqual([
+      { usuarioIds: [10], mensaje: expect.stringContaining('Ya pasó tu hora autorizada'), ruta: '/marcar' },
+      { usuarioIds: [5], mensaje: expect.stringContaining('pasó la hora que autorizaste'), ruta: '/asistencia/casos' },
+    ]);
+    avisos.length = 0;
+    await servicio.revisar();
+    expect(avisos).toEqual([]);
+  });
+
   it('"no llegará" + "descansa" + quien cubre el hueco: cobertura, pausa del turno y hora de regreso', async () => {
     const res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'descansa', cubridorId: 12 });
     expect(res.status).toBe(200);

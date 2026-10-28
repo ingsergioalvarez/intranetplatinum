@@ -10,11 +10,11 @@ import {
   type DecisionCaso,
   type SiguienteTurno,
 } from '@platinum/shared';
-import { mensajeDeError } from '../../core/api';
+import { ApiError, mensajeDeError } from '../../core/api';
 import { FormField, FormModal, Input, Spinner, Textarea, cn, toast } from '../../components/ui';
 import { casosService } from './casos.service';
 import { ElegirCubridor } from './ElegirCubridor';
-import { cuando, fechaLocal, hora24 } from './formato';
+import { aInputLocal, cuando, fechaLocal, hora24 } from './formato';
 
 /** Una opción que se elige con un toque (con su explicación). */
 function Opcion({
@@ -58,16 +58,23 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
   const [cubridor, setCubridor] = useState<CandidatoCobertura | null>(null);
   const [nota, setNota] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Hasta cuándo se queda (hora local). `null` = sin tocar: se usa la que propone el sistema.
+  const [hastaEditado, setHastaEditado] = useState<string | null>(null);
+  const [errorHasta, setErrorHasta] = useState<string | null>(null);
 
   const extraValido = /^\d+$/.test(extra) && Number(extra) <= DESCANSO_EXTRA_MAX_HORAS;
   const horasExtra = siguiente === 'descansa' && extraValido ? Number(extra) : 0;
+  const hastaIso = hastaEditado && !Number.isNaN(new Date(hastaEditado).getTime()) ? new Date(hastaEditado).toISOString() : undefined;
   const vista = useQuery({
-    queryKey: casosService.keys.vistaPrevia(caso.entradaId, horasExtra),
-    queryFn: () => casosService.vistaPrevia(caso.entradaId, horasExtra),
+    queryKey: casosService.keys.vistaPrevia(caso.entradaId, horasExtra, hastaIso),
+    queryFn: () => casosService.vistaPrevia(caso.entradaId, horasExtra, hastaIso),
     enabled: decision === 'no_llegara',
     placeholderData: keepPreviousData,
   });
   const v = vista.data;
+  // La hora propuesta (fin del turno del relevo) puede haber pasado ya: entonces hay que elegir otra.
+  const propuestaPasada = !!v && !hastaIso && new Date(v.finCubierto).getTime() <= Date.now();
+  const hasta = hastaEditado ?? (v && !propuestaPasada ? aInputLocal(v.finCubierto) : '');
   const hueco = decision === 'no_llegara' && siguiente === 'descansa' ? (v?.huecos[0] ?? null) : null;
   const tramoRelevo = relevo
     ? { fecha: fechaLocal(relevo.inicio), horaInicio: hora24(relevo.inicio), horas: Math.min(24, Math.max(1, Math.ceil(relevo.horas))) }
@@ -79,7 +86,9 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
     mutationFn: () =>
       casosService.resolver(caso.entradaId, {
         decision: decision!,
-        ...(decision === 'no_llegara' ? { siguiente: siguiente!, descansoExtraHoras: horasExtra } : {}),
+        ...(decision === 'no_llegara'
+          ? { siguiente: siguiente!, descansoExtraHoras: horasExtra, ...(hasta ? { finCubierto: new Date(hasta).toISOString() } : {}) }
+          : {}),
         ...(cubridor && tramo ? { cubridorId: cubridor.guardia.id } : {}),
         ...(nota.trim() ? { nota: nota.trim() } : {}),
       }),
@@ -91,14 +100,21 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
       toast.success('Plan guardado; avisamos a los guardias');
       onClose();
     },
-    onError: (e) => setError(mensajeDeError(e)),
+    onError: (e) => {
+      const campo = e instanceof ApiError ? e.fieldErrors.finCubierto : undefined;
+      if (campo) setErrorHasta(campo);
+      else setError(mensajeDeError(e));
+    },
   });
 
   const confirmar = () => {
     setError(null);
+    setErrorHasta(null);
     if (!decision) return setError('Elige qué pasa con el relevo');
     if (decision === 'otro_cubre' && !cubridor) return setError('Elige quién cubre');
     if (decision === 'no_llegara') {
+      if (!hasta) return setErrorHasta('Indica hasta qué hora se queda');
+      if (new Date(hasta).getTime() <= Date.now()) return setErrorHasta('Esa hora ya pasó: elige una que aún no llegue');
       if (!siguiente) return setError('Elige qué pasa con su siguiente turno');
       if (siguiente === 'descansa' && !extraValido) return setError('Revisa las horas de descanso');
     }
@@ -143,6 +159,28 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
           </Opcion>
         </div>
       </div>
+
+      {decision === 'no_llegara' && (
+        <FormField
+          label={`¿Hasta qué hora se queda ${guardia.nombre}?`}
+          required
+          error={errorHasta ?? undefined}
+          hint={
+            propuestaPasada
+              ? 'La hora del turno que cubre ya pasó: elige hasta cuándo se queda. Pasada esa hora se le avisa que marque su salida y lo que se pase queda por aprobar.'
+              : 'Hasta esa hora sus horas extra se aprueban solas. Pasada esa hora se le avisa que marque su salida y lo que se pase queda por aprobar.'
+          }
+        >
+          <Input
+            type="datetime-local"
+            value={hasta}
+            onChange={(e) => {
+              setHastaEditado(e.target.value);
+              setErrorHasta(null);
+            }}
+          />
+        </FormField>
+      )}
 
       {decision === 'no_llegara' && (
         <div>

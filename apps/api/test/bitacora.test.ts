@@ -172,7 +172,7 @@ describe('bitácora del guardia (DA-41)', () => {
       { ...evento(5, 'incidencia_rostro', '2026-10-07T14:00:00.000Z', 11), incidencia: null },
       evento(6, 'retardo', '2026-10-08T14:00:00.000Z', 11),
     );
-    // La de rostro ya revisada; el retardo de Ana justificado; el de Juan comentado.
+    // La de rostro ya revisada; el retardo de Ana justificado; el de Juan solo tiene una nota (una nota no lo atiende).
     repo.eventosGuardados[4].incidencia = {
       id: 1,
       motivo: 'pantalla',
@@ -189,9 +189,24 @@ describe('bitácora del guardia (DA-41)', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([
       { guardia: expect.objectContaining({ id: 11 }), asistencia: 1, rostro: 1, pendientes: 1 },
-      { guardia: expect.objectContaining({ id: 10 }), asistencia: 1, rostro: 0, pendientes: 0 },
+      { guardia: expect.objectContaining({ id: 10 }), asistencia: 1, rostro: 0, pendientes: 1 },
     ]);
     expect((await como(ROLES.GUARDIA).get('/incidencias/guardias?mes=2026-10')).status).toBe(403);
+  });
+
+  it('una nota no atiende lo justificable, pero sí lo que no se puede justificar (racha)', async () => {
+    repo.eventosGuardados.push(evento(4, 'racha', '2026-10-06T14:00:00.000Z', 11));
+    const ids = async (q: string) =>
+      (await sup().get(`/incidencias?mes=2026-10&guardia=11${q}`)).body.data.items.map((e: { id: number }) => e.id);
+    expect(await ids('&estado=pendientes')).toContain(4);
+    repo.eventosGuardados[repo.eventosGuardados.length - 1].comentarios.push({
+      id: 9,
+      texto: 'se habló',
+      autor: null,
+      createdAt: new Date(),
+    });
+    expect(await ids('&estado=pendientes')).not.toContain(4);
+    expect(await ids('&estado=atendidas')).toContain(4);
   });
 
   it('lista general de incidencias con filtro por clase, estado y guardia', async () => {

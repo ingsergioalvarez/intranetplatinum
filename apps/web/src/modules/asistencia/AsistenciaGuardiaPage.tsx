@@ -219,7 +219,7 @@ const columnasAsistencia = (
 /**
  * Ficha de un guardia (AS1-07, DA-41). En escritorio, a la izquierda su rostro de referencia, su
  * turno actual y el resumen del mes; a la derecha, pestañas Asistencia (jornadas, solo lectura) y
- * Bitácora (todo lo que le pasó, con comentarios y justificaciones). En celular, todo en columna.
+ * Bitácora (todo lo que le pasó, con notas y justificaciones). En celular, todo en columna.
  */
 export function AsistenciaGuardiaPage() {
   const user = useAuthStore((s) => s.user);
@@ -245,7 +245,7 @@ export function AsistenciaGuardiaPage() {
   const [cerrando, setCerrando] = useState<Jornada | null>(null);
   // Reporte oficial de asistencia de este guardia (DA-52).
   const [reportando, setReportando] = useState(false);
-  // Jornada de la que se ven sus incidencias (se recalculan de la bitácora al comentar o justificar).
+  // Jornada de la que se ven sus incidencias (se recalculan de la bitácora al agregar una nota o justificar).
   const [conIncidencias, setConIncidencias] = useState<Jornada | null>(null);
 
   const ficha = useQuery({

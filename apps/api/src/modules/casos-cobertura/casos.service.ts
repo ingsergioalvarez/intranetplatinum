@@ -99,10 +99,27 @@ export class CasosCoberturaService extends BaseService {
   }
 
   /** Hasta cuándo cubre: el fin del turno del relevo, o uno del largo del suyo desde su hora de salida. */
-  private finCubierto(c: Candidato, relevo: Relevo | null) {
+  private finCubierto(c: Candidato, relevo: Relevo | null, elegido: Date | null = null) {
+    if (elegido) return elegido;
     if (relevo) return relevo.fin;
     const salida = c.entrada.programadaSalida ?? this.ahora();
     return new Date(salida.getTime() + this.turnoMs(c));
+  }
+
+  /** La hora hasta la que se queda debe ser futura y estar dentro de un día después de su salida. */
+  private validarLimite(c: Candidato, relevo: Relevo | null, elegido: Date | null) {
+    const fin = this.finCubierto(c, relevo, elegido);
+    const salida = c.entrada.programadaSalida ?? c.horaExtra.desde;
+    const error = (message: string) => HttpError.badRequest('Datos inválidos', [{ path: 'finCubierto', message }]);
+    if (fin.getTime() <= this.ahora().getTime()) {
+      throw error(
+        elegido
+          ? 'Esa hora ya pasó: elige una que aún no llegue'
+          : `La hora que corresponde (${horaLocal(fin)}) ya pasó: indica hasta qué hora se queda`,
+      );
+    }
+    if (fin.getTime() <= salida.getTime()) throw error('Debe ser después de su hora de salida');
+    if (fin.getTime() - salida.getTime() > 24 * HORA) throw error('Máximo 24 h después de su hora de salida');
   }
 
   private estadoDe(c: Candidato): EstadoCaso {
@@ -147,11 +164,11 @@ export class CasosCoberturaService extends BaseService {
   /** Lo que pasaría con su siguiente turno y su descanso, para que el supervisor lo vea antes de confirmar. */
   async vistaPrevia(entradaId: number, q: VistaPreviaCasoQuery, alcance: Alcance | null): Promise<VistaPreviaCaso> {
     const c = await this.cargar(entradaId, alcance);
-    return this.calcularPlan(c, await this.relevoDe(c), q.descansoExtraHoras);
+    return this.calcularPlan(c, await this.relevoDe(c), q.descansoExtraHoras, q.finCubierto ? new Date(q.finCubierto) : null);
   }
 
-  private async calcularPlan(c: Candidato, relevo: Relevo | null, descansoExtraHoras: number) {
-    const fin = this.finCubierto(c, relevo);
+  private async calcularPlan(c: Candidato, relevo: Relevo | null, descansoExtraHoras: number, elegido: Date | null = null) {
+    const fin = this.finCubierto(c, relevo, elegido);
     const ref = hoyISO(undefined, fin);
     const todos = await this.turnos(sumarDiasFecha(ref, -8), sumarDiasFecha(ref, 21));
     return planearSiguiente({
@@ -168,6 +185,8 @@ export class CasosCoberturaService extends BaseService {
     if (c.caso?.estado === 'resuelto') throw HttpError.conflict('Este caso ya tiene un plan');
     if (c.horaExtra.estado !== 'abierta') throw HttpError.conflict('El guardia ya terminó sus horas extra');
     const relevo = await this.relevoDe(c);
+    const elegido = input.finCubierto ? new Date(input.finCubierto) : null;
+    if (input.decision === 'no_llegara') this.validarLimite(c, relevo, elegido);
     const nota = input.nota?.trim() || null;
     const { sitio } = c.entrada;
     const base = {
@@ -227,7 +246,7 @@ export class CasosCoberturaService extends BaseService {
       paraGuardia = `${cubridor.nombre} llega a cubrir ${sitio.nombre} a las ${horaLocal(tramo.inicio)}; entrégale el puesto y marca tu salida`;
     } else {
       const extra = input.descansoExtraHoras;
-      const vista = await this.calcularPlan(c, relevo, input.siguiente === 'descansa' ? extra : 0);
+      const vista = await this.calcularPlan(c, relevo, input.siguiente === 'descansa' ? extra : 0, elegido);
       const fin = new Date(vista.finCubierto);
       let regresaEn: Date | null = null;
       let coberturaId: number | null = null;
@@ -292,11 +311,11 @@ export class CasosCoberturaService extends BaseService {
       const quien = relevo ? `el turno de ${relevo.nombre}` : 'ese turno';
       if (input.siguiente === 'normal') {
         detalle = `El supervisor confirmó que ${c.entrada.guardia} cubre ${quien} hasta las ${horaLocal(fin)} en ${sitio.nombre} y trabaja normal su siguiente turno${vista.limiteExtra ? ` (${cuando(new Date(vista.limiteExtra))})` : ''}`;
-        paraGuardia = `Tu supervisor confirmó el plan: cubres ${quien} en ${sitio.nombre} hasta las ${horaLocal(fin)}${vista.limiteExtra ? `; tu siguiente turno empieza ${cuando(new Date(vista.limiteExtra))} y lo trabajas normal: marca tu salida y luego tu entrada` : ''}`;
+        paraGuardia = `Tu supervisor confirmó el plan: cubres ${quien} en ${sitio.nombre} hasta las ${horaLocal(fin)}; a esa hora marca tu salida${vista.limiteExtra ? `. Tu siguiente turno empieza ${cuando(new Date(vista.limiteExtra))} y lo trabajas normal: marca tu salida y luego tu entrada` : ''}`;
       } else {
         const vuelve = regresaEn ? `te presentas ${cuando(regresaEn)}` : 'no tienes turno próximo';
         detalle = `El supervisor confirmó que ${c.entrada.guardia} cubre ${quien} hasta las ${horaLocal(fin)} en ${sitio.nombre} y descansa${extra ? ` (${extra} h más que su patrón)` : ''}; regresa ${regresaEn ? cuando(regresaEn) : 'sin turno próximo'}${vista.huecos.length && !input.cubridorId ? '. Queda un turno sin cubrir' : ''}`;
-        paraGuardia = `Tu supervisor confirmó el plan: cubres ${quien} en ${sitio.nombre} hasta las ${horaLocal(fin)}; después descansas y ${vuelve}`;
+        paraGuardia = `Tu supervisor confirmó el plan: cubres ${quien} en ${sitio.nombre} hasta las ${horaLocal(fin)}; a esa hora marca tu salida. Después descansas y ${vuelve}`;
       }
       // Cansancio: si descansa, solo importa lo que ya lleva al cubrir ese turno.
       advertencias.push(...vista.advertencias.filter((a) => input.siguiente === 'normal' || a.startsWith('Para cubrir')));
@@ -384,6 +403,28 @@ export class CasosCoberturaService extends BaseService {
         });
       } catch (err) {
         console.error('[casos cobertura] No se pudo avisar del caso', c.entrada.id, err);
+      }
+    }
+
+    // 1b. Pasó la hora hasta la que se podía quedar y sigue en el sitio: se le dice que marque su salida.
+    for (const c of await this.repo.candidatos()) {
+      const fin = c.caso?.estado === 'resuelto' && c.caso.decision === 'no_llegara' ? c.caso.finCubierto : null;
+      if (!fin || fin.getTime() > ahora.getTime()) continue;
+      try {
+        if (!(await this.repo.marcarEnviado(`caso-limite:${c.entrada.id}`))) continue;
+        const { sitio, guardia, usuarioId } = c.entrada;
+        await this.avisar([usuarioId], {
+          tipo: 'cobertura',
+          mensaje: `Ya pasó tu hora autorizada en ${sitio.nombre} (${horaLocal(fin)}). Marca tu salida y retírate; lo que pase de esa hora lo revisa tu supervisor`,
+          ruta: '/marcar',
+        });
+        await this.avisar(await this.repo.revisoresDe(sitio.id), {
+          tipo: 'cobertura',
+          mensaje: `${guardia} · ${sitio.nombre}: pasó la hora que autorizaste (${horaLocal(fin)}) y sigue en el sitio. Las horas después de esa hora quedarán por aprobar`,
+          ruta: RUTA,
+        });
+      } catch (err) {
+        console.error('[casos cobertura] No se pudo avisar de la hora límite', c.entrada.id, err);
       }
     }
 

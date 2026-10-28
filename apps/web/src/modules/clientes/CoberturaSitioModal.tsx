@@ -4,25 +4,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
   CalendarX,
-  CircleCheck,
   Clock,
   Plus,
   Trash2,
-  TriangleAlert,
   UserRound,
-  UsersRound,
 } from 'lucide-react';
 import {
+  ESTADO_COBERTURA_LABEL,
   ROLES,
   asignacionCreateSchema,
   esUnoYUno,
   horaLegible,
-  huecosDelDia,
   letraDia,
-  patronDe,
   sumarDiasFecha,
   textoDias,
-  trabajaEl,
   type Asignacion,
   type Sitio,
   type TurnoCatalogo,
@@ -50,6 +45,8 @@ import { TurnoModal } from '../catalogos/TurnoModal';
 import { textoHorario } from '../catalogos/turnos.texto';
 import { turnosService } from '../catalogos/turnos.service';
 import { gruposService } from '../grupos/grupos.service';
+import { coberturaService } from '../cobertura/cobertura.service';
+import { ESTILO_ESTADO } from '../cobertura/estados';
 import { AsignarTurnoModal, Avatar } from './AsignarTurnoModal';
 import { clientesService, sitiosService } from './clientes.service';
 import { CoberturasDelSitio } from './CoberturasDelSitio';
@@ -61,7 +58,6 @@ function estadoAsignacion(a: Asignacion, hoy: string): { label: string; tone: Ba
 }
 
 const nombreDe = (a: Asignacion) => (a.grupo ? a.grupo.nombre : (a.guardia?.nombre ?? '—'));
-const primerNombre = (a: Asignacion) => (a.grupo ? a.grupo.nombre : (a.guardia?.nombre.split(' ')[0] ?? '—'));
 const diaCorto = (f: string) =>
   new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric' }).format(new Date(`${f}T12:00:00`));
 
@@ -115,6 +111,7 @@ export function CoberturaSitioModal({
     void qc.invalidateQueries({ queryKey: clientesService.keys.all });
     void qc.invalidateQueries({ queryKey: gruposService.keys.all });
     void qc.invalidateQueries({ queryKey: turnosService.keys.all });
+    void qc.invalidateQueries({ queryKey: coberturaService.keys.all });
   };
 
   const eliminarAsignacion = useMutation({
@@ -166,10 +163,11 @@ export function CoberturaSitioModal({
     return [...mapa.values()].sort((x, y) => (x.clave === 'sin' ? 1 : y.clave === 'sin' ? -1 : 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asignaciones.data, turnos.data]);
-
-  // Próximos 7 días: quién entra cada día y horas sin cubrir (solo turnos y eventos vigentes o programados).
-  const activas = lista.filter((a) => a.vigente || a.desde > hoy);
-  const dias = Array.from({ length: 7 }, (_, i) => sumarDiasFecha(hoy, i));
+  // Próximos 7 días: el mismo cálculo del calendario de cobertura (turnos del sitio, no las 24 h).
+  const cobertura = useQuery({
+    queryKey: coberturaService.keys.sitio({ sitioId: sitio.id, desde: hoy, hasta: sumarDiasFecha(hoy, 6) }),
+    queryFn: () => coberturaService.sitio({ sitioId: sitio.id, desde: hoy, hasta: sumarDiasFecha(hoy, 6) }),
+  });
 
   const renglon = (a: Asignacion, referencia: string | null) => {
     const estado = estadoAsignacion(a, hoy);
@@ -348,58 +346,51 @@ export function CoberturaSitioModal({
               </p>
             )}
 
-            {activas.some((a) => a.horaInicio) && (
+            {cobertura.data && cobertura.data.turnos.length > 0 && (
               <section className="rounded-xl bg-slate-50 p-3">
-                <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                  <CalendarDays className="size-4" /> Próximos 7 días
+                <h3 className="mb-2 flex items-center justify-between gap-2 text-sm font-semibold text-slate-800">
+                  <span className="flex items-center gap-1.5">
+                    <CalendarDays className="size-4" /> Próximos 7 días
+                  </span>
+                  <Link
+                    to={`/asistencia/calendario?sitio=${sitio.id}`}
+                    className="text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    Ver calendario
+                  </Link>
                 </h3>
                 <ul className="space-y-2">
-                  {dias.map((f) => {
-                    const entran = activas.filter((a) => trabajaEl(f, patronDe(a)));
-                    const huecos = huecosDelDia(f, activas.map(patronDe));
-                    return (
-                      <li key={f} className="grid grid-cols-[4.5rem_1fr] gap-2 text-sm">
-                        <span className="font-medium text-slate-700 capitalize">{diaCorto(f)}</span>
-                        <span className="min-w-0 space-y-1">
-                          <span className="flex flex-wrap gap-1">
-                            {entran.length === 0 && <span className="text-slate-400">Nadie entra</span>}
-                            {entran.map((a) => (
-                              <span
-                                key={a.id}
-                                className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs text-slate-700 ring-1 ring-slate-200"
-                              >
-                                {a.grupo ? (
-                                  <UsersRound className="size-3" />
-                                ) : (
-                                  <UserRound className="size-3" />
-                                )}
-                                {primerNombre(a)}
-                                {a.horaInicio && (
-                                  <span className="text-slate-400">{horaLegible(a.horaInicio)}</span>
-                                )}
+                  {cobertura.data.dias.map((d) => (
+                    <li key={d.fecha} className="grid grid-cols-[4.5rem_1fr] gap-2 text-sm">
+                      <span className="font-medium text-slate-700 capitalize">{diaCorto(d.fecha)}</span>
+                      <span className="min-w-0 space-y-1">
+                        {d.turnos.length === 0 && <span className="block text-slate-400">Sin turno</span>}
+                        {d.turnos.map((t) => {
+                          const turno = cobertura.data.turnos.find((x) => x.clave === t.clave);
+                          const est = ESTILO_ESTADO[t.estado];
+                          const Icono = est.icono;
+                          return (
+                            <span key={t.clave} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className={`flex items-center gap-1 text-xs font-medium ${est.texto}`}>
+                                <Icono className="size-3.5 shrink-0" />
+                                {ESTADO_COBERTURA_LABEL[t.estado]}
                               </span>
-                            ))}
-                          </span>
-                          {huecos.length === 0 ? (
-                            <span className="flex items-center gap-1 text-xs text-emerald-700">
-                              <CircleCheck className="size-3.5" /> Cubierto las 24 h
+                              {t.guardias.map((g) => (
+                                <span
+                                  key={`${g.id}-${g.origen}`}
+                                  className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs text-slate-700 ring-1 ring-slate-200"
+                                >
+                                  <UserRound className="size-3" />
+                                  {g.nombre.split(' ')[0]}
+                                </span>
+                              ))}
+                              {turno && <span className="text-xs text-slate-400">{turno.etiqueta}</span>}
                             </span>
-                          ) : (
-                            <span className="flex items-start gap-1 text-xs font-medium text-amber-700">
-                              <TriangleAlert className="mt-px size-3.5 shrink-0" />
-                              {huecos.length === 1 &&
-                              huecos[0].desde === '00:00' &&
-                              huecos[0].hasta === '00:00'
-                                ? 'Sin cubrir todo el día'
-                                : `Sin cubrir: ${huecos
-                                    .map((h) => `${horaLegible(h.desde)} a ${horaLegible(h.hasta)}`)
-                                    .join(', ')}`}
-                            </span>
-                          )}
-                        </span>
-                      </li>
-                    );
-                  })}
+                          );
+                        })}
+                      </span>
+                    </li>
+                  ))}
                 </ul>
               </section>
             )}

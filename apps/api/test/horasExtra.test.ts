@@ -571,6 +571,34 @@ describe('horas extra: con el plan del supervisor (AS6-05, AS6-08)', () => {
     expect(bitacora.at(-1)).toMatchObject({ tipo: 'horas_extra', actorId: 5 });
   });
 
+  it('lo que pasa de la hora autorizada se aprueba solo hasta esa hora y el resto queda por aprobar', async () => {
+    ahora = en('2026-10-27T02:20:00Z');
+    await guardia().post('/extender', {});
+    avisos.length = 0;
+    // Autorizado hasta las 4:00Z; marca su salida a las 5:00Z.
+    await conPlan(caso({ finCubierto: en('2026-10-27T04:00:00Z'), limiteExtra: null })).alSalir({
+      entrada: marca(ENTRADA_LUNES),
+      salida: salida('2026-10-27T05:00:00Z'),
+    });
+    expect(repo.filas[0]).toMatchObject({ estado: 'aprobada', minutos: 120 });
+    expect(repo.filas[0].hasta).toEqual(en('2026-10-27T04:00:00Z'));
+    expect(repo.filas[1]).toMatchObject({ estado: 'por_aprobar', minutos: 60, origen: 'salida_tardia' });
+    expect(repo.filas[1].desde).toEqual(en('2026-10-27T04:00:00Z'));
+    // Al supervisor le llega la aprobación del excedente; al guardia, lo aprobado.
+    expect(avisos.some((a) => a.usuarioIds.includes(5) && a.mensaje.includes('por aprobar'))).toBe(true);
+  });
+
+  it('un par de minutos después de la hora autorizada no cuentan como excedente', async () => {
+    ahora = en('2026-10-27T02:20:00Z');
+    await guardia().post('/extender', {});
+    await conPlan(caso({ finCubierto: en('2026-10-27T04:00:00Z'), limiteExtra: null })).alSalir({
+      entrada: marca(ENTRADA_LUNES),
+      salida: salida('2026-10-27T04:05:00Z'),
+    });
+    expect(repo.filas).toHaveLength(1);
+    expect(repo.filas[0]).toMatchObject({ estado: 'aprobada', minutos: 120 });
+  });
+
   it('con "descansa" no hay tope: se aprueban las horas que trabajó', async () => {
     ahora = en('2026-10-27T02:20:00Z');
     await guardia().post('/extender', {});

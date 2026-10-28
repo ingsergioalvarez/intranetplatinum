@@ -5,6 +5,29 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-28 #23 — Hora límite en el plan de cobertura (A-19, DA-58)
+
+#### Añadido
+
+- El plan "No llegará" pide **hasta qué hora se queda** el guardia (propone el fin del turno del relevo; si ya pasó, hay que elegir otra, y el servidor no deja guardar una hora pasada).
+- Pasada esa hora sin salida: aviso en la campanita al guardia y al supervisor (una sola vez) y aviso rojo en el Checador ("Marca tu salida y retírate").
+
+#### Cambiado
+
+- Las horas extra del plan se aprueban solas **solo hasta esa hora**; lo que se pase (más de 10 min) se registra aparte como horas extra por aprobar. No se marca la salida por el guardia.
+- Textos del plan del guardia: "Te quedas hasta las X; a esa hora marca tu salida y retírate".
+
+### Sesión 2026-10-27 #22 — Un solo cálculo de huecos (A-17)
+
+#### Cambiado
+
+- Bitácora del guardia: "Comentar" ahora es "Agregar nota" (con aviso de que la nota no cambia el evento y de que Justificar sí). Una nota ya no saca una incidencia de "Sin atender" si se puede justificar; solo justificar la saca. Las que no se pueden justificar (rachas) siguen saliendo con una nota.
+- Etiqueta de entrada con retardo: muestra el total y los minutos fuera de tolerancia ("+13 min (+3 fuera de tolerancia)").
+
+#### Corregido
+
+- El cuadro "Próximos 7 días" de la ventana de turnos del sitio medía contra las 24 h del día y marcaba "Sin cubrir" aunque el turno (p. ej. 1 h) estuviera cubierto. Ahora usa el mismo cálculo que el calendario de cobertura (estado por turno, guardias y enlace "Ver calendario"), así que ambas pantallas coinciden.
+
 ### Sesión 2026-10-27 #21 — Turnos en el menú y borrado con reemplazo (A-18, DA-57)
 
 #### Añadido

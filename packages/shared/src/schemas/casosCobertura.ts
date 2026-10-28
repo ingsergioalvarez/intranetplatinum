@@ -37,6 +37,8 @@ const descansoExtraSchema = z.coerce
 export const resolverCasoSchema = z
   .object({
     decision: z.enum(DECISIONES_CASO, 'Elige qué pasa con el relevo'),
+    /** Hasta cuándo se queda el guardia ("no llegará"); si no se manda, el fin del turno del relevo. */
+    finCubierto: z.iso.datetime({ offset: true }).optional(),
     /** Solo si el guardia cubre el turno ("no llegará"). */
     siguiente: z.enum(SIGUIENTES_TURNO).optional(),
     /** Horas de descanso que se agregan a las del patrón ("descansa"). */
@@ -59,7 +61,10 @@ export type ResolverCasoData = z.output<typeof resolverCasoSchema>;
 export const entradaIdParamSchema = z.object({ entradaId: z.coerce.number().int().positive() });
 export type EntradaIdParam = z.infer<typeof entradaIdParamSchema>;
 
-export const vistaPreviaCasoQuerySchema = z.object({ descansoExtraHoras: descansoExtraSchema.default(0) });
+export const vistaPreviaCasoQuerySchema = z.object({
+  descansoExtraHoras: descansoExtraSchema.default(0),
+  finCubierto: z.iso.datetime({ offset: true }).optional(),
+});
 export type VistaPreviaCasoQuery = z.infer<typeof vistaPreviaCasoQuerySchema>;
 
 export interface CasoCobertura {

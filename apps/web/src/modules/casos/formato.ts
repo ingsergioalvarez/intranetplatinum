@@ -19,3 +19,6 @@ export const hora24 = (iso: string) =>
 /** `1 h 05 min` / `25 min` */
 export const duracionTexto = (min: number) =>
   min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
+
+/** Valor de un `<input type="datetime-local">` (`AAAA-MM-DDTHH:MM`, hora local) de un instante. */
+export const aInputLocal = (iso: string) => `${fechaLocal(iso)}T${hora24(iso)}`;

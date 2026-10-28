@@ -230,7 +230,7 @@ export function BitacoraGuardia({
 }
 
 /**
- * Eventos agrupados por día, con comentar, justificar, ver foto y revisar la incidencia de rostro.
+ * Eventos agrupados por día, con notas, justificar, ver foto y revisar la incidencia de rostro.
  * `conGuardia` muestra de quién es cada uno (lista general de incidencias).
  */
 export function ListaEventos({
@@ -418,7 +418,7 @@ function Evento({
         {e.comentarios.map((c) => (
           <Nota key={c.id}>
             <span className="text-xs text-slate-500">
-              {c.autor ?? 'Alguien'} · {formatFechaHora(c.createdAt)}
+              Nota · {c.autor ?? 'Alguien'} · {formatFechaHora(c.createdAt)}
             </span>
             <span className="block text-slate-700">{c.texto}</span>
           </Nota>
@@ -426,7 +426,7 @@ function Evento({
 
         <div className="-ml-3 flex flex-wrap gap-1">
           <Button variant="ghost" size="sm" icon={<MessageSquare className="size-4" />} onClick={onComentar}>
-            Comentar
+            Agregar nota
           </Button>
           {justificable && (
             <Button
@@ -537,7 +537,7 @@ function DialogoTexto({
         : asistenciaService.justificarEvento(evento.id, t),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: asistenciaService.keys.all });
-      toast.success(comentar ? 'Comentario guardado' : 'Justificado');
+      toast.success(comentar ? 'Nota guardada' : 'Justificado');
       onClose();
     },
     onError: (e) => toast.error(mensajeDeError(e)),
@@ -554,22 +554,24 @@ function DialogoTexto({
 
   return (
     <FormModal
-      title={comentar ? 'Comentar' : `Justificar ${TIPO_EVENTO_BITACORA_LABEL[evento.tipo].toLowerCase()}`}
+      title={comentar ? 'Agregar nota' : `Justificar ${TIPO_EVENTO_BITACORA_LABEL[evento.tipo].toLowerCase()}`}
       description={evento.detalle}
       onClose={onClose}
       onSubmit={onSubmit}
-      submitLabel={comentar ? 'Comentar' : 'Justificar'}
+      submitLabel={comentar ? 'Guardar nota' : 'Justificar'}
       loading={guardar.isPending}
       dirty={texto.trim() !== ''}
       size="sm"
     >
       <FormField
-        label={comentar ? 'Comentario' : 'Motivo'}
+        label={comentar ? 'Nota' : 'Motivo'}
         required
         error={error ?? undefined}
         hint={
           comentar
-            ? 'Solo lo ven supervisores y admin'
+            ? TIPOS_JUSTIFICABLES.includes(evento.tipo)
+              ? 'Nota interna, solo la ven supervisores y admin. No cambia nada: el evento sigue contando. Para que deje de contar, usa Justificar.'
+              : 'Nota interna, solo la ven supervisores y admin.'
             : 'Ya no contará en el resumen ni en reportes. No se puede deshacer.'
         }
       >

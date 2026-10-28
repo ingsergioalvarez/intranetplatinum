@@ -11,12 +11,14 @@ export const casosService = {
   keys: {
     all: ['casos-cobertura'] as const,
     lista: ['casos-cobertura', 'lista'] as const,
-    vistaPrevia: (entradaId: number, descansoExtraHoras: number) =>
-      ['casos-cobertura', 'vista-previa', entradaId, descansoExtraHoras] as const,
+    vistaPrevia: (entradaId: number, descansoExtraHoras: number, finCubierto?: string) =>
+      ['casos-cobertura', 'vista-previa', entradaId, descansoExtraHoras, finCubierto ?? null] as const,
   },
   lista: () => api.get<CasosCoberturaLista>('/casos-cobertura'),
-  vistaPrevia: (entradaId: number, descansoExtraHoras: number) =>
-    api.get<VistaPreviaCaso>(`/casos-cobertura/${entradaId}/vista-previa`, { query: { descansoExtraHoras } }),
+  vistaPrevia: (entradaId: number, descansoExtraHoras: number, finCubierto?: string) =>
+    api.get<VistaPreviaCaso>(`/casos-cobertura/${entradaId}/vista-previa`, {
+      query: { descansoExtraHoras, ...(finCubierto ? { finCubierto } : {}) },
+    }),
   resolver: (entradaId: number, input: ResolverCasoInput) =>
     api.post<CasoCobertura>(`/casos-cobertura/${entradaId}/resolver`, input),
   /** El guardia avisa que no puede quedarse. */

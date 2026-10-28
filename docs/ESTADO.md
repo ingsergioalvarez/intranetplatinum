@@ -2,9 +2,9 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-10-27 (turnos en el menú, A-18)
+**Última actualización:** 2026-10-28 (hora límite en el plan de cobertura, A-19)
 **Fase actual:** Asistencia completa en lo funcional: reporte oficial, modo sin conexión, cambios de turno y horas extra.
-**Última tarea terminada:** A-18 (Turnos en el menú para admin y supervisor; borrar un turno eligiendo el turno nuevo de cada sitio activo).
+**Última tarea terminada:** A-19 (plan de cobertura con hora límite: aviso al pasarse y excedente por aprobar). Antes: A-18 (Turnos en el menú).
 **Tarea en progreso:** ninguna.
 
 ## Siguiente paso
@@ -28,7 +28,7 @@
 
 - `npm install`; `npm run db:deploy -w @platinum/api` y `npm run db:seed -w @platinum/api` (sincroniza roles y permisos).
 - `npm run dev:https` para checador biométrico y pruebas en red local.
-- Calidad: `npm test` (345/345 pasando), `npm run lint`, `npm run typecheck`.
+- Calidad: `npm test` (357/357 pasando), `npm run lint`, `npm run typecheck`.
 
 ## Notas de contexto
 

@@ -40,6 +40,7 @@ export function HoraMarca({ jornada: j, tipo }: { jornada: Jornada; tipo: 'entra
         >
           {tipo === 'entrada' ? 'Entra a las' : 'Sale a las'} {formatHora(programada)}
           {marca && fuera && ` · ${minutos(tipo === 'entrada' ? diferencia : -diferencia)}`}
+          {marca && fuera && tipo === 'entrada' && ` (+${diferencia - TOLERANCIA_RETARDO_MIN} fuera de tolerancia)`}
         </span>
       )}
     </span>

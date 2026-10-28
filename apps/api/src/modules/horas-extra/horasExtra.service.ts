@@ -495,8 +495,17 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
       const plan = caso?.estado === 'resuelto' && caso.decision === 'no_llegara' ? caso : null;
       const desde = descanso ? entrada.registradaEn : rec.desde;
       let hasta = hora.getTime() < desde.getTime() ? desde : hora;
-      if (plan?.limiteExtra && plan.limiteExtra.getTime() > desde.getTime() && hasta.getTime() > plan.limiteExtra.getTime()) {
-        hasta = plan.limiteExtra;
+      // Lo autorizado llega hasta la hora que el supervisor dejó en el plan (o, si es antes, donde empieza
+      // su turno normal); lo que pase de ahí queda aparte, por aprobar.
+      const topes = [plan?.finCubierto, plan?.limiteExtra].filter((t): t is Date => !!t && t.getTime() > desde.getTime());
+      const tope = topes.length ? new Date(Math.min(...topes.map((t) => t.getTime()))) : null;
+      let excedente: { desde: Date; minutos: number } | null = null;
+      if (plan && tope && hasta.getTime() > tope.getTime()) {
+        const pasado = minutosEntre(tope, hasta);
+        if (pasado > TOLERANCIA_EXTRA_MIN && tope.getTime() === plan.finCubierto?.getTime()) {
+          excedente = { desde: tope, minutos: pasado };
+        }
+        hasta = tope;
       }
       const minutos = minutosEntre(desde, hasta);
       const sinExtra = !descanso && (minutos <= 0 || (rec.origen === 'jornada_abierta' && minutos <= TOLERANCIA_EXTRA_MIN));
@@ -520,6 +529,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
           { minutos, casoId: plan.id },
           plan.resueltoPorId,
         );
+        if (excedente) await this.abrirExcedente(nueva, excedente.desde, hora, excedente.minutos);
         await this.avisar([nueva.guardia.id], {
           tipo: 'horas_extra',
           mensaje: `Tus horas extra del ${fechaCorta(nueva.fecha)} en ${nueva.sitio.nombre} (${duracionExtra(minutos)}) quedaron aprobadas con el plan de tu supervisor`,
@@ -565,6 +575,28 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
         ? `Trabajó en su día de descanso en ${creada.sitio.nombre}: ${duracionExtra(minutos)} por aprobar`
         : `Marcó su salida ${duracionExtra(minutos)} después de su hora en ${creada.sitio.nombre}: horas extra por aprobar`,
       { minutos, origen },
+    );
+    await this.avisarPorAprobar(creada);
+  }
+
+  /** Lo que pasó de la hora autorizada por el plan: horas extra aparte que el supervisor aprueba o rechaza. */
+  private async abrirExcedente(base: HoraExtraRow, desde: Date, hasta: Date, minutos: number) {
+    const creada = await this.repo.crear({
+      usuarioId: base.guardia.id,
+      sitioId: base.sitio.id,
+      entradaId: null,
+      fecha: base.fecha,
+      desde,
+      hasta,
+      minutos,
+      origen: 'salida_tardia',
+      estado: 'por_aprobar',
+      motivo: `Pasó de la hora autorizada en el plan (${horaLocal(desde)})`,
+    });
+    await this.registrar(
+      creada,
+      `Se quedó ${duracionExtra(minutos)} después de la hora autorizada en ${creada.sitio.nombre} (${horaLocal(desde)} a ${horaLocal(hasta)}): por aprobar`,
+      { minutos, excedente: true },
     );
     await this.avisarPorAprobar(creada);
   }
