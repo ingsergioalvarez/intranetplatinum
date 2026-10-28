@@ -1,6 +1,7 @@
 import { PERMISOS, ROLES, type Aviso, type ReglasAviso, type TipoAviso } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import { firmarArchivo } from '../../core';
+import { notificarPush } from '../push/enviar';
 
 export interface NuevoAviso {
   tipo: TipoAviso;
@@ -33,6 +34,7 @@ export class PrismaAvisosRepository extends AvisosRepository {
     await getPrisma().aviso.createMany({
       data: usuarioIds.map((usuarioId) => ({ usuarioId, tipo, mensaje: mensaje.slice(0, 255), reporteId })),
     });
+    notificarPush(usuarioIds, { tipo, mensaje, reporteId });
   }
 
   async listar(usuarioId: number, limite: number): Promise<Aviso[]> {

@@ -34,6 +34,8 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
+        // Notificaciones push (A-20): public/push-sw.js recibe los avisos y abre la app al tocarlos.
+        importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         globIgnores: ['modelos/**'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,

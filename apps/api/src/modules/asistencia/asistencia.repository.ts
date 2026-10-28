@@ -14,6 +14,7 @@ import { dateAFecha, fechaADate, hoyISO } from '../../core';
 import { asignadaA, vigenteEn } from '../clientes/clientes.repository';
 import { turnoDeDb } from '../sitios/sitios.repository';
 import { diasDeDb, diasSelect } from '../turnos/dias';
+import { notificarPush } from '../push/enviar';
 
 export interface MarcacionRow {
   id: number;
@@ -576,6 +577,7 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
         fotoClave,
       })),
     });
+    notificarPush(usuarioIds, { tipo, mensaje, ruta });
   }
 
   async estadosRostros(ids: number[]) {

@@ -39,6 +39,18 @@ Repetir 1 y 2 (en la misma carpeta; el `.env` y los volúmenes se conservan: ext
 `cd ~/platinum/deploy && docker compose up -d --build`. Si hay migraciones nuevas:
 `docker compose exec api npm run db:deploy`.
 
+## Notificaciones push (A-20): claves, una sola vez
+
+Después de construir con el código que trae el push (`docker compose up -d --build`):
+
+1. `docker compose exec -T api npx web-push generate-vapid-keys --json > /tmp/vapid.json`
+2. Pasar las dos claves al `.env` sin mostrarlas, y borrar el archivo temporal:
+   `python3 -c "import json;d=json.load(open('/tmp/vapid.json'));print('VAPID_PUBLIC_KEY='+d['publicKey']);print('VAPID_PRIVATE_KEY='+d['privateKey']);print('VAPID_SUBJECT=mailto:no-reply@grupocomunicalo.mx')" >> .env; rm /tmp/vapid.json`
+3. `docker compose up -d` (recrea la API con las claves) y `docker compose exec api npm run db:deploy` (tabla `suscripciones_push`).
+
+No cambiar las claves después: cada celular tendría que volver a activar las notificaciones.
+Cada persona las activa desde la campanita ("Activar").
+
 ## Pendiente
 
 - Respaldo automático de MySQL (`mysqldump`) y de las fotos (volumen `uploads`), con copia fuera del servidor.

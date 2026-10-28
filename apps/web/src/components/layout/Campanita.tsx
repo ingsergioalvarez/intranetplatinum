@@ -24,7 +24,9 @@ import {
 import type { Aviso, BandejaAvisos, TipoAviso } from '@platinum/shared';
 import { api } from '../../core/api';
 import { formatFechaHora } from '../../core/format/fechas';
+import { usePush } from '../../core/push/usePush';
 import { Button, EmptyState, Modal, Spinner, cn } from '../ui';
+import { PushAvisos } from './PushAvisos';
 
 const CLAVE = ['avisos'] as const;
 
@@ -100,6 +102,8 @@ export function Campanita({ className, tono = 'oscuro' }: { className?: string; 
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [abierta, setAbierta] = useState(false);
+  // Siempre montado: al abrir la app registra de nuevo el celular para el usuario actual (A-20).
+  const push = usePush();
 
   const bandeja = useQuery({
     queryKey: CLAVE,
@@ -173,6 +177,7 @@ export function Campanita({ className, tono = 'oscuro' }: { className?: string; 
           )
         }
       >
+        <PushAvisos push={push} />
         {bandeja.isPending ? (
           <div className="flex justify-center py-8 text-brand-600">
             <Spinner className="size-6" />

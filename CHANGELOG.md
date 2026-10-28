@@ -5,6 +5,14 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-28 #26 — Notificaciones push (A-20, DA-59)
+
+#### Añadido
+
+- Notificaciones push: cada aviso de la campanita llega también al celular aunque la app esté cerrada o el teléfono bloqueado. Módulo `push` (tabla `suscripciones_push`, `GET /api/push/clave`, `POST` y `DELETE /api/push/suscripciones`), enviado con Web Push (VAPID, librería `web-push`) desde los tres lugares donde se crean avisos.
+- Interruptor "Activar / Desactivar" en la campanita; al tocar la notificación se abre la pantalla del aviso (`public/push-sw.js`, cargado por el service worker sin cambiar su caché ni el modo sin conexión).
+- Variables `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`; sin ellas el push queda apagado. Pasos en `docs/DESPLIEGUE.md`.
+
 ### Sesión 2026-10-28 #25 — Preparación del despliegue (F4-04, D-008b)
 
 #### Añadido

@@ -99,6 +99,7 @@ model Usuario {
   horasExtra           HoraExtra[]          @relation("HoraExtraDe")
   horasExtraResueltas  HoraExtra[]          @relation("HoraExtraResolvio")
   casosCobertura       CasoCobertura[]      @relation("CasoGuardia")
+  suscripcionesPush    SuscripcionPush[]
   pausasTurno          PausaTurno[]
   bitacora             EventoBitacora[]     @relation("BitacoraDe")
   bitacoraActor        EventoBitacora[]     @relation("BitacoraActor")
@@ -555,6 +556,23 @@ model Aviso {
 
   @@index([usuarioId, leidoEn, createdAt])
   @@map("avisos")
+}
+
+/// Celular (navegador) de un usuario suscrito a las notificaciones push (A-20). Un usuario puede tener varios.
+model SuscripcionPush {
+  id           Int      @id @default(autoincrement())
+  usuarioId    Int      @map("usuario_id")
+  /// SHA-256 del endpoint: el endpoint es largo y se usa como identidad única de la suscripción.
+  endpointHash String   @unique @map("endpoint_hash") @db.Char(64)
+  endpoint     String   @db.Text
+  p256dh       String   @db.VarChar(255)
+  auth         String   @db.VarChar(255)
+  userAgent    String?  @map("user_agent") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at")
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("suscripciones_push")
 }
 
 // ============================================================

@@ -82,3 +82,53 @@ export interface BandejaAvisos {
   items: Aviso[];
   noLeidos: number;
 }
+
+/** Título de la notificación push de cada tipo de aviso (A-20). */
+export const TITULO_AVISO: Record<TipoAviso, string> = {
+  reporte_nuevo: 'Nuevo reporte',
+  reporte_estatus: 'Reporte actualizado',
+  reporte_comentario: 'Nuevo comentario',
+  rostro_pendiente: 'Rostro por revisar',
+  rostro_suplantacion: 'Posible suplantación',
+  rostro_duplicado: 'Rostro ya registrado',
+  rostro_pantalla: 'Pantalla o foto',
+  rostro_reto: 'Gesto no completado',
+  rostro_aprobado: 'Rostro aprobado',
+  rostro_rechazado: 'Rostro rechazado',
+  cuenta_intento: 'Intento con tu cuenta',
+  asignacion: 'Tu sitio y horario',
+  grupo: 'Tu grupo',
+  retardo: 'Retardo',
+  marca_alerta: 'Marca con alerta',
+  horas_extra: 'Horas extra',
+  cobertura: 'Turno sin cubrir',
+};
+
+// ---------- Notificaciones push (A-20) ----------
+
+/** Suscripción de un navegador (`PushSubscription.toJSON()`). */
+export const suscripcionPushSchema = z.object({
+  endpoint: z.url('Suscripción inválida').max(2000),
+  keys: z.object({
+    p256dh: z.string().min(10).max(255),
+    auth: z.string().min(8).max(255),
+  }),
+});
+export type SuscripcionPushInput = z.infer<typeof suscripcionPushSchema>;
+
+export const quitarSuscripcionPushSchema = z.object({ endpoint: z.url().max(2000) });
+export type QuitarSuscripcionPushInput = z.infer<typeof quitarSuscripcionPushSchema>;
+
+/** Clave pública del servicio; `null` si el servidor no tiene push configurado. */
+export interface ClavePush {
+  publicKey: string | null;
+}
+
+/** Lo que el service worker recibe en cada push. */
+export interface PayloadPush {
+  titulo: string;
+  cuerpo: string;
+  /** Pantalla a la que lleva al tocar la notificación. */
+  ruta: string;
+  tipo: TipoAviso;
+}

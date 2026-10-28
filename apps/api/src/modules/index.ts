@@ -15,6 +15,7 @@ import { gruposModule } from './grupos';
 import { healthModule } from './health';
 import { horasExtraModule } from './horas-extra';
 import { informesModule } from './informes';
+import { pushModule } from './push';
 import { reportesModule } from './reportes';
 import { sitiosModule } from './sitios';
 import { turnosModule } from './turnos';
@@ -37,6 +38,7 @@ export const modules: AppModule[] = [
   reportesModule,
   archivosModule,
   avisosModule,
+  pushModule,
   asistenciaModule,
   bitacoraModule,
   informesModule,

@@ -1,5 +1,6 @@
 import type { TipoAviso } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
+import { notificarPush } from '../push/enviar';
 
 export interface AvisoUsuario {
   tipo: TipoAviso;
@@ -23,6 +24,7 @@ export const avisarConPrisma: AvisarUsuarios = async (
     await getPrisma().aviso.createMany({
       data: ids.map((usuarioId) => ({ usuarioId, tipo, mensaje: mensaje.slice(0, 255), ruta, fotoClave })),
     });
+    notificarPush(ids, { tipo, mensaje, ruta });
   } catch (err) {
     console.error('[avisos] No se pudo crear el aviso', err);
   }

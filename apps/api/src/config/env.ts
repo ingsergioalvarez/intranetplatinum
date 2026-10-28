@@ -30,6 +30,10 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().default('Platinum Agency <no-reply@platinum.example>'),
+  // Notificaciones push (A-20). Sin las dos claves el push queda apagado y todo lo demás funciona igual.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('mailto:no-reply@grupocomunicalo.mx'),
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   UPLOADS_DIR: z.string().default('./uploads'),
   MAX_UPLOAD_MB: z.coerce.number().default(10),
