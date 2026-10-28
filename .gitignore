@@ -14,3 +14,6 @@ apps/api/src/generated/
 
 # PWA en desarrollo
 dev-dist/
+
+# Paquete para subir al servidor (git archive)
+*.tar.gz

@@ -15,6 +15,9 @@ Túnel: `platinum` (id `fe51bf90-21ae-4768-9202-250300febaf3`, creado el 2026-10
 `platinum` debe ser un CNAME con proxy hacia `fe51bf90-21ae-4768-9202-250300febaf3.cfargotunnel.com`.
 El archivo de credenciales (`~/.cloudflared/<id>.json`) es secreto: no va a git ni al chat.
 
+Estado: publicado el 2026-10-28; se entró al dominio desde el celular. En la primera construcción faltaba copiar
+`tsconfig.base.json` a las imágenes (ya corregido en los Dockerfiles).
+
 ## Primera vez
 
 1. **En la PC** (después de hacer commit de lo que se quiere subir), desde la raíz del repositorio:

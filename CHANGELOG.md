@@ -12,6 +12,10 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - Carpeta `deploy/`: Docker Compose con MySQL 8.4, API, sitio web (nginx) y túnel propio de Cloudflare (`platinum`); `Dockerfile.api`, `Dockerfile.web`, `nginx.conf`, `cloudflared.yml` y `.env.example`. La IP real del visitante pasa a la API para que el límite de intentos de login no cuente a todos como una sola IP.
 - `docs/DESPLIEGUE.md`: pasos de primera vez y de actualización.
 
+#### Corregido
+
+- Los Dockerfiles de la web y la API no copiaban `tsconfig.base.json`, y la construcción de la web fallaba.
+
 #### Cambiado
 
 - D-008b: en producción MySQL va en un contenedor del servidor de la oficina (no en otra máquina).

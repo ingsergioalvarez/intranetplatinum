@@ -2,13 +2,14 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-10-28 (hora límite en el plan de cobertura, A-19)
+**Última actualización:** 2026-10-28 (Platinum publicado en https://platinum.grupocomunicalo.mx, F4-04)
 **Fase actual:** Asistencia completa en lo funcional: reporte oficial, modo sin conexión, cambios de turno y horas extra.
-**Última tarea terminada:** A-19 (plan de cobertura con hora límite: aviso al pasarse y excedente por aprobar). Antes: A-18 (Turnos en el menú).
+**Última tarea terminada:** F4-04 casi completa: Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel propio de Cloudflare); se pudo entrar desde el dominio. Falta respaldo automático y SMTP. Antes: A-19 (hora límite del plan de cobertura).
 **Tarea en progreso:** ninguna.
 
 ## Siguiente paso
 
+0. **Respaldos** automáticos de MySQL y de las fotos (volumen `uploads`) con copia fuera del servidor; sin eso no usar con guardias reales. Después, SMTP (correos y recuperar contraseña). Ver [DESPLIEGUE.md](DESPLIEGUE.md).
 1. Probar AS6 con datos reales en el piloto: caso de cobertura (relevo que no llega), plan de descanso y calendario. AS6 (DA-56) está terminada y probada con datos simulados y pruebas automáticas.
 2. AS4-03: ausencias justificadas (vacaciones, incapacidad, permiso) para que no cuenten como falta en el reporte.
 3. Probar la PWA y el modo sin conexión en el celular (necesita HTTPS de confianza: dominio o túnel) y publicar en el dominio (F4-04).
