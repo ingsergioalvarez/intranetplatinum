@@ -49,6 +49,7 @@
 | A-18 | Administrar los turnos desde el menú (admin y supervisor); borrar un turno asignado eligiendo el turno nuevo | Usuario 2026-10-27 | A-18 (ver DA-57)    | Terminado        |
 | A-19 | Plan de cobertura con hora límite: el supervisor elige hasta cuándo se queda el guardia; pasada esa hora se avisa y lo que pase de ahí queda por aprobar | Usuario 2026-10-28 | A-19 (ver DA-58)    | Terminado        |
 | A-20 | Notificaciones push: los avisos llegan al celular aunque la app esté cerrada o el teléfono bloqueado (Android) | Usuario 2026-10-28 | A-20 (ver DA-59; TC-21) | Terminado        |
+| A-21 | Push obligatorio: sin botón para desactivarlo, la app pide activarlo y no deja seguir; notificación con ícono de barra de estado y botón "Ver" | Usuario 2026-10-28 | A-21 (ver A-20)     | Terminado        |
 
 ### Alcances propuestos (sugeridos, sin confirmar)
 

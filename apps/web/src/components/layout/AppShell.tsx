@@ -11,6 +11,7 @@ import { useSincronizacion } from '../../core/offline/sincronizar';
 import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
 import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
 import { Campanita } from './Campanita';
+import { ExigirPush } from './ExigirPush';
 import { navItems } from './navItems';
 
 function useReportesNoLeidos() {
@@ -251,6 +252,7 @@ export function AppShell() {
         </main>
       </div>
       <BottomNav />
+      <ExigirPush />
       <BienvenidaRostro />
       <VentanaTurno />
       <VentanaComida />

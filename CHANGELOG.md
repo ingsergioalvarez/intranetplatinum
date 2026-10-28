@@ -5,6 +5,15 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-28 #27 — Push obligatorio (A-21)
+
+#### Cambiado
+
+- Las notificaciones push ya no se pueden desactivar desde la app: se quitó el interruptor de la campanita. Si el celular no las tiene activas, la app muestra un aviso que no se puede cerrar (`ExigirPush`) con "Activar notificaciones" o, si el navegador las bloqueó, los pasos para permitirlas; al volver de los permisos se revisa solo. Queda "Cerrar sesión" para celulares compartidos. Si el navegador o el servidor no admiten push (iPhone sin instalar, servidor sin claves) no se pide nada.
+- `Modal` acepta `cerrable={false}` (sin botón de cerrar ni Escape).
+- La notificación lleva ícono monocromático para la barra de estado (`public/push-badge.png`), vibración y botón "Ver".
+- Sin cambios en la API: la ruta para quitar una suscripción sigue existiendo, pero la app ya no la usa.
+
 ### Sesión 2026-10-28 #26 — Notificaciones push (A-20, DA-59)
 
 #### Añadido

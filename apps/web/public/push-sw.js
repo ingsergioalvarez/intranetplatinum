@@ -14,6 +14,10 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(datos.titulo || 'Platinum', {
       body: datos.cuerpo || '',
       icon: '/icon-192.png',
+      // Android pinta el badge en la barra de estado: solo usa su transparencia (escudo blanco).
+      badge: '/push-badge.png',
+      vibrate: [200, 100, 200],
+      actions: [{ action: 'ver', title: 'Ver' }],
       data: { ruta: datos.ruta || '/' },
     }),
   );

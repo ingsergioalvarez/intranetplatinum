@@ -24,7 +24,7 @@ const soportado = () =>
   typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
 /**
- * Notificaciones push de este navegador (A-20): si están activas, si se pueden activar o apagar. Al
+ * Notificaciones push de este navegador (A-20): si están activas y cómo activarlas (no hay forma de apagarlas desde la app). Al
  * abrir la app con push activo vuelve a registrar el celular, así el aviso llega al usuario que
  * tiene la sesión abierta (por si en el mismo celular entró otra persona antes).
  */
@@ -64,6 +64,15 @@ export function usePush() {
     void revisar();
   }, [revisar]);
 
+  // Si la persona fue a los permisos del navegador y volvió, se revisa de nuevo sin que toque nada.
+  useEffect(() => {
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') void revisar();
+    };
+    document.addEventListener('visibilitychange', alVolver);
+    return () => document.removeEventListener('visibilitychange', alVolver);
+  }, [revisar]);
+
   /** Pide permiso (hay que llamarlo desde un toque del usuario) y registra el celular. Devuelve el error si falla. */
   const activar = useCallback(async () => {
     if (!publicKey) return 'Las notificaciones no están disponibles en este momento';
@@ -89,23 +98,5 @@ export function usePush() {
     }
   }, [publicKey, registro]);
 
-  const desactivar = useCallback(async () => {
-    setTrabajando(true);
-    try {
-      const reg = await registro();
-      const sub = await reg?.pushManager.getSubscription();
-      if (sub) {
-        await api.delete('/push/suscripciones', { body: { endpoint: sub.endpoint } }).catch(() => undefined);
-        await sub.unsubscribe();
-      }
-      setEstado('apagado');
-      return null;
-    } catch {
-      return 'No se pudieron desactivar las notificaciones. Intenta de nuevo';
-    } finally {
-      setTrabajando(false);
-    }
-  }, [registro]);
-
-  return { estado, trabajando, activar, desactivar };
+  return { estado, trabajando, activar, revisar };
 }

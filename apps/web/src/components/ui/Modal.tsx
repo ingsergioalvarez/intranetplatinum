@@ -14,6 +14,8 @@ export interface ModalProps {
   size?: 'sm' | 'md' | 'lg';
   /** Evita cerrar al tocar fuera (formularios con cambios). */
   dismissible?: boolean;
+  /** Sin botón de cerrar ni Escape: la persona debe resolver lo que pide el modal. */
+  cerrable?: boolean;
 }
 
 const sizes = { sm: 'md:max-w-sm', md: 'md:max-w-lg', lg: 'md:max-w-3xl' };
@@ -31,6 +33,7 @@ export function Modal({
   footer,
   size = 'md',
   dismissible = true,
+  cerrable = true,
 }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -54,7 +57,7 @@ export function Modal({
     if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current();
+      if (e.key === 'Escape' && cerrable) onCloseRef.current();
     };
     document.addEventListener('keydown', onKey);
     return () => {
@@ -62,7 +65,7 @@ export function Modal({
       document.body.style.overflow = previousOverflow;
       focoPrevio.current?.focus();
     };
-  }, [open]);
+  }, [open, cerrable]);
 
   if (!open) return null;
 
@@ -93,14 +96,16 @@ export function Modal({
             </h2>
             {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="-mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-            aria-label="Cerrar"
-          >
-            <X className="size-5" />
-          </button>
+          {cerrable && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="-mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+              aria-label="Cerrar"
+            >
+              <X className="size-5" />
+            </button>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6">{children}</div>
         {footer && (
