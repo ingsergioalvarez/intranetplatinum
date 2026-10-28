@@ -57,6 +57,7 @@ export class NotificadorAvisos implements NotificadorReportes {
       if (destinatarios.size > 0) {
         await this.repo.crear(Array.from(destinatarios), {
           tipo: 'reporte_nuevo',
+          titulo: `Reporte nuevo · ${PRIORIDAD_REPORTE_LABEL[r.prioridad]}`,
           reporteId: r.id,
           mensaje: `${r.folio} · ${PRIORIDAD_REPORTE_LABEL[r.prioridad]}: ${r.titulo} (${r.sitio.nombre}, ${r.cliente.nombreComercial})`,
         });
@@ -73,6 +74,7 @@ export class NotificadorAvisos implements NotificadorReportes {
       const destinatarios = [...new Set([r.creadoPor.id, ...clientes])];
       await this.repo.crear(this.sin(destinatarios, actorId), {
         tipo: 'reporte_estatus',
+        titulo: `Reporte actualizado: ${ESTATUS_REPORTE_LABEL[nuevo]}`,
         reporteId: r.id,
         mensaje: `${r.folio} ahora está "${ESTATUS_REPORTE_LABEL[nuevo]}": ${r.titulo}`,
       });
@@ -88,6 +90,7 @@ export class NotificadorAvisos implements NotificadorReportes {
       const destinatarios = [...new Set([...supervisores, r.creadoPor.id, ...clientes])];
       await this.repo.crear(this.sin(destinatarios, actorId), {
         tipo: 'reporte_comentario',
+        titulo: 'Nuevo comentario en un reporte',
         reporteId: r.id,
         mensaje: `${actorNombre} comentó en ${r.folio}: ${r.titulo}`,
       });

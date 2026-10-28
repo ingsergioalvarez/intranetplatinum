@@ -5,6 +5,14 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-28 #28 — Título propio en cada aviso (A-22)
+
+#### Cambiado
+
+- Cada aviso de la campanita y cada notificación push lleva un título propio y coherente con su mensaje, en vez de uno genérico por tipo (antes un supervisor nuevo recibía "Tu sitio y horario"). Columna nueva `avisos.titulo` (migración `20261028020000_avisos_titulo`); los avisos anteriores, sin título propio, siguen mostrando el genérico de su tipo.
+- Títulos asignados en todos los puntos que crean avisos: asignaciones y supervisión de sitios, turnos, grupos, cambios de turno, coberturas, casos de cobertura, horas extra, asistencia (retardos, marcas, comidas, rostros) y reportes. Se distingue lo que recibe el guardia de lo que recibe el supervisor.
+- `tituloDeAviso(tipo, titulo)` en `@platinum/shared`; `Aviso.titulo` siempre viene lleno.
+
 ### Sesión 2026-10-28 #27 — Push obligatorio (A-21)
 
 #### Cambiado

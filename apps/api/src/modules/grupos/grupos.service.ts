@@ -35,9 +35,15 @@ export class GruposService extends BaseService {
       detalle: `Salió del grupo ${nombre}`,
       actorId,
     });
-    await this.avisar(agregados, { tipo: 'grupo', mensaje: `Te agregaron al grupo ${nombre}`, ruta: '/' });
+    await this.avisar(agregados, {
+      tipo: 'grupo',
+      titulo: 'Te agregaron a un grupo',
+      mensaje: `Te agregaron al grupo ${nombre}`,
+      ruta: '/',
+    });
     await this.avisar(quitados, {
       tipo: 'grupo',
+      titulo: 'Ya no estás en el grupo',
       mensaje: `Ya no formas parte del grupo ${nombre}`,
       ruta: '/',
     });

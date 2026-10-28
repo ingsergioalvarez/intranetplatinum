@@ -8,7 +8,7 @@ import type {
   TipoAviso,
   TipoMarcacion,
 } from '@platinum/shared';
-import { ROLES, trabajaEl } from '@platinum/shared';
+import { ROLES, tituloDeAviso, trabajaEl } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import { dateAFecha, fechaADate, hoyISO } from '../../core';
 import { asignadaA, vigenteEn } from '../clientes/clientes.repository';
@@ -120,6 +120,8 @@ export interface AvisoAsistencia {
     | 'retardo'
     | 'marca_alerta'
   >;
+  /** Título propio del aviso (A-22); sin él se usa el genérico del tipo. */
+  titulo?: string;
   mensaje: string;
   ruta: string;
   /** Foto que se muestra en miniatura en la campanita. */
@@ -566,18 +568,20 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
     return admins.map((a) => a.id);
   }
 
-  async avisar(usuarioIds: number[], { tipo, mensaje, ruta, fotoClave = null }: AvisoAsistencia) {
+  async avisar(usuarioIds: number[], { tipo, titulo, mensaje, ruta, fotoClave = null }: AvisoAsistencia) {
     if (usuarioIds.length === 0) return;
+    const t = tituloDeAviso(tipo, titulo);
     await getPrisma().aviso.createMany({
       data: usuarioIds.map((usuarioId) => ({
         usuarioId,
         tipo,
+        titulo: t,
         mensaje: mensaje.slice(0, 255),
         ruta,
         fotoClave,
       })),
     });
-    notificarPush(usuarioIds, { tipo, mensaje, ruta });
+    notificarPush(usuarioIds, { tipo, titulo: t, mensaje, ruta });
   }
 
   async estadosRostros(ids: number[]) {

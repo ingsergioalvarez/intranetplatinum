@@ -200,6 +200,7 @@ export class CoberturasService extends BaseService {
     });
     await this.avisar([guardia.id], {
       tipo: 'asignacion',
+      titulo: 'Cubrirás un turno',
       mensaje: `Cubrirás ${sitio.nombre} ${rango}: entras a las ${horaLegible(data.horaInicio)} (${data.horas} h). Motivo: ${data.motivo}`,
       ruta: '/marcar',
     });
@@ -212,6 +213,7 @@ export class CoberturasService extends BaseService {
     if (supervisores.size) {
       await this.avisar([...supervisores], {
         tipo: 'asignacion',
+        titulo: 'Guardia enviado a cubrir otro sitio',
         mensaje: `${guardia.nombre} cubrirá ${sitio.nombre} ${rango}${
           sit.estado === 'trabaja'
             ? `; su turno (${sit.detalle?.replace('Trabaja en ', '')}) queda en pausa`
@@ -253,6 +255,7 @@ export class CoberturasService extends BaseService {
     });
     await this.avisar([c.guardia.id], {
       tipo: 'asignacion',
+      titulo: 'Cobertura cancelada',
       mensaje: `Se canceló tu cobertura en ${c.sitio.nombre} ${rango}: regresas a tu sitio`,
       ruta: '/marcar',
     });

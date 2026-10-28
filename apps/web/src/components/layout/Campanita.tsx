@@ -30,27 +30,27 @@ const CLAVE = ['avisos'] as const;
 
 type Tono = 'rojo' | 'ambar' | 'azul' | 'verde';
 
-/** Título, ícono y color (gravedad) de cada tipo de aviso (AS1-13). */
-const TIPO: Record<TipoAviso, { titulo: string; icono: typeof Bell; tono: Tono }> = {
-  reporte_nuevo: { titulo: 'Nuevo reporte', icono: ClipboardList, tono: 'azul' },
-  reporte_estatus: { titulo: 'Reporte actualizado', icono: RefreshCw, tono: 'azul' },
-  reporte_comentario: { titulo: 'Nuevo comentario', icono: MessageSquare, tono: 'azul' },
+/** Ícono y color (gravedad) de cada tipo de aviso (AS1-13); el título lo trae cada aviso (A-22). */
+const TIPO: Record<TipoAviso, { icono: typeof Bell; tono: Tono }> = {
+  reporte_nuevo: { icono: ClipboardList, tono: 'azul' },
+  reporte_estatus: { icono: RefreshCw, tono: 'azul' },
+  reporte_comentario: { icono: MessageSquare, tono: 'azul' },
   // Asistencia (A-17)
-  rostro_pendiente: { titulo: 'Rostro por revisar', icono: ScanFace, tono: 'ambar' },
-  rostro_suplantacion: { titulo: 'Posible suplantación', icono: ShieldAlert, tono: 'rojo' },
-  rostro_duplicado: { titulo: 'Rostro ya registrado', icono: Copy, tono: 'rojo' },
-  rostro_pantalla: { titulo: 'Pantalla o foto', icono: SmartphoneNfc, tono: 'rojo' },
-  rostro_reto: { titulo: 'Gesto no completado', icono: Hand, tono: 'ambar' },
-  retardo: { titulo: 'Retardo', icono: Clock, tono: 'ambar' },
-  marca_alerta: { titulo: 'Marca con alerta', icono: TriangleAlert, tono: 'ambar' },
-  horas_extra: { titulo: 'Horas extra', icono: Clock, tono: 'ambar' },
-  cobertura: { titulo: 'Turno sin cubrir', icono: CalendarDays, tono: 'rojo' },
+  rostro_pendiente: { icono: ScanFace, tono: 'ambar' },
+  rostro_suplantacion: { icono: ShieldAlert, tono: 'rojo' },
+  rostro_duplicado: { icono: Copy, tono: 'rojo' },
+  rostro_pantalla: { icono: SmartphoneNfc, tono: 'rojo' },
+  rostro_reto: { icono: Hand, tono: 'ambar' },
+  retardo: { icono: Clock, tono: 'ambar' },
+  marca_alerta: { icono: TriangleAlert, tono: 'ambar' },
+  horas_extra: { icono: Clock, tono: 'ambar' },
+  cobertura: { icono: CalendarDays, tono: 'rojo' },
   // Para el guardia (DA-34)
-  rostro_aprobado: { titulo: 'Rostro aprobado', icono: UserCheck, tono: 'verde' },
-  rostro_rechazado: { titulo: 'Rostro rechazado', icono: UserX, tono: 'rojo' },
-  cuenta_intento: { titulo: 'Intento con tu cuenta', icono: ShieldAlert, tono: 'rojo' },
-  asignacion: { titulo: 'Tu sitio y horario', icono: MapPin, tono: 'azul' },
-  grupo: { titulo: 'Tu grupo', icono: UsersRound, tono: 'azul' },
+  rostro_aprobado: { icono: UserCheck, tono: 'verde' },
+  rostro_rechazado: { icono: UserX, tono: 'rojo' },
+  cuenta_intento: { icono: ShieldAlert, tono: 'rojo' },
+  asignacion: { icono: MapPin, tono: 'azul' },
+  grupo: { icono: UsersRound, tono: 'azul' },
 };
 
 const COLOR: Record<Tono, { barra: string; icono: string }> = {
@@ -203,7 +203,7 @@ export function Campanita({ className, tono = 'oscuro' }: { className?: string; 
 }
 
 function FilaAviso({ aviso: a, ahora, onAbrir }: { aviso: Aviso; ahora: Date; onAbrir: () => void }) {
-  const { titulo, icono: Icono, tono } = TIPO[a.tipo];
+  const { icono: Icono, tono } = TIPO[a.tipo];
   const { contexto, detalle } = partes(a.mensaje);
   return (
     <button
@@ -228,7 +228,7 @@ function FilaAviso({ aviso: a, ahora, onAbrir }: { aviso: Aviso; ahora: Date; on
               a.leido ? 'font-medium text-slate-700' : 'font-semibold text-slate-900',
             )}
           >
-            {titulo}
+            {a.titulo}
           </span>
           <time
             className="shrink-0 text-xs text-slate-500"

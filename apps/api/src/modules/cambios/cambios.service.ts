@@ -236,6 +236,7 @@ export class CambiosService extends BaseService {
     const aprobadores = (await this.aprobadores(fila)).filter((id) => id !== user.id);
     await this.avisar(aprobadores, {
       tipo: 'asignacion',
+      titulo: 'Cambio de turno por aprobar',
       mensaje: `${persona.nombre} pide ${this.resumen(fila)}. Motivo: ${fila.motivo}`,
       ruta: '/asistencia/cambios',
     });
@@ -307,6 +308,7 @@ export class CambiosService extends BaseService {
     quienes.delete(ctx.actorId);
     await this.avisar([...quienes], {
       tipo: 'asignacion',
+      titulo: 'Cambio de turno aprobado',
       mensaje: `Se aprobó tu cambio de turno: ${this.resumen(r)}`,
       ruta: '/mis-sitios',
     });
@@ -370,6 +372,7 @@ export class CambiosService extends BaseService {
       });
       await this.avisar([r.solicitante.id], {
         tipo: 'asignacion',
+        titulo: 'Cambio de turno rechazado',
         mensaje: `Se rechazó tu cambio de turno (${this.resumen(r)})${nota ? `: ${nota}` : ''}`,
         ruta: '/mis-sitios',
       });
@@ -424,12 +427,14 @@ export class CambiosService extends BaseService {
     if (!this.esGuardia(user) || r.estado === 'aprobado') {
       await this.avisar([...avisados], {
         tipo: 'asignacion',
+        titulo: 'Cambio de turno cancelado',
         mensaje: `Se canceló el cambio de turno (${this.resumen(r)})`,
         ruta: '/mis-sitios',
       });
     } else {
       await this.avisar((await this.aprobadores(r)).filter((x) => x !== user.id), {
         tipo: 'asignacion',
+        titulo: 'Solicitud de cambio cancelada',
         mensaje: `${r.guardia.nombre} canceló su solicitud de cambio (${this.resumen(r)})`,
         ruta: '/asistencia/cambios',
       });

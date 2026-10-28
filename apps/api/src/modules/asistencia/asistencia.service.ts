@@ -756,6 +756,7 @@ export class AsistenciaService extends BaseService {
         { sitioId, guardiaId: usuarioId },
         {
           tipo: esRetardo ? 'retardo' : 'marca_alerta',
+          titulo: esRetardo ? 'Retardos seguidos' : 'Salidas anticipadas seguidas',
           mensaje: `${guardia} · ${sitio}: lleva ${PATRON_SEGUIDOS} turnos seguidos ${
             esRetardo ? 'llegando tarde' : 'saliendo antes de su hora'
           } (${patron.map((n) => `${esRetardo ? '+' : '−'}${n} min`).join(', ')})`,
@@ -769,6 +770,7 @@ export class AsistenciaService extends BaseService {
         { sitioId, guardiaId: usuarioId },
         {
           tipo: 'marca_alerta',
+          titulo: 'Marca fuera del sitio',
           mensaje: `${guardia} · ${TIPO_MARCACION_LABEL[tipo]} en ${sitio}: fuera del sitio (${distanciaTexto(m.fueraDelSitio)})`,
           ruta,
         },
@@ -779,6 +781,7 @@ export class AsistenciaService extends BaseService {
         { sitioId, guardiaId: usuarioId },
         {
           tipo: 'retardo',
+          titulo: 'Llegó tarde',
           mensaje: `${guardia} · ${sitio}: llegó ${duracionTexto(m.retardoMin!)} tarde (debía entrar a las ${horaLegible(m.horaEntrada!)})`,
           ruta,
         },
@@ -789,6 +792,7 @@ export class AsistenciaService extends BaseService {
         { sitioId, guardiaId: usuarioId },
         {
           tipo: 'marca_alerta',
+          titulo: 'Salida anticipada',
           mensaje: `${guardia} · Salida en ${sitio}: salió ${duracionTexto(m.salidaAnticipadaMin!)} antes de su hora`,
           ruta,
         },
@@ -1015,6 +1019,7 @@ export class AsistenciaService extends BaseService {
       { sitioId: null, guardiaId: usuarioId },
       {
         tipo: 'rostro_pendiente',
+        titulo: 'Rostro por revisar',
         mensaje: `${usuario.nombre} registró su rostro: pendiente de revisión`,
         ruta: RUTA_REVISION,
         fotoClave: rostro.fotoClave,
@@ -1144,11 +1149,13 @@ export class AsistenciaService extends BaseService {
       estado === 'aprobado'
         ? {
             tipo: 'rostro_aprobado',
+            titulo: 'Tu rostro fue aprobado',
             mensaje: 'Tu rostro fue aprobado: ya puedes checar normalmente',
             ruta: '/marcar',
           }
         : {
             tipo: 'rostro_rechazado',
+            titulo: 'Tu rostro fue rechazado',
             mensaje: `Tu rostro fue rechazado: ${motivo}. Vuelve a registrarlo la próxima vez que cheques`,
             ruta: '/marcar',
           },
@@ -1216,10 +1223,18 @@ export class AsistenciaService extends BaseService {
       reto_fallido: 'no completó el gesto pedido',
       registro_duplicado: `intentó registrar un rostro que ya está registrado para ${rostroDe?.nombre}`,
     };
+    const tituloIncidencia: Record<MotivoIncidencia, string> = {
+      pantalla: 'Pantalla o foto al checar',
+      rostro_de_otro: 'Rostro de otra persona al checar',
+      no_titular: 'Rostro no corresponde al titular',
+      reto_fallido: 'Gesto no completado',
+      registro_duplicado: 'Rostro ya registrado en otra cuenta',
+    };
     await this.avisarRevisores(
       { sitioId, guardiaId: usuarioId },
       {
         tipo: AVISO_DE[motivo],
+        titulo: tituloIncidencia[motivo],
         mensaje:
           motivo === 'registro_duplicado'
             ? `${guardia} ${detalle[motivo]}`
@@ -1232,6 +1247,10 @@ export class AsistenciaService extends BaseService {
     if (motivo === 'pantalla' || motivo === 'rostro_de_otro' || motivo === 'no_titular') {
       await this.avisarGuardia(usuarioId, {
         tipo: 'cuenta_intento',
+        titulo:
+          motivo === 'pantalla'
+            ? 'Intento con tu cuenta: foto o pantalla'
+            : 'Intento con tu cuenta: otra persona',
         mensaje:
           motivo === 'pantalla'
             ? 'Se detectó un intento de checar con tu cuenta usando una foto o pantalla. Si no fuiste tú, avisa a tu supervisor.'
@@ -1391,6 +1410,7 @@ export class AsistenciaService extends BaseService {
     });
     await this.avisarGuardia(entrada.usuarioId, {
       tipo: 'marca_alerta',
+      titulo: 'Cerraron tu jornada',
       mensaje: `${quien} cerró tu jornada en ${sitio} (salida a las ${horaLocal(hora)}). Motivo: ${motivo}`,
       ruta: '/marcar',
     });

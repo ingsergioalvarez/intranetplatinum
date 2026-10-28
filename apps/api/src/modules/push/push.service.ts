@@ -1,5 +1,5 @@
 import {
-  TITULO_AVISO,
+  tituloDeAviso,
   type ClavePush,
   type PayloadPush,
   type QuitarSuscripcionPushInput,
@@ -16,6 +16,8 @@ export interface EnviadorPush {
 
 export interface AvisoPush {
   tipo: TipoAviso;
+  /** Título propio del aviso (A-22); sin él se usa el genérico del tipo. */
+  titulo?: string;
   mensaje: string;
   ruta?: string | null;
   reporteId?: number | null;
@@ -54,7 +56,7 @@ export class PushService extends BaseService {
     if (!this.enviador) return;
     try {
       const payload: PayloadPush = {
-        titulo: TITULO_AVISO[aviso.tipo],
+        titulo: tituloDeAviso(aviso.tipo, aviso.titulo),
         cuerpo: aviso.mensaje.slice(0, CUERPO_MAX),
         ruta: aviso.reporteId ? `/reportes/${aviso.reporteId}` : (aviso.ruta ?? '/'),
         tipo: aviso.tipo,

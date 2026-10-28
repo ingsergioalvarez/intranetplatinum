@@ -1,10 +1,12 @@
-import { PERMISOS, ROLES, type Aviso, type ReglasAviso, type TipoAviso } from '@platinum/shared';
+import { PERMISOS, ROLES, tituloDeAviso, type Aviso, type ReglasAviso, type TipoAviso } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import { firmarArchivo } from '../../core';
 import { notificarPush } from '../push/enviar';
 
 export interface NuevoAviso {
   tipo: TipoAviso;
+  /** Título propio del aviso (A-22); sin él se usa el genérico del tipo. */
+  titulo?: string;
   mensaje: string;
   reporteId: number;
 }
@@ -29,12 +31,13 @@ export abstract class AvisosRepository {
 }
 
 export class PrismaAvisosRepository extends AvisosRepository {
-  async crear(usuarioIds: number[], { tipo, mensaje, reporteId }: NuevoAviso) {
+  async crear(usuarioIds: number[], { tipo, titulo, mensaje, reporteId }: NuevoAviso) {
     if (usuarioIds.length === 0) return;
+    const t = tituloDeAviso(tipo, titulo);
     await getPrisma().aviso.createMany({
-      data: usuarioIds.map((usuarioId) => ({ usuarioId, tipo, mensaje: mensaje.slice(0, 255), reporteId })),
+      data: usuarioIds.map((usuarioId) => ({ usuarioId, tipo, titulo: t, mensaje: mensaje.slice(0, 255), reporteId })),
     });
-    notificarPush(usuarioIds, { tipo, mensaje, reporteId });
+    notificarPush(usuarioIds, { tipo, titulo: t, mensaje, reporteId });
   }
 
   async listar(usuarioId: number, limite: number): Promise<Aviso[]> {
@@ -45,6 +48,7 @@ export class PrismaAvisosRepository extends AvisosRepository {
       select: {
         id: true,
         tipo: true,
+        titulo: true,
         mensaje: true,
         reporteId: true,
         ruta: true,
@@ -53,8 +57,9 @@ export class PrismaAvisosRepository extends AvisosRepository {
         createdAt: true,
       },
     });
-    return rows.map(({ leidoEn, createdAt, fotoClave, ...a }) => ({
+    return rows.map(({ leidoEn, createdAt, fotoClave, titulo, ...a }) => ({
       ...a,
+      titulo: tituloDeAviso(a.tipo, titulo),
       foto: fotoClave ? firmarArchivo(fotoClave) : null,
       leido: leidoEn !== null,
       createdAt: createdAt.toISOString(),

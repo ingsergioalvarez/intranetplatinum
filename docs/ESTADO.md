@@ -5,7 +5,7 @@
 **Última actualización:** 2026-10-28 (Platinum publicado en https://platinum.grupocomunicalo.mx, F4-04)
 **Fase actual:** Asistencia completa en lo funcional: reporte oficial, modo sin conexión, cambios de turno y horas extra.
 **Última tarea terminada:** F4-04 casi completa: Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel propio de Cloudflare); se pudo entrar desde el dominio. Falta respaldo automático y SMTP. Antes: A-19 (hora límite del plan de cobertura).
-**Tarea en progreso:** ninguna. A-20 (push) funciona en el celular del usuario; A-21 (push obligatorio, sin desactivar) está hecha y probada en local, falta subirla al servidor.
+**Tarea en progreso:** ninguna. A-20 (push) funciona en el celular del usuario; A-21 (push obligatorio) y A-22 (título propio en cada aviso, con migración nueva) están hechas y probadas en local, faltan subirlas al servidor (`docker compose exec api npm run db:deploy`).
 
 ## Siguiente paso
 

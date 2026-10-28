@@ -68,6 +68,8 @@ export type TipoAviso = (typeof TIPOS_AVISO)[number];
 export interface Aviso {
   id: number;
   tipo: TipoAviso;
+  /** Título del aviso: el propio si lo tiene (A-22) o el genérico del tipo; siempre viene lleno. */
+  titulo: string;
   mensaje: string;
   reporteId: number | null;
   /** Pantalla a la que lleva el aviso (avisos que no son de un reporte). */
@@ -83,7 +85,12 @@ export interface BandejaAvisos {
   noLeidos: number;
 }
 
-/** Título de la notificación push de cada tipo de aviso (A-20). */
+/** Título del aviso: el propio (A-22) o, si no tiene, el genérico de su tipo. Largo máximo de la columna. */
+export const TITULO_AVISO_MAX = 80;
+export const tituloDeAviso = (tipo: TipoAviso, titulo?: string | null) =>
+  titulo?.trim().slice(0, TITULO_AVISO_MAX) || TITULO_AVISO[tipo];
+
+/** Título genérico de cada tipo de aviso, cuando el aviso no trae uno propio (A-20, A-22). */
 export const TITULO_AVISO: Record<TipoAviso, string> = {
   reporte_nuevo: 'Nuevo reporte',
   reporte_estatus: 'Reporte actualizado',

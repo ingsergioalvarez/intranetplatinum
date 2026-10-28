@@ -46,6 +46,7 @@ export class AvisosHuecos {
       const n = huecos.length;
       await this.avisar(await this.repo.revisoresDe(s.sitio.id), {
         tipo: 'cobertura',
+        titulo: n === 1 ? 'Turno sin cubrir' : 'Turnos sin cubrir',
         mensaje: `${s.sitio.nombre}: ${n} ${n === 1 ? 'turno sin cubrir' : 'turnos sin cubrir'} en los próximos ${DIAS_ADELANTE} días (el primero: ${diaCorto(primero.fecha)}, ${horaLegible(primero.turno.horaInicio)})`,
         ruta: `/asistencia/calendario?sitio=${s.sitio.id}&dia=${primero.fecha}`,
       });

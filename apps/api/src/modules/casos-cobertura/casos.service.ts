@@ -205,6 +205,9 @@ export class CasosCoberturaService extends BaseService {
     let caso: CasoRow;
     let detalle: string;
     let paraGuardia: string;
+    // Títulos del aviso al guardia y de la constancia al supervisor (A-22), uno por decisión.
+    let tituloGuardia: string;
+    let tituloSupervisor: string;
     const advertencias: string[] = [];
 
     if (input.decision === 'en_camino') {
@@ -217,6 +220,8 @@ export class CasosCoberturaService extends BaseService {
       });
       detalle = `El supervisor indicó que ${aviso}; ${c.entrada.guardia} sigue en ${sitio.nombre} mientras llega`;
       paraGuardia = `Tu supervisor sabe que sigues en ${sitio.nombre}: ${aviso}. Quédate en tu puesto; si pasan ${HORAS_RECONSULTA_CASO} h te avisamos del plan`;
+      tituloGuardia = 'Quédate en tu puesto: viene tu relevo';
+      tituloSupervisor = 'Plan de cobertura: relevo en camino';
     } else if (input.decision === 'otro_cubre') {
       const cubridor = await this.repo.guardia(input.cubridorId!);
       if (!cubridor) throw HttpError.badRequest('Elige un guardia activo');
@@ -244,6 +249,8 @@ export class CasosCoberturaService extends BaseService {
       });
       detalle = `El supervisor mandó a ${cubridor.nombre} a cubrir ${sitio.nombre} (${horaLocal(tramo.inicio)}); ${c.entrada.guardia} entrega y marca su salida`;
       paraGuardia = `${cubridor.nombre} llega a cubrir ${sitio.nombre} a las ${horaLocal(tramo.inicio)}; entrégale el puesto y marca tu salida`;
+      tituloGuardia = 'Llega quien te releva';
+      tituloSupervisor = 'Plan de cobertura: otro guardia cubre';
     } else {
       const extra = input.descansoExtraHoras;
       const vista = await this.calcularPlan(c, relevo, input.siguiente === 'descansa' ? extra : 0, elegido);
@@ -312,10 +319,14 @@ export class CasosCoberturaService extends BaseService {
       if (input.siguiente === 'normal') {
         detalle = `El supervisor confirmó que ${c.entrada.guardia} cubre ${quien} hasta las ${horaLocal(fin)} en ${sitio.nombre} y trabaja normal su siguiente turno${vista.limiteExtra ? ` (${cuando(new Date(vista.limiteExtra))})` : ''}`;
         paraGuardia = `Tu supervisor confirmó el plan: cubres ${quien} en ${sitio.nombre} hasta las ${horaLocal(fin)}; a esa hora marca tu salida${vista.limiteExtra ? `. Tu siguiente turno empieza ${cuando(new Date(vista.limiteExtra))} y lo trabajas normal: marca tu salida y luego tu entrada` : ''}`;
+        tituloGuardia = 'Plan confirmado: cubres ese turno';
+        tituloSupervisor = 'Plan de cobertura: cubre y sigue normal';
       } else {
         const vuelve = regresaEn ? `te presentas ${cuando(regresaEn)}` : 'no tienes turno próximo';
         detalle = `El supervisor confirmó que ${c.entrada.guardia} cubre ${quien} hasta las ${horaLocal(fin)} en ${sitio.nombre} y descansa${extra ? ` (${extra} h más que su patrón)` : ''}; regresa ${regresaEn ? cuando(regresaEn) : 'sin turno próximo'}${vista.huecos.length && !input.cubridorId ? '. Queda un turno sin cubrir' : ''}`;
         paraGuardia = `Tu supervisor confirmó el plan: cubres ${quien} en ${sitio.nombre} hasta las ${horaLocal(fin)}; a esa hora marca tu salida. Después descansas y ${vuelve}`;
+        tituloGuardia = 'Plan confirmado: cubres y luego descansas';
+        tituloSupervisor = 'Plan de cobertura: cubre y descansa';
       }
       // Cansancio: si descansa, solo importa lo que ya lleva al cubrir ese turno.
       advertencias.push(...vista.advertencias.filter((a) => input.siguiente === 'normal' || a.startsWith('Para cubrir')));
@@ -338,14 +349,25 @@ export class CasosCoberturaService extends BaseService {
       sitioId: sitio.id,
       actorId: ctx.actorId,
     });
-    await this.avisar([c.entrada.usuarioId], { tipo: 'cobertura', mensaje: paraGuardia, ruta: '/marcar' });
+    await this.avisar([c.entrada.usuarioId], {
+      tipo: 'cobertura',
+      titulo: tituloGuardia,
+      mensaje: paraGuardia,
+      ruta: '/marcar',
+    });
     // Quien no es el supervisor del sitio (p. ej. un admin) deja constancia para él.
     if (sitio.supervisorId && sitio.supervisorId !== ctx.actorId) {
-      await this.avisar([sitio.supervisorId], { tipo: 'cobertura', mensaje: `${sitio.nombre}: ${detalle}`, ruta: RUTA });
+      await this.avisar([sitio.supervisorId], {
+        tipo: 'cobertura',
+        titulo: tituloSupervisor,
+        mensaje: `${sitio.nombre}: ${detalle}`,
+        ruta: RUTA,
+      });
     }
     if (advertencias.length) {
       await this.avisar(await this.repo.revisoresDe(sitio.id), {
         tipo: 'cobertura',
+        titulo: 'Advertencia del plan de cobertura',
         mensaje: `${c.entrada.guardia} · ${sitio.nombre}: ${advertencias[0]}`,
         ruta: RUTA,
       });
@@ -370,6 +392,7 @@ export class CasosCoberturaService extends BaseService {
     });
     await this.avisar(await this.repo.revisoresDe(sitio.id), {
       tipo: 'cobertura',
+      titulo: 'No puede quedarse: manda un relevo',
       mensaje: `${guardia} · ${sitio.nombre}: avisó que no puede quedarse. Manda a otro guardia a cubrir`,
       ruta: RUTA,
     });
@@ -391,6 +414,7 @@ export class CasosCoberturaService extends BaseService {
         const { sitio, guardia, usuarioId } = c.entrada;
         await this.avisar(await this.repo.revisoresDe(sitio.id), {
           tipo: 'cobertura',
+          titulo: relevo ? 'Relevo no llegó: define el plan' : 'Sigue en el sitio: define el plan',
           mensaje: relevo
             ? `${sitio.nombre}: ${relevo.nombre} no llegó (le tocaba a las ${horaLocal(relevo.inicio)}) y ${guardia} sigue en el sitio. Define el plan`
             : `${sitio.nombre}: ${guardia} sigue en el sitio después de su hora. Define el plan`,
@@ -398,6 +422,7 @@ export class CasosCoberturaService extends BaseService {
         });
         await this.avisar([usuarioId], {
           tipo: 'cobertura',
+          titulo: 'Quédate en tu puesto',
           mensaje: `Tu supervisor ya sabe que sigues en ${sitio.nombre}. Quédate en tu puesto mientras define el plan`,
           ruta: '/marcar',
         });
@@ -415,11 +440,13 @@ export class CasosCoberturaService extends BaseService {
         const { sitio, guardia, usuarioId } = c.entrada;
         await this.avisar([usuarioId], {
           tipo: 'cobertura',
+          titulo: 'Pasó tu hora autorizada: marca tu salida',
           mensaje: `Ya pasó tu hora autorizada en ${sitio.nombre} (${horaLocal(fin)}). Marca tu salida y retírate; lo que pase de esa hora lo revisa tu supervisor`,
           ruta: '/marcar',
         });
         await this.avisar(await this.repo.revisoresDe(sitio.id), {
           tipo: 'cobertura',
+          titulo: 'Se pasó de la hora autorizada',
           mensaje: `${guardia} · ${sitio.nombre}: pasó la hora que autorizaste (${horaLocal(fin)}) y sigue en el sitio. Las horas después de esa hora quedarán por aprobar`,
           ruta: RUTA,
         });
@@ -434,6 +461,7 @@ export class CasosCoberturaService extends BaseService {
       const esperando = Math.floor((ahora.getTime() - (c.entrada.programadaSalida ?? c.horaExtra.desde).getTime()) / MIN);
       await this.avisar(await this.repo.revisoresDe(c.entrada.sitio.id), {
         tipo: 'cobertura',
+        titulo: 'Relevo tardó: define qué hacer',
         mensaje: `${c.entrada.guardia} · ${c.entrada.sitio.nombre}: lleva ${duracion(Math.max(esperando, 0))} de más esperando a su relevo. Define qué hacer`,
         ruta: RUTA,
       });

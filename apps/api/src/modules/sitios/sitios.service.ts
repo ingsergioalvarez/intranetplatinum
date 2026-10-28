@@ -135,6 +135,7 @@ export class SitiosService extends BaseService {
     });
     await this.avisar(quienes, {
       tipo: 'asignacion',
+      titulo: asignacion.grupo ? 'Tu grupo fue asignado a un sitio' : 'Te asignaron a un sitio',
       mensaje: `${quien} a ${sitio.nombre}: ${[
         horario(asignacion),
         `desde el ${fechaCorta(asignacion.desde)}`,
@@ -238,6 +239,13 @@ export class SitiosService extends BaseService {
     if (cambios.length) {
       await this.avisar(quienes, {
         tipo: 'asignacion',
+        titulo: horario_.horaInicio
+          ? asignacion.grupo
+            ? 'Cambió el horario de tu grupo'
+            : 'Cambió tu horario'
+          : asignacion.grupo
+            ? 'Cambió la asignación de tu grupo'
+            : 'Cambió la fecha de término',
         mensaje: `${asignacion.grupo ? `Tu grupo ${asignacion.grupo.nombre} en` : 'Tu asignación en'} ${sitio.nombre}: ${cambios.join(' · ')}`,
         ruta: '/',
       });
@@ -434,6 +442,7 @@ export class SitiosService extends BaseService {
       const quien = n.grupo ? `Tu grupo ${n.grupo} fue asignado` : 'Te asignaron';
       await this.avisar(avisar, {
         tipo: 'asignacion',
+        titulo: n.grupo ? 'Tu grupo fue asignado a un sitio' : 'Te asignaron a un sitio',
         mensaje: `${quien} a ${sitio.nombre}: ${horario(asignacion)} · desde el ${fechaCorta(n.data.desde)}`,
         ruta: '/',
       });
@@ -505,12 +514,14 @@ export class SitiosService extends BaseService {
     if (programada) {
       await this.avisar(quienes, {
         tipo: 'asignacion',
+        titulo: 'Se canceló una asignación',
         mensaje: `Se canceló ${deQuien} en ${sitio.nombre} que empezaba el ${fechaCorta(actual.desde)}`,
         ruta: '/',
       });
     } else if (actual.vigente) {
       await this.avisar(quienes, {
         tipo: 'asignacion',
+        titulo: actual.grupo ? 'Tu grupo ya no está en el sitio' : 'Ya no estás asignado a un sitio',
         mensaje: `Ya no estás asignado a ${sitio.nombre}${actual.grupo ? ` (grupo ${actual.grupo.nombre})` : ''}`,
         ruta: '/',
       });
@@ -548,6 +559,7 @@ export class SitiosService extends BaseService {
     if (supervisorId !== null) {
       await this.avisar([supervisorId], {
         tipo: 'asignacion',
+        titulo: 'Ahora supervisas un sitio',
         mensaje: `Ahora supervisas ${sitio.nombre}: te llegarán sus avisos y verás a sus guardias`,
         ruta,
       });
@@ -555,6 +567,7 @@ export class SitiosService extends BaseService {
     if (anterior !== null) {
       await this.avisar([anterior], {
         tipo: 'asignacion',
+        titulo: 'Ya no supervisas un sitio',
         mensaje: `Ya no supervisas ${sitio.nombre}`,
         ruta,
       });

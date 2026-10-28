@@ -544,6 +544,8 @@ model Aviso {
   usuarioId Int       @map("usuario_id")
   reporteId Int?      @map("reporte_id")
   tipo      TipoAviso
+  /// Título propio del aviso (A-22); si falta se usa el título genérico del tipo.
+  titulo    String?   @db.VarChar(80)
   mensaje   String    @db.VarChar(255)
   /// Pantalla a la que lleva el aviso (avisos que no son de un reporte).
   ruta      String?   @db.VarChar(200)

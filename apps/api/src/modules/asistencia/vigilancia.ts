@@ -148,6 +148,7 @@ export class VigilanciaTurnos {
     if (!fila.avisoGuardiaEn) {
       await this.avisar([t.guardia.id], {
         tipo: 'retardo',
+        titulo: 'Aún no checas tu entrada',
         mensaje: `Tu turno en ${t.sitio.nombre} empezó a las ${hora} y aún no checas tu entrada`,
         ruta: '/marcar',
       });
@@ -157,6 +158,7 @@ export class VigilanciaTurnos {
       const ruta = `/asistencia/guardias/${t.guardia.id}?vista=bitacora&cat=incidencias`;
       await this.avisar(await this.repo.revisoresDe({ sitioId: t.sitio.id, guardiaId: t.guardia.id }), {
         tipo: 'retardo',
+        titulo: 'No se presentó a su turno',
         mensaje: `${t.guardia.nombre} · ${t.sitio.nombre}: no se presentó a su turno de las ${hora} (pasaron ${MIN_NO_SE_PRESENTO} min)`,
         ruta,
       });
@@ -201,6 +203,7 @@ export class VigilanciaTurnos {
       });
       await this.avisar(await this.repo.revisoresDe({ sitioId: f.sitioId, guardiaId: usuarioId }), {
         tipo: 'retardo',
+        titulo: 'Llegó tarde con falta: ¿aceptas?',
         mensaje: `${guardia} · ${f.sitio}: llegó ${duracionTexto(tarde)} tarde (tenía falta). ¿Aceptas la asistencia?`,
         ruta: `/asistencia/guardias/${usuarioId}?vista=bitacora&cat=incidencias`,
       });

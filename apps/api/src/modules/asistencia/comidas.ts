@@ -56,6 +56,7 @@ export class RecordatoriosComida {
         if (min >= COMIDA_MIN && (await this.repo.marcarEnviado(`comida-guardia:${id}`))) {
           await this.avisar([guardia.id], {
             tipo: 'marca_alerta',
+            titulo: 'Registra tu regreso de comida',
             mensaje: `Ya pasó tu hora de comida (saliste a las ${horaLocal(abierta.inicio.registradaEn)}): registra tu regreso`,
             ruta: '/marcar',
           });
@@ -66,6 +67,7 @@ export class RecordatoriosComida {
         ) {
           await this.avisar(await this.repo.revisoresDe(destino), {
             tipo: 'marca_alerta',
+            titulo: 'Falta su regreso de comida',
             mensaje: `${guardia.nombre} · ${sitio}: no ha checado su regreso de comida (${duracion(min)})`,
             ruta: `/asistencia/guardias/${guardia.id}?vista=bitacora`,
           });
@@ -97,6 +99,7 @@ export class RecordatoriosComida {
           ) {
             await this.avisar([guardia.id], {
               tipo: 'marca_alerta',
+              titulo: 'Aún no registras tu comida',
               mensaje:
                 j.comidasPermitidas > 1
                   ? `Aún no registras tu comida ${k} de ${j.comidasPermitidas}. Cuando salgas a comer, regístrala en el checador`
@@ -119,6 +122,7 @@ export class RecordatoriosComida {
         const cuantas = j.comidasPermitidas > 1 ? ` (${tomadas} de ${j.comidasPermitidas})` : '';
         await this.avisar(await this.repo.revisoresDe(destino), {
           tipo: 'marca_alerta',
+          titulo: 'No registró su comida',
           mensaje: `${guardia.nombre} · ${sitio}: no registró su comida${cuantas} en su turno`,
           ruta: `/asistencia/guardias/${guardia.id}?vista=bitacora`,
         });

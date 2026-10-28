@@ -139,6 +139,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     const t = r.minutos ? duracionExtra(r.minutos) : 'horas extra';
     await this.avisar(await this.revisores(r.sitio), {
       tipo: 'horas_extra',
+      titulo: 'Horas extra por aprobar',
       mensaje: `${r.guardia.nombre} · ${r.sitio.nombre}: ${t} de horas extra por aprobar (${fechaCorta(r.fecha)})`,
       ruta: RUTA,
     });
@@ -203,6 +204,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     );
     await this.avisar([r.guardia.id], {
       tipo: 'horas_extra',
+      titulo: aprueba ? 'Horas extra aprobadas' : 'Horas extra rechazadas',
       mensaje: aprueba
         ? `Tus horas extra del ${fechaCorta(r.fecha)} en ${r.sitio.nombre} (${t}) fueron aprobadas`
         : `Tus horas extra del ${fechaCorta(r.fecha)} en ${r.sitio.nombre} fueron rechazadas${nota ? `: ${nota}` : ''}`,
@@ -302,6 +304,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     );
     await this.avisar([guardia.id], {
       tipo: 'horas_extra',
+      titulo: 'Se registraron tus horas extra',
       mensaje: `Se registraron ${duracionExtra(minutos)} de horas extra tuyas del ${fechaCorta(input.fecha)} en ${creada.sitio.nombre}`,
       ruta: '/marcar',
     });
@@ -407,6 +410,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     );
     await this.avisar(await this.revisores(entrada.sitio), {
       tipo: 'horas_extra',
+      titulo: 'Pidió extender su horario',
       mensaje: `${entrada.guardia} · ${entrada.sitio.nombre}: pidió extender su horario desde las ${horaLocal(desde)}`,
       ruta: RUTA,
     });
@@ -532,6 +536,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
         if (excedente) await this.abrirExcedente(nueva, excedente.desde, hora, excedente.minutos);
         await this.avisar([nueva.guardia.id], {
           tipo: 'horas_extra',
+          titulo: 'Horas extra aprobadas con el plan',
           mensaje: `Tus horas extra del ${fechaCorta(nueva.fecha)} en ${nueva.sitio.nombre} (${duracionExtra(minutos)}) quedaron aprobadas con el plan de tu supervisor`,
           ruta: '/marcar',
         });
@@ -631,6 +636,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
       );
       await this.avisar(await this.revisores(nueva.sitio), {
         tipo: 'horas_extra',
+        titulo: 'Horas extra sin salida',
         mensaje: `${nueva.guardia.nombre} · ${nueva.sitio.nombre}: horas extra sin salida del ${fechaCorta(nueva.fecha)}. Fija la hora en que terminó`,
         ruta: RUTA,
       });
@@ -641,6 +647,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     for (const r of await this.repo.sinResponder(antes)) {
       await this.avisar(await this.repo.admins(), {
         tipo: 'horas_extra',
+        titulo: 'Horas extra sin respuesta',
         mensaje: `${r.guardia.nombre} · ${r.sitio.nombre}: horas extra del ${fechaCorta(r.fecha)} llevan más de ${HORAS_ESCALAR_EXTRA} h sin respuesta`,
         ruta: RUTA,
       });
@@ -669,11 +676,13 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     );
     await this.avisar(await this.revisores(e.sitio), {
       tipo: 'horas_extra',
+      titulo: 'Falta marcar su salida',
       mensaje: `${e.guardia} · ${e.sitio.nombre}: no ha marcado su salida (le tocaba a las ${hora})`,
       ruta: RUTA,
     });
     await this.avisar([e.usuarioId], {
       tipo: 'horas_extra',
+      titulo: 'Marca tu salida',
       mensaje: `Ya pasó tu hora de salida en ${e.sitio.nombre} (${hora}). Marca tu salida o avisa que sigues en turno`,
       ruta: '/marcar',
     });

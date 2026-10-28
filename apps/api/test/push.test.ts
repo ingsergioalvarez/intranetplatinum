@@ -68,6 +68,18 @@ describe('push: enviar avisos al celular (A-20)', () => {
     });
   });
 
+  it('usa el título propio del aviso (A-22) y, si no trae, el genérico del tipo', async () => {
+    await service.suscribir(10, SUB);
+    await service.enviar([10], { tipo: 'asignacion', titulo: 'Ya no supervisas un sitio', mensaje: 'Ya no supervisas poetas 7' });
+    await service.enviar([10], { tipo: 'asignacion', titulo: '   ', mensaje: 'Sin título útil' });
+    await service.enviar([10], { tipo: 'asignacion', mensaje: 'Sin título' });
+    expect(enviados.map((e) => e.payload.titulo)).toEqual([
+      'Ya no supervisas un sitio',
+      'Tu sitio y horario',
+      'Tu sitio y horario',
+    ]);
+  });
+
   it('un aviso de reporte abre el reporte; sin ruta abre el inicio; el texto se recorta', async () => {
     await service.suscribir(10, SUB);
     await service.enviar([10], { tipo: 'reporte_nuevo', mensaje: 'x'.repeat(300), reporteId: 42 });

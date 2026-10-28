@@ -94,6 +94,7 @@ export class TurnosService extends BaseService {
         });
         await this.avisar([...ids], {
           tipo: 'asignacion',
+          titulo: 'Cambió tu horario',
           mensaje: `Cambió tu horario en ${sitio}: ${horarioTexto(data)}`,
           ruta: '/',
         });
@@ -209,6 +210,7 @@ export class TurnosService extends BaseService {
         });
         await this.avisar(ids, {
           tipo: 'asignacion',
+          titulo: 'Cambió tu turno',
           mensaje: `Cambió tu turno en ${s.uso.sitio.nombre}: ahora es "${nuevo.nombre}" (${horarioTexto(nuevo)})`,
           ruta: '/',
         });
