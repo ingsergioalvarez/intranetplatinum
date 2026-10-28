@@ -34,24 +34,35 @@ export function Modal({
 }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  // `onClose` casi siempre llega como función nueva en cada render del padre: si el efecto dependiera
+  // de ella, cada letra escrita devolvería el foco al botón de atrás y el campo lo perdería.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+  // Quién tenía el foco al abrir (antes de que un campo con `autoFocus` lo tome): ahí vuelve al cerrar.
+  const abierta = useRef(false);
+  const focoPrevio = useRef<HTMLElement | null>(null);
+  if (open && !abierta.current) focoPrevio.current = document.activeElement as HTMLElement | null;
+  abierta.current = open;
 
   useEffect(() => {
     if (!open) return;
-    const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
+    // Un campo con autoFocus ya tomó el foco: no se lo quitamos.
+    if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
+      focoPrevio.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

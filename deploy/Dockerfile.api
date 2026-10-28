@@ -1,0 +1,18 @@
+# API de Platinum. Se ejecuta con tsx (el proyecto no se compila a JS); las dependencias de desarrollo
+# se quedan porque `prisma migrate deploy` y el seed las necesitan.
+FROM node:24-slim
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages/shared ./packages/shared
+COPY apps/api ./apps/api
+RUN npm ci --workspace=@platinum/api --workspace=@platinum/shared --include-workspace-root
+# Fotos y archivos subidos: carpeta aparte, montada como volumen para que no se pierdan al reconstruir.
+RUN mkdir -p /data/uploads && chown -R node:node /data /app
+USER node
+WORKDIR /app/apps/api
+EXPOSE 4000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "fetch('http://localhost:4000/api').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["npx", "tsx", "src/server.ts"]

@@ -1,0 +1,76 @@
+# Platinum en el servidor de la oficina: base de datos, API, sitio web y su propio túnel de Cloudflare.
+# Nombres y volúmenes propios (proyecto `platinum`): no toca los contenedores del escáner ni otros.
+name: platinum
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?falta MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: platinum_intranet
+      MYSQL_USER: platinum
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?falta MYSQL_PASSWORD}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      TZ: America/Mexico_City
+      APP_TIMEZONE: America/Mexico_City
+      APP_URL: ${APP_URL:-https://platinum.grupocomunicalo.mx}
+      DATABASE_URL: mysql://platinum:${MYSQL_PASSWORD}@mysql:3306/platinum_intranet?allowPublicKeyRetrieval=true
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?falta JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?falta JWT_REFRESH_SECRET}
+      UPLOADS_DIR: /data/uploads
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-Platinum Agency <no-reply@grupocomunicalo.mx>}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+    volumes:
+      - uploads:/data/uploads
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      - api
+    # Solo en el propio servidor (para probar con curl); al público lo sirve el túnel.
+    ports:
+      - "127.0.0.1:5190:80"
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.6.1
+    restart: unless-stopped
+    user: "${PLATINUM_UID:-1000}:${PLATINUM_GID:-1000}"
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    depends_on:
+      - web
+    volumes:
+      - ./cloudflared.yml:/etc/cloudflared/config.yml:ro
+      - ${CLOUDFLARED_CREDENTIALS:?falta CLOUDFLARED_CREDENTIALS}:/etc/cloudflared/credentials.json:ro
+
+volumes:
+  mysql-data:
+  uploads:

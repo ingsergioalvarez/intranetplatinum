@@ -5,6 +5,24 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-28 #25 — Preparación del despliegue (F4-04, D-008b)
+
+#### Añadido
+
+- Carpeta `deploy/`: Docker Compose con MySQL 8.4, API, sitio web (nginx) y túnel propio de Cloudflare (`platinum`); `Dockerfile.api`, `Dockerfile.web`, `nginx.conf`, `cloudflared.yml` y `.env.example`. La IP real del visitante pasa a la API para que el límite de intentos de login no cuente a todos como una sola IP.
+- `docs/DESPLIEGUE.md`: pasos de primera vez y de actualización.
+
+#### Cambiado
+
+- D-008b: en producción MySQL va en un contenedor del servidor de la oficina (no en otra máquina).
+
+### Sesión 2026-10-28 #24 — Foco en las ventanas (experiencia de uso)
+
+#### Corregido
+
+- Al escribir en una ventana (p. ej. "Rechazar horas extra" y "Hora en que terminaron"), el campo perdía el foco con cada letra y había que volver a tocarlo. La ventana (`Modal`) devolvía el foco al botón de atrás cada vez que la pantalla se redibujaba; ahora no reacciona a eso. Corrige a la vez las ~49 ventanas que usan `Modal`/`FormModal`.
+- Al cerrar una ventana el foco vuelve al botón que la abrió, aunque un campo con `autoFocus` lo hubiera tomado al abrir.
+
 ### Sesión 2026-10-28 #23 — Hora límite en el plan de cobertura (A-19, DA-58)
 
 #### Añadido

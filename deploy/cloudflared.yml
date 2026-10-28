@@ -1,0 +1,9 @@
+# Túnel propio de Platinum (no es el del escáner ni el de arco). El túnel `platinum` se creó con
+# `cloudflared tunnel create platinum`; su archivo de credenciales NO va en el repositorio: se monta
+# desde el servidor (ver docker-compose.yml).
+tunnel: fe51bf90-21ae-4768-9202-250300febaf3
+credentials-file: /etc/cloudflared/credentials.json
+ingress:
+  - hostname: platinum.grupocomunicalo.mx
+    service: http://web:80
+  - service: http_status:404
