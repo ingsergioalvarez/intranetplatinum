@@ -4,6 +4,7 @@ import {
   type AccesoCliente,
   type AccesoClienteCreado,
   type AccesoClienteData,
+  type UsuarioClienteDisponible,
   type ClienteCreateData,
   type ClienteDetalle,
   ClienteFiltro,
@@ -126,10 +127,16 @@ export class ClientesService extends BaseService {
 
   // ---------- Acceso del cliente (A-29) ----------
 
+  /** Usuarios cliente que se pueden ligar (activos y sin cliente asignado). */
+  listarClientesDisponibles(): Promise<UsuarioClienteDisponible[]> {
+    return this.repo.listClientesDisponibles();
+  }
+
   /**
-   * Da acceso a la intranet a una persona del cliente: crea su usuario (rol cliente) con contraseña
-   * temporal, o liga a un usuario cliente que ya existía. Máximo MAX_ACCESOS_CLIENTE activos. Su correo
-   * queda como contacto que recibe los avisos de reportes.
+   * Da acceso a la intranet a una persona del cliente: liga a un usuario cliente que ya existía (por su id,
+   * elegido de la lista) o crea uno nuevo con contraseña temporal. Un correo que ya existe no se liga
+   * escribiéndolo: hay que elegirlo de la lista. Máximo MAX_ACCESOS_CLIENTE activos. Su correo queda
+   * como contacto que recibe los avisos de reportes.
    */
   async crearAcceso(clienteId: number, data: AccesoClienteData, ctx: AccionCtx): Promise<AccesoClienteCreado> {
     await this.clienteEditable(clienteId);
@@ -138,17 +145,24 @@ export class ClientesService extends BaseService {
       throw HttpError.conflict(`Un cliente puede tener máximo ${MAX_ACCESOS_CLIENTE} usuarios con acceso`);
     }
 
-    const existente = await this.repo.findUsuarioPorEmail(data.email);
     let acceso: AccesoCliente;
     let passwordTemporal: string | null = null;
-    if (existente) {
-      const error = (message: string) => HttpError.conflict(message, [{ path: 'email', message }]);
-      if (existente.rol !== ROLES.CLIENTE) throw error('Ese correo ya pertenece a un usuario que no es cliente');
-      if (existente.deletedAt) throw error('Ese usuario está dado de baja; reactívalo primero');
-      if (existente.clienteId === clienteId) throw error('Ese usuario ya tiene acceso a este cliente');
-      if (existente.clienteId) throw error('Ese usuario ya está ligado a otro cliente');
+    if ('usuarioId' in data) {
+      const existente = await this.repo.findUsuarioPorId(data.usuarioId);
+      if (!existente || existente.rol !== ROLES.CLIENTE) throw HttpError.notFound('Usuario cliente no encontrado');
+      if (existente.deletedAt) throw HttpError.conflict('Ese usuario está dado de baja; reactívalo primero');
+      if (existente.clienteId === clienteId) throw HttpError.conflict('Ese usuario ya tiene acceso a este cliente');
+      if (existente.clienteId) throw HttpError.conflict('Ese usuario ya está ligado a otro cliente');
       acceso = await this.repo.ligarAcceso(existente.id, clienteId);
     } else {
+      const otro = await this.repo.findUsuarioPorEmail(data.email);
+      if (otro) {
+        const message =
+          otro.rol === ROLES.CLIENTE
+            ? 'Ese correo ya existe: elígelo de la lista de usuarios cliente'
+            : 'Ese correo ya pertenece a un usuario que no es cliente';
+        throw HttpError.conflict(message, [{ path: 'email', message }]);
+      }
       passwordTemporal = generateTemporaryPassword();
       acceso = await this.repo.crearAcceso(clienteId, {
         nombre: data.nombre,
@@ -159,13 +173,13 @@ export class ClientesService extends BaseService {
 
     // Que los avisos le lleguen también por correo: contacto con "Recibe notificaciones".
     const contactos = await this.repo.listContactos(clienteId);
-    if (!contactos.some((c) => c.email === data.email)) {
+    if (!contactos.some((c) => c.email === acceso.email)) {
       await this.repo.createContacto(clienteId, {
-        nombre: data.nombre,
+        nombre: acceso.nombre,
         puesto: null,
         telefono: null,
         celular: null,
-        email: data.email,
+        email: acceso.email,
         esResponsable: contactos.length === 0,
         recibeNotificaciones: true,
         prioridad: 0,

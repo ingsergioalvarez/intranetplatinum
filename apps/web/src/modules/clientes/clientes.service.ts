@@ -1,6 +1,7 @@
 import type {
   AccesoClienteCreado,
   AccesoClienteData,
+  UsuarioClienteDisponible,
   Asignacion,
   AsignacionCreate,
   AsignacionUpdate,
@@ -29,6 +30,11 @@ class ClientesService extends CrudService<ClienteResumen, ClienteCreate, Cliente
 
   reglasAviso(clienteId: number, reglas: ReglasAvisoInput) {
     return this.api.put<ReglasAviso>(`${this.resource}/${clienteId}/avisos`, reglas);
+  }
+
+  /** Usuarios cliente sin cliente asignado, que se pueden ligar (A-29). */
+  accesosDisponibles(clienteId: number) {
+    return this.api.get<UsuarioClienteDisponible[]>(`${this.resource}/${clienteId}/accesos/disponibles`);
   }
 
   /** Da acceso a la intranet a una persona del cliente (A-29). */

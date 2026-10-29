@@ -22,6 +22,8 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - Recordatorio a los 30 min (A-26): si mandaron a casa a un guardia y el sitio sigue sin ningún guardia, se avisa una sola vez al supervisor y a los admin ("El sitio sigue sin guardia", con ruta al calendario del sitio) y queda en la bitácora. Corre dentro de la vigilancia de cada minuto (`RecordatorioSitioSolo`).
 - Cada aviso lleva a donde está lo que indica (A-32): "Te mandaron a casa", "Cerraron tu jornada" y "Retardo aceptado" van al historial de marcas del guardia; los avisos de sitios, grupos, horarios y coberturas del guardia van a Mis sitios (antes al inicio o al checador). La push usa la misma ruta. Una incidencia que ya no existe muestra un mensaje en vez de una pantalla vacía.
 
+- Acceso del cliente, ajuste tras probarlo en el servidor: el modal permite elegir de una lista solo a usuarios con rol Cliente sin cliente asignado (`GET /api/clientes/:id/accesos/disponibles`) o crear uno nuevo; un correo que ya existe ya no se liga escribiéndolo, y antes de crear o ligar sale una ventana que explica a qué cliente quedará ligado ese correo (A-29).
+
 #### Pendiente
 
 - A-26: falta la lista formal de solicitudes de cobertura para que el admin las resuelva (necesita tabla y migración).

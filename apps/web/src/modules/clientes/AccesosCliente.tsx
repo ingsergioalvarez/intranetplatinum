@@ -1,16 +1,31 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound, Plus } from 'lucide-react';
 import {
   MAX_ACCESOS_CLIENTE,
-  accesoClienteSchema,
+  accesoClienteNuevoSchema,
   type AccesoClienteCreado,
+  type AccesoClienteData,
   type ClienteDetalle,
 } from '@platinum/shared';
 import { mensajeDeError } from '../../core/api';
 import { useForm } from '../../core/forms/useForm';
 import { formatFechaHora } from '../../core/format/fechas';
-import { Badge, Button, Card, CardHeader, EmptyState, FormField, FormModal, Input, toast } from '../../components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  ConfirmDialog,
+  EmptyState,
+  FormField,
+  FormModal,
+  Input,
+  Select,
+  Spinner,
+  cn,
+  toast,
+} from '../../components/ui';
 import { PasswordTemporalModal } from '../usuarios/PasswordTemporalModal';
 import { clientesService } from './clientes.service';
 
@@ -109,45 +124,144 @@ function AccesoModal({
   onCreado: (r: AccesoClienteCreado) => void;
 }) {
   const qc = useQueryClient();
+  const disponibles = useQuery({
+    queryKey: [...clientesService.keys.all, 'accesos-disponibles', cliente.id],
+    queryFn: () => clientesService.accesosDisponibles(cliente.id),
+  });
+  const lista = disponibles.data ?? [];
+  const [modo, setModo] = useState<'existente' | 'nuevo' | null>(null);
+  // Con usuarios cliente libres se ofrece elegirlos; si no hay, solo crear uno nuevo.
+  const modoActual = modo ?? (lista.length > 0 ? 'existente' : 'nuevo');
+  const [elegido, setElegido] = useState('');
+  const [errorElegido, setErrorElegido] = useState<string | undefined>();
+  const [confirmar, setConfirmar] = useState<AccesoClienteData | null>(null);
   const form = useForm({ nombre: '', email: '' });
+
   const crear = useMutation({
-    mutationFn: (data: ReturnType<typeof accesoClienteSchema.parse>) =>
-      clientesService.crearAcceso(cliente.id, data),
+    mutationFn: (data: AccesoClienteData) => clientesService.crearAcceso(cliente.id, data),
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: clientesService.keys.all });
       onCreado(r);
     },
     onError: (e) => {
+      setConfirmar(null);
       if (!form.aplicarErrorApi(e)) toast.error(mensajeDeError(e));
     },
   });
   const { errors, bind } = form;
+
+  const onSubmit = () => {
+    if (modoActual === 'existente') {
+      if (!elegido) return setErrorElegido('Elige un usuario');
+      setErrorElegido(undefined);
+      return setConfirmar({ usuarioId: Number(elegido) });
+    }
+    const data = form.validar(accesoClienteNuevoSchema);
+    if (data) setConfirmar(data);
+  };
+
+  const quien = confirmar
+    ? 'usuarioId' in confirmar
+      ? lista.find((u) => u.id === confirmar.usuarioId)
+      : confirmar
+    : null;
 
   return (
     <FormModal
       title="Crear acceso del cliente"
       description={cliente.nombreComercial}
       onClose={onClose}
-      onSubmit={() => {
-        const data = form.validar(accesoClienteSchema);
-        if (data) crear.mutate(data);
-      }}
-      submitLabel="Crear acceso"
+      onSubmit={onSubmit}
+      submitLabel="Continuar"
       loading={crear.isPending}
-      dirty={form.cambiado}
+      dirty={form.cambiado || !!elegido}
       size="sm"
     >
-      <FormField label="Nombre" required error={errors.nombre}>
-        <Input {...bind('nombre')} autoFocus />
-      </FormField>
-      <FormField
-        label="Correo"
-        required
-        error={errors.email}
-        hint="Con este correo entra y también recibe los avisos de reportes. Si ya existe un usuario cliente con este correo, se liga a este cliente."
-      >
-        <Input {...bind('email')} type="email" inputMode="email" autoCapitalize="none" />
-      </FormField>
+      {disponibles.isPending ? (
+        <div className="flex justify-center py-6 text-brand-600">
+          <Spinner className="size-6" />
+        </div>
+      ) : (
+        <>
+          {lista.length > 0 && (
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-medium">
+              {(['existente', 'nuevo'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setModo(m)}
+                  className={cn(
+                    'rounded-lg px-3 py-2',
+                    modoActual === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600',
+                  )}
+                >
+                  {m === 'existente' ? 'Elegir de la lista' : 'Crear nuevo'}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {modoActual === 'existente' ? (
+            <FormField
+              label="Usuario cliente"
+              required
+              error={errorElegido}
+              hint="Solo aparecen usuarios con rol Cliente que aún no tienen un cliente asignado."
+            >
+              <Select
+                value={elegido}
+                onChange={(e) => setElegido(e.target.value)}
+                placeholder="Elige un usuario"
+                options={lista.map((u) => ({ value: String(u.id), label: `${u.nombre} · ${u.email}` }))}
+              />
+            </FormField>
+          ) : (
+            <>
+              <FormField label="Nombre" required error={errors.nombre}>
+                <Input {...bind('nombre')} autoFocus />
+              </FormField>
+              <FormField
+                label="Correo"
+                required
+                error={errors.email}
+                hint="Con este correo entra y también recibe los avisos de reportes. Se crea con una contraseña temporal."
+              >
+                <Input {...bind('email')} type="email" inputMode="email" autoCapitalize="none" />
+              </FormField>
+            </>
+          )}
+        </>
+      )}
+
+      <ConfirmDialog
+        open={confirmar !== null}
+        title="¿Dar acceso a este cliente?"
+        confirmLabel="Sí, dar acceso"
+        loading={crear.isPending}
+        onCancel={() => setConfirmar(null)}
+        onConfirm={() => confirmar && crear.mutate(confirmar)}
+        description={
+          quien && (
+            <div className="space-y-2">
+              <p>
+                <strong>{quien.nombre}</strong> · {quien.email}
+              </p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  Ese correo quedará ligado a <strong>{cliente.nombreComercial}</strong>.
+                </li>
+                <li>Verá los sitios, guardias y reportes de este cliente, y nada de otros.</li>
+                <li>Recibirá los avisos de reportes de este cliente.</li>
+                <li>
+                  {confirmar && 'usuarioId' in confirmar
+                    ? 'Ya existe: conserva su contraseña.'
+                    : 'Se creará su usuario con una contraseña temporal que tú le mandas.'}
+                </li>
+              </ul>
+            </div>
+          )
+        }
+      />
     </FormModal>
   );
 }

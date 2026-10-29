@@ -71,6 +71,9 @@ export class ClientesController extends BaseController {
       ),
     );
 
+  accesosDisponibles = async (_req: Request, res: Response) =>
+    this.ok(res, await this.service.listarClientesDisponibles());
+
   // ----- Contactos -----
 
   createContacto = async (req: Request, res: Response) =>

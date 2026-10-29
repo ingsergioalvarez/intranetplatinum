@@ -61,6 +61,7 @@ export function createClientesModule({
   router.patch('/:id/reactivar', requirePermission(PERMISOS.CLIENTES_BAJA), id, c.reactivar);
 
   // El acceso y los avisos del cliente los define solo un administrador (A-29, A-30).
+  router.get('/:id/accesos/disponibles', requireRoles(ROLES.ADMIN), id, c.accesosDisponibles);
   router.post(
     '/:id/accesos',
     requireRoles(ROLES.ADMIN),

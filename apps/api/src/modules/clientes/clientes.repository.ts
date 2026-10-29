@@ -1,5 +1,6 @@
 import type {
   AccesoCliente,
+  UsuarioClienteDisponible,
   ClienteCreateData,
   ClienteFiltro,
   ClienteResumen,
@@ -46,6 +47,12 @@ export abstract class ClientesRepository extends BaseRepository<
 
   /** Usuarios con rol cliente ligados al cliente (activos primero). */
   abstract listAccesos(clienteId: number): Promise<AccesoCliente[]>;
+  /** Usuarios con rol cliente, activos y sin cliente asignado. */
+  abstract listClientesDisponibles(): Promise<UsuarioClienteDisponible[]>;
+  /** Usuario por id, con su rol y cliente. */
+  abstract findUsuarioPorId(
+    id: number,
+  ): Promise<{ id: number; rol: string; clienteId: number | null; deletedAt: string | null } | null>;
   /** Usuario por correo, esté o no de baja (el correo es único), con su rol y cliente. */
   abstract findUsuarioPorEmail(
     email: string,
@@ -329,6 +336,22 @@ export class PrismaClientesRepository extends ClientesRepository {
       orderBy: [{ deletedAt: 'asc' }, { createdAt: 'asc' }],
     });
     return rows.map(toAcceso);
+  }
+
+  async listClientesDisponibles() {
+    return getPrisma().usuario.findMany({
+      where: { clienteId: null, deletedAt: null, activo: true, rol: { clave: 'cliente' } },
+      select: { id: true, nombre: true, email: true },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
+  async findUsuarioPorId(id: number) {
+    const u = await getPrisma().usuario.findUnique({
+      where: { id },
+      select: { id: true, clienteId: true, deletedAt: true, rol: { select: { clave: true } } },
+    });
+    return u && { id: u.id, rol: u.rol.clave, clienteId: u.clienteId, deletedAt: u.deletedAt?.toISOString() ?? null };
   }
 
   async findUsuarioPorEmail(email: string) {

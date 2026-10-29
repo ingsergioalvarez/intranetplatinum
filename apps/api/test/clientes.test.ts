@@ -154,6 +154,14 @@ class MemoryClientesRepository extends ClientesRepository {
   async findUsuarioPorEmail(email: string) {
     return this.usuarios.find((u) => u.email === email) ?? null;
   }
+  async findUsuarioPorId(id: number) {
+    return this.usuarios.find((u) => u.id === id) ?? null;
+  }
+  async listClientesDisponibles() {
+    return this.usuarios
+      .filter((u) => u.rol === ROLES.CLIENTE && !u.clienteId && !u.deletedAt)
+      .map(({ id, nombre, email }) => ({ id, nombre, email }));
+  }
   async crearAcceso(clienteId: number, data: { nombre: string; email: string; passwordHash: string }) {
     const u = { id: 100 + this.usuarios.length, nombre: data.nombre, email: data.email, rol: ROLES.CLIENTE, clienteId, deletedAt: null };
     this.usuarios.push(u);
@@ -455,12 +463,28 @@ describe('acceso del cliente (A-29)', () => {
     expect(audit.acciones()).toContain('clientes.acceso_crear');
   });
 
-  it('liga a un usuario cliente que ya existía, sin contraseña nueva', async () => {
+  it('liga a un usuario cliente elegido de la lista, sin contraseña nueva', async () => {
     clientes.usuarios.push({ id: 9, nombre: 'Comunicalo', email: 'comunicalo@platinum.com', rol: ROLES.CLIENTE, clienteId: null, deletedAt: null });
-    const res = await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Comunicalo', email: 'comunicalo@platinum.com' });
+    const res = await como(ADMIN).post('/clientes/1/accesos', { usuarioId: 9 });
     expect(res.status).toBe(201);
     expect(res.body.data.passwordTemporal).toBeNull();
     expect(clientes.usuarios[0].clienteId).toBe(1);
+    expect((await como(ADMIN).get('/clientes/1')).body.data.contactos).toMatchObject([
+      { email: 'comunicalo@platinum.com', recibeNotificaciones: true },
+    ]);
+  });
+
+  it('la lista de disponibles solo trae usuarios cliente sin cliente asignado', async () => {
+    clientes.usuarios.push(
+      { id: 9, nombre: 'Libre', email: 'libre@x.mx', rol: ROLES.CLIENTE, clienteId: null, deletedAt: null },
+      { id: 10, nombre: 'Ocupado', email: 'ocupado@x.mx', rol: ROLES.CLIENTE, clienteId: 2, deletedAt: null },
+      { id: 11, nombre: 'Sofía', email: 'sofia@x.mx', rol: ROLES.SUPERVISOR, clienteId: null, deletedAt: null },
+      { id: 12, nombre: 'De baja', email: 'baja@x.mx', rol: ROLES.CLIENTE, clienteId: null, deletedAt: 'x' },
+    );
+    const res = await como(ADMIN).get('/clientes/1/accesos/disponibles');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([{ id: 9, nombre: 'Libre', email: 'libre@x.mx' }]);
+    expect((await como(SUPERVISOR).get('/clientes/1/accesos/disponibles')).status).toBe(403);
   });
 
   it('máximo 2 usuarios activos por cliente', async () => {
@@ -470,11 +494,24 @@ describe('acceso del cliente (A-29)', () => {
     expect(res.status).toBe(409);
   });
 
-  it('rechaza correos de usuarios que no son cliente o de otro cliente', async () => {
+  it('un correo que ya existe no se liga escribiéndolo: se elige de la lista', async () => {
+    clientes.usuarios.push({ id: 5, nombre: 'Sofía', email: 'sofia@x.mx', rol: ROLES.SUPERVISOR, clienteId: null, deletedAt: null });
+    clientes.usuarios.push({ id: 6, nombre: 'Libre', email: 'libre@x.mx', rol: ROLES.CLIENTE, clienteId: null, deletedAt: null });
+    const supervisor = await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Sofía', email: 'sofia@x.mx' });
+    expect(supervisor.status).toBe(409);
+    expect(supervisor.body.error.message).toContain('no es cliente');
+    const cliente = await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Libre', email: 'libre@x.mx' });
+    expect(cliente.status).toBe(409);
+    expect(cliente.body.error.message).toContain('elígelo de la lista');
+    expect(clientes.usuarios.every((u) => u.clienteId === null)).toBe(true);
+  });
+
+  it('por id solo se liga a un usuario cliente libre', async () => {
     clientes.usuarios.push({ id: 5, nombre: 'Sofía', email: 'sofia@x.mx', rol: ROLES.SUPERVISOR, clienteId: null, deletedAt: null });
     clientes.usuarios.push({ id: 6, nombre: 'Otro', email: 'otro@x.mx', rol: ROLES.CLIENTE, clienteId: 2, deletedAt: null });
-    expect((await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Sofía', email: 'sofia@x.mx' })).status).toBe(409);
-    expect((await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Otro', email: 'otro@x.mx' })).status).toBe(409);
+    expect((await como(ADMIN).post('/clientes/1/accesos', { usuarioId: 5 })).status).toBe(404);
+    expect((await como(ADMIN).post('/clientes/1/accesos', { usuarioId: 6 })).status).toBe(409);
+    expect((await como(ADMIN).post('/clientes/1/accesos', { usuarioId: 99 })).status).toBe(404);
   });
 
   it('solo el administrador da acceso', async () => {

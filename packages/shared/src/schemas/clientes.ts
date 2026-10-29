@@ -376,11 +376,25 @@ export interface ClienteDetalle extends Cliente {
 /** Máximo de usuarios con acceso por cliente: los dos ven lo mismo, cada uno desde su cuenta. */
 export const MAX_ACCESOS_CLIENTE = 2;
 
-export const accesoClienteSchema = z.object({
+export const accesoClienteNuevoSchema = z.object({
   nombre: z.string().trim().min(2, 'Escribe el nombre').max(120),
   email: z.string().trim().toLowerCase().pipe(z.email('Correo inválido').max(160)),
 });
+export type AccesoClienteNuevo = z.output<typeof accesoClienteNuevoSchema>;
+
+/** Liga a un usuario cliente que ya existe (elegido de la lista, nunca por correo escrito). */
+export const accesoClienteExistenteSchema = z.object({ usuarioId: z.coerce.number().int().positive() });
+
+/** Crear un usuario nuevo, o ligar uno existente de rol cliente. */
+export const accesoClienteSchema = z.union([accesoClienteExistenteSchema, accesoClienteNuevoSchema]);
 export type AccesoClienteData = z.output<typeof accesoClienteSchema>;
+
+/** Usuario cliente sin cliente asignado, que se puede ligar. */
+export interface UsuarioClienteDisponible {
+  id: number;
+  nombre: string;
+  email: string;
+}
 
 export interface AccesoCliente {
   id: number;
