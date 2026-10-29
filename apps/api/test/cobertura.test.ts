@@ -137,6 +137,13 @@ describe('cobertura por sitio y turno (AS6-01)', () => {
       expect(celda(r, '2026-10-26', DIA).estado).toBe('cubierto');
     });
 
+    it('en un turno de 24 h, llegar 9 h tarde sigue siendo ese turno: cubierto, no "sin registro" (A-28)', () => {
+      const santiago = [turno(1, 'Santiago', patron('08:00', 24, unoYUno, { desde: '2026-10-28' }))];
+      const reales = { ...VACIO, entradas: [{ usuarioId: 1, registradaEn: en('2026-10-28T23:19:00Z') }] };
+      const r = calcular(santiago, reales, en('2026-10-29T03:00:00Z'), '2026-10-28', '2026-10-28');
+      expect(celda(r, '2026-10-28', '08:00|1440')).toMatchObject({ estado: 'cubierto', guardias: [{ situacion: 'presente' }] });
+    });
+
     it('con falta, sin cubrir por falta', () => {
       const r = calcular(juan, {
         ...VACIO,

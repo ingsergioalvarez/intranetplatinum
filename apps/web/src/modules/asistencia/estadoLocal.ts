@@ -49,6 +49,7 @@ export function aplicarPendientes(estado: EstadoAsistencia, pendientes: MarcaPen
         salida: null,
         sitio: p.sitio,
         alertas: [...m.alertas],
+        justificadas: [],
         programada: null,
         retardoMin: null,
         salidaAnticipadaMin: null,

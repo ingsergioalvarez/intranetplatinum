@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type {
   AsistenciaDiaQuery,
   CerrarJornadaInput,
+  DecidirRetardoInput,
   ConclusionIncidencia,
   IdParam,
   IncidenciaCreateInput,
@@ -105,6 +106,18 @@ export class AsistenciaController extends BaseController {
     );
     return this.noContent(res);
   };
+
+  /** Aceptar el retardo o mandar al guardia a casa (A-25). */
+  decidirRetardo = async (req: Request, res: Response) =>
+    this.ok(
+      res,
+      await this.service.decidirRetardo(
+        this.params<IdParam>(req).id,
+        this.body<DecidirRetardoInput>(req),
+        this.accionCtx(req),
+        await this.alcance(req),
+      ),
+    );
 
   private esCliente(req: Request) {
     return this.currentUser(req).rol === ROLES.CLIENTE;

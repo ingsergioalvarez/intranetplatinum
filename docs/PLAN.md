@@ -51,6 +51,16 @@
 | A-20 | Notificaciones push: los avisos llegan al celular aunque la app esté cerrada o el teléfono bloqueado (Android) | Usuario 2026-10-28 | A-20 (ver DA-59; TC-21) | Terminado        |
 | A-21 | Push obligatorio: sin botón para desactivarlo, la app pide activarlo y no deja seguir; notificación con ícono de barra de estado y botón "Ver" | Usuario 2026-10-28 | A-21 (ver A-20)     | Terminado        |
 | A-22 | Cada aviso (campanita y push) lleva un título propio y coherente con lo que dice, no uno genérico por tipo (ej. "Tu sitio y horario" para un supervisor nuevo) | Usuario 2026-10-28 | A-22 (ver A-20)     | Terminado         |
+| A-23 | Celular bien ajustado: nada ensancha la pantalla (modales y Asistencia sin recortes a 360–412px), y sin zoom de pellizco en la app (solo en las fotos) | Usuario 2026-10-29 | A-23                | Terminado (falta ver con datos reales en el celular) |
+| A-24 | Un retardo justificado se ve como "Retardo justificado" en todas las pantallas (lista del día, tarjeta de jornada, checador) | Usuario 2026-10-29 | A-24                | Terminado         |
+| A-25 | Decisiones ante un retardo: Justificar / Aceptar con retardo / Mandar a casa (solo con jornada abierta; cuenta como falta, horas no cuentan; confirmación con consecuencias; avisa a guardia y, si el sitio queda solo, a admin) | Usuario 2026-10-29 | A-25 (ver A-24)     | Terminado         |
+| A-26 | Solicitud formal al admin para cubrir un sitio con un guardia de otro supervisor, y aviso al supervisor del guardia prestado; recordatorio a los 30 min si nadie llega | Usuario 2026-10-29 | A-26 (ver A-25)     | Parcial: la solicitud llega como aviso al admin y el recordatorio a los 30 min ya funciona; falta la lista formal de solicitudes |
+| A-27 | Incidencia de rostro atendible: botón visible "Revisar y atender" (falsa alarma / confirmada cierra la incidencia; una nota sola no) y el aviso de arriba dice qué incidencias faltan | Usuario 2026-10-29 | A-27 | Terminado |
+| A-28 | Calendario de cobertura: un guardia de turno de 24 h que llega muy tarde (9 h) cuenta como presente, no "Sin registro" | Usuario 2026-10-29 | A-28 | Terminado |
+| A-29 | El admin crea el acceso del cliente desde su ficha (nombre y correo, contraseña temporal y mensaje para copiar), máximo 2 usuarios por cliente; liga usuarios cliente existentes; su correo queda como contacto que recibe avisos | Usuario 2026-10-29 | A-29 | Terminado |
+| A-30 | Avisos de reportes: el supervisor ve la pantalla bloqueada (solo lectura, también en el servidor); solo el admin cambia a quién se avisa | Usuario 2026-10-29 | A-30 (ver A-29) | Terminado |
+| A-31 | Ventana de confirmación al marcar una incidencia de rostro (falsa alarma / confirmada) que explica qué significa y qué pasará, y aviso claro al terminar | Usuario 2026-10-29 | A-31 (ver A-27) | Terminado |
+| A-32 | Cada aviso y notificación push lleva directo a lo que indica (una cosa: a ella; varias: a la lista filtrada; si ya no existe: a la lista con mensaje); los del guardia por retardo o mandado a casa van a su historial y los de sitios, grupos y horarios a Mis sitios | Usuario 2026-10-29 | A-32 (ver A-22) | Terminado |
 
 ### Alcances propuestos (sugeridos, sin confirmar)
 

@@ -5,6 +5,7 @@ import {
   ROLES,
   asistenciaDiaQuerySchema,
   cerrarJornadaSchema,
+  decidirRetardoSchema,
   idParamSchema,
   incidenciaCreateSchema,
   incidenciasQuerySchema,
@@ -40,7 +41,12 @@ import { AsistenciaRepository, PrismaAsistenciaRepository } from './asistencia.r
 import { AsistenciaService, type LlegadaFn, type MisSitiosFn } from './asistencia.service';
 import { VigilanciaTurnos } from './vigilancia';
 import { RecordatoriosComida } from './comidas';
-import { PrismaComidasRepository, PrismaVigilanciaRepository } from './vigilancia.repository';
+import { RecordatorioSitioSolo } from './sitioSolo';
+import {
+  PrismaComidasRepository,
+  PrismaSitioSoloRepository,
+  PrismaVigilanciaRepository,
+} from './vigilancia.repository';
 
 interface AsistenciaModuleDeps {
   repo?: AsistenciaRepository;
@@ -124,6 +130,14 @@ export function createAsistenciaModule({
     validate({ params: idParamSchema, body: cerrarJornadaSchema }),
     c.cerrarJornada,
   );
+  // Ante un retardo: aceptarlo o mandar al guardia a casa (A-25). Justificar sigue en la bitácora.
+  router.post(
+    '/retardos/:id/decidir',
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    ver,
+    validate({ params: idParamSchema, body: decidirRetardoSchema }),
+    c.decidirRetardo,
+  );
   // Rostros de los guardias (AS1-02): revisión del autoregistro y registro en persona.
   router.get('/rostros/pendientes', rostros, c.rostrosPendientes);
   router.get('/rostros/:id', rostros, validate({ params: idParamSchema }), c.rostro);
@@ -175,6 +189,7 @@ export function iniciarVigilanciaTurnos() {
   const horasExtra = crearServicioHorasExtra();
   const huecos = crearAvisosHuecos();
   const casos = crearServicioCasos();
+  const sitioSolo = new RecordatorioSitioSolo(new PrismaSitioSoloRepository(), avisarConPrisma, bitacoraConPrisma);
   let corriendo = false;
   const revisar = async () => {
     if (corriendo) return;
@@ -185,6 +200,7 @@ export function iniciarVigilanciaTurnos() {
       await horasExtra.revisar();
       await huecos.revisar();
       await casos.revisar();
+      await sitioSolo.revisar();
     } catch (err) {
       console.error('[vigilancia] Falló la revisión de turnos', err);
     } finally {

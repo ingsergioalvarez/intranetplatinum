@@ -2,11 +2,10 @@ import { SALIDA_ANTICIPADA_MIN, TOLERANCIA_RETARDO_MIN, type Jornada } from '@pl
 import { cn } from '../../components/ui';
 import { formatHora } from './formato';
 
-/** `+25 min`, `−1 h 05 min` */
-function minutos(m: number) {
+/** `25 min`, `9 h 19 min` */
+function duracion(m: number) {
   const a = Math.abs(m);
-  const texto = a < 60 ? `${a} min` : `${Math.floor(a / 60)} h ${String(a % 60).padStart(2, '0')} min`;
-  return `${m > 0 ? '+' : '−'}${texto}`;
+  return a < 60 ? `${a} min` : `${Math.floor(a / 60)} h ${String(a % 60).padStart(2, '0')} min`;
 }
 
 /**
@@ -21,26 +20,36 @@ export function HoraMarca({ jornada: j, tipo }: { jornada: Jornada; tipo: 'entra
     diferencia !== null &&
     (tipo === 'entrada' ? diferencia > TOLERANCIA_RETARDO_MIN : diferencia >= SALIDA_ANTICIPADA_MIN);
 
+  const justificada = j.justificadas.includes(tipo === 'entrada' ? 'retardo' : 'salida_anticipada');
+
   return (
     <span className="inline-flex flex-col items-start gap-0.5">
       <span className="font-medium text-slate-900">{marca ? formatHora(marca.registradaEn) : '—'}</span>
       {programada && (
         <span
           className={cn(
-            'rounded px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset',
+            'max-w-full rounded px-1.5 py-0.5 text-[11px] leading-tight font-medium ring-1 ring-inset',
             !marca
               ? 'bg-slate-50 text-slate-600 ring-slate-200'
               : !fuera
                 ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                : tipo === 'entrada'
+                : justificada
+                  ? 'bg-brand-50 text-brand-700 ring-brand-200'
+                  : tipo === 'entrada'
                   ? 'bg-red-50 text-red-700 ring-red-200'
                   : 'bg-amber-50 text-amber-800 ring-amber-200',
           )}
-          title={tipo === 'entrada' ? 'Hora de entrada programada' : 'Hora de salida programada'}
+          title={
+            marca && fuera && tipo === 'entrada'
+              ? `Hora de entrada programada. ${diferencia - TOLERANCIA_RETARDO_MIN} min fuera de la tolerancia`
+              : tipo === 'entrada'
+                ? 'Hora de entrada programada'
+                : 'Hora de salida programada'
+          }
         >
           {tipo === 'entrada' ? 'Entra a las' : 'Sale a las'} {formatHora(programada)}
-          {marca && fuera && ` · ${minutos(tipo === 'entrada' ? diferencia : -diferencia)}`}
-          {marca && fuera && tipo === 'entrada' && ` (+${diferencia - TOLERANCIA_RETARDO_MIN} fuera de tolerancia)`}
+          {marca && fuera && ` · ${duracion(diferencia)} ${tipo === 'entrada' ? 'tarde' : 'antes'}`}
+          {marca && fuera && justificada && ' · justificado'}
         </span>
       )}
     </span>

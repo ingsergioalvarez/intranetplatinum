@@ -71,7 +71,7 @@ export function JornadaCard({
             <p className="text-sm text-amber-700">Sin salida registrada</p>
           )}
         </div>
-        {j.alertas.length > 0 && (
+        {j.alertas.some((a) => !j.justificadas.includes(a)) && (
           <TriangleAlert className="size-5 shrink-0 text-amber-500" aria-label="Con alerta" />
         )}
       </div>
@@ -124,8 +124,15 @@ export function JornadaCard({
       {j.alertas.length > 0 && (
         <ul className="mt-2 space-y-0.5 text-xs text-amber-700">
           {j.alertas.map((a) => (
-            <li key={a} className={cn(a === 'rostro_rechazado' && 'font-medium text-red-700')}>
+            <li
+              key={a}
+              className={cn(
+                a === 'rostro_rechazado' && 'font-medium text-red-700',
+                j.justificadas.includes(a) && 'text-slate-500',
+              )}
+            >
               • {ALERTA_MARCACION_LABEL[a]}
+              {j.justificadas.includes(a) && ' (justificado)'}
             </li>
           ))}
         </ul>

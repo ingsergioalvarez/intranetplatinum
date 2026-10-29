@@ -96,7 +96,7 @@ export class TurnosService extends BaseService {
           tipo: 'asignacion',
           titulo: 'Cambió tu horario',
           mensaje: `Cambió tu horario en ${sitio}: ${horarioTexto(data)}`,
-          ruta: '/',
+          ruta: '/mis-sitios',
         });
       }
     }
@@ -212,7 +212,7 @@ export class TurnosService extends BaseService {
           tipo: 'asignacion',
           titulo: 'Cambió tu turno',
           mensaje: `Cambió tu turno en ${s.uso.sitio.nombre}: ahora es "${nuevo.nombre}" (${horarioTexto(nuevo)})`,
-          ruta: '/',
+          ruta: '/mis-sitios',
         });
       }
     }

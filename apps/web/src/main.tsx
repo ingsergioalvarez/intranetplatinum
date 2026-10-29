@@ -8,6 +8,9 @@ import { authService } from './core/auth/AuthService';
 import { Toaster } from './components/ui';
 import './index.css';
 
+// iOS ignora user-scalable=no: se bloquea el pellizco de zoom de la página (A-23).
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+
 // Recupera la sesión con la cookie de refresh antes de decidir si mostrar el login.
 void authService.restore();
 

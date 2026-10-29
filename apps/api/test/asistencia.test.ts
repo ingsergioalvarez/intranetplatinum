@@ -185,6 +185,24 @@ class MemoryAsistenciaRepository extends AsistenciaRepository {
         .map((r) => [r.id, { estado: r.estado, revisadoEn: r.revisadoEn }] as const),
     );
   }
+  eventosRetardo: { id: number; tipo: string; usuarioId: number; marcacionId: number | null; justificadoEn: Date | null; decision: string | null }[] = [];
+  decisionesRetardo: { id: number; porId: number; decision: string }[] = [];
+  adminIds: number[] = [];
+  async findEventoRetardo(id: number) {
+    return this.eventosRetardo.find((e) => e.id === id) ?? null;
+  }
+  async decidirRetardo(id: number, porId: number, decision: string) {
+    this.decisionesRetardo.push({ id, porId, decision });
+    const e = this.eventosRetardo.find((x) => x.id === id);
+    if (e) e.decision = decision;
+  }
+  async admins() {
+    return this.adminIds;
+  }
+  justificadas: { marcacionId: number; tipo: 'retardo' | 'salida_anticipada' }[] = [];
+  async justificadasEn(marcacionIds: number[]) {
+    return this.justificadas.filter((j) => marcacionIds.includes(j.marcacionId));
+  }
   private incidenciaRow(i: MemoryAsistenciaRepository['incidenciasGuardadas'][number]): IncidenciaRow {
     const rostro = this.rostros.filter((r) => r.usuarioId === i.usuarioId && !r.reemplazadoEn).at(-1);
     return {
@@ -1218,6 +1236,15 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     expect(bitacora[0]).toMatchObject({ usuarioIds: [10], marcacionId: repo.marcas[0].id, sitioId: 1 });
   });
 
+  it('un retardo justificado por el supervisor llega marcado en la jornada (A-24)', async () => {
+    HORARIOS = { 1: { turno: '24x24', horaInicio: '07:00', horaFin: '07:00' } };
+    avanzar(30 / 60);
+    await marcar(10, marca('entrada'));
+    expect((await mias(10)).body.data[0]).toMatchObject({ alertas: ['retardo'], justificadas: [] });
+    repo.justificadas.push({ marcacionId: repo.marcas[0].id, tipo: 'retardo' });
+    expect((await mias(10)).body.data[0]).toMatchObject({ alertas: ['retardo'], justificadas: ['retardo'] });
+  });
+
   it('si venía de horas extra (salió después de la hora de este turno), su entrada no es retardo (AS6-07)', async () => {
     HORARIOS = { 1: { horas: 12, horaInicio: '07:00', horaFin: '19:00', dias: { tipo: 'diario' } } };
     await marcar(10, marca('entrada'));
@@ -1358,6 +1385,99 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     await marcar(10, marca('inicio_comida'));
     await marcar(10, marca('fin_comida'));
     expect((await marcar(10, marca('salida'))).status).toBe(201);
+  });
+
+  describe('decisión ante un retardo: aceptar o mandar a casa (A-25)', () => {
+    const decidir = (id: number, body: object, usuarioId = 5, rol = 'supervisor') =>
+      request(app)
+        .post(`/api/asistencia/retardos/${id}/decidir`)
+        .set('Authorization', token(usuarioId, rol as 'supervisor'))
+        .send(body);
+
+    /** El guardia 10 llega tarde (07:30) y la bitácora guarda su retardo. */
+    const llegaTarde = async () => {
+      HORARIOS = { 1: { horas: 12, horaInicio: '07:00', horaFin: '19:00', dias: { tipo: 'diario' } } };
+      avanzar(30 / 60);
+      await marcar(10, marca('entrada'));
+      const marcacionId = repo.marcas[0].id;
+      repo.eventosRetardo.push({ id: 77, tipo: 'retardo', usuarioId: 10, marcacionId, justificadoEn: null, decision: null });
+      return marcacionId;
+    };
+
+    it('aceptar con retardo: se queda, queda atendido y se avisa al guardia', async () => {
+      await llegaTarde();
+      const res = await decidir(77, { decision: 'aceptado' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ sitioSolo: false });
+      expect(repo.decisionesRetardo).toEqual([{ id: 77, porId: 5, decision: 'aceptado' }]);
+      expect(audit.acciones()).toContain('asistencia.aceptar_retardo');
+      expect(repo.avisos.at(-1)).toMatchObject({ usuarioIds: [10], titulo: 'Retardo aceptado' });
+      // La jornada sigue abierta.
+      expect(repo.marcas.some((m) => m.tipo === 'salida')).toBe(false);
+      // Una sola vez.
+      expect((await decidir(77, { decision: 'aceptado' })).status).toBe(409);
+    });
+
+    it('mandar a casa con otro guardia en el sitio: cierra la jornada, cuenta como falta y avisa al guardia', async () => {
+      await llegaTarde();
+      await marcar(13, marca('entrada')); // otro guardia del mismo sitio
+      repo.adminIds = [1];
+      const res = await decidir(77, { decision: 'enviado_a_casa', motivo: 'Llegó 30 min tarde sin avisar' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ sitioSolo: false });
+      expect(repo.marcas.find((m) => m.tipo === 'salida' && m.usuarioId === 10)).toMatchObject({
+        alertas: ['cerrada_por_supervisor', 'enviada_a_casa'],
+      });
+      expect(repo.decisionesRetardo).toEqual([{ id: 77, porId: 5, decision: 'enviado_a_casa' }]);
+      expect(audit.acciones()).toContain('asistencia.mandar_a_casa');
+      expect(repo.avisos.filter((a) => a.usuarioIds.includes(10)).at(-1)).toMatchObject({
+        titulo: 'Te mandaron a casa',
+        ruta: '/marcar/historial',
+      });
+      // Acompañado: no se avisa al admin.
+      expect(repo.avisos.some((a) => a.titulo === 'Sitio sin guardia')).toBe(false);
+    });
+
+    it('si el sitio quedaría solo pide quién se hace cargo, y al declararlo avisa al admin', async () => {
+      await llegaTarde();
+      repo.adminIds = [1, 5];
+      const sin = await decidir(77, { decision: 'enviado_a_casa', motivo: 'Llegó tarde' });
+      expect(sin.status).toBe(409);
+      expect(sin.body.error.code).toBe('SITIO_QUEDARIA_SOLO');
+      expect(repo.marcas.some((m) => m.tipo === 'salida')).toBe(false);
+
+      const res = await decidir(77, { decision: 'enviado_a_casa', motivo: 'Llegó tarde', responsabilidad: 'queda_solo' });
+      expect(res.body.data).toEqual({ sitioSolo: true });
+      const aviso = repo.avisos.find((a) => a.titulo === 'Sitio sin guardia')!;
+      // Al admin 1, no al propio supervisor que decidió.
+      expect(aviso.usuarioIds).toEqual([1]);
+      expect(aviso.mensaje).toContain('hasta el siguiente turno');
+      expect(bitacora.some((e) => e.tipo === 'cobertura' && e.detalle.includes('quedó sin guardia'))).toBe(true);
+    });
+
+    it('pedir un guardia de otro supervisor manda la solicitud al admin con ruta al calendario', async () => {
+      await llegaTarde();
+      repo.adminIds = [1];
+      const res = await decidir(77, { decision: 'enviado_a_casa', motivo: 'Llegó tarde', responsabilidad: 'pedir_a_admin' });
+      expect(res.body.data).toEqual({ sitioSolo: true });
+      const aviso = repo.avisos.find((a) => a.titulo === 'Solicitud de cobertura')!;
+      expect(aviso).toMatchObject({ usuarioIds: [1], ruta: '/asistencia/calendario' });
+      expect(aviso.mensaje).toContain('otro supervisor');
+    });
+
+    it('al mandar a casa el motivo es obligatorio; solo con la jornada abierta; solo admin o supervisor', async () => {
+      await llegaTarde();
+      expect((await decidir(77, { decision: 'enviado_a_casa', responsabilidad: 'queda_solo' })).status).toBe(400);
+      expect((await decidir(77, { decision: 'aceptado' }, 10, 'guardia')).status).toBe(403);
+      expect((await decidir(9999, { decision: 'aceptado' })).status).toBe(404);
+      // Ya salió: no se puede mandar a casa.
+      avanzar(2);
+      await marcar(10, marca('inicio_comida'));
+      await marcar(10, marca('fin_comida'));
+      expect((await marcar(10, marca('salida'))).status).toBe(201);
+      const tarde = await decidir(77, { decision: 'enviado_a_casa', motivo: 'Tarde', responsabilidad: 'queda_solo' });
+      expect(tarde.status).toBe(409);
+    });
   });
 
   describe('cerrar la jornada de un guardia que no pudo checar su salida (DA-49)', () => {

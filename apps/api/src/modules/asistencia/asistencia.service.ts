@@ -48,6 +48,8 @@ import {
   type TurnoDelGuardia,
   comidasDelTurno,
   type CerrarJornadaInput,
+  type DecidirRetardoInput,
+  type ResultadoDecisionRetardo,
   COMIDA_MIN,
   type TableroAsistencia,
   type TableroItem,
@@ -206,6 +208,7 @@ export function armarJornadas(rows: MarcacionRow[], estados: EstadosRostros = ne
           salida: null,
           sitio: r.sitio,
           alertas: [...m.alertas],
+          justificadas: [],
           programada,
           retardoMin: r.programadaEntrada
             ? m.alertas.includes('viene_de_horas_extra')
@@ -821,10 +824,21 @@ export class AsistenciaService extends BaseService {
     return seguidos === PATRON_SEGUIDOS ? valores.slice(0, PATRON_SEGUIDOS).reverse() : null;
   }
 
-  /** Jornadas con las alertas de rostro según su estado actual (AS1-14). */
+  /**
+   * Jornadas con las alertas de rostro según su estado actual (AS1-14) y marcando cuáles alertas
+   * (retardo, salida anticipada) ya fueron justificadas por un supervisor (A-24).
+   */
   private async jornadas(rows: MarcacionRow[]) {
     const ids = [...new Set(rows.map((r) => r.rostroId).filter((id): id is number => id !== null))];
-    return armarJornadas(rows, await this.repo.estadosRostros(ids));
+    const jornadas = armarJornadas(rows, await this.repo.estadosRostros(ids));
+    const justificadas = await this.repo.justificadasEn(rows.map((r) => r.id));
+    if (justificadas.length === 0) return jornadas;
+    const entradaDe = new Map(rows.map((r) => [r.id, r.tipo === 'entrada' ? r.id : r.entradaId]));
+    for (const { marcacionId, tipo } of justificadas) {
+      const j = jornadas.find((x) => x.entrada.id === entradaDe.get(marcacionId));
+      if (j && j.alertas.includes(tipo) && !j.justificadas.includes(tipo)) j.justificadas.push(tipo);
+    }
+    return jornadas;
   }
 
   /**
@@ -1348,6 +1362,8 @@ export class AsistenciaService extends BaseService {
     { motivo, salidaEn }: CerrarJornadaInput,
     ctx: AccionCtx,
     alcance: Alcance | null = null,
+    /** Mandado a casa por llegar tarde (A-25): otra marca, bitácora y aviso al guardia. */
+    aCasa = false,
   ): Promise<void> {
     const entrada = await this.repo.findMarca(entradaId);
     if (!entrada || entrada.tipo !== 'entrada') throw HttpError.notFound('Jornada no encontrada');
@@ -1386,7 +1402,7 @@ export class AsistenciaService extends BaseService {
       lng: entrada.lng,
       precisionM: 0,
       distanciaM: null,
-      alertas: ['cerrada_por_supervisor'],
+      alertas: aCasa ? ['cerrada_por_supervisor', 'enviada_a_casa'] : ['cerrada_por_supervisor'],
       registradaEn: hora,
     });
     await this.extras
@@ -1394,7 +1410,7 @@ export class AsistenciaService extends BaseService {
       .catch((err) => console.error('[asistencia] No se pudieron registrar las horas extra', err));
     const sitio = entrada.sitio?.nombre ?? 'su sitio';
     const quien = (await this.repo.findUsuarioRostro(ctx.actorId))?.nombre ?? 'Un supervisor';
-    await this.audit.registrarAccion(ctx, 'asistencia.cerrar_jornada', 'marcaciones', entrada.id, {
+    await this.audit.registrarAccion(ctx, aCasa ? 'asistencia.mandar_a_casa' : 'asistencia.cerrar_jornada', 'marcaciones', entrada.id, {
       guardiaId: entrada.usuarioId,
       sitio,
       salida: hora.toISOString(),
@@ -1403,17 +1419,138 @@ export class AsistenciaService extends BaseService {
     await this.bitacora({
       usuarioIds: [entrada.usuarioId],
       tipo: 'jornada_cerrada',
-      detalle: `${quien} cerró su jornada en ${sitio}: salida a las ${horaLocal(hora)}. Motivo: ${motivo}`,
+      detalle: aCasa
+        ? `${quien} lo mandó a casa por llegar tarde a ${sitio} (salida a las ${horaLocal(hora)}); cuenta como falta. Motivo: ${motivo}`
+        : `${quien} cerró su jornada en ${sitio}: salida a las ${horaLocal(hora)}. Motivo: ${motivo}`,
       marcacionId: entrada.id,
       sitioId: entrada.sitio?.id ?? null,
       actorId: ctx.actorId,
     });
-    await this.avisarGuardia(entrada.usuarioId, {
-      tipo: 'marca_alerta',
-      titulo: 'Cerraron tu jornada',
-      mensaje: `${quien} cerró tu jornada en ${sitio} (salida a las ${horaLocal(hora)}). Motivo: ${motivo}`,
-      ruta: '/marcar',
+    await this.avisarGuardia(
+      entrada.usuarioId,
+      aCasa
+        ? {
+            tipo: 'marca_alerta',
+            titulo: 'Te mandaron a casa',
+            mensaje: `${quien} te mandó a casa por llegar tarde a ${sitio}. Cuenta como falta y no se cuentan tus horas de hoy. Motivo: ${motivo}`,
+            ruta: '/marcar/historial',
+          }
+        : {
+            tipo: 'marca_alerta',
+            titulo: 'Cerraron tu jornada',
+            mensaje: `${quien} cerró tu jornada en ${sitio} (salida a las ${horaLocal(hora)}). Motivo: ${motivo}`,
+            ruta: '/marcar/historial',
+          },
+    );
+  }
+
+  /**
+   * Decisión del supervisor ante un retardo (A-25), además de justificarlo: aceptarlo (el guardia se
+   * queda, sigue contando como retardo pero ya está atendido) o mandarlo a casa (solo mientras está en
+   * el sitio: cierra su jornada, cuenta como falta y sus horas no cuentan). Si el sitio queda sin guardia
+   * hay que declarar quién se hace cargo y se avisa a los admin.
+   */
+  async decidirRetardo(
+    eventoId: number,
+    { decision, motivo, responsabilidad }: DecidirRetardoInput,
+    ctx: AccionCtx,
+    alcance: Alcance | null = null,
+  ): Promise<ResultadoDecisionRetardo> {
+    const ev = await this.repo.findEventoRetardo(eventoId);
+    if (!ev || ev.tipo !== 'retardo' || !guardiaEnAlcance(alcance, ev.usuarioId)) {
+      throw HttpError.notFound('Retardo no encontrado');
+    }
+    if (ev.justificadoEn || ev.decision) throw HttpError.conflict('Este retardo ya se atendió');
+    const entrada = ev.marcacionId !== null ? await this.repo.findMarca(ev.marcacionId) : null;
+    if (!entrada || entrada.tipo !== 'entrada') throw HttpError.notFound('Jornada no encontrada');
+    const sitio = entrada.sitio?.nombre ?? 'su sitio';
+    const quien = (await this.repo.findUsuarioRostro(ctx.actorId))?.nombre ?? 'Un supervisor';
+
+    if (decision === 'aceptado') {
+      await this.repo.decidirRetardo(eventoId, ctx.actorId, decision, this.ahora());
+      await this.audit.registrarAccion(ctx, 'asistencia.aceptar_retardo', 'bitacora_eventos', eventoId, {
+        guardiaId: ev.usuarioId,
+        sitio,
+      });
+      await this.avisarGuardia(ev.usuarioId, {
+        tipo: 'retardo',
+        titulo: 'Retardo aceptado',
+        mensaje: `${quien} aceptó tu llegada a ${sitio}. Puedes seguir en tu turno; el retardo queda registrado.`,
+        ruta: '/marcar/historial',
+      });
+      return { sitioSolo: false };
+    }
+
+    // Mandar a casa: solo con la jornada abierta, o sea con el guardia en el sitio.
+    const [jornada] = armarJornadas(
+      await this.repo.jornadasEntre(ev.usuarioId, entrada.registradaEn, new Date(entrada.registradaEn.getTime() + 1)),
+    );
+    if (!jornada || jornada.salida) {
+      throw HttpError.conflict('Solo se manda a casa a quien sigue en el sitio: su jornada ya se cerró');
+    }
+    const t = this.ahora().getTime();
+    const abiertas = await this.repo.jornadasDeTodos(new Date(t - 30 * 3_600_000), new Date(t + 60_000));
+    const acompanado = armarJornadas(abiertas).some(
+      (j) =>
+        !j.salida &&
+        j.entrada.id !== entrada.id &&
+        j.sitio?.id === entrada.sitio?.id &&
+        abiertas.find((r) => r.id === j.entrada.id)?.usuario.id !== ev.usuarioId,
+    );
+    const solo = !acompanado;
+    if (solo && !responsabilidad) {
+      throw new HttpError(
+        409,
+        'SITIO_QUEDARIA_SOLO',
+        `${sitio} se quedaría sin guardia. Indica quién se hace cargo.`,
+      );
+    }
+
+    await this.cerrarJornada(
+      entrada.id,
+      { motivo: motivo!, salidaEn: undefined },
+      ctx,
+      alcance,
+      true,
+    );
+    await this.repo.decidirRetardo(eventoId, ctx.actorId, decision, this.ahora());
+    await this.audit.registrarAccion(ctx, 'asistencia.decidir_retardo', 'bitacora_eventos', eventoId, {
+      guardiaId: ev.usuarioId,
+      decision,
+      motivo,
+      sitioSolo: solo,
+      responsabilidad: solo ? responsabilidad : null,
     });
+    if (solo) {
+      const guardia = (await this.repo.findUsuarioRostro(ev.usuarioId))?.nombre ?? 'El guardia';
+      const admins = (await this.repo.admins()).filter((id) => id !== ctx.actorId);
+      const detalle = {
+        queda_solo: 'Se queda sin guardia hasta el siguiente turno, bajo su responsabilidad.',
+        cubrire: 'Enviará a alguien de sus guardias a cubrir; si necesita uno de otro supervisor, lo pedirá aquí.',
+        pedir_a_admin:
+          'Necesita un guardia de otro supervisor: pide permiso para ver quién puede cubrir y que quede registrado en el sitio.',
+      }[responsabilidad!];
+      const titulo = responsabilidad === 'pedir_a_admin' ? 'Solicitud de cobertura' : 'Sitio sin guardia';
+      await this.bitacora({
+        usuarioIds: [ev.usuarioId],
+        tipo: 'cobertura',
+        detalle: `${sitio} quedó sin guardia al mandar a casa a ${guardia}. ${quien}: ${detalle}`,
+        marcacionId: entrada.id,
+        sitioId: entrada.sitio?.id ?? null,
+        actorId: ctx.actorId,
+      });
+      try {
+        await this.repo.avisar(admins, {
+          tipo: 'marca_alerta',
+          titulo,
+          mensaje: `${sitio}: ${quien} mandó a casa a ${guardia} por llegar tarde y el sitio quedó solo. ${detalle}`,
+          ruta: '/asistencia/calendario',
+        });
+      } catch (err) {
+        console.error('[asistencia] No se pudo crear el aviso', err);
+      }
+    }
+    return { sitioSolo: solo };
   }
 
   /** Jornadas del guardia cuya entrada cae en el mes `AAAA-MM` (zona del negocio). */

@@ -33,6 +33,7 @@ import {
   toast,
 } from '../../components/ui';
 import { ClienteModal } from './ClienteModal';
+import { AccesosClienteCard } from './AccesosCliente';
 import { ContactoModal } from './ContactoModal';
 import { EliminarClienteDialog } from './EliminarSitioClienteDialogs';
 import { EstatusClienteBadge } from './EstatusClienteBadge';
@@ -114,6 +115,7 @@ export function ClienteDetallePage() {
   const deBaja = !!c.deletedAt;
   const puedeEditar = hasPermission(yo, PERMISOS.CLIENTES_EDITAR) && !deBaja;
   const puedeBaja = hasPermission(yo, PERMISOS.CLIENTES_BAJA);
+  const esAdmin = yo?.rol === ROLES.ADMIN;
   const sitiosActivos = c.sitios.filter((s) => !s.deletedAt);
   const sitiosBaja = c.sitios.filter((s) => s.deletedAt);
 
@@ -270,7 +272,9 @@ export function ClienteDetallePage() {
           )}
         </Card>
 
-        <ReglasAvisoCard cliente={c} puedeEditar={puedeEditar} />
+        <AccesosClienteCard cliente={c} puedeEditar={esAdmin && !deBaja} />
+
+        <ReglasAvisoCard cliente={c} puedeEditar={esAdmin && !deBaja} />
 
         <Card className="md:col-span-2">
           <CardHeader

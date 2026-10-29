@@ -30,6 +30,7 @@ const jornada = (sitioId: number): Jornada => ({
   salida: marca(4, 'salida'),
   sitio: { id: sitioId, nombre: `Sitio ${sitioId}` },
   alertas: ['retardo', 'rostro_pendiente', 'rostro_rechazado', 'gps_impreciso'],
+  justificadas: [],
   programada: null,
   retardoMin: 12,
   salidaAnticipadaMin: null,

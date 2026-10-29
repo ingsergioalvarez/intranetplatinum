@@ -92,7 +92,8 @@ function situacionDe(
   const min = Math.floor((ahora.getTime() - inicio.getTime()) / 60_000);
   if (min < 0) return 'programado';
   const fila = turnosDia.get(`${guardiaId}|${inicio.getTime()}`);
-  const hasta = inicio.getTime() + Math.min(durMin, DESPUES_MAX_MIN) * 60_000;
+  // En turnos largos (24 h) llegar muy tarde sigue siendo ese turno: la ventana crece a la mitad del turno.
+  const hasta = inicio.getTime() + Math.min(durMin, Math.max(DESPUES_MAX_MIN, durMin / 2)) * 60_000;
   const entro = (entradasDe.get(guardiaId) ?? []).some((e) => e.getTime() >= inicio.getTime() - ANTES_MS && e.getTime() < hasta);
   // Seguía en una jornada que empezó antes y no había cerrado cuando empezó este turno (horas extra).
   const continua = (reales.jornadas ?? []).some(

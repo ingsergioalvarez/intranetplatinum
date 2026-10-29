@@ -56,6 +56,7 @@ import { mensajeDeError } from '../../core/api';
 import { formatFechaHora } from '../../core/format/fechas';
 import { asistenciaService } from './asistencia.service';
 import { formatDia, formatHora } from './formato';
+import { DecisionRetardo, NotaDecisionRetardo } from './DecisionRetardo';
 import { IncidenciaModal } from './IncidenciaModal';
 
 const ICONO: Record<TipoEventoBitacora, typeof Clock> = {
@@ -326,7 +327,12 @@ function Evento({
 }) {
   const Icono = ICONO[e.tipo];
   const justificable =
-    TIPOS_JUSTIFICABLES.includes(e.tipo) && !e.justificacion && e.decision?.tipo !== 'asistencia';
+    TIPOS_JUSTIFICABLES.includes(e.tipo) &&
+    !e.justificacion &&
+    e.decision?.tipo !== 'asistencia' &&
+    e.decision?.tipo !== 'enviado_a_casa';
+  // Retardo sin atender: justificar / aceptar / mandar a casa en un solo bloque (A-25).
+  const decidirRetardo = e.tipo === 'retardo' && !e.justificacion && !e.decision;
   const sinAtender = claseIncidencia(e.tipo) === 'asistencia' && incidenciaPendiente(e);
 
   return (
@@ -390,22 +396,35 @@ function Evento({
                     </span>
                   </p>
                 ) : (
-                  <Badge tone="warning">Pendiente de revisión</Badge>
+                  <Badge tone="warning">Sin atender</Badge>
                 )}
                 {e.incidencia.nota && <p className="text-slate-600">“{e.incidencia.nota}”</p>}
-                <button
-                  type="button"
-                  onClick={() => onIncidencia(e.incidencia!.id)}
-                  className="block text-sm font-medium text-brand-700 hover:underline"
-                >
-                  {e.incidencia.revisadaEn ? 'Ver incidencia' : 'Revisar'}
-                </button>
+                {e.incidencia.revisadaEn ? (
+                  <button
+                    type="button"
+                    onClick={() => onIncidencia(e.incidencia!.id)}
+                    className="block text-sm font-medium text-brand-700 hover:underline"
+                  >
+                    Ver incidencia
+                  </button>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-600">
+                      Una nota no la cierra: revísala y marca si fue falsa alarma o confirmada.
+                    </p>
+                    <Button size="sm" variant="secondary" onClick={() => onIncidencia(e.incidencia!.id)}>
+                      Revisar y atender
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
         )}
 
         {e.tipo === 'falta' && typeof e.datos?.llegoEn === 'string' && <DecisionLlegada evento={e} />}
+        {decidirRetardo && <DecisionRetardo evento={e} onJustificar={onJustificar} />}
+        <NotaDecisionRetardo evento={e} />
 
         {e.justificacion && (
           <Nota tono="verde">
@@ -428,7 +447,7 @@ function Evento({
           <Button variant="ghost" size="sm" icon={<MessageSquare className="size-4" />} onClick={onComentar}>
             Agregar nota
           </Button>
-          {justificable && (
+          {justificable && !decidirRetardo && (
             <Button
               variant="ghost"
               size="sm"

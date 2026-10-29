@@ -5,6 +5,47 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-29 #30 — Observaciones del primer guardia: rostro, calendario, acceso del cliente, avisos y rutas (A-26 a A-32)
+
+#### Añadido
+
+- Acceso del cliente: en la ficha, "Acceso a la intranet" (solo admin). `POST /api/clientes/:id/accesos` crea el usuario con rol cliente ligado al cliente, con contraseña temporal y mensaje para copiar; si el correo ya es de un usuario cliente sin cliente, lo liga. Máximo 2 usuarios activos por cliente (`MAX_ACCESOS_CLIENTE`). Su correo queda como contacto que recibe notificaciones. `ClienteDetalle.accesos` (A-29).
+
+#### Cambiado
+
+- Avisos de reportes: `PUT /api/clientes/:id/avisos` es solo para admin; el supervisor ve la pantalla con los campos bloqueados ("Ver") (A-30).
+- Incidencia de rostro: el botón "Revisar y atender" es visible y aclara que una nota no la cierra; el aviso de arriba detalla qué falta por atender (A-27).
+- Calendario de cobertura: en turnos largos la ventana para ligar la entrada al turno crece a la mitad del turno, así un guardia de 24 h que llega 9 h tarde ya no sale "Sin registro" (A-28).
+
+- Al marcar una incidencia de rostro como falsa alarma o confirmada, una ventana explica qué significa y qué pasará (se cierra, queda en verde o rojo en el historial, no se deshace), y al terminar el aviso lo dice (A-31).
+
+- Recordatorio a los 30 min (A-26): si mandaron a casa a un guardia y el sitio sigue sin ningún guardia, se avisa una sola vez al supervisor y a los admin ("El sitio sigue sin guardia", con ruta al calendario del sitio) y queda en la bitácora. Corre dentro de la vigilancia de cada minuto (`RecordatorioSitioSolo`).
+- Cada aviso lleva a donde está lo que indica (A-32): "Te mandaron a casa", "Cerraron tu jornada" y "Retardo aceptado" van al historial de marcas del guardia; los avisos de sitios, grupos, horarios y coberturas del guardia van a Mis sitios (antes al inicio o al checador). La push usa la misma ruta. Una incidencia que ya no existe muestra un mensaje en vez de una pantalla vacía.
+
+#### Pendiente
+
+- A-26: falta la lista formal de solicitudes de cobertura para que el admin las resuelva (necesita tabla y migración).
+- Sin migración nueva (`Usuario.clienteId` ya existía). Siguen pendientes A-26 (recordatorio y lista formal), subir A-21 a A-30 al servidor y la migración de A-22.
+
+### Sesión 2026-10-29 #29 — Celular sin zoom, retardo justificado y decisiones ante un retardo (A-23 a A-26)
+
+#### Añadido
+
+- Ante un retardo sin atender, el supervisor elige: **Justificar**, **Aceptar con retardo** (el guardia se queda y el retardo sigue contando, ya atendido) o **Mandar a casa** (solo si el guardia sigue en el sitio: cierra su jornada, cuenta como falta y sus horas no cuentan). `POST /api/asistencia/retardos/:id/decidir`, bloque `DecisionRetardo` en la bitácora y las incidencias (A-25).
+- Mandar a casa pide motivo, explica las consecuencias y avisa al guardia ("Te mandaron a casa"). Si el sitio quedaría sin otro guardia, el servidor responde `SITIO_QUEDARIA_SOLO` y la ventana pide elegir: se queda solo bajo su responsabilidad, mandará a alguien de sus guardias, o necesita un guardia de otro supervisor. En los tres casos se avisa a los admin ("Sitio sin guardia" / "Solicitud de cobertura", con ruta al calendario) y queda en la bitácora del sitio (A-25, A-26 parcial).
+- El reporte trata un retardo "mandado a casa" como falta sin horas; la alerta nueva `enviada_a_casa` muestra "Mandado a casa" en la lista del día.
+
+#### Cambiado
+
+- Un retardo o salida anticipada justificado ya no aparece como pendiente: `Jornada.justificadas`; la lista del día, la tarjeta de jornada y las horas muestran "justificado" (A-24).
+- La etiqueta de hora programada en Asistencia se acomoda en varias líneas y dice "9 h 19 min tarde" en vez de "+549 min", para que no ensanche la pantalla del celular (A-23).
+- Sin zoom de pellizco ni de doble toque en la app (viewport bloqueado y `touch-action`); las fotos siguen con su visor y su zoom. El cuerpo de los modales no crece a lo ancho (A-23).
+
+#### Pendiente
+
+- A-26: recordatorio a los 30 min si nadie llega y lista formal de solicitudes para que el admin las resuelva (hoy la solicitud es un aviso al admin; la cobertura se crea con el calendario de siempre).
+- Sin migración nueva en esta sesión (la de A-22 sigue pendiente de `db:deploy` en el servidor).
+
 ### Sesión 2026-10-28 #28 — Título propio en cada aviso (A-22)
 
 #### Cambiado

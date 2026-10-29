@@ -202,7 +202,7 @@ export class CoberturasService extends BaseService {
       tipo: 'asignacion',
       titulo: 'Cubrirás un turno',
       mensaje: `Cubrirás ${sitio.nombre} ${rango}: entras a las ${horaLegible(data.horaInicio)} (${data.horas} h). Motivo: ${data.motivo}`,
-      ruta: '/marcar',
+      ruta: '/mis-sitios',
     });
     // Supervisores del sitio cubierto y del sitio del guardia (si no fueron ellos quienes lo enviaron).
     const supervisores = new Set([
@@ -257,7 +257,7 @@ export class CoberturasService extends BaseService {
       tipo: 'asignacion',
       titulo: 'Cobertura cancelada',
       mensaje: `Se canceló tu cobertura en ${c.sitio.nombre} ${rango}: regresas a tu sitio`,
-      ruta: '/marcar',
+      ruta: '/mis-sitios',
     });
   }
 }

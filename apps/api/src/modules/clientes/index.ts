@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import {
   PERMISOS,
+  ROLES,
+  accesoClienteSchema,
   clienteCreateSchema,
   clienteFiltroSchema,
   clienteUpdateSchema,
@@ -15,6 +17,7 @@ import {
   PrismaAuditLogger,
   authenticate,
   requirePermission,
+  requireRoles,
   validate,
   type AppModule,
 } from '../../core';
@@ -57,9 +60,17 @@ export function createClientesModule({
   router.patch('/:id/baja', requirePermission(PERMISOS.CLIENTES_BAJA), id, c.baja);
   router.patch('/:id/reactivar', requirePermission(PERMISOS.CLIENTES_BAJA), id, c.reactivar);
 
+  // El acceso y los avisos del cliente los define solo un administrador (A-29, A-30).
+  router.post(
+    '/:id/accesos',
+    requireRoles(ROLES.ADMIN),
+    validate({ params: idParamSchema, body: accesoClienteSchema }),
+    c.createAcceso,
+  );
+
   router.put(
     '/:id/avisos',
-    editar,
+    requireRoles(ROLES.ADMIN),
     validate({ params: idParamSchema, body: reglasAvisoSchema }),
     c.reglasAviso,
   );

@@ -4,6 +4,7 @@ import request from 'supertest';
 import {
   PERMISOS_POR_ROL,
   ROLES,
+  type AccesoCliente,
   type ClienteCreateData,
   type ClienteResumen,
   type Contacto,
@@ -128,6 +129,40 @@ class MemoryClientesRepository extends ClientesRepository {
   }
   async restoreSitio(id: number) {
     (await this.findSitio(id))!.deletedAt = null;
+  }
+  usuarios: {
+    id: number;
+    nombre: string;
+    email: string;
+    rol: string;
+    clienteId: number | null;
+    deletedAt: string | null;
+  }[] = [];
+  private acceso(u: (typeof this.usuarios)[number]): AccesoCliente {
+    return {
+      id: u.id,
+      nombre: u.nombre,
+      email: u.email,
+      activo: !u.deletedAt,
+      ultimoAcceso: null,
+      debeCambiarPassword: true,
+    };
+  }
+  async listAccesos(clienteId: number) {
+    return this.usuarios.filter((u) => u.clienteId === clienteId && u.rol === ROLES.CLIENTE).map((u) => this.acceso(u));
+  }
+  async findUsuarioPorEmail(email: string) {
+    return this.usuarios.find((u) => u.email === email) ?? null;
+  }
+  async crearAcceso(clienteId: number, data: { nombre: string; email: string; passwordHash: string }) {
+    const u = { id: 100 + this.usuarios.length, nombre: data.nombre, email: data.email, rol: ROLES.CLIENTE, clienteId, deletedAt: null };
+    this.usuarios.push(u);
+    return this.acceso(u);
+  }
+  async ligarAcceso(usuarioId: number, clienteId: number) {
+    const u = this.usuarios.find((x) => x.id === usuarioId)!;
+    u.clienteId = clienteId;
+    return this.acceso(u);
   }
   reglas = new Map<number, ReglasAviso>();
   async getReglasAviso(id: number) {
@@ -380,7 +415,7 @@ describe('clientes (F2-02)', () => {
 
 describe('reglas de aviso (F3-09)', () => {
   it('guarda la regla por defecto y descarta excepciones iguales a ella', async () => {
-    const res = await como(SUPERVISOR).put('/clientes/1/avisos', {
+    const res = await como(ADMIN).put('/clientes/1/avisos', {
       porDefecto: 'supervisor',
       porPrioridad: { critica: 'ambos', baja: 'supervisor', media: null },
     });
@@ -393,8 +428,58 @@ describe('reglas de aviso (F3-09)', () => {
   });
 
   it('valida destinos y permisos', async () => {
-    expect((await como(SUPERVISOR).put('/clientes/1/avisos', { porDefecto: 'nadie' })).status).toBe(400);
+    expect((await como(ADMIN).put('/clientes/1/avisos', { porDefecto: 'nadie' })).status).toBe(400);
     expect((await como(GUARDIA).put('/clientes/1/avisos', { porDefecto: 'ambos' })).status).toBe(403);
+  });
+
+  it('el supervisor no puede cambiar a quién se avisa (A-30)', async () => {
+    const res = await como(SUPERVISOR).put('/clientes/1/avisos', { porDefecto: 'supervisor' });
+    expect(res.status).toBe(403);
+    expect(clientes.reglas.has(1)).toBe(false);
+  });
+});
+
+describe('acceso del cliente (A-29)', () => {
+  const alta = { nombre: 'Marta Ríos', email: 'MARTA@cliente.mx' };
+
+  it('crea el usuario cliente con contraseña temporal y su contacto que recibe avisos', async () => {
+    const res = await como(ADMIN).post('/clientes/1/accesos', alta);
+    expect(res.status).toBe(201);
+    expect(res.body.data.acceso).toMatchObject({ nombre: 'Marta Ríos', email: 'marta@cliente.mx' });
+    expect(res.body.data.passwordTemporal).toHaveLength(12);
+    const detalle = (await como(ADMIN).get('/clientes/1')).body.data;
+    expect(detalle.accesos).toHaveLength(1);
+    expect(detalle.contactos).toMatchObject([
+      { email: 'marta@cliente.mx', recibeNotificaciones: true, esResponsable: true },
+    ]);
+    expect(audit.acciones()).toContain('clientes.acceso_crear');
+  });
+
+  it('liga a un usuario cliente que ya existía, sin contraseña nueva', async () => {
+    clientes.usuarios.push({ id: 9, nombre: 'Comunicalo', email: 'comunicalo@platinum.com', rol: ROLES.CLIENTE, clienteId: null, deletedAt: null });
+    const res = await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Comunicalo', email: 'comunicalo@platinum.com' });
+    expect(res.status).toBe(201);
+    expect(res.body.data.passwordTemporal).toBeNull();
+    expect(clientes.usuarios[0].clienteId).toBe(1);
+  });
+
+  it('máximo 2 usuarios activos por cliente', async () => {
+    expect((await como(ADMIN).post('/clientes/1/accesos', alta)).status).toBe(201);
+    expect((await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Luis', email: 'luis@cliente.mx' })).status).toBe(201);
+    const res = await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Ana', email: 'ana@cliente.mx' });
+    expect(res.status).toBe(409);
+  });
+
+  it('rechaza correos de usuarios que no son cliente o de otro cliente', async () => {
+    clientes.usuarios.push({ id: 5, nombre: 'Sofía', email: 'sofia@x.mx', rol: ROLES.SUPERVISOR, clienteId: null, deletedAt: null });
+    clientes.usuarios.push({ id: 6, nombre: 'Otro', email: 'otro@x.mx', rol: ROLES.CLIENTE, clienteId: 2, deletedAt: null });
+    expect((await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Sofía', email: 'sofia@x.mx' })).status).toBe(409);
+    expect((await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Otro', email: 'otro@x.mx' })).status).toBe(409);
+  });
+
+  it('solo el administrador da acceso', async () => {
+    expect((await como(SUPERVISOR).post('/clientes/1/accesos', alta)).status).toBe(403);
+    expect((await como(ADMIN).post('/clientes/1/accesos', { nombre: 'X', email: 'no-es-correo' })).status).toBe(400);
   });
 });
 

@@ -7,6 +7,8 @@ import type {
   CerrarJornadaInput,
   TableroAsistencia,
   DecisionFalta,
+  DecidirRetardoInput,
+  ResultadoDecisionRetardo,
   EventoBitacora,
   IncidenciasDeGuardia,
   FilaAsistencia,
@@ -120,6 +122,8 @@ export const asistenciaService = {
     api.post<void>(`/asistencia/jornadas/${entradaId}/cerrar`, data),
   decidirFalta: (id: number, decision: DecisionFalta) =>
     api.post<EventoBitacora>(`/bitacora/eventos/${id}/decidir`, { decision }),
+  decidirRetardo: (id: number, data: DecidirRetardoInput) =>
+    api.post<ResultadoDecisionRetardo>(`/asistencia/retardos/${id}/decidir`, data),
   justificarEvento: (id: number, motivo: string) =>
     api.post<EventoBitacora>(`/bitacora/eventos/${id}/justificar`, { motivo }),
 };

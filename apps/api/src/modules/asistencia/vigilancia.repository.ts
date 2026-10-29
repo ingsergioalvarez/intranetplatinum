@@ -2,6 +2,7 @@ import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { turnoDeDb } from '../sitios/sitios.repository';
 import { ComidasRepository } from './comidas';
+import { SitioSoloRepository } from './sitioSolo';
 import { diasDeDb, diasSelect } from '../turnos/dias';
 import { PrismaAsistenciaRepository, type DestinoRevision } from './asistencia.repository';
 import {
@@ -195,6 +196,57 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
 /** Recordatorios de comida (DA-47). */
 export class PrismaComidasRepository extends ComidasRepository {
   private readonly asistencia = new PrismaAsistenciaRepository();
+
+  jornadasDesde(desde: Date, hasta: Date) {
+    return this.asistencia.jornadasDeTodos(desde, hasta);
+  }
+
+  async marcarEnviado(clave: string) {
+    try {
+      await getPrisma().avisoEnviado.create({ data: { clave } });
+      return true;
+    } catch {
+      // Ya existía: el aviso se envió antes.
+      return false;
+    }
+  }
+
+  revisoresDe(destino: DestinoRevision) {
+    return this.asistencia.revisoresDe(destino);
+  }
+}
+
+/** Recordatorio de "el sitio sigue sin guardia" (A-26). */
+export class PrismaSitioSoloRepository extends SitioSoloRepository {
+  private readonly asistencia = new PrismaAsistenciaRepository();
+
+  async enviadosACasa(desde: Date, hasta: Date) {
+    const rows = await getPrisma().eventoBitacora.findMany({
+      where: { tipo: 'retardo', decision: 'enviado_a_casa', decididoEn: { gte: desde, lte: hasta } },
+      select: {
+        id: true,
+        usuarioId: true,
+        sitioId: true,
+        decididoEn: true,
+        usuario: { select: { nombre: true } },
+        sitio: { select: { nombre: true } },
+      },
+    });
+    return rows.flatMap((r) =>
+      r.decididoEn
+        ? [
+            {
+              eventoId: r.id,
+              guardiaId: r.usuarioId,
+              guardiaNombre: r.usuario.nombre,
+              sitioId: r.sitioId,
+              sitioNombre: r.sitio?.nombre ?? 'El sitio',
+              decididoEn: r.decididoEn,
+            },
+          ]
+        : [],
+    );
+  }
 
   jornadasDesde(desde: Date, hasta: Date) {
     return this.asistencia.jornadasDeTodos(desde, hasta);

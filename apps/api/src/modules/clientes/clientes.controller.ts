@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import type {
+  AccesoClienteData,
   ClienteCreateData,
   ClienteFiltro,
   ContactoData,
@@ -54,6 +55,18 @@ export class ClientesController extends BaseController {
       await this.service.actualizarReglasAviso(
         this.params<IdParam>(req).id,
         this.body<ReglasAviso>(req),
+        this.accionCtx(req),
+      ),
+    );
+
+  // ----- Acceso del cliente -----
+
+  createAcceso = async (req: Request, res: Response) =>
+    this.created(
+      res,
+      await this.service.crearAcceso(
+        this.params<IdParam>(req).id,
+        this.body<AccesoClienteData>(req),
         this.accionCtx(req),
       ),
     );

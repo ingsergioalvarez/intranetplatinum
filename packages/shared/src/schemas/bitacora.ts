@@ -109,6 +109,38 @@ export const decidirFaltaSchema = z.object({
 });
 export type DecidirFaltaInput = z.infer<typeof decidirFaltaSchema>;
 
+/**
+ * Qué decide el supervisor ante un retardo (A-25), además de justificarlo: aceptarlo (el guardia se
+ * queda y el retardo sigue contando, pero ya está atendido) o mandarlo a casa (cierra su jornada y
+ * cuenta como falta; sus horas no cuentan).
+ */
+export const DECISIONES_RETARDO = ['aceptado', 'enviado_a_casa'] as const;
+export type DecisionRetardo = (typeof DECISIONES_RETARDO)[number];
+
+/** Si al mandarlo a casa el sitio queda sin guardia: quién se hace cargo. */
+export const RESPONSABILIDADES_SITIO = ['queda_solo', 'cubrire', 'pedir_a_admin'] as const;
+export type ResponsabilidadSitio = (typeof RESPONSABILIDADES_SITIO)[number];
+
+export const decidirRetardoSchema = z
+  .object({
+    decision: z.enum(DECISIONES_RETARDO, 'Elige qué hacer con el retardo'),
+    /** Obligatorio al mandarlo a casa; queda en la bitácora y en el aviso al guardia. */
+    motivo: z.string().trim().max(200, 'Máximo 200 caracteres').optional(),
+    responsabilidad: z.enum(RESPONSABILIDADES_SITIO).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.decision === 'enviado_a_casa' && (d.motivo?.length ?? 0) < 3) {
+      ctx.addIssue({ code: 'custom', path: ['motivo'], message: 'Escribe el motivo' });
+    }
+  });
+export type DecidirRetardoInput = z.infer<typeof decidirRetardoSchema>;
+
+/** Resultado de decidir un retardo. */
+export interface ResultadoDecisionRetardo {
+  /** El sitio se quedó sin guardia al mandarlo a casa. */
+  sitioSolo: boolean;
+}
+
 export const TIPO_EVENTO_BITACORA_LABEL: Record<TipoEventoBitacora, string> = {
   retardo: 'Retardo',
   salida_anticipada: 'Salida anticipada',
@@ -197,6 +229,6 @@ export interface EventoBitacora {
   } | null;
   justificacion: { motivo: string; por: string | null; en: string } | null;
   /** Falta con llegada tarde: qué decidió el supervisor (DA-45). */
-  decision: { tipo: DecisionFalta; por: string | null; en: string } | null;
+  decision: { tipo: DecisionFalta | DecisionRetardo; por: string | null; en: string } | null;
   comentarios: ComentarioBitacora[];
 }

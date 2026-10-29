@@ -25,6 +25,11 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    /* Sin zoom de pellizco ni de doble toque en la app; las fotos tienen su propio visor. */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    /* Red de seguridad: nada ensancha la página en celular. */
+    overflow-x: hidden;
   }
   body {
     @apply bg-slate-50 text-slate-900 antialiased;

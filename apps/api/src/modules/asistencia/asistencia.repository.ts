@@ -1,6 +1,7 @@
 import type {
   AlertaMarcacion,
   ConclusionIncidencia,
+  DecisionRetardo,
   EstadoRostro,
   GuardiaResumen,
   MotivoIncidencia,
@@ -244,6 +245,26 @@ export abstract class AsistenciaRepository {
   ): Promise<IncidenciaRow>;
   /** Estado actual de los rostros con los que se marcó (para las alertas de "pendiente", AS1-14). */
   abstract estadosRostros(ids: number[]): Promise<Map<number, EstadoRostroActual>>;
+  /** Retardos y salidas anticipadas ya justificados, por la marca que los originó (A-24). */
+  abstract justificadasEn(
+    marcacionIds: number[],
+  ): Promise<{ marcacionId: number; tipo: 'retardo' | 'salida_anticipada' }[]>;
+  // ---- Decisión ante un retardo (A-25) ----
+  abstract findEventoRetardo(id: number): Promise<EventoRetardoRow | null>;
+  /** Guarda lo que decidió el supervisor sobre un retardo. */
+  abstract decidirRetardo(id: number, porId: number, decision: DecisionRetardo, en: Date): Promise<void>;
+  /** Usuarios admin activos. */
+  abstract admins(): Promise<number[]>;
+}
+
+/** Evento de bitácora de un retardo, con lo necesario para decidirlo. */
+export interface EventoRetardoRow {
+  id: number;
+  tipo: string;
+  usuarioId: number;
+  marcacionId: number | null;
+  justificadoEn: Date | null;
+  decision: string | null;
 }
 
 export interface EstadoRostroActual {
@@ -591,6 +612,45 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
       select: { id: true, estado: true, revisadoEn: true },
     });
     return new Map(rows.map((r) => [r.id, { estado: r.estado, revisadoEn: r.revisadoEn }]));
+  }
+
+  async justificadasEn(marcacionIds: number[]) {
+    if (marcacionIds.length === 0) return [];
+    const rows = await getPrisma().eventoBitacora.findMany({
+      where: {
+        marcacionId: { in: marcacionIds },
+        tipo: { in: ['retardo', 'salida_anticipada'] },
+        justificadoEn: { not: null },
+      },
+      select: { marcacionId: true, tipo: true },
+    });
+    return rows.flatMap((r) =>
+      r.marcacionId !== null && (r.tipo === 'retardo' || r.tipo === 'salida_anticipada')
+        ? [{ marcacionId: r.marcacionId, tipo: r.tipo }]
+        : [],
+    );
+  }
+
+  async findEventoRetardo(id: number) {
+    return getPrisma().eventoBitacora.findUnique({
+      where: { id },
+      select: { id: true, tipo: true, usuarioId: true, marcacionId: true, justificadoEn: true, decision: true },
+    });
+  }
+
+  async decidirRetardo(id: number, porId: number, decision: DecisionRetardo, en: Date) {
+    await getPrisma().eventoBitacora.update({
+      where: { id },
+      data: { decision, decididoPorId: porId, decididoEn: en },
+    });
+  }
+
+  async admins() {
+    const rows = await getPrisma().usuario.findMany({
+      where: { activo: true, deletedAt: null, rol: { clave: ROLES.ADMIN } },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
   }
 
   async crearIncidencia(data: NuevaIncidencia) {

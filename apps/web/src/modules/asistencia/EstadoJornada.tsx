@@ -20,8 +20,13 @@ export function EstadoJornada({
     if (turno.estado === 'por_llegar') return <Badge tone="info">Por llegar</Badge>;
     return <Badge>Entra {formatHora(turno.entrada)}</Badge>;
   }
-  if (j.alertas.length === 1) return <Badge tone="warning">{ALERTA_MARCACION_LABEL[j.alertas[0]]}</Badge>;
-  if (j.alertas.length) return <Badge tone="warning">{j.alertas.length} alertas</Badge>;
+  if (j.alertas.includes('enviada_a_casa')) return <Badge tone="danger">Mandado a casa</Badge>;
+  // Lo justificado por un supervisor ya no es pendiente (A-24).
+  const pendientes = j.alertas.filter((a) => !j.justificadas.includes(a));
+  if (pendientes.length === 1) return <Badge tone="warning">{ALERTA_MARCACION_LABEL[pendientes[0]]}</Badge>;
+  if (pendientes.length) return <Badge tone="warning">{pendientes.length} alertas</Badge>;
+  if (j.justificadas.length === 1 && j.salida)
+    return <Badge tone="info">{ALERTA_MARCACION_LABEL[j.justificadas[0]]} justificado</Badge>;
   if (!j.salida)
     return jornadaEnCurso(j) ? <Badge tone="info">En curso</Badge> : <Badge tone="warning">Sin salida</Badge>;
   return <Badge tone="success">Completa</Badge>;

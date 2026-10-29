@@ -1,4 +1,5 @@
 import type {
+  AccesoCliente,
   ClienteCreateData,
   ClienteFiltro,
   ClienteResumen,
@@ -42,6 +43,20 @@ export abstract class ClientesRepository extends BaseRepository<
   /** Baja del sitio y término (al día `hoy`) de sus asignaciones vigentes. */
   abstract softDeleteSitio(id: number, hoy: string): Promise<void>;
   abstract restoreSitio(id: number): Promise<void>;
+
+  /** Usuarios con rol cliente ligados al cliente (activos primero). */
+  abstract listAccesos(clienteId: number): Promise<AccesoCliente[]>;
+  /** Usuario por correo, esté o no de baja (el correo es único), con su rol y cliente. */
+  abstract findUsuarioPorEmail(
+    email: string,
+  ): Promise<{ id: number; rol: string; clienteId: number | null; deletedAt: string | null } | null>;
+  /** Crea un usuario con rol cliente ligado al cliente y contraseña temporal. */
+  abstract crearAcceso(
+    clienteId: number,
+    data: { nombre: string; email: string; passwordHash: string },
+  ): Promise<AccesoCliente>;
+  /** Liga un usuario cliente que ya existía. */
+  abstract ligarAcceso(usuarioId: number, clienteId: number): Promise<AccesoCliente>;
 
   abstract getReglasAviso(clienteId: number): Promise<ReglasAviso>;
   /** Reemplaza la regla por defecto y todas las excepciones por prioridad. */
@@ -153,6 +168,27 @@ function toSitio({ _count, lat, lng, deletedAt, ...s }: SitioRow): Sitio {
 }
 
 // ---------- Implementación Prisma ----------
+
+const accesoSelect = {
+  id: true,
+  nombre: true,
+  email: true,
+  activo: true,
+  ultimoAcceso: true,
+  debeCambiarPassword: true,
+  deletedAt: true,
+} satisfies Prisma.UsuarioSelect;
+
+function toAcceso(u: Prisma.UsuarioGetPayload<{ select: typeof accesoSelect }>): AccesoCliente {
+  return {
+    id: u.id,
+    nombre: u.nombre,
+    email: u.email,
+    activo: u.activo && !u.deletedAt,
+    ultimoAcceso: u.ultimoAcceso?.toISOString() ?? null,
+    debeCambiarPassword: u.debeCambiarPassword,
+  };
+}
 
 export class PrismaClientesRepository extends ClientesRepository {
   async findById(id: number) {
@@ -282,6 +318,49 @@ export class PrismaClientesRepository extends ClientesRepository {
 
   async restoreSitio(id: number) {
     await getPrisma().sitio.update({ where: { id }, data: { deletedAt: null } });
+  }
+
+  // ----- Acceso del cliente (A-29) -----
+
+  async listAccesos(clienteId: number) {
+    const rows = await getPrisma().usuario.findMany({
+      where: { clienteId, rol: { clave: 'cliente' } },
+      select: accesoSelect,
+      orderBy: [{ deletedAt: 'asc' }, { createdAt: 'asc' }],
+    });
+    return rows.map(toAcceso);
+  }
+
+  async findUsuarioPorEmail(email: string) {
+    const u = await getPrisma().usuario.findUnique({
+      where: { email },
+      select: { id: true, clienteId: true, deletedAt: true, rol: { select: { clave: true } } },
+    });
+    return u && { id: u.id, rol: u.rol.clave, clienteId: u.clienteId, deletedAt: u.deletedAt?.toISOString() ?? null };
+  }
+
+  async crearAcceso(clienteId: number, { nombre, email, passwordHash }: { nombre: string; email: string; passwordHash: string }) {
+    const u = await getPrisma().usuario.create({
+      data: {
+        nombre,
+        email,
+        passwordHash,
+        debeCambiarPassword: true,
+        cliente: { connect: { id: clienteId } },
+        rol: { connect: { clave: 'cliente' } },
+      },
+      select: accesoSelect,
+    });
+    return toAcceso(u);
+  }
+
+  async ligarAcceso(usuarioId: number, clienteId: number) {
+    const u = await getPrisma().usuario.update({
+      where: { id: usuarioId },
+      data: { cliente: { connect: { id: clienteId } } },
+      select: accesoSelect,
+    });
+    return toAcceso(u);
   }
 
   // ----- Reglas de aviso (F3-09) -----

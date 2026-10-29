@@ -2,10 +2,10 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-10-28 (Platinum publicado en https://platinum.grupocomunicalo.mx, F4-04)
+**Última actualización:** 2026-10-29 (observaciones del primer guardia, A-26 a A-32)
 **Fase actual:** Asistencia completa en lo funcional: reporte oficial, modo sin conexión, cambios de turno y horas extra.
 **Última tarea terminada:** F4-04 casi completa: Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel propio de Cloudflare); se pudo entrar desde el dominio. Falta respaldo automático y SMTP. Antes: A-19 (hora límite del plan de cobertura).
-**Tarea en progreso:** ninguna. A-20 (push) funciona en el celular del usuario; A-21 (push obligatorio) y A-22 (título propio en cada aviso, con migración nueva) están hechas y probadas en local, faltan subirlas al servidor (`docker compose exec api npm run db:deploy`).
+**Tarea en progreso:** ninguna. Hechas y probadas en local, sin subir al servidor: A-27 (rostro atendible), A-28 (calendario con turnos de 24 h), A-29 (el admin crea el acceso del cliente, máx. 2) A-30 (avisos bloqueados para el supervisor), A-31 (confirmación al marcar incidencias de rostro), A-32 (cada aviso lleva a lo que indica) y el recordatorio de 30 min de A-26, todas sin migración; además A-23 (celular sin zoom y sin ensanchar), A-24 (retardo justificado), A-25 (aceptar con retardo / mandar a casa) y A-26 parcial (solicitud al admin como aviso; faltan recordatorio a los 30 min y lista formal). Sin migración nueva. A-20 (push) funciona en el celular del usuario; A-21 (push obligatorio) y A-22 (título propio en cada aviso, con migración nueva) están hechas y probadas en local, faltan subirlas al servidor (`docker compose exec api npm run db:deploy`).
 
 ## Siguiente paso
 
@@ -29,7 +29,7 @@
 
 - `npm install`; `npm run db:deploy -w @platinum/api` y `npm run db:seed -w @platinum/api` (sincroniza roles y permisos).
 - `npm run dev:https` para checador biométrico y pruebas en red local.
-- Calidad: `npm test` (357/357 pasando), `npm run lint`, `npm run typecheck`.
+- Calidad: `npm test` (383/383 pasando), `npm run lint`, `npm run typecheck`.
 
 ## Notas de contexto
 

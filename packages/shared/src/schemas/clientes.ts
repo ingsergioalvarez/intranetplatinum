@@ -367,4 +367,33 @@ export interface ClienteDetalle extends Cliente {
   contactos: Contacto[];
   sitios: Sitio[];
   reglasAviso: ReglasAviso;
+  /** Usuarios con rol cliente ligados a este cliente (portal F5-01). */
+  accesos: AccesoCliente[];
+}
+
+// ---------- Acceso del cliente (A-29) ----------
+
+/** Máximo de usuarios con acceso por cliente: los dos ven lo mismo, cada uno desde su cuenta. */
+export const MAX_ACCESOS_CLIENTE = 2;
+
+export const accesoClienteSchema = z.object({
+  nombre: z.string().trim().min(2, 'Escribe el nombre').max(120),
+  email: z.string().trim().toLowerCase().pipe(z.email('Correo inválido').max(160)),
+});
+export type AccesoClienteData = z.output<typeof accesoClienteSchema>;
+
+export interface AccesoCliente {
+  id: number;
+  nombre: string;
+  email: string;
+  activo: boolean;
+  ultimoAcceso: string | null;
+  /** Aún no cambia la contraseña temporal. */
+  debeCambiarPassword: boolean;
+}
+
+/** `passwordTemporal` es null cuando se ligó un usuario cliente que ya existía. */
+export interface AccesoClienteCreado {
+  acceso: AccesoCliente;
+  passwordTemporal: string | null;
 }

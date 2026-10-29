@@ -1,5 +1,5 @@
 import { Copy, MessageCircle, TriangleAlert } from 'lucide-react';
-import type { UsuarioConPassword } from '@platinum/shared';
+import type { Usuario } from '@platinum/shared';
 import { Button, Modal, toast } from '../../components/ui';
 
 async function copiar(texto: string, aviso: string) {
@@ -20,7 +20,7 @@ export function PasswordTemporalModal({
   titulo,
   onClose,
 }: {
-  resultado: UsuarioConPassword | null;
+  resultado: { usuario: Pick<Usuario, 'nombre' | 'email'>; passwordTemporal: string } | null;
   titulo: string;
   onClose: () => void;
 }) {

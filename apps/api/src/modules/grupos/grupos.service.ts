@@ -39,13 +39,13 @@ export class GruposService extends BaseService {
       tipo: 'grupo',
       titulo: 'Te agregaron a un grupo',
       mensaje: `Te agregaron al grupo ${nombre}`,
-      ruta: '/',
+      ruta: '/mis-sitios',
     });
     await this.avisar(quitados, {
       tipo: 'grupo',
       titulo: 'Ya no estás en el grupo',
       mensaje: `Ya no formas parte del grupo ${nombre}`,
-      ruta: '/',
+      ruta: '/mis-sitios',
     });
   }
 

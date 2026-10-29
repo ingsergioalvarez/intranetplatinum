@@ -13,6 +13,7 @@ import {
 import {
   Badge,
   Button,
+  ConfirmDialog,
   EmptyState,
   FormField,
   Modal,
@@ -61,6 +62,7 @@ export function IncidenciaModal({ id, onClose }: { id: number | null; onClose: (
   const qc = useQueryClient();
   const [nota, setNota] = useState('');
   const [viendo, setViendo] = useState<number | null>(null);
+  const [confirmando, setConfirmando] = useState<ConclusionIncidencia | null>(null);
   const detalle = useQuery({
     queryKey: asistenciaService.keys.incidencia(id ?? 0),
     queryFn: () => asistenciaService.incidencia(id!),
@@ -70,7 +72,12 @@ export function IncidenciaModal({ id, onClose }: { id: number | null; onClose: (
     mutationFn: (conclusion: ConclusionIncidencia) =>
       asistenciaService.revisarIncidencia(id!, conclusion, nota.trim()),
     onSuccess: (r) => {
-      toast.success(`Incidencia revisada: ${CONCLUSION_INCIDENCIA_LABEL[r.conclusion!].toLowerCase()}`);
+      toast.success(
+        r.conclusion === 'confirmada'
+          ? 'Incidencia cerrada como confirmada: quedó en rojo en el historial del guardia'
+          : 'Incidencia cerrada como falsa alarma: quedó en verde en el historial del guardia',
+      );
+      setConfirmando(null);
       setNota('');
       void qc.invalidateQueries({ queryKey: asistenciaService.keys.all });
       onClose();
@@ -100,8 +107,7 @@ export function IncidenciaModal({ id, onClose }: { id: number | null; onClose: (
                   variant="secondary"
                   icon={<CircleCheck className="size-4" />}
                   disabled={revisar.isPending}
-                  loading={revisar.isPending && revisar.variables === 'falsa_alarma'}
-                  onClick={() => revisar.mutate('falsa_alarma')}
+                  onClick={() => setConfirmando('falsa_alarma')}
                 >
                   Falsa alarma
                 </Button>
@@ -109,8 +115,7 @@ export function IncidenciaModal({ id, onClose }: { id: number | null; onClose: (
                   variant="danger"
                   icon={<ShieldAlert className="size-4" />}
                   disabled={revisar.isPending}
-                  loading={revisar.isPending && revisar.variables === 'confirmada'}
-                  onClick={() => revisar.mutate('confirmada')}
+                  onClick={() => setConfirmando('confirmada')}
                 >
                   Confirmada
                 </Button>
@@ -125,7 +130,10 @@ export function IncidenciaModal({ id, onClose }: { id: number | null; onClose: (
           <Spinner className="size-7" />
         </div>
       ) : detalle.isError || !i ? (
-        <EmptyState title="No se pudo cargar la incidencia" />
+        <EmptyState
+          title="Esa incidencia ya no está disponible"
+          description="Pudo haberla atendido o eliminado alguien más. Búscala en la lista de incidencias."
+        />
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -221,6 +229,39 @@ export function IncidenciaModal({ id, onClose }: { id: number | null; onClose: (
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={confirmando !== null}
+        title={confirmando === 'confirmada' ? '¿Marcar como confirmada?' : '¿Marcar como falsa alarma?'}
+        variant={confirmando === 'confirmada' ? 'danger' : 'primary'}
+        confirmLabel={confirmando === 'confirmada' ? 'Sí, confirmada' : 'Sí, falsa alarma'}
+        loading={revisar.isPending}
+        onCancel={() => setConfirmando(null)}
+        onConfirm={() => confirmando && revisar.mutate(confirmando)}
+        description={
+          <div className="space-y-2">
+            {confirmando === 'confirmada' ? (
+              <p>
+                Significa que <strong>sí hubo un problema real</strong>, por ejemplo que otra persona intentó
+                marcar por el guardia o que el rostro no era el suyo.
+              </p>
+            ) : (
+              <p>
+                Significa que <strong>no hubo problema</strong>: era el guardia y la cámara o el gesto
+                fallaron.
+              </p>
+            )}
+            <ul className="list-disc space-y-1 pl-5">
+              <li>La incidencia se cierra y deja de salir como "sin atender".</li>
+              <li>
+                Queda {confirmando === 'confirmada' ? 'en rojo' : 'en verde'} en el historial del guardia con
+                tu nombre y la hora.
+              </li>
+              {nota.trim() && <li>Se guarda tu nota: “{nota.trim()}”.</li>}
+              <li>No se puede deshacer.</li>
+            </ul>
+          </div>
+        }
+      />
       {i && (
         <VisorFotos
           fotos={[

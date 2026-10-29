@@ -107,7 +107,7 @@ export function Modal({
             </button>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6">{children}</div>
+        <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 md:px-6">{children}</div>
         {footer && (
           <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:flex-row md:justify-end md:px-6">
             {footer}

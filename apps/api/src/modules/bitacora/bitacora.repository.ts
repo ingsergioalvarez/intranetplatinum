@@ -1,6 +1,7 @@
 import type {
   ConclusionIncidencia,
   DecisionFalta,
+  DecisionRetardo,
   MotivoIncidencia,
   TipoEventoBitacora,
 } from '@platinum/shared';
@@ -31,7 +32,7 @@ export interface EventoBitacoraRow {
   justificacion: string | null;
   justificadoPor: string | null;
   justificadoEn: Date | null;
-  decision: DecisionFalta | null;
+  decision: DecisionFalta | DecisionRetardo | null;
   decididoPor: string | null;
   decididoEn: Date | null;
   comentarios: { id: number; texto: string; autor: string | null; createdAt: Date }[];
@@ -125,7 +126,7 @@ function aRow(r: Fila): EventoBitacoraRow {
     justificacion: r.justificacion,
     justificadoPor: r.justificadoPor?.nombre ?? null,
     justificadoEn: r.justificadoEn,
-    decision: r.decision as DecisionFalta | null,
+    decision: r.decision as DecisionFalta | DecisionRetardo | null,
     decididoPor: r.decididoPor?.nombre ?? null,
     decididoEn: r.decididoEn,
     comentarios: r.comentarios.map((c) => ({

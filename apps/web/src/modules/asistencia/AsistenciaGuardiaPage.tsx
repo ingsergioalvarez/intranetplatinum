@@ -28,6 +28,7 @@ import {
   type Jornada,
   type MiSitio,
   type RostroRegistro,
+  TIPO_EVENTO_BITACORA_LABEL,
   type TipoEventoBitacora,
 } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
@@ -661,7 +662,14 @@ function ResumenMes({
   const cuenta = (tipo: TipoEventoBitacora) =>
     eventos?.filter((e) => e.tipo === tipo && incidenciaCuenta(e)).length;
   const justificados = eventos?.filter((e) => e.justificacion).length ?? 0;
-  const sinAtender = eventos?.filter(incidenciaPendiente).length ?? 0;
+  const pendientes = eventos?.filter(incidenciaPendiente) ?? [];
+  const sinAtender = pendientes.length;
+  // Qué falta por atender, para no tener que abrirlas a ver cuál es (A-27).
+  const porTipo = new Map<TipoEventoBitacora, number>();
+  for (const e of pendientes) porTipo.set(e.tipo, (porTipo.get(e.tipo) ?? 0) + 1);
+  const detalleSinAtender = [...porTipo]
+    .map(([tipo, n]) => `${n} ${TIPO_EVENTO_BITACORA_LABEL[tipo].toLowerCase()}`)
+    .join(' · ');
   const evento = (label: string, tipo: TipoEventoBitacora) => ({
     label,
     valor: cuenta(tipo),
@@ -730,6 +738,7 @@ function ResumenMes({
           <ShieldAlert className="size-4 shrink-0" />
           <span className="flex-1">
             {sinAtender === 1 ? '1 incidencia sin atender' : `${sinAtender} incidencias sin atender`}
+            {detalleSinAtender && <span className="block text-xs font-normal">{detalleSinAtender}</span>}
           </span>
           <ChevronRight className="size-4" />
         </button>

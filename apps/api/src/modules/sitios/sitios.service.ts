@@ -142,7 +142,7 @@ export class SitiosService extends BaseService {
       ]
         .filter(Boolean)
         .join(' · ')}`,
-      ruta: '/',
+      ruta: '/mis-sitios',
     });
     return asignacion;
   }
@@ -247,7 +247,7 @@ export class SitiosService extends BaseService {
             ? 'Cambió la asignación de tu grupo'
             : 'Cambió la fecha de término',
         mensaje: `${asignacion.grupo ? `Tu grupo ${asignacion.grupo.nombre} en` : 'Tu asignación en'} ${sitio.nombre}: ${cambios.join(' · ')}`,
-        ruta: '/',
+        ruta: '/mis-sitios',
       });
     }
     return asignacion;
@@ -444,7 +444,7 @@ export class SitiosService extends BaseService {
         tipo: 'asignacion',
         titulo: n.grupo ? 'Tu grupo fue asignado a un sitio' : 'Te asignaron a un sitio',
         mensaje: `${quien} a ${sitio.nombre}: ${horario(asignacion)} · desde el ${fechaCorta(n.data.desde)}`,
-        ruta: '/',
+        ruta: '/mis-sitios',
       });
     }
     return creadas;
@@ -516,14 +516,14 @@ export class SitiosService extends BaseService {
         tipo: 'asignacion',
         titulo: 'Se canceló una asignación',
         mensaje: `Se canceló ${deQuien} en ${sitio.nombre} que empezaba el ${fechaCorta(actual.desde)}`,
-        ruta: '/',
+        ruta: '/mis-sitios',
       });
     } else if (actual.vigente) {
       await this.avisar(quienes, {
         tipo: 'asignacion',
         titulo: actual.grupo ? 'Tu grupo ya no está en el sitio' : 'Ya no estás asignado a un sitio',
         mensaje: `Ya no estás asignado a ${sitio.nombre}${actual.grupo ? ` (grupo ${actual.grupo.nombre})` : ''}`,
-        ruta: '/',
+        ruta: '/mis-sitios',
       });
     }
   }

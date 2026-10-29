@@ -258,10 +258,22 @@ function diaConJornada(
   const retardoMin = j.retardoMin;
   const cerrada = j.alertas.includes('cerrada_por_supervisor');
 
+  // Mandado a casa por llegar tarde (A-25): cuenta como falta y sus horas no cuentan.
+  const evRetardo = eventoDeMarca(eventos, 'retardo', ids);
+  if (evRetardo?.decision === 'enviado_a_casa') {
+    return {
+      ...base(f, j, t, e),
+      estado: evRetardo.justificacion ? 'falta_justificada' : 'falta',
+      notas: [
+        `Llegó a las ${hora(entradaIso)}; ${evRetardo.decididoPor ?? 'el supervisor'} lo mandó a casa y cuenta como falta.`,
+      ],
+    };
+  }
+
   let estado: EstadoDiaInforme = 'completa';
   const retardo = (retardoMin ?? 0) > TOLERANCIA_RETARDO_MIN;
   if (retardo) {
-    const ev = eventoDeMarca(eventos, 'retardo', ids);
+    const ev = evRetardo;
     if (ev?.justificacion) {
       notas.push(`Retardo justificado por ${ev.justificadoPor ?? 'el supervisor'}: ${ev.justificacion}`);
     } else {
@@ -376,6 +388,13 @@ const TIPOS_JUSTIFICABLES_HECHO: readonly TipoEventoBitacora[] = [
   'falta',
 ];
 
+const DECISION_TEXTO = {
+  asistencia: 'decidió aceptar la asistencia',
+  falta: 'decidió dejar la falta',
+  aceptado: 'aceptó al guardia con su retardo',
+  enviado_a_casa: 'lo mandó a casa; cuenta como falta',
+} as const;
+
 function hechos(eventos: EventoBitacoraRow[], e: EntradaCalculo): InformeHecho[] {
   const res: InformeHecho[] = [];
   for (const v of eventos) {
@@ -396,7 +415,7 @@ function hechos(eventos: EventoBitacoraRow[], e: EntradaCalculo): InformeHecho[]
         res.push({
           en: v.ocurrioEn.toISOString(),
           guardia: v.guardia.nombre,
-          texto: `${etiqueta}: ${v.decididoPor ?? 'el supervisor'} decidió ${v.decision === 'asistencia' ? 'aceptar la asistencia' : 'dejar la falta'}.`,
+          texto: `${etiqueta}: ${v.decididoPor ?? 'el supervisor'} ${DECISION_TEXTO[v.decision]}.`,
         });
       }
     }

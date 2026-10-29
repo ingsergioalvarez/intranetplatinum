@@ -1,4 +1,6 @@
 import type {
+  AccesoClienteCreado,
+  AccesoClienteData,
   Asignacion,
   AsignacionCreate,
   AsignacionUpdate,
@@ -27,6 +29,11 @@ class ClientesService extends CrudService<ClienteResumen, ClienteCreate, Cliente
 
   reglasAviso(clienteId: number, reglas: ReglasAvisoInput) {
     return this.api.put<ReglasAviso>(`${this.resource}/${clienteId}/avisos`, reglas);
+  }
+
+  /** Da acceso a la intranet a una persona del cliente (A-29). */
+  crearAcceso(clienteId: number, data: AccesoClienteData) {
+    return this.api.post<AccesoClienteCreado>(`${this.resource}/${clienteId}/accesos`, data);
   }
 
   crearContacto(clienteId: number, data: ContactoInput) {

@@ -1,6 +1,11 @@
-import type {
-  ClienteCreateData,
-  ClienteDetalle,
+import {
+  MAX_ACCESOS_CLIENTE,
+  ROLES,
+  type AccesoCliente,
+  type AccesoClienteCreado,
+  type AccesoClienteData,
+  type ClienteCreateData,
+  type ClienteDetalle,
   ClienteFiltro,
   ClienteResumen,
   Contacto,
@@ -10,7 +15,16 @@ import type {
   Sitio,
   SitioData,
 } from '@platinum/shared';
-import { AuditLogger, BaseService, HttpError, calcularCambios, hoyISO, type AccionCtx } from '../../core';
+import {
+  AuditLogger,
+  BaseService,
+  HttpError,
+  calcularCambios,
+  generateTemporaryPassword,
+  hashPassword,
+  hoyISO,
+  type AccionCtx,
+} from '../../core';
 import type { ClienteUpdateData, ClientesRepository } from './clientes.repository';
 
 const rfcDuplicado = () =>
@@ -43,12 +57,13 @@ export class ClientesService extends BaseService {
   /** Ficha completa: datos, contactos y sitios (incluye sitios de baja para el historial). */
   async getDetalle(id: number): Promise<ClienteDetalle> {
     const { totalSitios: _s, totalContactos: _c, responsable: _r, ...cliente } = await this.getById(id);
-    const [contactos, sitios, reglasAviso] = await Promise.all([
+    const [contactos, sitios, reglasAviso, accesos] = await Promise.all([
       this.repo.listContactos(id),
       this.repo.listSitios(id, this.hoy(), true),
       this.repo.getReglasAviso(id),
+      this.repo.listAccesos(id),
     ]);
-    return { ...cliente, contactos, sitios, reglasAviso };
+    return { ...cliente, contactos, sitios, reglasAviso, accesos };
   }
 
   async crear(data: ClienteCreateData, ctx: AccionCtx): Promise<ClienteResumen> {
@@ -107,6 +122,62 @@ export class ClientesService extends BaseService {
     await this.repo.setReglasAviso(id, limpias);
     await this.auditar(ctx, 'clientes.reglas_aviso', 'clientes', id, { antes, despues: limpias });
     return limpias;
+  }
+
+  // ---------- Acceso del cliente (A-29) ----------
+
+  /**
+   * Da acceso a la intranet a una persona del cliente: crea su usuario (rol cliente) con contraseña
+   * temporal, o liga a un usuario cliente que ya existía. Máximo MAX_ACCESOS_CLIENTE activos. Su correo
+   * queda como contacto que recibe los avisos de reportes.
+   */
+  async crearAcceso(clienteId: number, data: AccesoClienteData, ctx: AccionCtx): Promise<AccesoClienteCreado> {
+    await this.clienteEditable(clienteId);
+    const accesos = await this.repo.listAccesos(clienteId);
+    if (accesos.filter((a) => a.activo).length >= MAX_ACCESOS_CLIENTE) {
+      throw HttpError.conflict(`Un cliente puede tener máximo ${MAX_ACCESOS_CLIENTE} usuarios con acceso`);
+    }
+
+    const existente = await this.repo.findUsuarioPorEmail(data.email);
+    let acceso: AccesoCliente;
+    let passwordTemporal: string | null = null;
+    if (existente) {
+      const error = (message: string) => HttpError.conflict(message, [{ path: 'email', message }]);
+      if (existente.rol !== ROLES.CLIENTE) throw error('Ese correo ya pertenece a un usuario que no es cliente');
+      if (existente.deletedAt) throw error('Ese usuario está dado de baja; reactívalo primero');
+      if (existente.clienteId === clienteId) throw error('Ese usuario ya tiene acceso a este cliente');
+      if (existente.clienteId) throw error('Ese usuario ya está ligado a otro cliente');
+      acceso = await this.repo.ligarAcceso(existente.id, clienteId);
+    } else {
+      passwordTemporal = generateTemporaryPassword();
+      acceso = await this.repo.crearAcceso(clienteId, {
+        nombre: data.nombre,
+        email: data.email,
+        passwordHash: await hashPassword(passwordTemporal),
+      });
+    }
+
+    // Que los avisos le lleguen también por correo: contacto con "Recibe notificaciones".
+    const contactos = await this.repo.listContactos(clienteId);
+    if (!contactos.some((c) => c.email === data.email)) {
+      await this.repo.createContacto(clienteId, {
+        nombre: data.nombre,
+        puesto: null,
+        telefono: null,
+        celular: null,
+        email: data.email,
+        esResponsable: contactos.length === 0,
+        recibeNotificaciones: true,
+        prioridad: 0,
+      });
+    }
+
+    await this.auditar(ctx, 'clientes.acceso_crear', 'usuarios', acceso.id, {
+      clienteId,
+      email: acceso.email,
+      ligado: passwordTemporal === null,
+    });
+    return { acceso, passwordTemporal };
   }
 
   // ---------- Contactos (F2-03) ----------

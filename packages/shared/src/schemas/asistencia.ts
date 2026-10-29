@@ -59,6 +59,7 @@ export const ALERTAS_MARCACION = [
   'salida_anticipada',
   'sin_lentes_declarado',
   'cerrada_por_supervisor',
+  'enviada_a_casa',
   'enviada_sin_conexion',
   'hora_desfasada',
   'viene_de_horas_extra',
@@ -76,6 +77,7 @@ export const ALERTA_MARCACION_LABEL: Record<AlertaMarcacion, string> = {
   retardo: 'Retardo',
   salida_anticipada: 'Salida anticipada',
   cerrada_por_supervisor: 'Jornada cerrada por un supervisor',
+  enviada_a_casa: 'Lo mandaron a casa por llegar tarde (cuenta como falta)',
   enviada_sin_conexion: 'Checada hecha sin conexión y enviada después',
   hora_desfasada: 'La hora del celular no coincide con la del servidor',
   viene_de_horas_extra: 'Venía de horas extra: su entrada no cuenta como retardo',
@@ -420,6 +422,8 @@ export interface Jornada {
   sitio: { id: number; nombre: string } | null;
   /** Alertas de cualquiera de sus marcas, sin repetir. */
   alertas: AlertaMarcacion[];
+  /** De `alertas`, las que un supervisor ya justificó (retardo, salida anticipada): ya no cuentan como pendientes (A-24). */
+  justificadas: AlertaMarcacion[];
   /** Entrada y salida programadas del turno (copia del horario al marcar la entrada, DA-32). */
   programada: { entrada: string; salida: string } | null;
   /** Minutos tarde (negativo: llegó antes). Null sin horario. */

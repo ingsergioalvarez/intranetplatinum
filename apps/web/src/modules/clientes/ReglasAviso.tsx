@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { BellRing, Pencil, TriangleAlert } from 'lucide-react';
+import { BellRing, Lock, Pencil, TriangleAlert } from 'lucide-react';
 import {
   DESTINOS_AVISO,
   DESTINO_AVISO_LABEL,
@@ -39,16 +39,14 @@ export function ReglasAvisoCard({ cliente, puedeEditar }: { cliente: ClienteDeta
         }
         subtitle="A quién se le avisa cuando un guardia reporta en sus sitios"
         actions={
-          puedeEditar && (
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={<Pencil className="size-4" />}
-              onClick={() => setEditando(true)}
-            >
-              Configurar
-            </Button>
-          )
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={puedeEditar ? <Pencil className="size-4" /> : <Lock className="size-4" />}
+            onClick={() => setEditando(true)}
+          >
+            {puedeEditar ? 'Configurar' : 'Ver'}
+          </Button>
         }
       />
       <div className="space-y-3 p-4 text-sm">
@@ -78,12 +76,22 @@ export function ReglasAvisoCard({ cliente, puedeEditar }: { cliente: ClienteDeta
           </p>
         )}
       </div>
-      {editando && <ReglasAvisoModal cliente={cliente} onClose={() => setEditando(false)} />}
+      {editando && (
+        <ReglasAvisoModal cliente={cliente} soloLectura={!puedeEditar} onClose={() => setEditando(false)} />
+      )}
     </Card>
   );
 }
 
-function ReglasAvisoModal({ cliente, onClose }: { cliente: ClienteDetalle; onClose: () => void }) {
+function ReglasAvisoModal({
+  cliente,
+  soloLectura,
+  onClose,
+}: {
+  cliente: ClienteDetalle;
+  soloLectura: boolean;
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
   const inicial = cliente.reglasAviso;
   const [porDefecto, setPorDefecto] = useState<DestinoAviso>(inicial.porDefecto);
@@ -121,7 +129,14 @@ function ReglasAvisoModal({ cliente, onClose }: { cliente: ClienteDetalle; onClo
       loading={guardar.isPending}
       dirty={cambiado}
       submitDisabled={!cambiado}
+      readOnly={soloLectura}
     >
+      {soloLectura && (
+        <p className="flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          <Lock className="mt-0.5 size-4 shrink-0" />
+          Solo un administrador puede cambiar a quién se avisa.
+        </p>
+      )}
       <FormField label="Por defecto, avisar a" hint="Aplica a todas las prioridades sin excepción.">
         <Select
           options={destinoOptions}
