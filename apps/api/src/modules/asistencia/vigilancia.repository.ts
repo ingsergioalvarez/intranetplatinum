@@ -182,6 +182,13 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
     return e.id;
   }
 
+  async superarNoSePresento(usuarioId: number, sitioId: number, ocurrioEn: Date) {
+    await getPrisma().eventoBitacora.updateMany({
+      where: { usuarioId, sitioId, tipo: 'no_se_presento', ocurrioEn, decision: null },
+      data: { decision: 'superado', decididoEn: new Date() },
+    });
+  }
+
   async completarEvento(id: number, datos: Record<string, string | number | boolean | null>) {
     const e = await getPrisma().eventoBitacora.findUnique({ where: { id }, select: { datos: true } });
     const previos = (e?.datos ?? {}) as Record<string, string | number | boolean | null>;

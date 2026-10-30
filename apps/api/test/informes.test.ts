@@ -98,6 +98,7 @@ const evento = (o: Partial<EventoBitacoraRow> & Pick<EventoBitacoraRow, 'id' | '
   decision: null,
   decididoPor: null,
   decididoEn: null,
+  decisionMotivo: null,
   comentarios: [],
   ...o,
 });

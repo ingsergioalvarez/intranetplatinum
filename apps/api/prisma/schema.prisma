@@ -104,6 +104,8 @@ model Usuario {
   bitacora             EventoBitacora[]     @relation("BitacoraDe")
   bitacoraActor        EventoBitacora[]     @relation("BitacoraActor")
   bitacoraJustifico    EventoBitacora[]     @relation("BitacoraJustifico")
+  medidasRecibidas     MedidaDisciplinaria[] @relation("MedidaDe")
+  medidasAplicadas     MedidaDisciplinaria[] @relation("MedidaAplico")
   bitacoraComentarios  ComentarioBitacora[]
 
   @@index([rolId])
@@ -778,6 +780,7 @@ enum TipoEventoBitacora {
   sin_comida
   jornada_cerrada
   horas_extra
+  medida_disciplinaria
 }
 
 /// Bitácora del guardia (DA-41): control interno de supervisores y admin. Cada evento se guarda al
@@ -802,6 +805,8 @@ model EventoBitacora {
   decision         String?              @db.VarChar(20)
   decididoPorId    Int?                 @map("decidido_por_id")
   decididoEn       DateTime?            @map("decidido_en")
+  /// Por qué se confirmó la falta (A-48): categoría y texto ya armados.
+  decisionMotivo   String?              @db.VarChar(255) @map("decision_motivo")
   createdAt        DateTime             @default(now()) @map("created_at")
   usuario          Usuario              @relation("BitacoraDe", fields: [usuarioId], references: [id], onDelete: Cascade)
   actor            Usuario?             @relation("BitacoraActor", fields: [actorId], references: [id], onDelete: SetNull)
@@ -1138,4 +1143,28 @@ model HoraExtra {
   @@index([estado])
   @@index([resueltoPorId])
   @@map("horas_extra")
+}
+
+/// Historial formal de medidas disciplinarias del guardia (A-48, A-49): llamada de atención verbal o
+/// amonestación por escrito, con el motivo y lo que la originó. Cada una también queda en la bitácora.
+model MedidaDisciplinaria {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int      @map("usuario_id")
+  /// llamada_atencion | amonestacion
+  tipo        String   @db.VarChar(20)
+  /// falta | salida_sin_marcar
+  origen      String   @db.VarChar(20)
+  motivo      String   @db.VarChar(255)
+  /// Evento de bitácora (la falta) que la originó, si hubo.
+  eventoId    Int?     @map("evento_id")
+  marcacionId Int?     @map("marcacion_id")
+  sitioId     Int?     @map("sitio_id")
+  aplicadaPorId Int?   @map("aplicada_por_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  usuario     Usuario  @relation("MedidaDe", fields: [usuarioId], references: [id], onDelete: Cascade)
+  aplicadaPor Usuario? @relation("MedidaAplico", fields: [aplicadaPorId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId, createdAt])
+  @@index([aplicadaPorId])
+  @@map("medidas_disciplinarias")
 }

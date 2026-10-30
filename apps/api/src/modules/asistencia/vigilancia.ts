@@ -61,6 +61,8 @@ export abstract class VigilanciaRepository {
   abstract sinEntrada(usuarioId: number, desde: Date): Promise<(TurnoDiaRow & { sitio: string })[]>;
   /** Guarda el evento en la bitácora y devuelve su id. */
   abstract crearEvento(evento: EventoVigilancia): Promise<number>;
+  /** Cierra el "No se presentó" de ese turno: ya pasó a falta o el guardia llegó (A-48). */
+  abstract superarNoSePresento(usuarioId: number, sitioId: number, ocurrioEn: Date): Promise<void>;
   /** Agrega datos al evento (p. ej. la hora de llegada a una falta). */
   abstract completarEvento(
     id: number,
@@ -181,6 +183,12 @@ export class VigilanciaTurnos {
         datos: { programada: programada.toISOString() },
       });
       await this.repo.actualizarTurnoDia(fila.id, { faltaEn: ahora, faltaEventoId: eventoId });
+      // La falta reemplaza al aviso de "No se presentó": no quedan dos pendientes por lo mismo.
+      await this.repo.superarNoSePresento(
+        t.guardia.id,
+        t.sitio.id,
+        new Date(programada.getTime() + MIN_NO_SE_PRESENTO * 60_000),
+      );
     }
   }
 
@@ -195,6 +203,14 @@ export class VigilanciaTurnos {
     );
     for (const f of filas) {
       await this.repo.actualizarTurnoDia(f.id, { entradaId: entrada.id });
+      // Llegó antes de que pasara a falta: el "No se presentó" ya no aplica.
+      if (f.noSePresentoEn && !f.faltaEn) {
+        await this.repo.superarNoSePresento(
+          f.usuarioId,
+          f.sitioId,
+          new Date(f.programadaEntrada.getTime() + MIN_NO_SE_PRESENTO * 60_000),
+        );
+      }
       if (!f.faltaEn || !f.faltaEventoId) continue;
       const tarde = Math.round((entrada.registradaEn.getTime() - f.programadaEntrada.getTime()) / 60_000);
       await this.repo.completarEvento(f.faltaEventoId, {

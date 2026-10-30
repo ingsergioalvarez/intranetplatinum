@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarX,
   CheckCircle2,
+  Gavel,
   Clock,
   LogOut,
   MapPin,
@@ -34,8 +35,11 @@ import {
   TIPO_EVENTO_BITACORA_LABEL,
   categoriaDeEvento,
   comentarioBitacoraSchema,
+  MOTIVOS_JUSTIFICAR,
+  MOTIVO_JUSTIFICAR_LABEL,
   justificarBitacoraSchema,
   type CategoriaBitacora,
+  type MotivoJustificar,
   type DecisionFalta,
   type EventoBitacora,
   type TipoEventoBitacora,
@@ -53,11 +57,14 @@ import {
   toast,
 } from '../../components/ui';
 import { mensajeDeError } from '../../core/api';
+import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import { formatFechaHora } from '../../core/format/fechas';
 import { asistenciaService } from './asistencia.service';
 import { formatDia, formatHora } from './formato';
 import { DecisionRetardo, NotaDecisionRetardo } from './DecisionRetardo';
+import { ConfirmarFaltaModal } from './ConfirmarFaltaModal';
 import { IncidenciaModal } from './IncidenciaModal';
+import { MotivoLista } from './MotivoLista';
 
 const ICONO: Record<TipoEventoBitacora, typeof Clock> = {
   retardo: Clock,
@@ -82,6 +89,7 @@ const ICONO: Record<TipoEventoBitacora, typeof Clock> = {
   sin_comida: Utensils,
   jornada_cerrada: LogOut,
   horas_extra: Clock,
+  medida_disciplinaria: Gavel,
 };
 
 /** Color del ícono: rojo lo grave, ámbar lo de asistencia, verde lo bueno, gris lo administrativo. */
@@ -95,6 +103,7 @@ const COLOR: Partial<Record<TipoEventoBitacora, string>> = {
   incidencia_rostro: 'bg-red-100 text-red-700',
   rostro_rechazado: 'bg-red-100 text-red-700',
   rostro_aprobado: 'bg-emerald-100 text-emerald-700',
+  medida_disciplinaria: 'bg-red-100 text-red-700',
 };
 
 /** Filtro de la bitácora (en la URL de la ficha). `tipo` viene del resumen del mes. */
@@ -247,6 +256,7 @@ export function ListaEventos({
 }) {
   const [comentando, setComentando] = useState<EventoBitacora | null>(null);
   const [justificando, setJustificando] = useState<EventoBitacora | null>(null);
+  const [confirmando, setConfirmando] = useState<EventoBitacora | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
   const [incidencia, setIncidencia] = useState<number | null>(null);
 
@@ -286,6 +296,7 @@ export function ListaEventos({
                     onFoto={setFoto}
                     onComentar={() => setComentando(e)}
                     onJustificar={() => setJustificando(e)}
+                    onConfirmarFalta={() => setConfirmando(e)}
                     onIncidencia={setIncidencia}
                   />
                 ))}
@@ -295,10 +306,9 @@ export function ListaEventos({
         </div>
       )}
 
-      {comentando && <DialogoTexto evento={comentando} modo="comentar" onClose={() => setComentando(null)} />}
-      {justificando && (
-        <DialogoTexto evento={justificando} modo="justificar" onClose={() => setJustificando(null)} />
-      )}
+      {comentando && <NotaModal evento={comentando} onClose={() => setComentando(null)} />}
+      {justificando && <JustificarModal evento={justificando} onClose={() => setJustificando(null)} />}
+      {confirmando && <ConfirmarFaltaModal evento={confirmando} onClose={() => setConfirmando(null)} />}
       <VisorFotos
         fotos={foto ? [{ url: foto }] : []}
         indice={foto ? 0 : null}
@@ -316,6 +326,7 @@ function Evento({
   onFoto,
   onComentar,
   onJustificar,
+  onConfirmarFalta,
   onIncidencia,
 }: {
   evento: EventoBitacora;
@@ -323,6 +334,7 @@ function Evento({
   onFoto: (url: string) => void;
   onComentar: () => void;
   onJustificar: () => void;
+  onConfirmarFalta: () => void;
   onIncidencia: (id: number) => void;
 }) {
   const Icono = ICONO[e.tipo];
@@ -330,7 +342,11 @@ function Evento({
     TIPOS_JUSTIFICABLES.includes(e.tipo) &&
     !e.justificacion &&
     e.decision?.tipo !== 'asistencia' &&
-    e.decision?.tipo !== 'enviado_a_casa';
+    e.decision?.tipo !== 'enviado_a_casa' &&
+    e.decision?.tipo !== 'superado';
+  // Falta sin atender (A-48): además de justificarla se puede confirmar. Si el guardia llegó tarde, eso
+  // lo ofrece el bloque "¿Aceptas la asistencia?".
+  const confirmable = e.tipo === 'falta' && !e.justificacion && !e.decision && typeof e.datos?.llegoEn !== 'string';
   // Retardo sin atender: justificar / aceptar / mandar a casa en un solo bloque (A-25).
   const decidirRetardo = e.tipo === 'retardo' && !e.justificacion && !e.decision;
   const sinAtender = claseIncidencia(e.tipo) === 'asistencia' && incidenciaPendiente(e);
@@ -422,7 +438,20 @@ function Evento({
           </div>
         )}
 
-        {e.tipo === 'falta' && typeof e.datos?.llegoEn === 'string' && <DecisionLlegada evento={e} />}
+        {e.tipo === 'falta' && typeof e.datos?.llegoEn === 'string' && (
+          <DecisionLlegada evento={e} onConfirmarFalta={onConfirmarFalta} />
+        )}
+        {e.tipo === 'falta' && e.decision?.tipo === 'falta' && typeof e.datos?.llegoEn !== 'string' && (
+          <Nota>
+            <strong>Falta confirmada</strong> por {e.decision.por ?? 'alguien'} · {formatFechaHora(e.decision.en)}
+            {e.decision.motivo && <span className="block text-slate-700">{e.decision.motivo}</span>}
+          </Nota>
+        )}
+        {e.tipo === 'no_se_presento' && e.decision?.tipo === 'superado' && (
+          <Nota>
+            Cerrado solo: el guardia llegó o el turno pasó a falta.
+          </Nota>
+        )}
         {decidirRetardo && <DecisionRetardo evento={e} onJustificar={onJustificar} />}
         <NotaDecisionRetardo evento={e} />
 
@@ -447,6 +476,11 @@ function Evento({
           <Button variant="ghost" size="sm" icon={<MessageSquare className="size-4" />} onClick={onComentar}>
             Agregar nota
           </Button>
+          {confirmable && (
+            <Button variant="ghost" size="sm" icon={<CalendarX className="size-4" />} onClick={onConfirmarFalta}>
+              Confirmar falta
+            </Button>
+          )}
           {justificable && !decidirRetardo && (
             <Button
               variant="ghost"
@@ -467,7 +501,13 @@ function Evento({
  * Falta en la que el guardia llegó después (DA-45): el supervisor acepta la asistencia (la falta deja
  * de contar; el retardo se queda) o deja la falta.
  */
-function DecisionLlegada({ evento: e }: { evento: EventoBitacora }) {
+function DecisionLlegada({
+  evento: e,
+  onConfirmarFalta,
+}: {
+  evento: EventoBitacora;
+  onConfirmarFalta: () => void;
+}) {
   const qc = useQueryClient();
   const decidir = useMutation({
     mutationFn: (d: DecisionFalta) => asistenciaService.decidirFalta(e.id, d),
@@ -486,6 +526,7 @@ function DecisionLlegada({ evento: e }: { evento: EventoBitacora }) {
       <Nota tono={e.decision.tipo === 'asistencia' ? 'verde' : undefined}>
         <strong>{e.decision.tipo === 'asistencia' ? 'Asistencia aceptada' : 'Falta confirmada'}</strong> por{' '}
         {e.decision.por ?? 'alguien'} · {formatFechaHora(e.decision.en)}
+        {e.decision.motivo && <span className="block text-slate-700">{e.decision.motivo}</span>}
         <span className="block text-slate-700">
           Llegó a las {formatHora(llego)} ({tarde} tarde)
           {e.decision.tipo === 'asistencia' && '; el retardo se queda salvo que se justifique.'}
@@ -507,13 +548,7 @@ function DecisionLlegada({ evento: e }: { evento: EventoBitacora }) {
         >
           Aceptar asistencia
         </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          loading={decidir.isPending && decidir.variables === 'falta'}
-          disabled={decidir.isPending}
-          onClick={() => decidir.mutate('falta')}
-        >
+        <Button size="sm" variant="secondary" disabled={decidir.isPending} onClick={onConfirmarFalta}>
           Dejar la falta
         </Button>
       </div>
@@ -534,38 +569,80 @@ function Nota({ tono, children }: { tono?: 'verde'; children: ReactNode }) {
   );
 }
 
-/** Comentar o justificar un evento; al guardar se recargan bitácora, ficha e incidencias. */
-function DialogoTexto({
-  evento,
-  modo,
-  onClose,
-}: {
-  evento: EventoBitacora;
-  modo: 'comentar' | 'justificar';
-  onClose: () => void;
-}) {
+/** Justificar un evento (A-48): motivo de la lista; con "otro", el detalle es obligatorio. */
+function JustificarModal({ evento, onClose }: { evento: EventoBitacora; onClose: () => void }) {
   const qc = useQueryClient();
-  const [texto, setTexto] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const comentar = modo === 'comentar';
+  const [categoria, setCategoria] = useState<MotivoJustificar | ''>('');
+  const [nota, setNota] = useState('');
+  const [errores, setErrores] = useState<Partial<Record<string, string>>>({});
 
   const guardar = useMutation({
-    mutationFn: (t: string) =>
-      comentar
-        ? asistenciaService.comentarEvento(evento.id, t)
-        : asistenciaService.justificarEvento(evento.id, t),
+    mutationFn: () =>
+      asistenciaService.justificarEvento(evento.id, {
+        categoria: categoria as MotivoJustificar,
+        nota: nota.trim() || undefined,
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: asistenciaService.keys.all });
-      toast.success(comentar ? 'Nota guardada' : 'Justificado');
+      toast.success('Justificado');
       onClose();
     },
     onError: (e) => toast.error(mensajeDeError(e)),
   });
 
   const onSubmit = () => {
-    const r = comentar
-      ? comentarioBitacoraSchema.safeParse({ texto })
-      : justificarBitacoraSchema.safeParse({ motivo: texto });
+    const r = justificarBitacoraSchema.safeParse({ categoria: categoria || undefined, nota: nota.trim() || undefined });
+    if (!r.success) return setErrores(erroresDeCampos(r.error));
+    setErrores({});
+    guardar.mutate();
+  };
+
+  return (
+    <FormModal
+      title={`Justificar ${TIPO_EVENTO_BITACORA_LABEL[evento.tipo].toLowerCase()}`}
+      description={evento.detalle}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      submitLabel="Justificar"
+      loading={guardar.isPending}
+      dirty={!!categoria || !!nota}
+      size="sm"
+    >
+      <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        Ya no contará en el resumen ni en reportes. No se puede deshacer.
+      </p>
+      <MotivoLista
+        categorias={MOTIVOS_JUSTIFICAR}
+        etiquetas={MOTIVO_JUSTIFICAR_LABEL}
+        categoria={categoria}
+        nota={nota}
+        onCategoria={setCategoria}
+        onNota={setNota}
+        errores={errores}
+        placeholderNota="Ej. Cita médica con comprobante"
+      />
+    </FormModal>
+  );
+}
+
+/** Agregar una nota a un evento; al guardar se recargan bitácora, ficha e incidencias. */
+function NotaModal({ evento, onClose }: { evento: EventoBitacora; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [texto, setTexto] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const guardar = useMutation({
+    mutationFn: (t: string) => asistenciaService.comentarEvento(evento.id, t),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: asistenciaService.keys.all });
+      toast.success('Nota guardada');
+      onClose();
+    },
+    onError: (e) => toast.error(mensajeDeError(e)),
+  });
+
+  const onSubmit = () => {
+    const r = comentarioBitacoraSchema.safeParse({ texto });
     if (!r.success) return setError(r.error.issues[0].message);
     setError(null);
     guardar.mutate(texto.trim());
@@ -573,35 +650,31 @@ function DialogoTexto({
 
   return (
     <FormModal
-      title={comentar ? 'Agregar nota' : `Justificar ${TIPO_EVENTO_BITACORA_LABEL[evento.tipo].toLowerCase()}`}
+      title="Agregar nota"
       description={evento.detalle}
       onClose={onClose}
       onSubmit={onSubmit}
-      submitLabel={comentar ? 'Guardar nota' : 'Justificar'}
+      submitLabel="Guardar nota"
       loading={guardar.isPending}
       dirty={texto.trim() !== ''}
       size="sm"
     >
       <FormField
-        label={comentar ? 'Nota' : 'Motivo'}
+        label="Nota"
         required
         error={error ?? undefined}
         hint={
-          comentar
-            ? TIPOS_JUSTIFICABLES.includes(evento.tipo)
-              ? 'Nota interna, solo la ven supervisores y admin. No cambia nada: el evento sigue contando. Para que deje de contar, usa Justificar.'
-              : 'Nota interna, solo la ven supervisores y admin.'
-            : 'Ya no contará en el resumen ni en reportes. No se puede deshacer.'
+          TIPOS_JUSTIFICABLES.includes(evento.tipo)
+            ? 'Nota interna, solo la ven supervisores y admin. No cambia nada: el evento sigue contando. Para que deje de contar, usa Justificar.'
+            : 'Nota interna, solo la ven supervisores y admin.'
         }
       >
         <Textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           rows={3}
-          maxLength={comentar ? 500 : 255}
-          placeholder={
-            comentar ? 'Ej. Se habló con él; dice que hubo tráfico' : 'Ej. Cita médica con comprobante'
-          }
+          maxLength={500}
+          placeholder="Ej. Se habló con él; dice que hubo tráfico"
           autoFocus
         />
       </FormField>

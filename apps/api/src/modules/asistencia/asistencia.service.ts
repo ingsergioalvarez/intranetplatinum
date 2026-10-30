@@ -48,6 +48,7 @@ import {
   type TurnoDelGuardia,
   comidasDelTurno,
   type CerrarJornadaInput,
+  type ResultadoCerrarJornada,
   type DecidirRetardoInput,
   type ResultadoDecisionRetardo,
   COMIDA_MIN,
@@ -67,6 +68,7 @@ import {
   type RequestContext,
 } from '../../core';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
+import { sinMedidas, type MedidasPuerto } from '../medidas/medidas';
 import { sinHorasExtra, type HorasExtraPuerto } from '../horas-extra/puerto';
 import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
 import { horaLocal } from './formato';
@@ -427,6 +429,8 @@ export class AsistenciaService extends BaseService {
     private readonly alLlegar: LlegadaFn = async () => undefined,
     /** Horas extra (AS5): pregunta al guardia, salida final y registro al salir. */
     private readonly extras: HorasExtraPuerto = sinHorasExtra,
+    /** Medidas disciplinarias (A-49): historial formal y contador de salidas sin marcar. */
+    private readonly medidas: MedidasPuerto = sinMedidas,
   ) {
     super();
   }
@@ -1359,12 +1363,12 @@ export class AsistenciaService extends BaseService {
    */
   async cerrarJornada(
     entradaId: number,
-    { motivo, salidaEn }: CerrarJornadaInput,
+    { motivo, salidaEn, medida }: CerrarJornadaInput,
     ctx: AccionCtx,
     alcance: Alcance | null = null,
     /** Mandado a casa por llegar tarde (A-25): otra marca, bitácora y aviso al guardia. */
     aCasa = false,
-  ): Promise<void> {
+  ): Promise<ResultadoCerrarJornada> {
     const entrada = await this.repo.findMarca(entradaId);
     if (!entrada || entrada.tipo !== 'entrada') throw HttpError.notFound('Jornada no encontrada');
     exigirGuardia(alcance, entrada.usuarioId);
@@ -1415,13 +1419,16 @@ export class AsistenciaService extends BaseService {
       sitio,
       salida: hora.toISOString(),
       motivo,
+      medida: medida ?? 'ninguna',
     });
     await this.bitacora({
       usuarioIds: [entrada.usuarioId],
       tipo: 'jornada_cerrada',
       detalle: aCasa
         ? `${quien} lo mandó a casa por llegar tarde a ${sitio} (salida a las ${horaLocal(hora)}); cuenta como falta. Motivo: ${motivo}`
-        : `${quien} cerró su jornada en ${sitio}: salida a las ${horaLocal(hora)}. Motivo: ${motivo}`,
+        : `${quien} cerró su jornada en ${sitio}: salida sin marcar a las ${horaLocal(hora)}. Motivo: ${motivo}`,
+      // Con este origen se cuentan las salidas sin marcar del mes (A-49).
+      datos: aCasa ? null : { origen: 'salida_sin_marcar' },
       marcacionId: entrada.id,
       sitioId: entrada.sitio?.id ?? null,
       actorId: ctx.actorId,
@@ -1442,6 +1449,21 @@ export class AsistenciaService extends BaseService {
             ruta: '/marcar/historial',
           },
     );
+    if (!aCasa && medida && medida !== 'ninguna') {
+      await this.medidas.aplicar({
+        usuarioId: entrada.usuarioId,
+        tipo: medida,
+        origen: 'salida_sin_marcar',
+        motivo,
+        marcacionId: entrada.id,
+        sitioId: entrada.sitio?.id ?? null,
+        sitio,
+        actorId: ctx.actorId,
+      });
+    }
+    return {
+      salidasSinMarcarMes: aCasa ? 0 : await this.medidas.salidasSinMarcarDelMes(entrada.usuarioId, hora),
+    };
   }
 
   /**

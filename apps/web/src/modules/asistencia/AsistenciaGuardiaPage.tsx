@@ -49,6 +49,7 @@ import { formatFecha, hoyLocal } from '../../core/format/fechas';
 import { describirAsignacion } from '../clientes/asignaciones';
 import { asistenciaService } from './asistencia.service';
 import { CerrarJornadaModal } from './CerrarJornadaModal';
+import { MedidasGuardia } from './MedidasGuardia';
 import { BitacoraGuardia, ListaEventos, type FiltroBitacora } from './BitacoraGuardia';
 import { NuevoInformeModal } from '../informes/NuevoInformeModal';
 import { TablaInformes } from '../informes/TablaInformes';
@@ -456,6 +457,7 @@ export function AsistenciaGuardiaPage() {
                 <TablaInformes guardiaId={id} filtros={false} />
               </Card>
             )}
+            {puedeCerrar && <MedidasGuardia guardiaId={id} />}
           </section>
         </div>
       )}

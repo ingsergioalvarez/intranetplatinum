@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import type {
   AsistenciaDiaQuery,
-  CerrarJornadaInput,
+  CerrarJornadaBody,
   DecidirRetardoInput,
   ConclusionIncidencia,
   IdParam,
@@ -10,7 +10,7 @@ import type {
   MarcacionCreateData,
   RostroRegistroInput,
 } from '@platinum/shared';
-import { ROLES } from '@platinum/shared';
+import { MOTIVO_SALIDA_SIN_MARCAR_LABEL, ROLES, textoMotivoLista } from '@platinum/shared';
 import { BaseController, requestContext } from '../../core';
 import type { AlcanceFn } from '../sitios/alcance';
 import { fichaParaCliente, filaParaCliente } from './vista-cliente';
@@ -98,13 +98,16 @@ export class AsistenciaController extends BaseController {
 
   /** Admin o supervisor cierran la jornada de un guardia que no pudo checar su salida (DA-49). */
   cerrarJornada = async (req: Request, res: Response) => {
-    await this.service.cerrarJornada(
-      this.params<IdParam>(req).id,
-      this.body<CerrarJornadaInput>(req),
-      this.accionCtx(req),
-      await this.alcance(req),
+    const { categoria, nota, salidaEn, medida } = this.body<CerrarJornadaBody>(req);
+    return this.ok(
+      res,
+      await this.service.cerrarJornada(
+        this.params<IdParam>(req).id,
+        { motivo: textoMotivoLista(MOTIVO_SALIDA_SIN_MARCAR_LABEL[categoria], nota), salidaEn, medida },
+        this.accionCtx(req),
+        await this.alcance(req),
+      ),
     );
-    return this.noContent(res);
   };
 
   /** Aceptar el retardo o mandar al guardia a casa (A-25). */

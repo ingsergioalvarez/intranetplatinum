@@ -16,6 +16,7 @@ import { createApp } from '../src/app';
 import { StorageService, signAccessToken } from '../src/core';
 import { createAsistenciaModule } from '../src/modules/asistencia';
 import { sinHorasExtra } from '../src/modules/horas-extra/puerto';
+import { sinMedidas, type MedidaNueva } from '../src/modules/medidas/medidas';
 import {
   AsistenciaRepository,
   type FiltroIncidencias,
@@ -341,6 +342,8 @@ let repo: MemoryAsistenciaRepository;
 let storage: MemoryStorage;
 let audit: MemoryAuditLogger;
 let bitacora: EventoNuevo[];
+let medidasAplicadas: MedidaNueva[];
+let salidasSinMarcar = 0;
 let ahora: Date;
 
 const token = (id: number, rol: Rol = 'guardia') =>
@@ -407,6 +410,8 @@ const avanzar = (horas: number) => {
 
 beforeEach(() => {
   bitacora = [];
+  medidasAplicadas = [];
+  salidasSinMarcar = 0;
   HORARIOS = {};
   HOY = '2026-10-20';
   TUVO_EXTRAS = false;
@@ -443,6 +448,11 @@ beforeEach(() => {
       bitacora: async (e) => void bitacora.push(e),
       alcance: sinAlcance,
       llegada: async () => undefined,
+      medidas: {
+        ...sinMedidas,
+        aplicar: async (m) => void medidasAplicadas.push(m),
+        salidasSinMarcarDelMes: async () => salidasSinMarcar,
+      },
     }),
   ]);
 });
@@ -1493,8 +1503,9 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
       const entradaId = repo.marcas[0].id;
       avanzar(14); // ya pasó la hora de salida programada (7 p.m.)
 
-      const res = await cerrar(entradaId, { motivo: 'Se le descompuso el teléfono' });
-      expect(res.status).toBe(204);
+      const res = await cerrar(entradaId, { categoria: 'falla_telefono' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ salidasSinMarcarMes: 0 });
 
       const salida = repo.marcas.at(-1)!;
       expect(salida).toMatchObject({
@@ -1506,41 +1517,74 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
       // Sin hora indicada: la salida programada (7:00 p.m. CDMX = 01:00 UTC del día siguiente).
       expect(salida.registradaEn.toISOString()).toBe('2026-10-21T01:00:00.000Z');
       expect(bitacora.at(-1)).toMatchObject({ tipo: 'jornada_cerrada', usuarioIds: [10], actorId: 5 });
-      expect(bitacora.at(-1)!.detalle).toContain('Se le descompuso el teléfono');
+      expect(bitacora.at(-1)!.detalle).toContain('Falla del teléfono o de la app');
+      expect(bitacora.at(-1)!.datos).toEqual({ origen: 'salida_sin_marcar' });
+      expect(medidasAplicadas).toEqual([]);
       expect(audit.acciones()).toContain('asistencia.cerrar_jornada');
       expect(repo.avisos.at(-1)).toMatchObject({ usuarioIds: [10], tipo: 'marca_alerta' });
 
       // El guardia ya puede checar su siguiente entrada, y no se puede cerrar dos veces.
       const estado = await request(app).get('/api/asistencia/estado').set('Authorization', token(10));
       expect(estado.body.data.permitidas).toEqual(['entrada']);
-      expect((await cerrar(entradaId, { motivo: 'Otra vez' })).status).toBe(409);
+      expect((await cerrar(entradaId, { categoria: 'olvido' })).status).toBe(409);
     });
 
     it('motivo obligatorio, hora válida y solo admin o supervisor', async () => {
       await marcar(10, marca('entrada'));
       const entradaId = repo.marcas[0].id;
       avanzar(2);
-      expect((await cerrar(entradaId, { motivo: '' })).status).toBe(400);
+      expect((await cerrar(entradaId, {})).status).toBe(400);
+      // "Otro" exige explicar qué pasó.
+      const sinNota = await cerrar(entradaId, { categoria: 'otro' });
+      expect(sinNota.status).toBe(400);
+      expect(sinNota.body.error.details[0].path).toBe('nota');
       // Antes de su entrada o en el futuro.
-      const antes = await cerrar(entradaId, { motivo: 'Prueba', salidaEn: '2026-10-20T10:00:00.000Z' });
+      const antes = await cerrar(entradaId, { categoria: 'olvido', salidaEn: '2026-10-20T10:00:00.000Z' });
       expect(antes.status).toBe(400);
       expect(antes.body.error.details[0].path).toBe('salidaEn');
       expect(
-        (await cerrar(entradaId, { motivo: 'Prueba', salidaEn: '2026-10-22T10:00:00.000Z' })).status,
+        (await cerrar(entradaId, { categoria: 'olvido', salidaEn: '2026-10-22T10:00:00.000Z' })).status,
       ).toBe(400);
       // El guardia no puede cerrarse la jornada solo.
-      expect((await cerrar(entradaId, { motivo: 'Prueba' }, 10, 'guardia')).status).toBe(403);
+      expect((await cerrar(entradaId, { categoria: 'olvido' }, 10, 'guardia')).status).toBe(403);
       // Una checada que no es entrada no es una jornada.
-      expect((await cerrar(9999, { motivo: 'Prueba' })).status).toBe(404);
+      expect((await cerrar(9999, { categoria: 'olvido' })).status).toBe(404);
       // El admin sí, con la hora indicada.
       const ok = await cerrar(
         entradaId,
-        { motivo: 'Cierre por prueba', salidaEn: '2026-10-20T14:30:00.000Z' },
+        { categoria: 'otro', nota: 'Cierre por prueba', salidaEn: '2026-10-20T14:30:00.000Z' },
         1,
         'admin',
       );
-      expect(ok.status).toBe(204);
+      expect(ok.status).toBe(200);
       expect(repo.marcas.at(-1)!.registradaEn.toISOString()).toBe('2026-10-20T14:30:00.000Z');
+    });
+
+    it('con medida disciplinaria la guarda en el historial y devuelve cuántas salidas sin marcar lleva en el mes (A-49)', async () => {
+      await marcar(10, marca('entrada'));
+      const entradaId = repo.marcas[0].id;
+      avanzar(2);
+      salidasSinMarcar = 3;
+      const res = await cerrar(entradaId, { categoria: 'olvido', nota: 'Es la tercera', medida: 'amonestacion' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ salidasSinMarcarMes: 3 });
+      expect(medidasAplicadas).toEqual([
+        expect.objectContaining({
+          usuarioId: 10,
+          tipo: 'amonestacion',
+          origen: 'salida_sin_marcar',
+          motivo: 'Se le olvidó marcar: Es la tercera',
+          actorId: 5,
+        }),
+      ]);
+      expect(audit.acciones()).toContain('asistencia.cerrar_jornada');
+    });
+
+    it('"ninguna" no guarda medida', async () => {
+      await marcar(10, marca('entrada'));
+      avanzar(2);
+      expect((await cerrar(repo.marcas[0].id, { categoria: 'olvido', medida: 'ninguna' })).status).toBe(200);
+      expect(medidasAplicadas).toEqual([]);
     });
   });
 
@@ -1594,7 +1638,7 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
       await request(app)
         .post(`/api/asistencia/jornadas/${repo.marcas[0].id}/cerrar`)
         .set('Authorization', token(5, 'supervisor'))
-        .send({ motivo: 'Se olvidó de checar' });
+        .send({ categoria: 'olvido' });
       expect(await resumen()).toEqual([['sin_llegar', 13]]);
     });
 

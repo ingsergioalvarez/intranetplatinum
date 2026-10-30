@@ -5,6 +5,25 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-30 #33 — Óvalo punteado, confirmar falta y salida sin marcar con medida (A-47, A-48, A-49)
+
+#### Añadido
+
+- **Confirmar falta** (A-48): en una falta sin atender, además de "Justificar", el supervisor puede "Confirmar falta" con motivo de lista (no se presentó y no avisó, abandonó el servicio, otro con texto) y una medida disciplinaria opcional. `POST /api/bitacora/eventos/:id/confirmar-falta`. "Dejar la falta" (cuando el guardia llegó tarde) usa la misma ventana, así también queda el motivo. Migración `20261030020000_medidas_disciplinarias` (`bitacora_eventos.decision_motivo`).
+- **Historial formal de medidas disciplinarias** (A-48, A-49): tabla `medidas_disciplinarias` (llamada de atención verbal o amonestación por escrito, con origen, motivo y quién la aplicó). Cada medida también queda en la bitácora (tipo `medida_disciplinaria`) y se avisa al guardia. `GET /api/bitacora/guardias/:id/medidas` y tarjeta "Medidas disciplinarias" en el perfil del guardia.
+- **Salida sin marcar** (A-49): al cerrar una jornada el motivo es de lista (se le olvidó, falla del teléfono, no pudo marcar, otro con texto) y se puede aplicar una medida. Cuenta como salida sin marcar del guardia; al llegar a 3 en el mes el sistema sugiere una amonestación (aviso al cerrar). La respuesta de `POST /api/asistencia/jornadas/:id/cerrar` ahora trae `salidasSinMarcarMes`.
+
+#### Cambiado
+
+- Óvalo de la cámara **punteado** (verde al centrar) en el checador y en el registro de rostro (A-47). Las dos pantallas usan el mismo componente: si el registro se vio con el estilo viejo (sin fondo oscuro), era la versión anterior guardada en el celular; basta cerrar y abrir la app.
+- Justificar ahora pide el motivo de una lista (permiso, enfermedad, avisó antes, transporte, otro con texto) en lugar de texto libre (A-48). El cuerpo de `justificar` cambió de `{ motivo }` a `{ categoria, nota }`.
+- El aviso "No se presentó" se cierra solo cuando el turno pasa a falta o el guardia llega, y deja de contar aparte (A-48).
+
+#### Pendiente
+
+- Probar en el celular el óvalo punteado y, en escritorio, confirmar falta y cerrar jornada con medida.
+- Preguntar si los guardias que usan lentes deben seguir quitándoselos para el checador.
+
 ### Sesión 2026-10-30 #32 — Cámara de asistencia: centrado, óvalo y gesto de 15 s (A-36, A-37)
 
 #### Cambiado

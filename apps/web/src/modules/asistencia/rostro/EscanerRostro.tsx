@@ -954,7 +954,7 @@ export function EscanerRostro({
           {activo && ovalo && (
             <div
               className={cn(
-                'pointer-events-none absolute rounded-[50%] border-[5px] border-solid transition-colors',
+                'pointer-events-none absolute rounded-[50%] border-4 border-dashed transition-colors',
                 noTitular || pantalla
                   ? 'border-red-500'
                   : calidad.posicion === 'ok'

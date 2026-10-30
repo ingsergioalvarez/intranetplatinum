@@ -78,6 +78,10 @@ class MemoryVigilanciaRepository extends VigilanciaRepository {
     this.eventos.push({ ...e, id: this.eventos.length + 1 });
     return this.eventos.length;
   }
+  superados: { usuarioId: number; sitioId: number; ocurrioEn: Date }[] = [];
+  async superarNoSePresento(usuarioId: number, sitioId: number, ocurrioEn: Date) {
+    this.superados.push({ usuarioId, sitioId, ocurrioEn });
+  }
   async completarEvento(id: number, datos: Record<string, string | number | boolean | null>) {
     const e = this.eventos.find((x) => x.id === id)!;
     e.datos = { ...e.datos, ...datos };

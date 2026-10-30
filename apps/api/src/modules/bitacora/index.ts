@@ -4,6 +4,7 @@ import {
   ROLES,
   bitacoraQuerySchema,
   comentarioBitacoraSchema,
+  confirmarFaltaSchema,
   decidirFaltaSchema,
   idParamSchema,
   incidenciasMesQuerySchema,
@@ -11,6 +12,7 @@ import {
   type BitacoraQuery,
   type IncidenciasMesQuery,
   type ComentarioBitacoraInput,
+  type ConfirmarFaltaInput,
   type DecidirFaltaInput,
   type IdParam,
   type JustificarBitacoraInput,
@@ -26,6 +28,7 @@ import {
   type AppModule,
 } from '../../core';
 import { alcanceConPrisma, type AlcanceFn } from '../sitios/alcance';
+import { medidasConPrisma, type MedidasPuerto } from '../medidas/medidas';
 import { BitacoraRepository, PrismaBitacoraRepository } from './bitacora.repository';
 import { BitacoraService } from './bitacora.service';
 
@@ -91,11 +94,25 @@ class BitacoraController extends BaseController {
       res,
       await this.service.justificar(
         this.params<IdParam>(req).id,
-        this.body<JustificarBitacoraInput>(req).motivo,
+        this.body<JustificarBitacoraInput>(req),
         this.accionCtx(req),
         await this.alcance(req),
       ),
     );
+
+  confirmarFalta = async (req: Request, res: Response) =>
+    this.ok(
+      res,
+      await this.service.confirmarFalta(
+        this.params<IdParam>(req).id,
+        this.body<ConfirmarFaltaInput>(req),
+        this.accionCtx(req),
+        await this.alcance(req),
+      ),
+    );
+
+  medidas = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.medidasDelGuardia(this.params<IdParam>(req).id, await this.alcance(req)));
 }
 
 interface BitacoraModuleDeps {
@@ -103,6 +120,7 @@ interface BitacoraModuleDeps {
   audit?: AuditLogger;
   ahora?: () => Date;
   alcance?: AlcanceFn;
+  medidas?: MedidasPuerto;
 }
 
 /** Bitácora del guardia (DA-41): solo admin y supervisor (permiso de ver asistencia). */
@@ -111,8 +129,9 @@ export function createBitacoraModule({
   audit = new PrismaAuditLogger(),
   ahora,
   alcance = alcanceConPrisma,
+  medidas = medidasConPrisma,
 }: BitacoraModuleDeps = {}): AppModule {
-  const c = new BitacoraController(new BitacoraService(repo, audit, ahora), alcance);
+  const c = new BitacoraController(new BitacoraService(repo, audit, ahora, medidas), alcance);
   const id = idParamSchema;
 
   const router = Router();
@@ -127,6 +146,12 @@ export function createBitacoraModule({
   router.get('/incidencias/guardias', validate({ query: bitacoraQuerySchema }), c.incidenciasPorGuardia);
   router.get('/incidencias', validate({ query: incidenciasMesQuerySchema }), c.incidencias);
   router.get('/guardias/:id', validate({ params: id, query: bitacoraQuerySchema }), c.guardia);
+  router.get('/guardias/:id/medidas', validate({ params: id }), c.medidas);
+  router.post(
+    '/eventos/:id/confirmar-falta',
+    validate({ params: id, body: confirmarFaltaSchema }),
+    c.confirmarFalta,
+  );
   router.post('/eventos/:id/decidir', validate({ params: id, body: decidirFaltaSchema }), c.decidir);
   router.post(
     '/eventos/:id/comentarios',

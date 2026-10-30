@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ConclusionIncidencia, MotivoIncidencia } from './asistencia';
 import { paginationQuerySchema } from './pagination';
+import { MOTIVOS_FALTA, MOTIVOS_JUSTIFICAR, medidaSchema, notaSchema, pedirNotaSiOtro } from './medidas';
 
 /** Bitácora del guardia (DA-41): control interno de admin y supervisor; el guardia no la ve. */
 export const TIPOS_EVENTO_BITACORA = [
@@ -26,6 +27,7 @@ export const TIPOS_EVENTO_BITACORA = [
   'sin_comida',
   'jornada_cerrada',
   'horas_extra',
+  'medida_disciplinaria',
 ] as const;
 export type TipoEventoBitacora = (typeof TIPOS_EVENTO_BITACORA)[number];
 
@@ -98,7 +100,13 @@ export function incidenciaPendiente(
 
 /** Cuenta en el resumen y en reportes: no justificada, y si es falta, que no se aceptó la asistencia. */
 export const incidenciaCuenta = (e: Pick<EventoBitacora, 'justificacion' | 'decision'>) =>
-  !e.justificacion && e.decision?.tipo !== 'asistencia';
+  !e.justificacion && e.decision?.tipo !== 'asistencia' && e.decision?.tipo !== 'superado';
+
+/**
+ * "No se presentó" que ya no es un aviso aparte (A-48): pasó a falta o el guardia llegó. Lo pone el
+ * sistema, no una persona.
+ */
+export const DECISION_SUPERADO = 'superado' as const;
 
 /** Falta con llegada tarde (DA-45): el supervisor acepta la asistencia o deja la falta. */
 export const DECISIONES_FALTA = ['asistencia', 'falta'] as const;
@@ -164,6 +172,7 @@ export const TIPO_EVENTO_BITACORA_LABEL: Record<TipoEventoBitacora, string> = {
   sin_comida: 'No registró comida',
   jornada_cerrada: 'Jornada cerrada',
   horas_extra: 'Horas extra',
+  medida_disciplinaria: 'Medida disciplinaria',
 };
 
 const mesSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Mes inválido (AAAA-MM)');
@@ -194,10 +203,27 @@ export const comentarioBitacoraSchema = z.object({
 });
 export type ComentarioBitacoraInput = z.infer<typeof comentarioBitacoraSchema>;
 
-export const justificarBitacoraSchema = z.object({
-  motivo: z.string().trim().min(3, 'Escribe el motivo').max(255, 'Máximo 255 caracteres'),
-});
+export const justificarBitacoraSchema = z
+  .object({
+    categoria: z.enum(MOTIVOS_JUSTIFICAR, 'Elige el motivo'),
+    /** Obligatoria con "otro". */
+    nota: notaSchema,
+  })
+  .superRefine(pedirNotaSiOtro);
 export type JustificarBitacoraInput = z.infer<typeof justificarBitacoraSchema>;
+
+/**
+ * Confirmar una falta (A-48): lo contrario de justificarla. Cuenta como falta; el motivo es obligatorio
+ * y puede llevar una medida disciplinaria.
+ */
+export const confirmarFaltaSchema = z
+  .object({
+    categoria: z.enum(MOTIVOS_FALTA, 'Elige el motivo'),
+    nota: notaSchema,
+    medida: medidaSchema,
+  })
+  .superRefine(pedirNotaSiOtro);
+export type ConfirmarFaltaInput = z.infer<typeof confirmarFaltaSchema>;
 
 export interface ComentarioBitacora {
   id: number;
@@ -229,6 +255,12 @@ export interface EventoBitacora {
   } | null;
   justificacion: { motivo: string; por: string | null; en: string } | null;
   /** Falta con llegada tarde: qué decidió el supervisor (DA-45). */
-  decision: { tipo: DecisionFalta | DecisionRetardo; por: string | null; en: string } | null;
+  decision: {
+    tipo: DecisionFalta | DecisionRetardo | typeof DECISION_SUPERADO;
+    por: string | null;
+    en: string;
+    /** Por qué se confirmó la falta (A-48). */
+    motivo?: string | null;
+  } | null;
   comentarios: ComentarioBitacora[];
 }

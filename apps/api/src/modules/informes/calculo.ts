@@ -411,7 +411,7 @@ function hechos(eventos: EventoBitacoraRow[], e: EntradaCalculo): InformeHecho[]
           guardia: v.guardia.nombre,
           texto: `${etiqueta} justificado por ${v.justificadoPor ?? 'el supervisor'}: ${v.justificacion}`,
         });
-      } else if (v.decision) {
+      } else if (v.decision && v.decision !== 'superado') {
         res.push({
           en: v.ocurrioEn.toISOString(),
           guardia: v.guardia.nombre,

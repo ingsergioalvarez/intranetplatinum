@@ -4,6 +4,7 @@ import { PERMISOS_POR_ROL, ROLES, type Rol } from '@platinum/shared';
 import { createApp } from '../src/app';
 import { signAccessToken } from '../src/core';
 import { createBitacoraModule } from '../src/modules/bitacora';
+import { sinMedidas, type MedidaNueva } from '../src/modules/medidas/medidas';
 import { BitacoraRepository, type EventoBitacoraRow } from '../src/modules/bitacora/bitacora.repository';
 import { sinAlcance } from '../src/modules/sitios/alcance';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
@@ -45,13 +46,14 @@ class MemoryBitacoraRepository extends BitacoraRepository {
       createdAt: new Date(),
     });
   }
-  async decidir(eventoId: number, porId: number, decision: 'asistencia' | 'falta', en: Date) {
+  async decidir(eventoId: number, porId: number, decision: 'asistencia' | 'falta', en: Date, motivo?: string) {
     Object.assign(
       this.eventosGuardados.find((x) => x.id === eventoId)!,
       {
         decision,
         decididoPor: NOMBRES[porId],
         decididoEn: en,
+        decisionMotivo: motivo ?? null,
       },
     );
   }
@@ -91,11 +93,13 @@ const evento = (
   decision: null,
   decididoPor: null,
   decididoEn: null,
+  decisionMotivo: null,
   comentarios: [],
 });
 
 let repo: MemoryBitacoraRepository;
 let audit: MemoryAuditLogger;
+let medidas: MedidaNueva[];
 let app: ReturnType<typeof createApp>;
 
 const token = (rol: Rol) =>
@@ -110,6 +114,7 @@ const sup = () => como(ROLES.SUPERVISOR);
 beforeEach(() => {
   repo = new MemoryBitacoraRepository();
   audit = new MemoryAuditLogger();
+  medidas = [];
   repo.eventosGuardados = [
     evento(1, 'retardo', '2026-10-05T14:00:00.000Z'),
     evento(2, 'asignacion', '2026-10-20T15:00:00.000Z'),
@@ -122,6 +127,7 @@ beforeEach(() => {
       audit,
       ahora: () => new Date('2026-10-21T18:00:00.000Z'),
       alcance: sinAlcance,
+      medidas: { ...sinMedidas, aplicar: async (m) => void medidas.push(m) },
     }),
   ]);
 });
@@ -132,7 +138,7 @@ describe('bitácora del guardia (DA-41)', () => {
     // El cliente tiene el permiso de ver asistencia (portal), pero no la bitácora interna.
     expect((await como(ROLES.CLIENTE).get('/guardias/10?mes=2026-10')).status).toBe(403);
     expect((await como(ROLES.CLIENTE).get('/incidencias/guardias?mes=2026-10')).status).toBe(403);
-    expect((await como(ROLES.CLIENTE).post('/eventos/1/justificar', { motivo: 'x' })).status).toBe(403);
+    expect((await como(ROLES.CLIENTE).post('/eventos/1/justificar', { categoria: 'permiso' })).status).toBe(403);
     expect((await como(ROLES.ADMIN).get('/guardias/10?mes=2026-10')).status).toBe(200);
   });
 
@@ -153,17 +159,17 @@ describe('bitácora del guardia (DA-41)', () => {
   });
 
   it('justifica solo retardos, salidas, comida fuera y faltas; una vez', async () => {
-    const res = await sup().post('/eventos/1/justificar', { motivo: 'Cita en el IMSS' });
+    const res = await sup().post('/eventos/1/justificar', { categoria: 'enfermedad', nota: 'Cita en el IMSS' });
     expect(res.status).toBe(200);
     expect(res.body.data.justificacion).toEqual({
-      motivo: 'Cita en el IMSS',
+      motivo: 'Enfermedad o cita médica: Cita en el IMSS',
       por: 'Supervisora',
       en: '2026-10-21T18:00:00.000Z',
     });
     expect(audit.acciones()).toEqual(['bitacora.justificar']);
-    expect((await sup().post('/eventos/1/justificar', { motivo: 'Otra vez' })).status).toBe(409);
-    expect((await sup().post('/eventos/2/justificar', { motivo: 'No aplica' })).status).toBe(400);
-    expect((await sup().post('/eventos/99/justificar', { motivo: 'No existe' })).status).toBe(404);
+    expect((await sup().post('/eventos/1/justificar', { categoria: 'permiso' })).status).toBe(409);
+    expect((await sup().post('/eventos/2/justificar', { categoria: 'permiso' })).status).toBe(400);
+    expect((await sup().post('/eventos/99/justificar', { categoria: 'permiso' })).status).toBe(404);
   });
 
   it('incidencias por guardia: asistencia y rostro del mes, sin justificadas; pendientes primero', async () => {
@@ -239,6 +245,63 @@ describe('bitácora del guardia (DA-41)', () => {
     expect((await sup().post('/eventos/1/comentarios', { texto: 'hola' })).status).toBe(404);
   });
 
+  it('justificar pide el motivo de la lista y "otro" exige explicarlo (A-48)', async () => {
+    expect((await sup().post('/eventos/1/justificar', {})).status).toBe(400);
+    const sinNota = await sup().post('/eventos/1/justificar', { categoria: 'otro' });
+    expect(sinNota.status).toBe(400);
+    expect(sinNota.body.error.details[0].path).toBe('nota');
+    const ok = await sup().post('/eventos/1/justificar', { categoria: 'otro', nota: 'Bloqueo en la autopista' });
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.justificacion.motivo).toBe('Otro: Bloqueo en la autopista');
+  });
+
+  it('confirmar una falta: motivo obligatorio, cuenta como falta y puede llevar medida (A-48)', async () => {
+    repo.eventosGuardados.push(evento(6, 'falta', '2026-10-09T16:00:00.000Z'), evento(7, 'retardo', '2026-10-09T14:00:00.000Z'));
+    expect((await sup().post('/eventos/6/confirmar-falta', {})).status).toBe(400);
+    expect((await sup().post('/eventos/6/confirmar-falta', { categoria: 'otro' })).status).toBe(400);
+    // Solo se confirma una falta.
+    expect((await sup().post('/eventos/7/confirmar-falta', { categoria: 'sin_aviso' })).status).toBe(400);
+    const res = await sup().post('/eventos/6/confirmar-falta', { categoria: 'sin_aviso', medida: 'llamada_atencion' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.decision).toEqual({
+      tipo: 'falta',
+      por: 'Supervisora',
+      en: '2026-10-21T18:00:00.000Z',
+      motivo: 'No se presentó y no avisó',
+    });
+    expect(medidas).toEqual([
+      expect.objectContaining({ usuarioId: 10, tipo: 'llamada_atencion', origen: 'falta', eventoId: 6, actorId: 2 }),
+    ]);
+    expect(audit.acciones()).toEqual(['bitacora.confirmar_falta', 'bitacora.aplicar_medida']);
+    // Ya decidida: ni se justifica ni se confirma otra vez; deja de estar pendiente.
+    expect((await sup().post('/eventos/6/confirmar-falta', { categoria: 'sin_aviso' })).status).toBe(409);
+    const lista = await sup().get('/incidencias?mes=2026-10&estado=pendientes');
+    expect(lista.body.data.items.map((e: { id: number }) => e.id)).not.toContain(6);
+  });
+
+  it('sin medida (o "ninguna") no se guarda nada en el historial', async () => {
+    repo.eventosGuardados.push(evento(6, 'falta', '2026-10-09T16:00:00.000Z'), evento(8, 'falta', '2026-10-10T16:00:00.000Z'));
+    expect((await sup().post('/eventos/6/confirmar-falta', { categoria: 'abandono' })).status).toBe(200);
+    expect((await sup().post('/eventos/8/confirmar-falta', { categoria: 'abandono', medida: 'ninguna' })).status).toBe(200);
+    expect(medidas).toEqual([]);
+  });
+
+  it('un "No se presentó" superado por la falta ya no cuenta ni queda pendiente (A-48)', async () => {
+    repo.eventosGuardados.push(
+      { ...evento(9, 'no_se_presento', '2026-10-11T14:15:00.000Z'), decision: 'superado', decididoEn: new Date('2026-10-11T16:00:00.000Z') },
+      evento(10, 'no_se_presento', '2026-10-12T14:15:00.000Z'),
+    );
+    const res = await sup().get('/incidencias?mes=2026-10&estado=pendientes');
+    const ids = res.body.data.items.map((e: { id: number }) => e.id);
+    expect(ids).toContain(10);
+    expect(ids).not.toContain(9);
+    const juan = (await sup().get('/incidencias/guardias?mes=2026-10')).body.data.find(
+      (f: { guardia: { id: number } }) => f.guardia.id === 10,
+    );
+    // Solo cuenta el que sigue vigente (más el retardo del 5 y los demás de la prueba).
+    expect(juan.asistencia).toBe(2);
+  });
+
   it('falta con llegada tarde: el supervisor acepta la asistencia una vez (DA-45)', async () => {
     repo.eventosGuardados.push(
       { ...evento(4, 'falta', '2026-10-07T16:00:00.000Z'), datos: { llegoEn: '2026-10-07T17:05:00.000Z' } },
@@ -251,6 +314,7 @@ describe('bitácora del guardia (DA-41)', () => {
       tipo: 'asistencia',
       por: 'Supervisora',
       en: '2026-10-21T18:00:00.000Z',
+      motivo: null,
     });
     expect((await sup().post('/eventos/4/decidir', { decision: 'falta' })).status).toBe(409);
     expect(audit.acciones()).toEqual(['bitacora.decidir_falta']);

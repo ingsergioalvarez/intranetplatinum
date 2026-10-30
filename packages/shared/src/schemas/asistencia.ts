@@ -5,6 +5,13 @@ import { fechaSchema } from './comunes';
 import type { PlanGuardia } from './casosCobertura';
 import type { EstadoHoraExtra, HoraExtraGuardia } from './horasExtra';
 import { paginationQuerySchema } from './pagination';
+import {
+  MOTIVOS_SALIDA_SIN_MARCAR,
+  medidaSchema,
+  notaSchema,
+  pedirNotaSiOtro,
+  type OpcionMedida,
+} from './medidas';
 
 // ---------- Control de asistencia (A-17, docs/ASISTENCIA.md) ----------
 
@@ -378,12 +385,30 @@ export type MarcacionCreateData = z.output<typeof marcacionCreateSchema>;
  * Cerrar la jornada de un guardia que no pudo checar su salida (DA-49): admin o supervisor registran
  * la salida con motivo obligatorio y la hora (por omisión, la programada si ya pasó, o ahora).
  */
-export const cerrarJornadaSchema = z.object({
-  motivo: z.string().trim().min(3, 'Escribe el motivo').max(255, 'Máximo 255 caracteres'),
-  /** Hora de salida (ISO); entre la entrada y ahora. */
-  salidaEn: z.iso.datetime({ offset: true }).optional(),
-});
-export type CerrarJornadaInput = z.infer<typeof cerrarJornadaSchema>;
+export const cerrarJornadaSchema = z
+  .object({
+    categoria: z.enum(MOTIVOS_SALIDA_SIN_MARCAR, 'Elige el motivo'),
+    /** Obligatoria con "otro". */
+    nota: notaSchema,
+    /** Hora de salida (ISO); entre la entrada y ahora. */
+    salidaEn: z.iso.datetime({ offset: true }).optional(),
+    /** A-49: medida disciplinaria opcional (por omisión, ninguna). */
+    medida: medidaSchema,
+  })
+  .superRefine(pedirNotaSiOtro);
+export type CerrarJornadaBody = z.infer<typeof cerrarJornadaSchema>;
+
+/** Lo que recibe el servicio (el motivo ya viene armado). */
+export interface CerrarJornadaInput {
+  motivo: string;
+  salidaEn?: string;
+  medida?: OpcionMedida;
+}
+
+/** Respuesta de cerrar una jornada: cuántas salidas sin marcar lleva el guardia en el mes. */
+export interface ResultadoCerrarJornada {
+  salidasSinMarcarMes: number;
+}
 
 export const misMarcasQuerySchema = z.object({
   mes: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Mes inválido (AAAA-MM)'),

@@ -4,7 +4,11 @@ import type {
   Marcacion,
   AsistenciaGuardia,
   ConclusionIncidencia,
-  CerrarJornadaInput,
+  CerrarJornadaBody,
+  ConfirmarFaltaInput,
+  JustificarBitacoraInput,
+  MedidaDisciplinaria,
+  ResultadoCerrarJornada,
   TableroAsistencia,
   DecisionFalta,
   DecidirRetardoInput,
@@ -62,6 +66,7 @@ export const asistenciaService = {
     incidencias: (params: ListParams) => ['asistencia', 'incidencias', params] as const,
     incidencia: (id: number) => ['asistencia', 'incidencia', id] as const,
     tablero: ['asistencia', 'tablero'] as const,
+    medidas: (id: number) => ['asistencia', 'medidas', id] as const,
     bitacora: (id: number, mes: string) => ['asistencia', 'bitacora', id, mes] as const,
     incidenciasPorGuardia: (mes: string) => ['asistencia', 'incidencias-guardias', mes] as const,
     incidenciasMes: (params: ListParams) => ['asistencia', 'incidencias-mes', params] as const,
@@ -118,12 +123,17 @@ export const asistenciaService = {
   /** Tablero del día para admin y supervisor (DA-51). */
   tablero: () => api.get<TableroAsistencia>('/asistencia/tablero'),
   /** Cerrar la jornada de un guardia que no pudo checar su salida (DA-49). */
-  cerrarJornada: (entradaId: number, data: CerrarJornadaInput) =>
-    api.post<void>(`/asistencia/jornadas/${entradaId}/cerrar`, data),
+  cerrarJornada: (entradaId: number, data: CerrarJornadaBody) =>
+    api.post<ResultadoCerrarJornada>(`/asistencia/jornadas/${entradaId}/cerrar`, data),
   decidirFalta: (id: number, decision: DecisionFalta) =>
     api.post<EventoBitacora>(`/bitacora/eventos/${id}/decidir`, { decision }),
   decidirRetardo: (id: number, data: DecidirRetardoInput) =>
     api.post<ResultadoDecisionRetardo>(`/asistencia/retardos/${id}/decidir`, data),
-  justificarEvento: (id: number, motivo: string) =>
-    api.post<EventoBitacora>(`/bitacora/eventos/${id}/justificar`, { motivo }),
+  justificarEvento: (id: number, data: JustificarBitacoraInput) =>
+    api.post<EventoBitacora>(`/bitacora/eventos/${id}/justificar`, data),
+  /** Confirmar una falta, con motivo y medida opcional (A-48). */
+  confirmarFalta: (id: number, data: ConfirmarFaltaInput) =>
+    api.post<EventoBitacora>(`/bitacora/eventos/${id}/confirmar-falta`, data),
+  /** Historial formal de medidas disciplinarias del guardia (A-48, A-49). */
+  medidas: (id: number) => api.get<MedidaDisciplinaria[]>(`/bitacora/guardias/${id}/medidas`),
 };

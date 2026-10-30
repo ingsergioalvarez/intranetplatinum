@@ -1,18 +1,26 @@
 import {
+  MEDIDA_LABEL,
+  MOTIVO_FALTA_LABEL,
+  MOTIVO_JUSTIFICAR_LABEL,
   TIPOS_INCIDENCIA,
   TIPOS_JUSTIFICABLES,
   TIPO_EVENTO_BITACORA_LABEL,
   claseIncidencia,
   incidenciaCuenta,
   incidenciaPendiente,
+  textoMotivoLista,
+  type ConfirmarFaltaInput,
   type DecisionFalta,
   type EventoBitacora,
   type IncidenciasDeGuardia,
   type IncidenciasMesQuery,
+  type JustificarBitacoraInput,
+  type MedidaDisciplinaria,
   type Paginated,
 } from '@platinum/shared';
 import { AuditLogger, BaseService, HttpError, firmarArchivo, inicioDelDia, type AccionCtx } from '../../core';
 import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
+import { sinMedidas, type MedidasPuerto } from '../medidas/medidas';
 import type { BitacoraRepository, EventoBitacoraRow } from './bitacora.repository';
 
 /** Inicio del mes `AAAA-MM` y del siguiente (zona del negocio). */
@@ -45,6 +53,7 @@ const aEvento = (r: EventoBitacoraRow): EventoBitacora => ({
     tipo: r.decision,
     por: r.decididoPor,
     en: r.decididoEn!.toISOString(),
+    motivo: r.decisionMotivo,
   },
   justificacion: r.justificadoEn && {
     motivo: r.justificacion!,
@@ -63,8 +72,17 @@ export class BitacoraService extends BaseService {
     private readonly repo: BitacoraRepository,
     private readonly audit: AuditLogger,
     private readonly ahora: () => Date = () => new Date(),
+    /** Medidas disciplinarias (A-48): historial formal del guardia. */
+    private readonly medidas: MedidasPuerto = sinMedidas,
   ) {
     super();
+  }
+
+  /** Historial formal de medidas disciplinarias del guardia (A-48, A-49). */
+  async medidasDelGuardia(usuarioId: number, alcance: Alcance | null = null): Promise<MedidaDisciplinaria[]> {
+    exigirGuardia(alcance, usuarioId);
+    if (!(await this.repo.existeGuardia(usuarioId))) throw HttpError.notFound('Guardia no encontrado');
+    return this.medidas.delGuardia(usuarioId);
   }
 
   /** Eventos del mes `AAAA-MM` (zona del negocio), del más nuevo al más viejo. */
@@ -158,11 +176,12 @@ export class BitacoraService extends BaseService {
 
   async justificar(
     id: number,
-    motivo: string,
+    { categoria, nota }: JustificarBitacoraInput,
     ctx: AccionCtx,
     alcance: Alcance | null = null,
   ): Promise<EventoBitacora> {
     const e = await this.evento(id, alcance);
+    const motivo = textoMotivoLista(MOTIVO_JUSTIFICAR_LABEL[categoria], nota);
     if (!TIPOS_JUSTIFICABLES.includes(e.tipo)) {
       throw HttpError.badRequest(`${TIPO_EVENTO_BITACORA_LABEL[e.tipo]} no se justifica`);
     }
@@ -173,6 +192,46 @@ export class BitacoraService extends BaseService {
       tipo: e.tipo,
       motivo,
     });
+    return aEvento((await this.repo.findById(id))!);
+  }
+
+  /**
+   * Confirmar una falta (A-48): lo contrario de justificarla. Vale para la falta sin llegada y para la
+   * que el guardia cubrió tarde ("Dejar la falta"). Motivo obligatorio y medida disciplinaria opcional.
+   */
+  async confirmarFalta(
+    id: number,
+    { categoria, nota, medida }: ConfirmarFaltaInput,
+    ctx: AccionCtx,
+    alcance: Alcance | null = null,
+  ): Promise<EventoBitacora> {
+    const e = await this.evento(id, alcance);
+    if (e.tipo !== 'falta') throw HttpError.badRequest('Solo se confirma una falta');
+    if (e.justificadoEn) throw HttpError.conflict('Ya está justificada');
+    if (e.decision) throw HttpError.conflict('Ya se decidió');
+    const motivo = textoMotivoLista(MOTIVO_FALTA_LABEL[categoria], nota);
+    await this.repo.decidir(id, ctx.actorId, 'falta', this.ahora(), motivo);
+    await this.audit.registrarAccion(ctx, 'bitacora.confirmar_falta', 'bitacora_eventos', id, {
+      guardiaId: e.usuarioId,
+      motivo,
+      medida: medida ?? 'ninguna',
+    });
+    if (medida && medida !== 'ninguna') {
+      await this.medidas.aplicar({
+        usuarioId: e.usuarioId,
+        tipo: medida,
+        origen: 'falta',
+        motivo,
+        eventoId: id,
+        sitioId: e.sitio?.id ?? null,
+        sitio: e.sitio?.nombre ?? null,
+        actorId: ctx.actorId,
+      });
+      await this.audit.registrarAccion(ctx, 'bitacora.aplicar_medida', 'bitacora_eventos', id, {
+        guardiaId: e.usuarioId,
+        medida: MEDIDA_LABEL[medida],
+      });
+    }
     return aEvento((await this.repo.findById(id))!);
   }
 

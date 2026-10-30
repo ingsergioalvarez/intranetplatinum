@@ -1,5 +1,6 @@
 import type {
   ConclusionIncidencia,
+  DECISION_SUPERADO,
   DecisionFalta,
   DecisionRetardo,
   MotivoIncidencia,
@@ -32,9 +33,10 @@ export interface EventoBitacoraRow {
   justificacion: string | null;
   justificadoPor: string | null;
   justificadoEn: Date | null;
-  decision: DecisionFalta | DecisionRetardo | null;
+  decision: DecisionFalta | DecisionRetardo | typeof DECISION_SUPERADO | null;
   decididoPor: string | null;
   decididoEn: Date | null;
+  decisionMotivo: string | null;
   comentarios: { id: number; texto: string; autor: string | null; createdAt: Date }[];
 }
 
@@ -60,7 +62,13 @@ export abstract class BitacoraRepository {
   abstract findById(id: number): Promise<EventoBitacoraRow | null>;
   abstract comentar(eventoId: number, autorId: number, texto: string): Promise<void>;
   abstract justificar(eventoId: number, porId: number, motivo: string, en: Date): Promise<void>;
-  abstract decidir(eventoId: number, porId: number, decision: DecisionFalta, en: Date): Promise<void>;
+  abstract decidir(
+    eventoId: number,
+    porId: number,
+    decision: DecisionFalta,
+    en: Date,
+    motivo?: string,
+  ): Promise<void>;
 }
 
 const nombre = { select: { nombre: true } } as const;
@@ -77,6 +85,7 @@ const select = {
   justificadoEn: true,
   decision: true,
   decididoEn: true,
+  decisionMotivo: true,
   decididoPor: nombre,
   sitio: { select: { id: true, nombre: true } },
   actor: nombre,
@@ -126,9 +135,10 @@ function aRow(r: Fila): EventoBitacoraRow {
     justificacion: r.justificacion,
     justificadoPor: r.justificadoPor?.nombre ?? null,
     justificadoEn: r.justificadoEn,
-    decision: r.decision as DecisionFalta | DecisionRetardo | null,
+    decision: r.decision as DecisionFalta | DecisionRetardo | typeof DECISION_SUPERADO | null,
     decididoPor: r.decididoPor?.nombre ?? null,
     decididoEn: r.decididoEn,
+    decisionMotivo: r.decisionMotivo,
     comentarios: r.comentarios.map((c) => ({
       id: c.id,
       texto: c.texto,
@@ -189,10 +199,10 @@ export class PrismaBitacoraRepository extends BitacoraRepository {
     await getPrisma().comentarioBitacora.create({ data: { eventoId, autorId, texto } });
   }
 
-  async decidir(eventoId: number, porId: number, decision: DecisionFalta, en: Date) {
+  async decidir(eventoId: number, porId: number, decision: DecisionFalta, en: Date, motivo?: string) {
     await getPrisma().eventoBitacora.update({
       where: { id: eventoId },
-      data: { decision, decididoPorId: porId, decididoEn: en },
+      data: { decision, decididoPorId: porId, decididoEn: en, decisionMotivo: motivo ?? null },
     });
   }
 
