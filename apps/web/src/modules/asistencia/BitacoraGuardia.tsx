@@ -445,6 +445,11 @@ function Evento({
         {e.tipo === 'falta' && typeof e.datos?.llegoEn === 'string' && (
           <DecisionLlegada evento={e} onConfirmarFalta={onConfirmarFalta} />
         )}
+        {e.tipo === 'falta' && !e.decision && !e.justificacion && typeof e.datos?.llegoEn !== 'string' && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset">
+            Aún no cuenta como falta: confírmala o justifícala. Te lo seguiremos recordando.
+          </p>
+        )}
         {e.tipo === 'falta' && e.decision?.tipo === 'falta' && typeof e.datos?.llegoEn !== 'string' && (
           <Nota>
             <strong>Falta confirmada</strong> por {e.decision.por ?? 'alguien'} · {formatFechaHora(e.decision.en)}

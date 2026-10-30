@@ -16,8 +16,11 @@ import {
   SIGUIENTES_MARCAS,
   TIPO_MARCACION_LABEL,
   TIPOS_CON_FOTO,
+  MARGEN_OTRO_LENTES,
   UMBRAL_NO_TITULAR,
+  UMBRAL_NO_TITULAR_LENTES,
   UMBRAL_ROSTRO,
+  UMBRAL_ROSTRO_LENTES,
   distanciaMetros,
   distanciaRostro,
   sitioMasCercano,
@@ -595,7 +598,7 @@ export class AsistenciaService extends BaseService {
       const mime = foto && detectarImagen(foto.buffer);
       if (!foto || !mime) throw errorFoto('Toma tu foto para registrar la marca');
 
-      const { propio, distancia, otro } = await this.identificar(usuarioId, data.descriptor);
+      const { propio, distancia, otro } = await this.identificar(usuarioId, data.descriptor, data.conLentes);
       if (otro) {
         await this.registrarIncidencia(
           usuarioId,
@@ -616,7 +619,7 @@ export class AsistenciaService extends BaseService {
       if (!propio) {
         alertas.push('sin_rostro_registrado');
       } else {
-        if (distancia === null || distancia > UMBRAL_ROSTRO) {
+        if (distancia === null || distancia > (data.conLentes ? UMBRAL_ROSTRO_LENTES : UMBRAL_ROSTRO)) {
           if (!sinConexion) {
             throw new HttpError(422, 'ROSTRO_NO_COINCIDE', 'No pudimos confirmar que seas el titular');
           }
@@ -849,12 +852,16 @@ export class AsistenciaService extends BaseService {
    * Verificación en vivo (DA-28): mientras la cámara está abierta, ¿la cara es la del titular?
    * No guarda nada; la marca se vuelve a verificar al registrarse.
    */
-  async verificarRostro(usuarioId: number, descriptor: number[]): Promise<ResultadoVerificacion> {
-    const { propio, distancia, otro } = await this.identificar(usuarioId, descriptor);
+  async verificarRostro(
+    usuarioId: number,
+    descriptor: number[],
+    conLentes = false,
+  ): Promise<ResultadoVerificacion> {
+    const { propio, distancia, otro } = await this.identificar(usuarioId, descriptor, conLentes);
     if (otro) return 'no_titular';
     if (!propio || distancia === null) return 'sin_rostro';
-    if (distancia <= UMBRAL_ROSTRO) return 'titular';
-    return distancia > UMBRAL_NO_TITULAR ? 'no_titular' : 'dudoso';
+    if (distancia <= (conLentes ? UMBRAL_ROSTRO_LENTES : UMBRAL_ROSTRO)) return 'titular';
+    return distancia > (conLentes ? UMBRAL_NO_TITULAR_LENTES : UMBRAL_NO_TITULAR) ? 'no_titular' : 'dudoso';
   }
 
   /**
@@ -960,7 +967,7 @@ export class AsistenciaService extends BaseService {
    * Compara la cara con el rostro del titular y con los demás registrados (1 a N). `otro` es el
    * guardia al que corresponde si se parece más a él que al titular.
    */
-  private async identificar(usuarioId: number, descriptor: number[] | undefined) {
+  private async identificar(usuarioId: number, descriptor: number[] | undefined, conLentes = false) {
     const propio = vigente(await this.repo.rostroActual(usuarioId));
     const distancia = propio && descriptor ? menorDistancia(descriptor, propio.descriptores) : null;
     let otro: OtroRostro | null = null;
@@ -970,8 +977,12 @@ export class AsistenciaService extends BaseService {
         if (!otro || d < otro.distancia) otro = { usuario: o.usuario, distancia: d };
       }
     }
+    // Con lentes el margen es más amplio, pero otro guardia bloquea con más facilidad: basta que quede
+    // cerca del propio (A-50), así el margen extra nunca deja pasar a un compañero.
+    const umbral = conLentes ? UMBRAL_ROSTRO_LENTES : UMBRAL_ROSTRO;
+    const margen = conLentes ? MARGEN_OTRO_LENTES : 0;
     const esOtro =
-      otro !== null && otro.distancia <= UMBRAL_ROSTRO && (distancia === null || otro.distancia < distancia);
+      otro !== null && otro.distancia <= umbral && (distancia === null || otro.distancia < distancia + margen);
     return { propio, distancia, otro: esOtro ? otro : null };
   }
 
@@ -994,7 +1005,7 @@ export class AsistenciaService extends BaseService {
    */
   async autoregistrarRostro(
     usuarioId: number,
-    { descriptores, sinLentes }: RostroRegistroInput,
+    { descriptores, sinLentes, conLentes }: RostroRegistroInput,
     archivos: ArchivoSubido[] | undefined,
     ctx: RequestContext,
   ): Promise<RostroRegistro> {
@@ -1025,7 +1036,7 @@ export class AsistenciaService extends BaseService {
       accion: 'asistencia.autoregistro_rostro',
       entidad: 'usuarios',
       entidadId: usuarioId,
-      datos: { rostroId: rostro.id, muestras: descriptores.length, ...(sinLentes && { sinLentes }) },
+      datos: { rostroId: rostro.id, muestras: descriptores.length, ...(sinLentes && { sinLentes }), ...(conLentes && { conLentes }) },
       ...ctx,
     });
     await this.bitacora({

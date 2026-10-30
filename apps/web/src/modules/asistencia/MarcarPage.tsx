@@ -500,7 +500,7 @@ export function MarcarPage() {
               ubicacion,
               foto: c.foto,
               descriptor: c.descriptor ?? undefined,
-              sinLentes: c.sinLentes,
+              conLentes: c.conLentes,
               intento,
             })
           }

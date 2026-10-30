@@ -12,7 +12,7 @@ export interface MarcaPendiente {
   precisionM: number;
   intento: number;
   descriptor?: number[];
-  sinLentes?: boolean;
+  conLentes?: boolean;
   /** Foto de entrada o salida. */
   foto?: Blob;
   /** Reloj crudo del celular y hora estimada (reloj corregido) al checar. */

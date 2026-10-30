@@ -66,6 +66,7 @@ export const ESTADOS_DIA_INFORME = [
   'retardo',
   'falta',
   'falta_justificada',
+  'por_revisar',
   'descanso',
   'sin_salida',
   'cerrada',
@@ -78,6 +79,7 @@ export const ESTADO_DIA_INFORME_LABEL: Record<EstadoDiaInforme, string> = {
   retardo: 'Retardo',
   falta: 'Falta',
   falta_justificada: 'Falta justificada',
+  por_revisar: 'Por revisar',
   descanso: 'Descanso',
   sin_salida: 'Sin salida',
   cerrada: 'Cerrada por supervisor',
@@ -111,6 +113,8 @@ export interface InformeResumen {
   trabajados: number;
   faltas: number;
   justificadas: number;
+  /** Días con falta que el supervisor aún no revisa: no cuentan como falta (A-51). Reportes anteriores no lo traen. */
+  porRevisar?: number;
   retardos: number;
   retardoMin: number;
   salidasAntes: number;

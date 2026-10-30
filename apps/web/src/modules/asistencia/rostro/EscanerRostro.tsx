@@ -62,8 +62,8 @@ export interface Captura {
   giro: Pose['giro'];
   /** Cabeceo de la cara en la foto (la de frente sirve de base para pedir arriba / abajo). */
   cabeceo: number | null;
-  /** Tocó "No traigo lentes" aunque se detectaban lentes (DA-44). */
-  sinLentes: boolean;
+  /** Se detectaron lentes al tomar la foto (A-50): el servidor usa un margen un poco más amplio. */
+  conLentes: boolean;
 }
 
 /** Intentos rechazados que detecta la cámara (DA-31). */
@@ -73,7 +73,7 @@ export type MotivoCamara = 'pantalla' | 'no_titular' | 'reto_fallido';
 export interface Titular {
   /** Nombre del titular para el saludo ("Hola, Juan"). */
   nombre: string;
-  verificar: (descriptor: number[]) => Promise<ResultadoVerificacion>;
+  verificar: (descriptor: number[], conLentes: boolean) => Promise<ResultadoVerificacion>;
   /** Intento rechazado con su foto (cada motivo se reporta una sola vez por apertura de la cámara). */
   onIncidencia: (motivo: MotivoCamara, foto: Blob, descriptor: number[] | null) => void;
 }
@@ -133,9 +133,6 @@ interface Calidad {
  * después de este tiempo no mejora se deja continuar (no se bloquea para siempre).
  */
 const TOLERAR_VISTA_MS = 12_000;
-
-/** Segundos con lentes detectados antes de ofrecer "No traigo lentes" (por si el detector se equivoca). */
-const OFRECER_SIN_LENTES_MS = 15_000;
 
 /** El análisis en vivo usa una copia reducida del video: más cuadros por segundo para no perder el parpadeo. */
 const ANCHO_ANALISIS = 360;
@@ -299,16 +296,14 @@ export function EscanerRostro({
   const [fotoLista, setFotoLista] = useState(false);
   const [respaldo, setRespaldo] = useState(false);
   const [lentes, setLentes] = useState(false);
-  // Lentes obligatorio quitarlos (DA-44); si el detector se equivoca, puede decir que no trae.
-  const [sinLentes, setSinLentes] = useState(false);
-  const [ofrecerSinLentes, setOfrecerSinLentes] = useState(false);
+  // Con lentes se recomienda quitárselos pero ya no bloquea (A-50): se evita el parpadeo y el servidor
+  // verifica con un margen un poco más amplio.
   const lentesBloqueanRef = useRef(false);
   // Ojos que no se distinguen (con histéresis) y la tolerancia si no mejora.
   const ojosRef = useRef(0);
   const ojosMalRef = useRef(false);
   const vistaDesdeRef = useRef<number | null>(null);
   const vistaToleradaRef = useRef(false);
-  const sinLentesRef = useRef(false);
   /** Inclinación del teléfono (beta, grados: 90 = vertical); null si no hay sensor. */
   const inclinacionRef = useRef<number | null>(null);
   const [intento, setIntento] = useState(0);
@@ -355,7 +350,8 @@ export function EscanerRostro({
   const nuevoGesto = useCallback(
     (ahora: number) => {
       const r = retoRef.current;
-      const gesto = sortearGesto(r?.usados);
+      // Con lentes no se pide parpadear: los reflejos hacen poco confiable ese gesto (A-50).
+      const gesto = sortearGesto([...(r?.usados ?? []), ...(lentesBloqueanRef.current ? (['parpadear'] as Gesto[]) : [])]);
       retoRef.current = {
         detector: new DetectorGesto(gesto, baseRef.current!, parpadeoRef.current),
         inicio: ahora,
@@ -488,7 +484,7 @@ export function EscanerRostro({
         if (!descriptor) return;
         evaluarVida(await motor.vida(foto, puntos), foto, descriptor);
         if (pantallaRef.current) return;
-        const resultado = await t.verificar(descriptor);
+        const resultado = await t.verificar(descriptor, lentesBloqueanRef.current);
         if (generacion !== generacionRef.current) return;
         const seguidas = seguidasRef.current;
         if (resultado === 'titular' || resultado === 'sin_rostro') {
@@ -581,7 +577,7 @@ export function EscanerRostro({
             rechazar('Falta un gesto más para confirmar');
             return;
           }
-          const resultado = descriptor ? await t.verificar(descriptor).catch(() => null) : null;
+          const resultado = descriptor ? await t.verificar(descriptor, lentesBloqueanRef.current).catch(() => null) : null;
           if (resultado !== 'titular' && resultado !== 'sin_rostro') {
             if (resultado === 'no_titular') fijarIdentidad('no_titular');
             else reiniciarIdentidad();
@@ -601,7 +597,7 @@ export function EscanerRostro({
           descriptor,
           giro: giroRef.current,
           cabeceo: puntos ? cabeceo(puntos, canvas.height) : null,
-          sinLentes: sinLentesRef.current && lentesBloqueanRef.current,
+          conLentes: lentesBloqueanRef.current,
         });
         if (descriptor) {
           setFotoLista(true);
@@ -674,7 +670,8 @@ export function EscanerRostro({
       }
       const luz: Luz =
         luzRef.current.luz === 'cara_oscura' && vistaToleradaRef.current ? 'ok' : luzRef.current.luz;
-      const ojosBorrosos = ojosMalRef.current && !vistaToleradaRef.current;
+      // Con lentes los ojos se ven con reflejos: no se bloquea por eso (A-50).
+      const ojosBorrosos = ojosMalRef.current && !vistaToleradaRef.current && !lentesBloqueanRef.current;
 
       let siguiente: Calidad;
       if (!puntos) {
@@ -731,13 +728,11 @@ export function EscanerRostro({
               : (inclinacion !== null && inclinacion > INCLINACION_MAX) || vertical > CABECEO_DESDE_ARRIBA
                 ? 'alto'
                 : null;
-        const conLentes = lentesBloqueanRef.current && !sinLentesRef.current;
         const enPose =
           luz === 'ok' &&
           posicion === 'ok' &&
           pose.mirada === 'ok' &&
           !telefono &&
-          !conLentes &&
           !ojosBorrosos;
         // Verificación del titular en vivo (solo con la cara bien colocada, para un vector confiable).
         if (
@@ -824,10 +819,8 @@ export function EscanerRostro({
                         ? telefono === 'bajo'
                           ? 'Sube el teléfono a la altura de tus ojos'
                           : 'Baja el teléfono a la altura de tus ojos'
-                        : conLentes
-                          ? 'Quítate los lentes para continuar'
-                          : ojosBorrosos
-                            ? 'No se ven bien tus ojos: quítate los lentes o busca más luz'
+                        : ojosBorrosos
+                            ? 'No se ven bien tus ojos: busca más luz'
                             : (correccionVisible(
                                 correccionDesdeRef,
                                 encuadre.instruccion ?? pose.instruccion,
@@ -920,16 +913,6 @@ export function EscanerRostro({
     window.addEventListener('deviceorientation', leer);
     return () => window.removeEventListener('deviceorientation', leer);
   }, []);
-
-  // Si lleva un rato detectando lentes, ofrece "No traigo lentes" (por si el detector se equivoca).
-  useEffect(() => {
-    if (!lentes || sinLentes) {
-      setOfrecerSinLentes(false);
-      return;
-    }
-    const t = setTimeout(() => setOfrecerSinLentes(true), OFRECER_SIN_LENTES_MS);
-    return () => clearTimeout(t);
-  }, [lentes, sinLentes]);
 
   const activo = fase.tipo === 'activo';
   const pidiendoGiro = objetivo.tipo !== 'frente' && !calidad.armado;
@@ -1215,9 +1198,7 @@ export function EscanerRostro({
                     ok={identidad === 'titular'}
                   />
                 )}
-                {lentes && !sinLentes && (
-                  <Indicador icono={<Glasses className="size-3.5" />} texto="Lentes" ok={false} />
-                )}
+                {lentes && <Indicador icono={<Glasses className="size-3.5" />} texto="Con lentes" ok />}
               </div>
               {pantalla ? (
                 <p className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-1.5 text-sm text-red-800">
@@ -1247,19 +1228,10 @@ export function EscanerRostro({
                   {calidad.instruccion}
                 </p>
               )}
-              {ofrecerSinLentes && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  fullWidth
-                  icon={<Glasses className="size-4" />}
-                  onClick={() => {
-                    sinLentesRef.current = true;
-                    setSinLentes(true);
-                  }}
-                >
-                  No traigo lentes
-                </Button>
+              {lentes && (
+                <p className="flex items-center justify-center gap-1.5 text-center text-sm text-slate-500">
+                  <Glasses className="size-4 shrink-0" /> Si puedes, quítate los lentes: se reconoce mejor.
+                </p>
               )}
             </>
           )}
@@ -1269,7 +1241,7 @@ export function EscanerRostro({
               size="sm"
               fullWidth
               icon={<Camera className="size-4" />}
-              disabled={capturando || !!calidad.telefono || (lentes && !sinLentes)}
+              disabled={capturando || !!calidad.telefono}
               onClick={() => void capturar(false)}
             >
               Tomar foto

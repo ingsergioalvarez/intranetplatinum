@@ -297,6 +297,23 @@ describe('bitácora del guardia (DA-41)', () => {
     expect((await sup().post('/eventos/11/confirmar-falta', { categoria: 'sin_aviso' })).status).toBe(409);
   });
 
+  it('una falta sin revisar no cuenta; confirmada sí; justificada no (A-51)', async () => {
+    repo.eventosGuardados.push(
+      evento(20, 'falta', '2026-10-14T16:00:00.000Z'),
+      evento(21, 'falta', '2026-10-15T16:00:00.000Z'),
+      evento(22, 'falta', '2026-10-16T16:00:00.000Z'),
+    );
+    const faltas = async () =>
+      (await sup().get('/incidencias/guardias?mes=2026-10')).body.data.find(
+        (f: { guardia: { id: number } }) => f.guardia.id === 10,
+      );
+    // Las tres sin revisar: solo el retardo del 5 cuenta, y las tres quedan pendientes.
+    expect(await faltas()).toMatchObject({ asistencia: 1, pendientes: 4 });
+    await sup().post('/eventos/21/confirmar-falta', { categoria: 'sin_aviso' });
+    await sup().post('/eventos/22/justificar', { categoria: 'permiso' });
+    expect(await faltas()).toMatchObject({ asistencia: 2, pendientes: 2 });
+  });
+
   it('sin medida (o "ninguna") no se guarda nada en el historial', async () => {
     repo.eventosGuardados.push(evento(6, 'falta', '2026-10-09T16:00:00.000Z'), evento(8, 'falta', '2026-10-10T16:00:00.000Z'));
     expect((await sup().post('/eventos/6/confirmar-falta', { categoria: 'abandono' })).status).toBe(200);
@@ -316,8 +333,8 @@ describe('bitácora del guardia (DA-41)', () => {
     const juan = (await sup().get('/incidencias/guardias?mes=2026-10')).body.data.find(
       (f: { guardia: { id: number } }) => f.guardia.id === 10,
     );
-    // Solo cuenta el que sigue vigente (más el retardo del 5 y los demás de la prueba).
-    expect(juan.asistencia).toBe(2);
+    // "No se presentó" es un aviso y no cuenta aparte; solo cuenta el retardo del 5.
+    expect(juan.asistencia).toBe(1);
   });
 
   it('falta con llegada tarde: el supervisor acepta la asistencia una vez (DA-45)', async () => {
@@ -339,6 +356,7 @@ describe('bitácora del guardia (DA-41)', () => {
     // Aceptada: ya no cuenta como falta ni queda pendiente.
     const porGuardia = await sup().get('/incidencias/guardias?mes=2026-10');
     const juan = porGuardia.body.data.find((f: { guardia: { id: number } }) => f.guardia.id === 10);
-    expect(juan).toMatchObject({ asistencia: 2, pendientes: 2 });
+    // Las faltas sin revisar no cuentan (A-51): quedan pendientes, no sumadas.
+    expect(juan).toMatchObject({ asistencia: 1, pendientes: 2 });
   });
 });

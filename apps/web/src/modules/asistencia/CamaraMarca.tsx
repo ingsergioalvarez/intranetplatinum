@@ -60,8 +60,8 @@ export function CamaraMarca({
       nombre,
       // Sin conexión no se puede consultar al servidor: se sigue con el reto de vida y el antipantalla
       // locales, y el servidor verifica el rostro al recibir la marca (AS2-03).
-      verificar: (descriptor) =>
-        asistenciaService.verificarRostro(descriptor).catch((e: unknown) => {
+      verificar: (descriptor, conLentes) =>
+        asistenciaService.verificarRostro(descriptor, conLentes).catch((e: unknown) => {
           if (e instanceof ApiError && e.code === 'NETWORK_ERROR') return 'sin_rostro' as const;
           throw e;
         }),
@@ -100,7 +100,7 @@ export function CamaraMarca({
       form.append('precisionM', String(ubicacion.precisionM));
       form.append('intento', String(intento));
       if (c.descriptor) form.append('descriptor', JSON.stringify(c.descriptor));
-      if (c.sinLentes) form.append('sinLentes', 'true');
+      if (c.conLentes) form.append('conLentes', 'true');
       form.append('foto', c.foto, 'marca.jpg');
       onRegistrada(await asistenciaService.marcarConFoto(form));
     } catch (err) {

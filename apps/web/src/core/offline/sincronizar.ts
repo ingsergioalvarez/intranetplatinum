@@ -21,7 +21,7 @@ function enviar(m: MarcaPendiente) {
   const form = new FormData();
   for (const [k, v] of Object.entries({ ...base, intento: m.intento })) form.append(k, String(v));
   if (m.descriptor) form.append('descriptor', JSON.stringify(m.descriptor));
-  if (m.sinLentes) form.append('sinLentes', 'true');
+  if (m.conLentes) form.append('conLentes', 'true');
   form.append('foto', m.foto, 'marca.jpg');
   return asistenciaService.marcarConFoto(form);
 }

@@ -67,6 +67,7 @@ const vacio = (): InformeResumen => ({
   trabajados: 0,
   faltas: 0,
   justificadas: 0,
+  porRevisar: 0,
   retardos: 0,
   retardoMin: 0,
   salidasAntes: 0,
@@ -77,7 +78,7 @@ const vacio = (): InformeResumen => ({
 
 export function sumarResumen(a: InformeResumen, b: InformeResumen): InformeResumen {
   const r = vacio();
-  for (const k of Object.keys(r) as (keyof InformeResumen)[]) r[k] = a[k] + b[k];
+  for (const k of Object.keys(r) as (keyof InformeResumen)[]) r[k] = (a[k] ?? 0) + (b[k] ?? 0);
   return r;
 }
 
@@ -126,6 +127,7 @@ function resumirDias(dias: InformeDia[]): InformeResumen {
     }
     if (d.estado === 'falta') r.faltas += 1;
     else if (d.estado === 'falta_justificada') r.justificadas += 1;
+    else if (d.estado === 'por_revisar') r.porRevisar = (r.porRevisar ?? 0) + 1;
     else if (d.entrada) {
       r.trabajados += 1;
       r.minutosTrabajados += d.minutos ?? 0;
@@ -224,6 +226,10 @@ function diaSinJornada(f: string, t: TurnoProgramado, eventos: EventoBitacoraRow
   if (falta?.justificacion) {
     estado = 'falta_justificada';
     notas.push(`Falta justificada por ${falta.justificadoPor ?? 'el supervisor'}: ${falta.justificacion}`);
+  } else if (falta && falta.decision !== 'falta') {
+    // El supervisor aún no la revisa: no cuenta como falta hasta que la confirme (A-51).
+    estado = 'por_revisar';
+    notas.push('Falta sin revisar: no cuenta como falta hasta que el supervisor la confirme.');
   }
   if (t.coberturaId) notas.push('Cubría otro sitio');
   const base: InformeDia = {

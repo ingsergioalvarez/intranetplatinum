@@ -143,7 +143,11 @@ describe('vigilancia de turnos sin entrada (DA-45)', () => {
     ahora = a('16:00');
     await vigilancia.revisar();
     await vigilancia.revisar();
-    expect(avisos).toHaveLength(2);
+    // Al crear la falta se avisa al supervisor que está por revisar (A-51), una sola vez.
+    expect(avisos).toHaveLength(3);
+    expect(avisos[2]).toMatchObject({ usuarioIds: [5], mensaje: expect.stringContaining('Aún no cuenta como falta') });
+    // La falta reemplaza al aviso de "No se presentó" (A-48).
+    expect(repo.superados).toEqual([expect.objectContaining({ usuarioId: 10, sitioId: 1 })]);
     expect(repo.eventos.map((e) => [e.tipo, e.detalle])).toEqual([
       ['no_se_presento', 'No se presentó a su turno de las 8:00 a.m. en POETAS (15 min sin entrada)'],
       ['falta', 'Faltó a su turno de las 8:00 a.m. en POETAS (2 h sin entrada)'],

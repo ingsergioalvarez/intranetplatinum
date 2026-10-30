@@ -14,7 +14,7 @@ export interface DatosSinConexion {
   comidas?: number;
   foto?: Blob;
   descriptor?: number[];
-  sinLentes?: boolean;
+  conLentes?: boolean;
   intento?: number;
 }
 
@@ -32,7 +32,7 @@ export async function guardarSinConexion(d: DatosSinConexion): Promise<Marcacion
     precisionM: d.ubicacion.precisionM,
     intento: d.intento ?? 1,
     descriptor: d.descriptor,
-    sinLentes: d.sinLentes,
+    conLentes: d.conLentes,
     foto: d.foto,
     horaCelular: new Date().toISOString(),
     capturadaEn: horaEstimada().toISOString(),

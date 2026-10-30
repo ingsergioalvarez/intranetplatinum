@@ -98,9 +98,15 @@ export function incidenciaPendiente(
   return TIPOS_JUSTIFICABLES.includes(e.tipo) || e.comentarios.length === 0;
 }
 
-/** Cuenta en el resumen y en reportes: no justificada, y si es falta, que no se aceptó la asistencia. */
-export const incidenciaCuenta = (e: Pick<EventoBitacora, 'justificacion' | 'decision'>) =>
-  !e.justificacion && e.decision?.tipo !== 'asistencia' && e.decision?.tipo !== 'superado';
+/**
+ * Cuenta en el resumen y en reportes: no justificada y no aceptada. Una falta sin revisar todavía no
+ * cuenta (A-51): solo al confirmarla el supervisor. "No se presentó" es un aviso y no cuenta aparte.
+ */
+export const incidenciaCuenta = (e: Pick<EventoBitacora, 'tipo' | 'justificacion' | 'decision'>) => {
+  if (e.tipo === 'no_se_presento') return false;
+  if (e.tipo === 'falta' && e.decision?.tipo !== 'falta') return false;
+  return !e.justificacion && e.decision?.tipo !== 'asistencia' && e.decision?.tipo !== 'superado';
+};
 
 /**
  * "No se presentó" que ya no es un aviso aparte (A-48): pasó a falta o el guardia llegó. Lo pone el

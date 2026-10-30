@@ -73,9 +73,9 @@ export const asistenciaService = {
   },
   estado: estadoConRespaldo,
   /** Verificación en vivo del titular con la cámara abierta (DA-28). */
-  verificarRostro: (descriptor: number[]) =>
+  verificarRostro: (descriptor: number[], conLentes = false) =>
     api
-      .post<{ resultado: ResultadoVerificacion }>('/asistencia/verificar-rostro', { descriptor })
+      .post<{ resultado: ResultadoVerificacion }>('/asistencia/verificar-rostro', { descriptor, conLentes })
       .then((r) => r.resultado),
   /** Intento rechazado en la cámara (pantalla, no es el titular, gesto): foto y aviso al supervisor. */
   reportarIncidencia: (form: FormData) => api.upload<void>('/asistencia/incidencias', form),

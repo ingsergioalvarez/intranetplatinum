@@ -1018,6 +1018,35 @@ describe('asistencia: verificación en vivo del titular (DA-28)', () => {
     expect(audit.eventos).toHaveLength(0);
   });
 
+  it('con lentes el margen es un poco más amplio, pero otro guardia cercano bloquea (A-50)', async () => {
+    const conLentes = async (id: number, d: number[], lentes: boolean) =>
+      (
+        await request(app)
+          .post('/api/asistencia/verificar-rostro')
+          .set('Authorization', token(id))
+          .send({ descriptor: d, conLentes: lentes })
+      ).body.data.resultado;
+    const algo = vector(0.158); // ≈ 0.54 del titular: pasa con lentes, dudoso sin ellos
+    expect(await conLentes(10, algo, false)).toBe('dudoso');
+    expect(await conLentes(10, algo, true)).toBe('titular');
+    // ≈ 0.62: sin lentes ya no es el titular; con lentes todavía se sigue buscando.
+    expect(await conLentes(10, vector(0.165), false)).toBe('no_titular');
+    expect(await conLentes(10, vector(0.165), true)).toBe('dudoso');
+    // Rosa se registra con una cara a ≈ 0.55 de esa: con lentes se parece casi igual a ella, no pasa.
+    await autoregistrar(11, [vector(0.2066), vector(0.2076), vector(0.2056)]);
+    expect(await conLentes(10, algo, false)).toBe('dudoso');
+    expect(await conLentes(10, algo, true)).toBe('no_titular');
+  });
+
+  it('al marcar con lentes se acepta una distancia un poco mayor, sin alerta de lentes (A-50)', async () => {
+    const dudosa = vector(0.158);
+    const sin = await marcar(10, marca('entrada'), { descriptor: dudosa });
+    expect(sin.body.error.code).toBe('ROSTRO_NO_COINCIDE');
+    const con = await marcar(10, { ...marca('entrada'), conLentes: 'true' }, { descriptor: dudosa });
+    expect(con.status).toBe(201);
+    expect(con.body.data.alertas).not.toContain('sin_lentes_declarado');
+  });
+
   it('solo el guardia (permiso de marcar) y con un vector válido', async () => {
     const sup = await request(app)
       .post('/api/asistencia/verificar-rostro')

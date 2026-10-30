@@ -183,6 +183,12 @@ export class VigilanciaTurnos {
         datos: { programada: programada.toISOString() },
       });
       await this.repo.actualizarTurnoDia(fila.id, { faltaEn: ahora, faltaEventoId: eventoId });
+      await this.avisar(await this.repo.revisoresDe({ sitioId: t.sitio.id, guardiaId: t.guardia.id }), {
+        tipo: 'retardo',
+        titulo: 'Falta por revisar',
+        mensaje: `${t.guardia.nombre} · ${t.sitio.nombre}: no llegó en 2 h. Aún no cuenta como falta: confírmala o justifícala.`,
+        ruta: `/asistencia/guardias/${t.guardia.id}?vista=bitacora&cat=incidencias`,
+      });
       // La falta reemplaza al aviso de "No se presentó": no quedan dos pendientes por lo mismo.
       await this.repo.superarNoSePresento(
         t.guardia.id,

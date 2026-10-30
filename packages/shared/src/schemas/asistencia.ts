@@ -119,6 +119,14 @@ export const DESCRIPTOR_LONGITUD = 128;
 export const UMBRAL_ROSTRO = 0.5;
 /** Más lejos que esto ya no es el titular (entre ambos umbrales: dudoso, se sigue buscando). DA-28. */
 export const UMBRAL_NO_TITULAR = 0.6;
+/**
+ * Con lentes (A-50) el reconocimiento es menos preciso: el margen para aceptar al titular se amplía un
+ * poco, pero otro guardia bloquea aunque quede solo cerca del propio (ver MARGEN_OTRO_LENTES).
+ */
+export const UMBRAL_ROSTRO_LENTES = 0.56;
+export const UMBRAL_NO_TITULAR_LENTES = 0.66;
+/** Con lentes, otro guardia gana si queda más cerca o a menos de este margen de distancia del propio. */
+export const MARGEN_OTRO_LENTES = 0.06;
 export const MUESTRAS_ROSTRO_MIN = 3;
 export const MUESTRAS_ROSTRO_MAX = 5;
 
@@ -152,13 +160,19 @@ export const rostroRegistroSchema = z.object({
       .min(MUESTRAS_ROSTRO_MIN, `Toma al menos ${MUESTRAS_ROSTRO_MIN} fotos`)
       .max(MUESTRAS_ROSTRO_MAX, `Máximo ${MUESTRAS_ROSTRO_MAX} fotos`),
   ),
-  /** Tocó "No traigo lentes" aunque la cámara detectaba lentes (DA-44); queda en auditoría. */
+  /** Tocó "No traigo lentes" aunque la cámara detectaba lentes (DA-44); ya no se usa, se acepta por lo antiguo. */
   sinLentes: z.stringbool().optional(),
+  /** Se registró con lentes puestos (A-50); queda en auditoría. */
+  conLentes: z.stringbool().optional(),
 });
 export type RostroRegistroInput = z.infer<typeof rostroRegistroSchema>;
 
 /** Verificación en vivo mientras la cámara está abierta (DA-28): no se guarda nada. */
-export const verificacionRostroSchema = z.object({ descriptor: descriptorSchema });
+export const verificacionRostroSchema = z.object({
+  descriptor: descriptorSchema,
+  /** La cámara detectó lentes (A-50): se usa el margen ampliado. */
+  conLentes: z.boolean().optional(),
+});
 
 /**
  * - titular: es el dueño de la cuenta.
@@ -368,8 +382,10 @@ export const marcacionCreateSchema = z.object({
   intento: z.coerce.number().int().min(1).max(99).default(1),
   /** Vector facial calculado en el dispositivo; falta si no se pudo leer el rostro. */
   descriptor: desdeJson(descriptorSchema).optional(),
-  /** Tocó "No traigo lentes" aunque la cámara detectaba lentes (DA-44): la marca lleva alerta. */
+  /** Tocó "No traigo lentes" aunque la cámara detectaba lentes (DA-44): ya no se usa, se acepta por lo antiguo. */
   sinLentes: z.stringbool().optional(),
+  /** La cámara detectó lentes (A-50): se verifica con el margen ampliado. */
+  conLentes: z.stringbool().optional(),
   /** Hora del reloj del celular al checar (ISO); el servidor la compara con la suya (AS2-04). */
   horaCelular: z.iso.datetime({ offset: true }).optional(),
   /**

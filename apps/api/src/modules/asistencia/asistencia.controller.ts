@@ -47,8 +47,8 @@ export class AsistenciaController extends BaseController {
 
   /** Verificación en vivo del titular mientras la cámara está abierta (DA-28). */
   verificarRostro = async (req: Request, res: Response) => {
-    const { descriptor } = this.body<{ descriptor: number[] }>(req);
-    const resultado = await this.service.verificarRostro(this.currentUser(req).id, descriptor);
+    const { descriptor, conLentes } = this.body<{ descriptor: number[]; conLentes?: boolean }>(req);
+    const resultado = await this.service.verificarRostro(this.currentUser(req).id, descriptor, conLentes);
     return this.ok(res, { resultado });
   };
 

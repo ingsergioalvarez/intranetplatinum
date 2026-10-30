@@ -78,6 +78,8 @@
 | A-47 | Óvalo de la cámara punteado (verde al centrar) en el checador y en el registro de rostro; el registro usa el mismo estilo (fondo oscuro afuera) | Usuario 2026-10-30 | A-47 (ver A-36) | Terminado (falta verlo en el celular) |
 | A-48 | Falta y "No se presentó": además de Justificar, "Confirmar falta" (motivo en lista + otro con texto, medida opcional); la "Falta" cierra sola el aviso "No se presentó"; en Atendidas se ve Justificada o Falta confirmada; "No se presentó" también se puede confirmar sin esperar las 2 h (crea la falta); justificar también pide motivo de lista | Usuario 2026-10-30 | A-48 | Terminado (con migración 20261030020000) |
 | A-49 | Cerrar jornada por salida sin marcar: motivo en lista + otro, cuenta como "salida sin marcar" del guardia, medida opcional (ninguna, llamada de atención verbal, amonestación escrita) guardada en historial formal del guardia y en bitácora, aviso al guardia y sugerencia al llegar a 3 en el mes | Usuario 2026-10-30 | A-49 | Terminado (con migración 20261030020000) |
+| A-50 | Lentes menos estrictos: con lentes detectados el checador deja continuar (recomienda quitárselos), amplía un poco el margen de reconocimiento mientras ningún otro guardia quede igual o más cerca, y pide giros de cabeza en lugar de parpadear; el registro de rostro permite registrar con lentes. Sin marca visible para el supervisor | Usuario 2026-10-30 | A-50 | Terminado (falta probarlo con guardias que usan lentes) |
+| A-51 | Faltas por revisar: una falta que el supervisor no ha atendido no cuenta (ni en el resumen ni en el reporte, donde sale "Por revisar"); solo cuenta al confirmarla. Recordatorio en la campanita a las 8:00 y a las 14:00 hasta que la atienda, y a las 24 h también al admin | Usuario 2026-10-30 | A-51 (ver A-48) | Terminado |
 
 ### Orden de ejecución (de lo rápido a lo tardado)
 
@@ -90,6 +92,8 @@
 | 3c | A-47 Óvalo punteado en checador y registro | Muy chico | No | A-36 |
 | 3d | A-48 Confirmar falta y motivo al justificar (pendiente: que el contador cuente solo faltas confirmadas, por decidir) | Mediano | Sí | — |
 | 3e | A-49 Salida sin marcar con medida disciplinaria | Mediano | Sí | A-48 (comparten medidas) |
+| 3f | A-51 Faltas por revisar y recordatorios | Mediano | No | A-48 |
+| 3g | A-50 Lentes menos estrictos | Mediano | No | A-36 |
 | 4  | A-36 Óvalo alto, fondo oscuro e instrucciones grandes | Chico | No | — |
 | 5  | A-37 Centrado, mantener y gesto de 15 s | Mediano | No | A-36 |
 | 6  | A-38 Portal del cliente con guardias | Mediano | No | — |

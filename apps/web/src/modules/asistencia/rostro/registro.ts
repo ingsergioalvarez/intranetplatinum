@@ -25,6 +25,6 @@ export function formularioRostro(capturas: Captura[]) {
   const form = new FormData();
   form.append('descriptores', JSON.stringify(capturas.map((c) => c.descriptor)));
   capturas.forEach((c, i) => form.append('fotos', c.foto, `rostro-${i + 1}.jpg`));
-  if (capturas.some((c) => c.sinLentes)) form.append('sinLentes', 'true');
+  if (capturas.some((c) => c.conLentes)) form.append('conLentes', 'true');
   return form;
 }
