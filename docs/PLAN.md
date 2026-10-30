@@ -76,7 +76,7 @@
 | A-45 | Cambiar o cancelar un plan de cobertura ya confirmado, con motivo obligatorio; deshace sus efectos (descansos en pausa y coberturas creadas) y avisa al guardia | Usuario 2026-10-30 | A-45 (ver A-35) | Terminado (con migración 20261030010000) |
 | A-46 | "Me quedo" / "Sí, sigo aquí" admite una nota opcional para el supervisor (p. ej. "no puedo quedarme mucho tiempo"); queda como motivo de las horas extra, en la bitácora y en el aviso | Usuario 2026-10-30 | A-46 (ver A-35) | Terminado |
 | A-47 | Óvalo de la cámara punteado (verde al centrar) en el checador y en el registro de rostro; el registro usa el mismo estilo (fondo oscuro afuera) | Usuario 2026-10-30 | A-47 (ver A-36) | Terminado (falta verlo en el celular) |
-| A-48 | Falta y "No se presentó": además de Justificar, "Confirmar falta" (motivo en lista + otro con texto, medida opcional); la "Falta" cierra sola el aviso "No se presentó"; en Atendidas se ve Justificada o Falta confirmada; el contador cuenta solo las confirmadas; justificar también pide motivo de lista | Usuario 2026-10-30 | A-48 | Terminado (con migración 20261030020000) |
+| A-48 | Falta y "No se presentó": además de Justificar, "Confirmar falta" (motivo en lista + otro con texto, medida opcional); la "Falta" cierra sola el aviso "No se presentó"; en Atendidas se ve Justificada o Falta confirmada; "No se presentó" también se puede confirmar sin esperar las 2 h (crea la falta); justificar también pide motivo de lista | Usuario 2026-10-30 | A-48 | Terminado (con migración 20261030020000) |
 | A-49 | Cerrar jornada por salida sin marcar: motivo en lista + otro, cuenta como "salida sin marcar" del guardia, medida opcional (ninguna, llamada de atención verbal, amonestación escrita) guardada en historial formal del guardia y en bitácora, aviso al guardia y sugerencia al llegar a 3 en el mes | Usuario 2026-10-30 | A-49 | Terminado (con migración 20261030020000) |
 
 ### Orden de ejecución (de lo rápido a lo tardado)
@@ -88,7 +88,7 @@
 | 3  | A-35 Motivo obligatorio en "No puedo quedarme" y en el plan | Mediano | Sí | — |
 | 3b | A-45 Cambiar o cancelar un plan confirmado | Mediano | Sí | A-35 |
 | 3c | A-47 Óvalo punteado en checador y registro | Muy chico | No | A-36 |
-| 3d | A-48 Confirmar falta y motivo al justificar | Mediano | Sí | — |
+| 3d | A-48 Confirmar falta y motivo al justificar (pendiente: que el contador cuente solo faltas confirmadas, por decidir) | Mediano | Sí | — |
 | 3e | A-49 Salida sin marcar con medida disciplinaria | Mediano | Sí | A-48 (comparten medidas) |
 | 4  | A-36 Óvalo alto, fondo oscuro e instrucciones grandes | Chico | No | — |
 | 5  | A-37 Centrado, mantener y gesto de 15 s | Mediano | No | A-36 |

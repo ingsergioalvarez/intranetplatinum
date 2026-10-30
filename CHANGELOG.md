@@ -16,6 +16,7 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 #### Cambiado
 
 - Óvalo de la cámara **punteado** (verde al centrar) en el checador y en el registro de rostro (A-47). Las dos pantallas usan el mismo componente: si el registro se vio con el estilo viejo (sin fondo oscuro), era la versión anterior guardada en el celular; basta cerrar y abrir la app.
+- "No se presentó" también tiene **Confirmar falta**: crea la falta en ese momento (sin esperar las 2 h), la liga al turno para que no se genere otra y cierra el aviso. Es definitiva: si el guardia llega después, la falta confirmada se queda.
 - Justificar ahora pide el motivo de una lista (permiso, enfermedad, avisó antes, transporte, otro con texto) en lugar de texto libre (A-48). El cuerpo de `justificar` cambió de `{ motivo }` a `{ categoria, nota }`.
 - El aviso "No se presentó" se cierra solo cuando el turno pasa a falta o el guardia llega, y deja de contar aparte (A-48).
 

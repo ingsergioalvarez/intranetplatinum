@@ -46,6 +46,12 @@ class MemoryBitacoraRepository extends BitacoraRepository {
       createdAt: new Date(),
     });
   }
+  async crearFaltaDesde(e: EventoBitacoraRow, en: Date) {
+    const id = this.eventosGuardados.length + 100;
+    this.eventosGuardados.push({ ...evento(id, 'falta', en.toISOString(), e.usuarioId), sitio: e.sitio });
+    Object.assign(this.eventosGuardados.find((x) => x.id === e.id)!, { decision: 'superado', decididoEn: en });
+    return id;
+  }
   async decidir(eventoId: number, porId: number, decision: 'asistencia' | 'falta', en: Date, motivo?: string) {
     Object.assign(
       this.eventosGuardados.find((x) => x.id === eventoId)!,
@@ -277,6 +283,18 @@ describe('bitácora del guardia (DA-41)', () => {
     expect((await sup().post('/eventos/6/confirmar-falta', { categoria: 'sin_aviso' })).status).toBe(409);
     const lista = await sup().get('/incidencias?mes=2026-10&estado=pendientes');
     expect(lista.body.data.items.map((e: { id: number }) => e.id)).not.toContain(6);
+  });
+
+  it('confirmar un "No se presentó" crea la falta sin esperar las 2 h y cierra el aviso (A-48)', async () => {
+    repo.eventosGuardados.push(evento(11, 'no_se_presento', '2026-10-13T14:15:00.000Z'));
+    const res = await sup().post('/eventos/11/confirmar-falta', { categoria: 'sin_aviso', medida: 'amonestacion' });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      tipo: 'falta',
+      decision: { tipo: 'falta', motivo: 'No se presentó y no avisó' },
+    });
+    expect(medidas).toEqual([expect.objectContaining({ tipo: 'amonestacion', eventoId: res.body.data.id })]);
+    expect((await sup().post('/eventos/11/confirmar-falta', { categoria: 'sin_aviso' })).status).toBe(409);
   });
 
   it('sin medida (o "ninguna") no se guarda nada en el historial', async () => {

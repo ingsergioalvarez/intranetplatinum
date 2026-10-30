@@ -7,6 +7,7 @@ import type {
   TipoEventoBitacora,
 } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
+import { MIN_NO_SE_PRESENTO } from '../asistencia/vigilancia';
 import type { Prisma } from '../../generated/prisma/client';
 
 export interface EventoBitacoraRow {
@@ -62,6 +63,11 @@ export abstract class BitacoraRepository {
   abstract findById(id: number): Promise<EventoBitacoraRow | null>;
   abstract comentar(eventoId: number, autorId: number, texto: string): Promise<void>;
   abstract justificar(eventoId: number, porId: number, motivo: string, en: Date): Promise<void>;
+  /**
+   * Confirmar un "No se presentó" sin esperar las 2 h (A-48): crea la falta, la liga al turno del día
+   * (así no se genera otra a las 2 h) y cierra el aviso. Devuelve el id de la falta.
+   */
+  abstract crearFaltaDesde(noSePresento: EventoBitacoraRow, en: Date): Promise<number>;
   abstract decidir(
     eventoId: number,
     porId: number,
@@ -197,6 +203,29 @@ export class PrismaBitacoraRepository extends BitacoraRepository {
 
   async comentar(eventoId: number, autorId: number, texto: string) {
     await getPrisma().comentarioBitacora.create({ data: { eventoId, autorId, texto } });
+  }
+
+  async crearFaltaDesde(e: EventoBitacoraRow, en: Date) {
+    const programada = new Date(e.ocurrioEn.getTime() - MIN_NO_SE_PRESENTO * 60_000);
+    return getPrisma().$transaction(async (tx) => {
+      const falta = await tx.eventoBitacora.create({
+        data: {
+          usuarioId: e.usuarioId,
+          tipo: 'falta',
+          ocurrioEn: en,
+          detalle: `Faltó a su turno en ${e.sitio?.nombre ?? 'su sitio'} (confirmada por el supervisor sin esperar las 2 h)`,
+          sitioId: e.sitio?.id ?? null,
+          datos: { programada: programada.toISOString() },
+        },
+        select: { id: true },
+      });
+      await tx.turnoDia.updateMany({
+        where: { usuarioId: e.usuarioId, programadaEntrada: programada },
+        data: { faltaEn: en, faltaEventoId: falta.id },
+      });
+      await tx.eventoBitacora.update({ where: { id: e.id }, data: { decision: 'superado', decididoEn: en } });
+      return falta.id;
+    });
   }
 
   async decidir(eventoId: number, porId: number, decision: DecisionFalta, en: Date, motivo?: string) {

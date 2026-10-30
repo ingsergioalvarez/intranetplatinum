@@ -346,7 +346,11 @@ function Evento({
     e.decision?.tipo !== 'superado';
   // Falta sin atender (A-48): además de justificarla se puede confirmar. Si el guardia llegó tarde, eso
   // lo ofrece el bloque "¿Aceptas la asistencia?".
-  const confirmable = e.tipo === 'falta' && !e.justificacion && !e.decision && typeof e.datos?.llegoEn !== 'string';
+  const confirmable =
+    (e.tipo === 'falta' || e.tipo === 'no_se_presento') &&
+    !e.justificacion &&
+    !e.decision &&
+    typeof e.datos?.llegoEn !== 'string';
   // Retardo sin atender: justificar / aceptar / mandar a casa en un solo bloque (A-25).
   const decidirRetardo = e.tipo === 'retardo' && !e.justificacion && !e.decision;
   const sinAtender = claseIncidencia(e.tipo) === 'asistencia' && incidenciaPendiente(e);
@@ -446,6 +450,12 @@ function Evento({
             <strong>Falta confirmada</strong> por {e.decision.por ?? 'alguien'} · {formatFechaHora(e.decision.en)}
             {e.decision.motivo && <span className="block text-slate-700">{e.decision.motivo}</span>}
           </Nota>
+        )}
+        {e.tipo === 'no_se_presento' && !e.justificacion && !e.decision && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset">
+            Aún puede llegar: si llega o pasan 2 h se cierra solo (a las 2 h pasa a falta). Si ya sabes que no
+            vendrá, usa <strong>Confirmar falta</strong>.
+          </p>
         )}
         {e.tipo === 'no_se_presento' && e.decision?.tipo === 'superado' && (
           <Nota>

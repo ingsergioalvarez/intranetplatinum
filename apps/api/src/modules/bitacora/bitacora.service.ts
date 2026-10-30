@@ -205,10 +205,17 @@ export class BitacoraService extends BaseService {
     ctx: AccionCtx,
     alcance: Alcance | null = null,
   ): Promise<EventoBitacora> {
-    const e = await this.evento(id, alcance);
-    if (e.tipo !== 'falta') throw HttpError.badRequest('Solo se confirma una falta');
-    if (e.justificadoEn) throw HttpError.conflict('Ya está justificada');
+    let e = await this.evento(id, alcance);
+    if (e.tipo !== 'falta' && e.tipo !== 'no_se_presento') {
+      throw HttpError.badRequest('Solo se confirma una falta o un "No se presentó"');
+    }
+    if (e.justificadoEn) throw HttpError.conflict('Ya está justificado');
     if (e.decision) throw HttpError.conflict('Ya se decidió');
+    // Sin esperar las 2 h: se crea la falta y la decisión se toma sobre ella.
+    if (e.tipo === 'no_se_presento') {
+      id = await this.repo.crearFaltaDesde(e, this.ahora());
+      e = (await this.repo.findById(id))!;
+    }
     const motivo = textoMotivoLista(MOTIVO_FALTA_LABEL[categoria], nota);
     await this.repo.decidir(id, ctx.actorId, 'falta', this.ahora(), motivo);
     await this.audit.registrarAccion(ctx, 'bitacora.confirmar_falta', 'bitacora_eventos', id, {
