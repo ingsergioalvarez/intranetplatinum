@@ -100,6 +100,28 @@ describe('cobertura por sitio y turno (AS6-01)', () => {
     expect(celda(r, '2026-10-29', DIA).estado).toBe('cubierto');
   });
 
+  it('un sitio de lunes a viernes no exige cobertura sábado y domingo: salen "sin turno"', () => {
+    const semana: DiasTurno = { tipo: 'semanal', semana: [1, 2, 3, 4, 5] };
+    const r = calcular([turno(1, 'Juan', patron('08:00', 12, semana))], VACIO, AHORA, '2026-10-29', '2026-11-02');
+    expect(celda(r, '2026-10-30', DIA).estado).toBe('cubierto'); // viernes
+    expect(celda(r, '2026-10-31', DIA)).toMatchObject({ estado: 'sin_turno', guardias: [] }); // sábado
+    expect(celda(r, '2026-11-01', DIA)).toMatchObject({ estado: 'sin_turno', guardias: [] }); // domingo
+    expect(celda(r, '2026-11-02', DIA).estado).toBe('cubierto'); // lunes
+  });
+
+  it('si ese día de la semana sí le toca y nadie trabaja, sigue siendo un hueco', () => {
+    const lunes: DiasTurno = { tipo: 'semanal', semana: [1] };
+    const r = calcular(
+      [turno(1, 'Juan', patron('08:00', 12, lunes), { pausas: [{ desde: '2026-11-02', hasta: '2026-11-02' }] })],
+      VACIO,
+      AHORA,
+      '2026-11-01',
+      '2026-11-02',
+    );
+    expect(celda(r, '2026-11-01', DIA).estado).toBe('sin_turno');
+    expect(celda(r, '2026-11-02', DIA)).toMatchObject({ estado: 'sin_cubrir', motivo: 'sin_asignar' });
+  });
+
   it('un turno que terminó (asignación con fin) ya no se exige después', () => {
     const r = calcular([turno(1, 'Juan', patron('08:00', 12, diario, { tipo: 'temporal', hasta: '2026-10-27' }))]);
     expect(celda(r, '2026-10-27', DIA).estado).toBe('cubierto');

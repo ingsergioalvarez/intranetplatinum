@@ -116,6 +116,8 @@ export const extenderHorarioSchema = z.object({
   lat: z.coerce.number('Falta tu ubicación').min(-90).max(90).optional(),
   lng: z.coerce.number('Falta tu ubicación').min(-180).max(180).optional(),
   precisionM: z.coerce.number().min(0).max(100_000).optional(),
+  /** Opcional: algo que el supervisor deba tomar en cuenta (p. ej. "no puedo quedarme mucho tiempo"). */
+  nota: z.string().trim().max(255, 'Máximo 255 caracteres').optional(),
 });
 export type ExtenderHorarioInput = z.infer<typeof extenderHorarioSchema>;
 

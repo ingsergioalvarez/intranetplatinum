@@ -1,4 +1,5 @@
 import {
+  diasDe,
   duracionPatronMin,
   horaLegible,
   sumarDiasFecha,
@@ -123,10 +124,19 @@ export function calcularCobertura(e: EntradaCobertura): CoberturaSitio {
     const turnosDelDia: TurnoDiaCobertura[] = franjas.map((f) => {
       const inicio = new Date(inicioDelDia(fecha).getTime() + minutosDe(f.horaInicio) * 60_000);
       const delTurno = e.turnos.filter((t) => t.patron.horaInicio && claveDe(t.patron.horaInicio, duracionPatronMin(t.patron) ?? 0) === f.clave);
-      // Se exige el turno mientras alguna asignación fija suya esté vigente ese día.
+      // Se exige el turno mientras alguna asignación fija suya esté vigente ese día. Las de días de la
+      // semana (p. ej. lunes a viernes) solo lo exigen en sus días: sábado y domingo salen "sin turno".
+      // Los ciclos (24x24, 12x12) y los diarios lo exigen siempre: ahí un día vacío sí es un hueco.
       const exigido =
         f.base &&
-        delTurno.some((t) => !t.coberturaId && t.patron.tipo !== 'eventual' && fecha >= t.patron.desde && (!t.patron.hasta || fecha <= t.patron.hasta));
+        delTurno.some(
+          (t) =>
+            !t.coberturaId &&
+            t.patron.tipo !== 'eventual' &&
+            fecha >= t.patron.desde &&
+            (!t.patron.hasta || fecha <= t.patron.hasta) &&
+            (diasDe(t.patron).tipo !== 'semanal' || trabajaEl(fecha, t.patron)),
+        );
 
       const guardias = new Map<string, GuardiaCobertura>();
       for (const t of delTurno) {

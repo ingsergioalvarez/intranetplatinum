@@ -1,14 +1,73 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, Timer } from 'lucide-react';
-import { duracionExtra, type HoraExtraGuardia } from '@platinum/shared';
-import { Button, ConfirmDialog, Modal, toast } from '../../components/ui';
+import {
+  MOTIVOS_NO_PUEDE,
+  MOTIVO_NO_PUEDE_LABEL,
+  duracionExtra,
+  noPuedoQuedarmeSchema,
+  type HoraExtraGuardia,
+  type MotivoNoPuede,
+} from '@platinum/shared';
+import { Button, FormField, FormModal, Modal, Select, Textarea, toast } from '../../components/ui';
 import { mensajeDeError } from '../../core/api';
+import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import { casosService } from '../casos/casos.service';
 import { horasExtraService } from '../horas-extra/horasExtra.service';
 import { asistenciaService } from './asistencia.service';
 import { formatHora } from './formato';
 import type { Ubicacion } from './ubicacion';
+
+/** Ventana de "No puedo quedarme": el motivo es obligatorio y le llega al supervisor (A-35). */
+function NoPuedoModal({ onClose }: { onClose: () => void }) {
+  const [motivo, setMotivo] = useState<MotivoNoPuede | ''>('');
+  const [nota, setNota] = useState('');
+  const [errores, setErrores] = useState<Partial<Record<string, string>>>({});
+  const enviar = useMutation({
+    mutationFn: () => casosService.noPuedo({ motivo: motivo as MotivoNoPuede, nota: nota.trim() || undefined }),
+    onSuccess: () => {
+      toast.success('Avisamos a tu supervisor con tu motivo para que mande a otro guardia');
+      onClose();
+    },
+    onError: (e) => toast.error(mensajeDeError(e)),
+  });
+
+  const onSubmit = () => {
+    const r = noPuedoQuedarmeSchema.safeParse({ motivo: motivo || undefined, nota: nota.trim() || undefined });
+    if (!r.success) return setErrores(erroresDeCampos(r.error));
+    setErrores({});
+    enviar.mutate();
+  };
+
+  return (
+    <FormModal
+      title="¿No puedes quedarte?"
+      description="Tu supervisor recibirá tu motivo y mandará a otro guardia. Quédate en tu puesto hasta que llegue."
+      onClose={onClose}
+      onSubmit={onSubmit}
+      submitLabel="Avisar a mi supervisor"
+      loading={enviar.isPending}
+      dirty={!!motivo || !!nota}
+      size="sm"
+    >
+      <FormField label="Motivo" required error={errores.motivo}>
+        <Select
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value as MotivoNoPuede | '')}
+          placeholder="Elige el motivo"
+          options={MOTIVOS_NO_PUEDE.map((m) => ({ value: m, label: MOTIVO_NO_PUEDE_LABEL[m] }))}
+        />
+      </FormField>
+      <FormField
+        label={motivo === 'otro' ? 'Explica el motivo' : 'Detalle (opcional)'}
+        required={motivo === 'otro'}
+        error={errores.nota}
+      >
+        <Textarea rows={2} maxLength={255} value={nota} onChange={(e) => setNota(e.target.value)} />
+      </FormField>
+    </FormModal>
+  );
+}
 
 const claveNo = (entradaId: number) => `horaExtra.no.${entradaId}`;
 const yaDijoNo = (entradaId: number) => {
@@ -40,27 +99,23 @@ export function HorasExtraGuardia({
   const queryClient = useQueryClient();
   const [dijoNo, setDijoNo] = useState(() => yaDijoNo(extra.entradaId));
   const [confirmandoNoPuedo, setConfirmandoNoPuedo] = useState(false);
+  // Algo opcional para el supervisor al decir "Sí, sigo aquí" (ej. "no puedo quedarme mucho").
+  const [notaExtender, setNotaExtender] = useState('');
   const fin = formatHora(new Date(extra.finProgramado));
 
   const extender = useMutation({
     mutationFn: () => {
       if (!navigator.onLine) throw new Error('Necesitas conexión para extender tu horario');
       return horasExtraService.extender(
-        ubicacion ? { lat: ubicacion.lat, lng: ubicacion.lng, precisionM: ubicacion.precisionM } : {},
+        {
+          ...(ubicacion ? { lat: ubicacion.lat, lng: ubicacion.lng, precisionM: ubicacion.precisionM } : {}),
+          ...(notaExtender.trim() ? { nota: notaExtender.trim() } : {}),
+        },
       );
     },
     onSuccess: () => {
       toast.success('Listo, avisamos a tu supervisor');
       void queryClient.invalidateQueries({ queryKey: asistenciaService.keys.all });
-    },
-    onError: (e) => toast.error(mensajeDeError(e)),
-  });
-
-  const noPuedo = useMutation({
-    mutationFn: () => casosService.noPuedo(),
-    onSuccess: () => {
-      toast.success('Avisamos a tu supervisor para que mande a otro guardia');
-      setConfirmandoNoPuedo(false);
     },
     onError: (e) => toast.error(mensajeDeError(e)),
   });
@@ -79,15 +134,7 @@ export function HorasExtraGuardia({
             </Button>
           )}
         </div>
-        <ConfirmDialog
-          open={confirmandoNoPuedo}
-          title="¿No puedes quedarte?"
-          description="Le avisamos a tu supervisor para que mande a otro guardia. Quédate en tu puesto hasta que llegue."
-          confirmLabel="Avisar a mi supervisor"
-          loading={noPuedo.isPending}
-          onConfirm={() => noPuedo.mutate()}
-          onCancel={() => setConfirmandoNoPuedo(false)}
-        />
+        {confirmandoNoPuedo && <NoPuedoModal onClose={() => setConfirmandoNoPuedo(false)} />}
       </div>
     );
   }
@@ -147,6 +194,13 @@ export function HorasExtraGuardia({
           Tu hora de salida era a las {fin}; si te quedas más tiempo, se registra como horas extra y tu
           supervisor las revisa.
         </p>
+        <FormField
+          className="mt-3"
+          label="¿Algo que tu supervisor deba saber? (opcional)"
+          hint='Por ejemplo: "no puedo quedarme mucho tiempo".'
+        >
+          <Textarea rows={2} maxLength={255} value={notaExtender} onChange={(e) => setNotaExtender(e.target.value)} />
+        </FormField>
       </Modal>
     </>
   );

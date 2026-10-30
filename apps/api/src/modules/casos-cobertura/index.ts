@@ -2,10 +2,14 @@ import { Router, type Request, type Response } from 'express';
 import {
   PERMISOS,
   ROLES,
+  cancelarPlanSchema,
   entradaIdParamSchema,
+  noPuedoQuedarmeSchema,
   resolverCasoSchema,
   vistaPreviaCasoQuerySchema,
+  type CancelarPlanData,
   type EntradaIdParam,
+  type NoPuedoQuedarmeData,
   type ResolverCasoData,
   type VistaPreviaCasoQuery,
 } from '@platinum/shared';
@@ -26,7 +30,7 @@ import { PrismaCoberturasRepository } from '../coberturas/coberturas.repository'
 import { CoberturasService, type TurnosFn } from '../coberturas/coberturas.service';
 import { alcanceConPrisma, type AlcanceFn } from '../sitios/alcance';
 import { CasosCoberturaRepository, PrismaCasosCoberturaRepository } from './casos.repository';
-import { CasosCoberturaService, type CubrirFn } from './casos.service';
+import { CasosCoberturaService, type CancelarCoberturaFn, type CubrirFn } from './casos.service';
 
 class CasosCoberturaController extends BaseController {
   constructor(
@@ -63,14 +67,40 @@ class CasosCoberturaController extends BaseController {
       ),
     );
 
+  cambiar = async (req: Request, res: Response) =>
+    this.ok(
+      res,
+      await this.service.cambiarPlan(
+        this.params<EntradaIdParam>(req).entradaId,
+        this.body<ResolverCasoData>(req),
+        this.accionCtx(req),
+        await this.alcance(req),
+      ),
+    );
+
+  cancelar = async (req: Request, res: Response) =>
+    this.ok(
+      res,
+      await this.service.cancelarPlan(
+        this.params<EntradaIdParam>(req).entradaId,
+        this.body<CancelarPlanData>(req),
+        this.accionCtx(req),
+        await this.alcance(req),
+      ),
+    );
+
   noPuedo = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.noPuedoQuedarme(this.currentUser(req).id));
+    this.ok(
+      res,
+      await this.service.noPuedoQuedarme(this.currentUser(req).id, this.body<NoPuedoQuedarmeData>(req), this.accionCtx(req)),
+    );
 }
 
 export interface CasosCoberturaDeps {
   repo?: CasosCoberturaRepository;
   turnos?: TurnosFn;
   cubrir?: CubrirFn;
+  cancelarCobertura?: CancelarCoberturaFn;
   audit?: AuditLogger;
   avisar?: AvisarUsuarios;
   bitacora?: RegistrarBitacora;
@@ -86,6 +116,7 @@ export function crearServicioCasos({
   avisar = avisarConPrisma,
   bitacora = bitacoraConPrisma,
   cubrir,
+  cancelarCobertura,
   ahora,
 }: CasosCoberturaDeps = {}) {
   const coberturas = new CoberturasService(new PrismaCoberturasRepository(), turnos, audit, avisar, bitacora);
@@ -97,6 +128,7 @@ export function crearServicioCasos({
     avisar,
     bitacora,
     ahora,
+    cancelarCobertura ?? ((id, ctx, alcance) => coberturas.cancelar(id, ctx, alcance)),
   );
 }
 
@@ -108,11 +140,19 @@ export function createCasosCoberturaModule({ alcance = alcanceConPrisma, ...deps
   const c = new CasosCoberturaController(crearServicioCasos(deps), alcance);
   const router = Router();
   router.use(authenticate);
-  router.post('/no-puedo', requireRoles(ROLES.GUARDIA), requirePermission(PERMISOS.ASISTENCIA_MARCAR), c.noPuedo);
+  router.post(
+    '/no-puedo',
+    requireRoles(ROLES.GUARDIA),
+    requirePermission(PERMISOS.ASISTENCIA_MARCAR),
+    validate({ body: noPuedoQuedarmeSchema }),
+    c.noPuedo,
+  );
   const revision = [requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR), requirePermission(PERMISOS.ASISTENCIA_VER)];
   router.get('/', ...revision, c.listar);
   router.get('/:entradaId/vista-previa', ...revision, validate({ params: entradaIdParamSchema, query: vistaPreviaCasoQuerySchema }), c.vistaPrevia);
   router.post('/:entradaId/resolver', ...revision, validate({ params: entradaIdParamSchema, body: resolverCasoSchema }), c.resolver);
+  router.post('/:entradaId/cambiar', ...revision, validate({ params: entradaIdParamSchema, body: resolverCasoSchema }), c.cambiar);
+  router.post('/:entradaId/cancelar', ...revision, validate({ params: entradaIdParamSchema, body: cancelarPlanSchema }), c.cancelar);
   return { name: 'casos-cobertura', basePath: 'casos-cobertura', router };
 }
 

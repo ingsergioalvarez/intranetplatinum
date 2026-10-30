@@ -383,8 +383,9 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
       }
     }
     const desde = salida && salida.getTime() > fin.getTime() ? salida : fin;
+    const nota = input.nota?.trim() || null;
     const fila = previa
-      ? await this.repo.actualizar(previa.id, { origen: 'guardia_extiende' })
+      ? await this.repo.actualizar(previa.id, { origen: 'guardia_extiende', ...(nota ? { motivo: nota } : {}) })
       : await this.repo.crear({
           usuarioId,
           sitioId: entrada.sitio.id,
@@ -395,23 +396,24 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
           minutos: null,
           origen: 'guardia_extiende',
           estado: 'abierta',
+          motivo: nota,
         });
     await this.audit.registrar({
       usuarioId,
       accion: 'horas_extra.extender',
       entidad: 'horas_extra',
       entidadId: fila.id,
-      datos: { sitio: entrada.sitio.nombre, desde: desde.toISOString() },
+      datos: { sitio: entrada.sitio.nombre, desde: desde.toISOString(), nota },
     });
     await this.registrar(
       fila,
-      `Pidió extender su horario en ${entrada.sitio.nombre} desde las ${horaLocal(desde)}`,
+      `Pidió extender su horario en ${entrada.sitio.nombre} desde las ${horaLocal(desde)}${nota ? `. Nota del guardia: ${nota}` : ''}`,
       { desde: desde.toISOString() },
     );
     await this.avisar(await this.revisores(entrada.sitio), {
       tipo: 'horas_extra',
       titulo: 'Pidió extender su horario',
-      mensaje: `${entrada.guardia} · ${entrada.sitio.nombre}: pidió extender su horario desde las ${horaLocal(desde)}`,
+      mensaje: `${entrada.guardia} · ${entrada.sitio.nombre}: pidió extender su horario desde las ${horaLocal(desde)}${nota ? `. Nota del guardia: ${nota}` : ''}`,
       ruta: RUTA,
     });
     return { id: fila.id, estado: fila.estado, desde: fila.desde.toISOString(), hasta: null, minutos: null };

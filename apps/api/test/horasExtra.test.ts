@@ -318,6 +318,14 @@ describe('horas extra: el guardia dice que sigue en turno (AS5-02)', () => {
     expect(avisos.at(-1)?.mensaje).toContain('2 h 30 min');
   });
 
+  it('al extender puede dejar una nota opcional: queda como motivo, en la bitácora y en el aviso al supervisor', async () => {
+    ahora = en('2026-10-27T02:16:00Z');
+    const res = await guardia().post('/extender', { nota: 'No puedo quedarme mucho tiempo' });
+    expect(res.status).toBe(200);
+    expect(repo.filas[0]).toMatchObject({ motivo: 'No puedo quedarme mucho tiempo' });
+    expect(avisos.at(-1)?.mensaje).toContain('Nota del guardia: No puedo quedarme mucho tiempo');
+  });
+
   it('antes de que termine su turno no puede extender', async () => {
     ahora = en('2026-10-27T01:00:00Z');
     expect((await guardia().post('/extender', {})).status).toBe(409);
@@ -543,6 +551,8 @@ describe('horas extra: con el plan del supervisor (AS6-05, AS6-08)', () => {
     coberturaId: null,
     resueltoPorId: 5,
     reconsultarEn: null,
+    motivo: 'relevo_no_llego',
+    coberturasIds: null,
     nota: null,
     ...extra,
   });

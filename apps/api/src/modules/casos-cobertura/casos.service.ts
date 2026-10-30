@@ -1,12 +1,19 @@
 import {
   HORAS_RECONSULTA_CASO,
+  MOTIVO_CANCELAR_PLAN_LABEL,
+  MOTIVO_NO_PUEDE_LABEL,
+  MOTIVO_PLAN_LABEL,
   duracionPatronMin,
   sumarDiasFecha,
   type CasoCobertura,
+  type CancelarPlanData,
   type CasosCoberturaLista,
   type CoberturaCreada,
   type CoberturaData,
   type EstadoCaso,
+  type MotivoNoPuede,
+  type MotivoPlan,
+  type NoPuedoQuedarmeData,
   type ResolverCasoData,
   type VistaPreviaCaso,
   type VistaPreviaCasoQuery,
@@ -29,12 +36,19 @@ const TURNO_SUPUESTO_HORAS = 12;
 /** Crea una cobertura (la del módulo de coberturas): se usa para mandar a alguien a cubrir. */
 export type CubrirFn = (data: CoberturaData, ctx: AccionCtx, alcance: Alcance | null) => Promise<CoberturaCreada>;
 
+/** Cancela una cobertura creada por un plan (la del módulo de coberturas). */
+export type CancelarCoberturaFn = (id: number, ctx: AccionCtx, alcance: Alcance | null) => Promise<void>;
+
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const fechaCorta = (f: string) => `${Number(f.slice(8, 10))} ${MESES[Number(f.slice(5, 7)) - 1]}`;
 /** `el 29 oct a las 8:00 p.m.` */
 const cuando = (d: Date) => `el ${fechaCorta(hoyISO(undefined, d))} a las ${horaLocal(d)}`;
 const duracion = (min: number) =>
   min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
+
+/** `Falta de personal: faltaron dos`; con "otro" solo el detalle. */
+const textoMotivo = (etiqueta: string, esOtro: boolean, nota: string | null) =>
+  esOtro && nota ? nota : nota ? `${etiqueta}: ${nota}` : etiqueta;
 
 const noEncontrado = () => HttpError.notFound('Caso no encontrado');
 
@@ -62,6 +76,7 @@ export class CasosCoberturaService extends BaseService {
     private readonly avisar: AvisarUsuarios = sinAvisos,
     private readonly bitacora: RegistrarBitacora = sinBitacora,
     private readonly ahora: () => Date = () => new Date(),
+    private readonly cancelarCobertura: CancelarCoberturaFn = async () => undefined,
   ) {
     super();
   }
@@ -146,7 +161,16 @@ export class CasosCoberturaService extends BaseService {
       decision: c.caso?.decision ?? null,
       siguiente: c.caso?.siguiente ?? null,
       regresaEn: c.caso?.regresaEn?.toISOString() ?? null,
+      motivo: (c.caso?.motivo as MotivoPlan | null | undefined) ?? null,
       nota: c.caso?.nota ?? null,
+      noPuede:
+        c.horaExtra.noPuedeEn && c.horaExtra.noPuedeMotivo
+          ? {
+              motivo: c.horaExtra.noPuedeMotivo as MotivoNoPuede,
+              nota: c.horaExtra.noPuedeNota,
+              en: c.horaExtra.noPuedeEn.toISOString(),
+            }
+          : null,
     };
   }
 
@@ -188,6 +212,7 @@ export class CasosCoberturaService extends BaseService {
     const elegido = input.finCubierto ? new Date(input.finCubierto) : null;
     if (input.decision === 'no_llegara') this.validarLimite(c, relevo, elegido);
     const nota = input.nota?.trim() || null;
+    const motivo = textoMotivo(MOTIVO_PLAN_LABEL[input.motivo], input.motivo === 'otro', nota);
     const { sitio } = c.entrada;
     const base = {
       relevoId: relevo?.id ?? null,
@@ -200,6 +225,8 @@ export class CasosCoberturaService extends BaseService {
       coberturaId: null,
       resueltoPorId: ctx.actorId,
       reconsultarEn: null,
+      motivo: input.motivo,
+      coberturasIds: null,
       nota,
     };
     let caso: CasoRow;
@@ -246,6 +273,7 @@ export class CasosCoberturaService extends BaseService {
         estado: 'resuelto',
         decision: 'otro_cubre',
         coberturaId: cobertura.id,
+        coberturasIds: String(cobertura.id),
       });
       detalle = `El supervisor mandó a ${cubridor.nombre} a cubrir ${sitio.nombre} (${horaLocal(tramo.inicio)}); ${c.entrada.guardia} entrega y marca su salida`;
       paraGuardia = `${cubridor.nombre} llega a cubrir ${sitio.nombre} a las ${horaLocal(tramo.inicio)}; entrégale el puesto y marca tu salida`;
@@ -257,6 +285,7 @@ export class CasosCoberturaService extends BaseService {
       const fin = new Date(vista.finCubierto);
       let regresaEn: Date | null = null;
       let coberturaId: number | null = null;
+      const creadas: number[] = [];
       if (input.siguiente === 'descansa') {
         // 1) Quien cubre el hueco y, si regresa a la mitad de un turno, su propia entrada tarde: primero
         // las coberturas, porque pueden fallar (conflictos) y entonces no se toca nada más.
@@ -278,10 +307,11 @@ export class CasosCoberturaService extends BaseService {
               alcance,
             );
             coberturaId ??= cobertura.id;
+            creadas.push(cobertura.id);
           }
         }
         if (vista.entraTarde) {
-          await this.cubrir(
+          const { cobertura } = await this.cubrir(
             {
               usuarioId: c.entrada.usuarioId,
               sitioId: sitio.id,
@@ -293,6 +323,7 @@ export class CasosCoberturaService extends BaseService {
             ctx,
             alcance,
           );
+          creadas.push(cobertura.id);
         }
         regresaEn = vista.vuelveA ? new Date(vista.vuelveA) : null;
       }
@@ -306,6 +337,7 @@ export class CasosCoberturaService extends BaseService {
         regresaEn,
         limiteExtra: input.siguiente === 'normal' && vista.limiteExtra ? new Date(vista.limiteExtra) : null,
         coberturaId,
+        coberturasIds: creadas.length ? creadas.join(',') : null,
       });
       if (input.siguiente === 'descansa') {
         // 2) Los turnos que se salta quedan en pausa (sin falta ni retardo).
@@ -339,20 +371,21 @@ export class CasosCoberturaService extends BaseService {
       siguiente: input.siguiente ?? null,
       descansoExtraHoras: input.descansoExtraHoras,
       cubridorId: input.cubridorId ?? null,
+      motivo: input.motivo,
       nota,
     });
     await this.bitacora({
       usuarioIds: [c.entrada.usuarioId],
       tipo: 'cobertura',
-      detalle: `${detalle}${nota ? `. Nota: ${nota}` : ''}`,
-      datos: { casoId: caso.id, decision: input.decision },
+      detalle: `${detalle}. Motivo: ${motivo}`,
+      datos: { casoId: caso.id, decision: input.decision, motivo: input.motivo },
       sitioId: sitio.id,
       actorId: ctx.actorId,
     });
     await this.avisar([c.entrada.usuarioId], {
       tipo: 'cobertura',
       titulo: tituloGuardia,
-      mensaje: paraGuardia,
+      mensaje: `${paraGuardia}. Motivo: ${motivo}`,
       ruta: '/marcar',
     });
     // Quien no es el supervisor del sitio (p. ej. un admin) deja constancia para él.
@@ -360,7 +393,7 @@ export class CasosCoberturaService extends BaseService {
       await this.avisar([sitio.supervisorId], {
         tipo: 'cobertura',
         titulo: tituloSupervisor,
-        mensaje: `${sitio.nombre}: ${detalle}`,
+        mensaje: `${sitio.nombre}: ${detalle}. Motivo: ${motivo}`,
         ruta: RUTA,
       });
     }
@@ -375,25 +408,131 @@ export class CasosCoberturaService extends BaseService {
     return this.aCaso({ ...c, caso });
   }
 
+  // ---------- Cancelar o cambiar un plan confirmado (A-45) ----------
+
+  /** El plan solo se toca mientras el guardia sigue en el sitio con sus horas extra abiertas. */
+  private conPlan(c: Candidato) {
+    if (!c.caso) throw HttpError.conflict('Este caso no tiene un plan');
+    if (c.horaExtra.estado !== 'abierta') {
+      throw HttpError.conflict('El guardia ya terminó sus horas extra: el plan ya no se puede cambiar');
+    }
+    return c.caso;
+  }
+
+  /** Deshace lo que creó el plan: cancela sus coberturas y borra el caso (con sus descansos en pausa). */
+  private async deshacer(caso: CasoRow, ctx: AccionCtx, alcance: Alcance | null) {
+    const ids = new Set(
+      [...(caso.coberturasIds?.split(',') ?? []), caso.coberturaId ? String(caso.coberturaId) : '']
+        .map(Number)
+        .filter((n) => n > 0),
+    );
+    for (const id of ids) {
+      try {
+        await this.cancelarCobertura(id, ctx, alcance);
+      } catch (e) {
+        // Ya estaba cancelada o ya terminó: no hay nada que deshacer.
+        if (!(e instanceof HttpError) || (e.status !== 404 && e.status !== 409)) throw e;
+      }
+    }
+    await this.repo.eliminarCaso(caso.id);
+  }
+
+  /** Cancela un plan confirmado: el caso vuelve a "sin decidir" y se avisa al guardia. */
+  async cancelarPlan(entradaId: number, input: CancelarPlanData, ctx: AccionCtx, alcance: Alcance | null) {
+    const c = await this.cargar(entradaId, alcance);
+    const caso = this.conPlan(c);
+    const nota = input.nota?.trim() || null;
+    const motivo = textoMotivo(MOTIVO_CANCELAR_PLAN_LABEL[input.motivo], input.motivo === 'otro', nota);
+    const { sitio, guardia } = { sitio: c.entrada.sitio, guardia: c.entrada.guardia };
+    await this.deshacer(caso, ctx, alcance);
+
+    await this.audit.registrarAccion(ctx, 'casos_cobertura.cancelar', 'casos_cobertura', caso.id, {
+      guardiaId: c.entrada.usuarioId,
+      sitio: sitio.nombre,
+      decision: caso.decision,
+      motivo: input.motivo,
+      nota,
+    });
+    await this.bitacora({
+      usuarioIds: [c.entrada.usuarioId],
+      tipo: 'cobertura',
+      detalle: `El supervisor canceló el plan de cobertura de ${sitio.nombre}. Motivo: ${motivo}`,
+      datos: { casoId: caso.id, motivo: input.motivo },
+      sitioId: sitio.id,
+      actorId: ctx.actorId,
+    });
+    await this.avisar([c.entrada.usuarioId], {
+      tipo: 'cobertura',
+      titulo: 'Plan cancelado: quédate en tu puesto',
+      mensaje: `Tu supervisor canceló el plan de ${sitio.nombre} (${motivo}). Quédate en tu puesto hasta que defina otro`,
+      ruta: '/marcar',
+    });
+    if (sitio.supervisorId && sitio.supervisorId !== ctx.actorId) {
+      await this.avisar([sitio.supervisorId], {
+        tipo: 'cobertura',
+        titulo: 'Plan de cobertura cancelado',
+        mensaje: `${sitio.nombre}: cancelaron el plan de ${guardia}. Motivo: ${motivo}. Define uno nuevo`,
+        ruta: RUTA,
+      });
+    }
+    return this.aCaso({ ...c, caso: null });
+  }
+
+  /** Cambia un plan confirmado: se deshace el anterior y se confirma el nuevo (con su motivo). */
+  async cambiarPlan(entradaId: number, input: ResolverCasoData, ctx: AccionCtx, alcance: Alcance | null) {
+    const c = await this.cargar(entradaId, alcance);
+    const caso = this.conPlan(c);
+    const nota = input.nota?.trim() || null;
+    const motivo = textoMotivo(MOTIVO_PLAN_LABEL[input.motivo], input.motivo === 'otro', nota);
+    await this.deshacer(caso, ctx, alcance);
+    await this.audit.registrarAccion(ctx, 'casos_cobertura.cambiar', 'casos_cobertura', caso.id, {
+      guardiaId: c.entrada.usuarioId,
+      sitio: c.entrada.sitio.nombre,
+      decisionAnterior: caso.decision,
+      motivo: input.motivo,
+      nota,
+    });
+    await this.bitacora({
+      usuarioIds: [c.entrada.usuarioId],
+      tipo: 'cobertura',
+      detalle: `El supervisor cambió el plan de cobertura de ${c.entrada.sitio.nombre}. Motivo del cambio: ${motivo}`,
+      datos: { casoId: caso.id, motivo: input.motivo },
+      sitioId: c.entrada.sitio.id,
+      actorId: ctx.actorId,
+    });
+    return this.resolver(entradaId, input, ctx, alcance);
+  }
+
   // ---------- Guardia ----------
 
   /** El guardia avisa que no puede quedarse: el supervisor decide quién cubre. */
-  async noPuedoQuedarme(usuarioId: number) {
+  async noPuedoQuedarme(usuarioId: number, input: NoPuedoQuedarmeData, ctx: AccionCtx) {
     const c = await this.repo.candidatoDe(usuarioId);
     if (!c) throw HttpError.conflict('No tienes horas extra abiertas');
+    if (c.caso?.estado === 'resuelto') throw HttpError.conflict('Tu supervisor ya dejó el plan');
+    if (c.horaExtra.noPuedeEn) throw HttpError.conflict('Ya avisaste que no puedes quedarte');
     const { sitio, guardia } = c.entrada;
+    const nota = input.nota?.trim() || null;
+    const motivo = textoMotivo(MOTIVO_NO_PUEDE_LABEL[input.motivo], input.motivo === 'otro', nota);
+    await this.repo.registrarNoPuede(c.horaExtra.id, { en: this.ahora(), motivo: input.motivo, nota });
+    await this.audit.registrarAccion(ctx, 'casos_cobertura.no_puede_quedarse', 'horas_extra', c.horaExtra.id, {
+      guardiaId: usuarioId,
+      sitio: sitio.nombre,
+      motivo: input.motivo,
+      nota,
+    });
     await this.bitacora({
       usuarioIds: [usuarioId],
       tipo: 'cobertura',
-      detalle: `Avisó que no puede quedarse en ${sitio.nombre}: el supervisor debe mandar a otro guardia`,
-      datos: { entradaId: c.entrada.id },
+      detalle: `Avisó que no puede quedarse en ${sitio.nombre}. Motivo: ${motivo}. El supervisor debe mandar a otro guardia`,
+      datos: { entradaId: c.entrada.id, motivo: input.motivo },
       sitioId: sitio.id,
       actorId: usuarioId,
     });
     await this.avisar(await this.repo.revisoresDe(sitio.id), {
       tipo: 'cobertura',
-      titulo: 'No puede quedarse: manda un relevo',
-      mensaje: `${guardia} · ${sitio.nombre}: avisó que no puede quedarse. Manda a otro guardia a cubrir`,
+      titulo: 'No puede quedarse: elige quién cubre',
+      mensaje: `${guardia} · ${sitio.nombre}: avisó que no puede quedarse (${motivo}). Elige quién cubre`,
       ruta: RUTA,
     });
     return { ok: true };

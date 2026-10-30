@@ -23,12 +23,13 @@ export function HoraMarca({ jornada: j, tipo }: { jornada: Jornada; tipo: 'entra
   const justificada = j.justificadas.includes(tipo === 'entrada' ? 'retardo' : 'salida_anticipada');
 
   return (
-    <span className="inline-flex flex-col items-start gap-0.5">
+    <span className="inline-flex max-w-full min-w-0 flex-col items-start gap-0.5">
       <span className="font-medium text-slate-900">{marca ? formatHora(marca.registradaEn) : '—'}</span>
       {programada && (
         <span
           className={cn(
-            'max-w-full rounded px-1.5 py-0.5 text-[11px] leading-tight font-medium ring-1 ring-inset',
+            // Se parte en dos líneas si no cabe (celular), en vez de cortarse.
+            'max-w-full rounded px-1.5 py-0.5 text-[11px] leading-tight font-medium break-words whitespace-normal ring-1 ring-inset',
             !marca
               ? 'bg-slate-50 text-slate-600 ring-slate-200'
               : !fuera

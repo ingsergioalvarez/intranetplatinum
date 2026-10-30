@@ -55,7 +55,7 @@ export interface NuevaHoraExtra {
 export type CambiosHoraExtra = Partial<
   Pick<
     HoraExtraRow,
-    'desde' | 'hasta' | 'minutos' | 'origen' | 'estado' | 'resueltoEn' | 'notaResolucion' | 'escaladaEn'
+    'desde' | 'hasta' | 'minutos' | 'origen' | 'estado' | 'resueltoEn' | 'notaResolucion' | 'escaladaEn' | 'motivo'
   > & { resueltoPorId: number | null }
 >;
 

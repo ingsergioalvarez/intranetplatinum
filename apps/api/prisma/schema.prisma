@@ -1066,6 +1066,10 @@ model CasoCobertura {
   resueltoPorId      Int?                  @map("resuelto_por_id")
   /// Cuándo se vuelve a preguntar al supervisor ("viene en camino").
   reconsultarEn      DateTime?             @map("reconsultar_en")
+  /// Por qué el supervisor dejó el plan (lista de `MOTIVOS_PLAN`); el detalle va en `nota`.
+  motivo             String?               @db.VarChar(30)
+  /// Todas las coberturas que creó el plan (ids separados por coma), para deshacerlas al cancelarlo o cambiarlo.
+  coberturasIds      String?               @map("coberturas_ids") @db.VarChar(255)
   nota               String?               @db.VarChar(255)
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
@@ -1118,6 +1122,10 @@ model HoraExtra {
   notaResolucion String?         @map("nota_resolucion") @db.VarChar(255)
   /// Cuándo se avisó a los admins por falta de respuesta del supervisor.
   escaladaEn     DateTime?       @map("escalada_en")
+  /// El guardia avisó que no puede quedarse (A-35): cuándo, por qué (`MOTIVOS_NO_PUEDE`) y el detalle.
+  noPuedeEn      DateTime?       @map("no_puede_en")
+  noPuedeMotivo  String?         @map("no_puede_motivo") @db.VarChar(30)
+  noPuedeNota    String?         @map("no_puede_nota") @db.VarChar(255)
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
   usuario        Usuario         @relation("HoraExtraDe", fields: [usuarioId], references: [id], onDelete: Cascade)

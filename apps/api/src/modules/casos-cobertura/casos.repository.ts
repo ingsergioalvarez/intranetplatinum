@@ -19,6 +19,10 @@ export interface HoraExtraCaso {
   estado: EstadoHoraExtra;
   origen: OrigenHoraExtra;
   desde: Date;
+  /** El guardia avisó que no puede quedarse (A-35). */
+  noPuedeEn: Date | null;
+  noPuedeMotivo: string | null;
+  noPuedeNota: string | null;
 }
 
 export interface CasoRow {
@@ -39,6 +43,9 @@ export interface CasoRow {
   coberturaId: number | null;
   resueltoPorId: number | null;
   reconsultarEn: Date | null;
+  motivo: string | null;
+  /** Ids de todas las coberturas que creó el plan, separados por coma. */
+  coberturasIds: string | null;
   nota: string | null;
 }
 
@@ -66,6 +73,13 @@ export abstract class CasosCoberturaRepository {
   /** Crea o reemplaza el caso de esa jornada. */
   abstract guardarCaso(entrada: EntradaCaso, datos: DatosCaso): Promise<CasoRow>;
   abstract actualizarCaso(id: number, datos: Partial<DatosCaso>): Promise<CasoRow>;
+  /** Borra el caso (y con él sus días de descanso en pausa): la jornada vuelve a "sin decidir". */
+  abstract eliminarCaso(id: number): Promise<void>;
+  /** Deja constancia de que el guardia no puede quedarse, con su motivo (A-35). */
+  abstract registrarNoPuede(
+    horaExtraId: number,
+    datos: { en: Date; motivo: string; nota: string | null },
+  ): Promise<void>;
   /** Días en que el guardia descansa por el plan (se pausa su turno de ese día). */
   abstract crearPausas(casoId: number, usuarioId: number, fechas: string[]): Promise<void>;
   /** Casos "viene en camino" que ya toca volver a preguntar. */
@@ -105,6 +119,8 @@ const casoSelect = {
   coberturaId: true,
   resueltoPorId: true,
   reconsultarEn: true,
+  motivo: true,
+  coberturasIds: true,
   nota: true,
 } as const;
 
@@ -133,7 +149,16 @@ const aEntrada = (m: EntradaDb): EntradaCaso | null =>
 
 export class PrismaCasosCoberturaRepository extends CasosCoberturaRepository {
   private async armar(
-    rows: { entrada: EntradaDb | null; id: number; estado: EstadoHoraExtra; origen: OrigenHoraExtra; desde: Date }[],
+    rows: {
+      entrada: EntradaDb | null;
+      id: number;
+      estado: EstadoHoraExtra;
+      origen: OrigenHoraExtra;
+      desde: Date;
+      noPuedeEn: Date | null;
+      noPuedeMotivo: string | null;
+      noPuedeNota: string | null;
+    }[],
   ): Promise<Candidato[]> {
     const ids = rows.flatMap((r) => (r.entrada ? [r.entrada.id] : []));
     const casos = ids.length
@@ -146,7 +171,15 @@ export class PrismaCasosCoberturaRepository extends CasosCoberturaRepository {
       if (!entrada) continue;
       res.push({
         entrada,
-        horaExtra: { id: r.id, estado: r.estado, origen: r.origen, desde: r.desde },
+        horaExtra: {
+          id: r.id,
+          estado: r.estado,
+          origen: r.origen,
+          desde: r.desde,
+          noPuedeEn: r.noPuedeEn,
+          noPuedeMotivo: r.noPuedeMotivo,
+          noPuedeNota: r.noPuedeNota,
+        },
         caso: porEntrada.get(entrada.id) ?? null,
       });
     }
@@ -158,6 +191,9 @@ export class PrismaCasosCoberturaRepository extends CasosCoberturaRepository {
     estado: true,
     origen: true,
     desde: true,
+    noPuedeEn: true,
+    noPuedeMotivo: true,
+    noPuedeNota: true,
     entrada: { select: entradaSelect },
   } as const;
 
@@ -216,6 +252,17 @@ export class PrismaCasosCoberturaRepository extends CasosCoberturaRepository {
 
   async actualizarCaso(id: number, datos: Partial<DatosCaso>) {
     return getPrisma().casoCobertura.update({ where: { id }, data: datos, select: casoSelect });
+  }
+
+  async registrarNoPuede(horaExtraId: number, { en, motivo, nota }: { en: Date; motivo: string; nota: string | null }) {
+    await getPrisma().horaExtra.update({
+      where: { id: horaExtraId },
+      data: { noPuedeEn: en, noPuedeMotivo: motivo, noPuedeNota: nota },
+    });
+  }
+
+  async eliminarCaso(id: number) {
+    await getPrisma().casoCobertura.delete({ where: { id } });
   }
 
   async crearPausas(casoId: number, usuarioId: number, fechas: string[]) {

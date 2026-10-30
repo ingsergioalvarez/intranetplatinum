@@ -53,10 +53,15 @@ class MemoriaCasos extends CasosCoberturaRepository {
   relevo: { id: number; nombre: string; inicio: Date } | null = { id: 11, nombre: 'Ana', inicio: en('2026-10-27T02:00:00Z') };
   pausas: { casoId: number; usuarioId: number; fechas: string[] }[] = [];
   enviados = new Set<string>();
+  noPuede: { noPuedeEn: Date | null; noPuedeMotivo: string | null; noPuedeNota: string | null } = {
+    noPuedeEn: null,
+    noPuedeMotivo: null,
+    noPuedeNota: null,
+  };
 
   private candidatoActual(): Candidato | null {
     return this.abierta
-      ? { entrada: ENTRADA, horaExtra: { id: 1, estado: 'abierta', origen: 'jornada_abierta', desde: ENTRADA.programadaSalida! }, caso: this.caso }
+      ? { entrada: ENTRADA, horaExtra: { id: 1, estado: 'abierta', origen: 'jornada_abierta', desde: ENTRADA.programadaSalida!, ...this.noPuede }, caso: this.caso }
       : null;
   }
   async candidatos() {
@@ -79,6 +84,12 @@ class MemoriaCasos extends CasosCoberturaRepository {
   async actualizarCaso(_id: number, datos: Partial<DatosCaso>) {
     this.caso = { ...this.caso!, ...datos };
     return this.caso;
+  }
+  async eliminarCaso() {
+    this.caso = null;
+  }
+  async registrarNoPuede(_id: number, d: { en: Date; motivo: string; nota: string | null }) {
+    this.noPuede = { noPuedeEn: d.en, noPuedeMotivo: d.motivo, noPuedeNota: d.nota };
   }
   async crearPausas(casoId: number, usuarioId: number, fechas: string[]) {
     this.pausas.push({ casoId, usuarioId, fechas });
@@ -108,6 +119,7 @@ let audit: MemoryAuditLogger;
 let avisos: { usuarioIds: number[]; mensaje: string; ruta?: string | null }[];
 let bitacora: EventoNuevo[];
 let coberturas: CoberturaData[];
+let canceladas: number[];
 let alcance: Alcance | null;
 let ahora: Date;
 let servicio: CasosCoberturaService;
@@ -127,6 +139,7 @@ beforeEach(() => {
   avisos = [];
   bitacora = [];
   coberturas = [];
+  canceladas = [];
   alcance = null;
   // Martes 27, 02:30Z = lunes 26, 20:30 locales: Ana no llegó (20:00) y Juan sigue en el sitio.
   ahora = en('2026-10-27T02:30:00Z');
@@ -141,9 +154,10 @@ beforeEach(() => {
       coberturas.push(data);
       return { cobertura: { id: 50 + coberturas.length } as never, advertencia: null };
     },
+    cancelarCobertura: async (id: number) => void canceladas.push(id),
     ahora: () => ahora,
   };
-  servicio = new CasosCoberturaService(repo, deps.turnos, deps.cubrir, audit, deps.avisar, deps.bitacora, deps.ahora);
+  servicio = new CasosCoberturaService(repo, deps.turnos, deps.cubrir, audit, deps.avisar, deps.bitacora, deps.ahora, deps.cancelarCobertura);
   app = createApp([createCasosCoberturaModule({ ...deps, alcance: async (u) => (u.rol === ROLES.SUPERVISOR ? alcance : null) })]);
 });
 
@@ -182,6 +196,18 @@ describe('casos de cobertura: lista y vista previa (AS6-05, AS6-06)', () => {
     });
   });
 
+  it('el plan exige motivo; con "otro" pide el detalle y el motivo queda en el caso, bitácora y avisos', async () => {
+    expect((await sup().post('/100/resolver', { decision: 'en_camino' })).status).toBe(400);
+    expect((await sup().post('/100/resolver', { decision: 'en_camino', motivo: 'otro' })).status).toBe(400);
+    const res = await sup().post('/100/resolver', { decision: 'en_camino', motivo: 'falta_personal', nota: 'Faltaron dos' });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ motivo: 'falta_personal', nota: 'Faltaron dos' });
+    expect(repo.caso).toMatchObject({ motivo: 'falta_personal' });
+    expect(bitacora[0].detalle).toContain('Motivo: Falta de personal: Faltaron dos');
+    expect(avisos.find((x) => x.usuarioIds[0] === 10)?.mensaje).toContain('Motivo: Falta de personal: Faltaron dos');
+    expect(audit.eventos.find((e) => e.accion === 'casos_cobertura.resolver')?.datos).toMatchObject({ motivo: 'falta_personal' });
+  });
+
   it('solo admin y supervisor ven los casos; el guardia no', async () => {
     expect((await guardia().get('/')).status).toBe(403);
     expect((await como(1, ROLES.ADMIN).get('/')).status).toBe(200);
@@ -190,7 +216,7 @@ describe('casos de cobertura: lista y vista previa (AS6-05, AS6-06)', () => {
 
 describe('casos de cobertura: el supervisor deja el plan (AS6-05)', () => {
   it('"viene en camino": el guardia espera, se le avisa y a las 2 h se vuelve a preguntar', async () => {
-    const res = await sup().post('/100/resolver', { decision: 'en_camino' });
+    const res = await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'en_camino' });
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({ estado: 'en_espera', decision: 'en_camino' });
     expect(avisos.at(-1)).toMatchObject({ usuarioIds: [10], mensaje: expect.stringContaining('viene en camino') });
@@ -213,7 +239,7 @@ describe('casos de cobertura: el supervisor deja el plan (AS6-05)', () => {
   });
 
   it('"no llegará" + "lo trabaja normal": las horas extra terminan donde empieza su turno; nadie descansa', async () => {
-    const res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal' });
+    const res = await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'normal' });
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({ estado: 'resuelto', decision: 'no_llegara', siguiente: 'normal' });
     expect(repo.caso).toMatchObject({ limiteExtra: en('2026-10-27T14:00:00Z'), finCubierto: en('2026-10-27T14:00:00Z'), resueltoPorId: 5 });
@@ -224,6 +250,7 @@ describe('casos de cobertura: el supervisor deja el plan (AS6-05)', () => {
 
   it('"no llegará": el supervisor elige hasta qué hora se queda y esa hora manda en el plan', async () => {
     const res = await sup().post('/100/resolver', {
+      motivo: 'relevo_no_llego',
       decision: 'no_llegara',
       siguiente: 'normal',
       finCubierto: '2026-10-27T05:00:00.000Z',
@@ -236,23 +263,23 @@ describe('casos de cobertura: el supervisor deja el plan (AS6-05)', () => {
 
   it('"no llegará": si la hora ya pasó (la elegida o la del turno del relevo) no deja guardar el plan', async () => {
     // La hora elegida ya pasó.
-    let res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T02:10:00.000Z' });
+    let res = await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T02:10:00.000Z' });
     expect(res.status).toBe(400);
     expect(res.body.error.details).toEqual([{ path: 'finCubierto', message: expect.stringContaining('ya pasó') }]);
     // El turno del relevo terminaba 14:00Z y ya son las 15:00Z: hay que decir hasta cuándo se queda.
     ahora = en('2026-10-27T15:00:00Z');
-    res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal' });
+    res = await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'normal' });
     expect(res.status).toBe(400);
     expect(res.body.error.details[0]).toMatchObject({ path: 'finCubierto' });
     expect(repo.caso).toBeNull();
     // Antes de su hora de salida tampoco.
     ahora = en('2026-10-27T02:30:00Z');
-    res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T01:00:00.000Z' });
+    res = await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T01:00:00.000Z' });
     expect(res.status).toBe(400);
   });
 
   it('pasada la hora autorizada sin salida se avisa una sola vez al guardia y al supervisor', async () => {
-    await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T05:00:00.000Z' });
+    await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'normal', finCubierto: '2026-10-27T05:00:00.000Z' });
     avisos.length = 0;
     await servicio.revisar();
     expect(avisos).toEqual([]);
@@ -268,7 +295,7 @@ describe('casos de cobertura: el supervisor deja el plan (AS6-05)', () => {
   });
 
   it('"no llegará" + "descansa" + quien cubre el hueco: cobertura, pausa del turno y hora de regreso', async () => {
-    const res = await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'descansa', cubridorId: 12 });
+    const res = await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'descansa', cubridorId: 12 });
     expect(res.status).toBe(200);
     expect(coberturas).toEqual([
       expect.objectContaining({ usuarioId: 12, sitioId: 1, desde: '2026-10-27', horaInicio: '08:00', horas: 12, cubreAId: 10 }),
@@ -280,19 +307,19 @@ describe('casos de cobertura: el supervisor deja el plan (AS6-05)', () => {
   });
 
   it('descansa sin elegir quién cubre: queda el hueco y se dice en la bitácora', async () => {
-    await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'descansa' });
+    await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'descansa' });
     expect(coberturas).toEqual([]);
     expect(repo.pausas).toHaveLength(1);
     expect(bitacora[0].detalle).toContain('Queda un turno sin cubrir');
   });
 
   it('el supervisor puede agregar descanso: regresa más tarde', async () => {
-    await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'descansa', descansoExtraHoras: 24 });
+    await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'descansa', descansoExtraHoras: 24 });
     expect(repo.caso).toMatchObject({ descansoExtraHoras: 24, regresaEn: en('2026-10-29T14:00:00Z') });
   });
 
   it('"mando a otro": se crea la cobertura del turno de Ana y el guardia entrega', async () => {
-    const res = await sup().post('/100/resolver', { decision: 'otro_cubre', cubridorId: 12 });
+    const res = await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'otro_cubre', cubridorId: 12 });
     expect(res.status).toBe(200);
     expect(coberturas).toEqual([
       expect.objectContaining({ usuarioId: 12, desde: '2026-10-26', horaInicio: '20:00', horas: 12, cubreAId: 11 }),
@@ -303,26 +330,80 @@ describe('casos de cobertura: el supervisor deja el plan (AS6-05)', () => {
 
   it('avisa del cansancio al supervisor cuando el plan deja muchas horas seguidas', async () => {
     // Entró el 26 a las 8:00; si sigue hasta el fin del turno de Ana (8:00 del 27) son 24 h.
-    await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal' });
+    await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'normal' });
     expect(avisos.some((a) => a.usuarioIds[0] === 5 && a.mensaje.includes('h seguidas'))).toBe(true);
   });
 
   it('valida: "no llegará" pide el siguiente turno y "mando a otro" pide quién', async () => {
-    expect((await sup().post('/100/resolver', { decision: 'no_llegara' })).status).toBe(400);
-    expect((await sup().post('/100/resolver', { decision: 'otro_cubre' })).status).toBe(400);
-    expect((await sup().post('/100/resolver', { decision: 'otro_cubre', cubridorId: 99 })).status).toBe(400);
-    expect((await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'descansa', descansoExtraHoras: 200 })).status).toBe(400);
+    expect((await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara' })).status).toBe(400);
+    expect((await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'otro_cubre' })).status).toBe(400);
+    expect((await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'otro_cubre', cubridorId: 99 })).status).toBe(400);
+    expect((await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'descansa', descansoExtraHoras: 200 })).status).toBe(400);
   });
 
   it('un caso con plan no se resuelve dos veces y un guardia no puede resolverlo', async () => {
-    expect((await sup().post('/100/resolver', { decision: 'no_llegara', siguiente: 'normal' })).status).toBe(200);
-    expect((await sup().post('/100/resolver', { decision: 'en_camino' })).status).toBe(409);
-    expect((await guardia().post('/100/resolver', { decision: 'en_camino' })).status).toBe(403);
+    expect((await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'no_llegara', siguiente: 'normal' })).status).toBe(200);
+    expect((await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'en_camino' })).status).toBe(409);
+    expect((await guardia().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'en_camino' })).status).toBe(403);
   });
 
   it('si el guardia ya terminó sus horas extra no hay caso', async () => {
     repo.abierta = false;
-    expect((await sup().post('/100/resolver', { decision: 'en_camino' })).status).toBe(404);
+    expect((await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'en_camino' })).status).toBe(404);
+  });
+});
+
+describe('casos de cobertura: cancelar o cambiar el plan (A-45)', () => {
+  const confirmar = (extra: object = {}) =>
+    sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'otro_cubre', cubridorId: 12, ...extra });
+
+  it('cancelar pide motivo, deshace las coberturas del plan, deja el caso "sin decidir" y avisa al guardia', async () => {
+    expect((await confirmar()).status).toBe(200);
+    avisos.length = 0;
+    bitacora.length = 0;
+    expect((await sup().post('/100/cancelar', {})).status).toBe(400);
+    expect((await sup().post('/100/cancelar', { motivo: 'otro' })).status).toBe(400);
+
+    const res = await sup().post('/100/cancelar', { motivo: 'relevo_llego' });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ estado: 'nuevo', decision: null, motivo: null });
+    expect(canceladas).toEqual([51]);
+    expect(repo.caso).toBeNull();
+    expect(avisos.find((x) => x.usuarioIds[0] === 10)?.mensaje).toContain('El relevo ya llegó');
+    expect(bitacora[0].detalle).toContain('canceló el plan');
+    expect(bitacora[0].detalle).toContain('Motivo: El relevo ya llegó');
+    expect(audit.eventos.map((e) => e.accion)).toContain('casos_cobertura.cancelar');
+  });
+
+  it('cancela todas las coberturas del plan, no solo la primera', async () => {
+    await confirmar();
+    repo.caso = { ...repo.caso!, coberturasIds: '51,52' };
+    await sup().post('/100/cancelar', { motivo: 'error' });
+    expect(canceladas).toEqual([51, 52]);
+  });
+
+  it('cambiar deshace el plan anterior y confirma el nuevo con su motivo', async () => {
+    await confirmar();
+    const res = await sup().post('/100/cambiar', { motivo: 'falta_personal', decision: 'en_camino' });
+    expect(res.status).toBe(200);
+    expect(canceladas).toEqual([51]);
+    expect(res.body.data).toMatchObject({ decision: 'en_camino', motivo: 'falta_personal' });
+    expect(audit.eventos.map((e) => e.accion)).toEqual(expect.arrayContaining(['casos_cobertura.cambiar', 'casos_cobertura.resolver']));
+    expect((await sup().post('/100/cambiar', { decision: 'en_camino' })).status).toBe(400);
+  });
+
+  it('sin plan no hay qué cancelar ni cambiar; con las horas extra cerradas tampoco', async () => {
+    expect((await sup().post('/100/cancelar', { motivo: 'error' })).status).toBe(409);
+    expect((await sup().post('/100/cambiar', { motivo: 'falta_personal', decision: 'en_camino' })).status).toBe(409);
+    await confirmar();
+    repo.abierta = false;
+    expect((await sup().post('/100/cancelar', { motivo: 'error' })).status).toBe(404);
+  });
+
+  it('el guardia no puede cancelar ni cambiar', async () => {
+    await confirmar();
+    expect((await guardia().post('/100/cancelar', { motivo: 'error' })).status).toBe(403);
+    expect((await guardia().post('/100/cambiar', { motivo: 'falta_personal', decision: 'en_camino' })).status).toBe(403);
   });
 });
 
@@ -345,18 +426,47 @@ describe('casos de cobertura: avisos y el guardia (AS6-05, AS6-08)', () => {
     expect((await sup().get('/')).body.data.items[0]).toMatchObject({ estado: 'nuevo', relevo: null });
   });
 
-  it('"No puedo quedarme": avisa al supervisor y queda en la bitácora', async () => {
-    const res = await guardia().post('/no-puedo');
+  it('"No puedo quedarme": pide motivo, avisa al supervisor con él, queda en bitácora y auditoría', async () => {
+    expect((await guardia().post('/no-puedo')).status).toBe(400);
+    expect((await guardia().post('/no-puedo', { motivo: 'otro' })).status).toBe(400);
+    const res = await guardia().post('/no-puedo', { motivo: 'salud' });
     expect(res.status).toBe(200);
     expect(avisos).toEqual([
-      { usuarioIds: [5], mensaje: expect.stringContaining('avisó que no puede quedarse'), ruta: '/asistencia/casos' },
+      {
+        usuarioIds: [5],
+        mensaje: expect.stringContaining('avisó que no puede quedarse (Cuestión de salud). Elige quién cubre'),
+        ruta: '/asistencia/casos',
+      },
     ]);
     expect(bitacora[0]).toMatchObject({ tipo: 'cobertura', usuarioIds: [10], actorId: 10 });
+    expect(bitacora[0].detalle).toContain('Motivo: Cuestión de salud');
+    expect(audit.eventos.map((e) => e.accion)).toContain('casos_cobertura.no_puede_quedarse');
+  });
+
+  it('con "otro" el detalle es obligatorio y es lo que se ve como motivo', async () => {
+    const res = await guardia().post('/no-puedo', { motivo: 'otro', nota: 'Cuido a mi mamá' });
+    expect(res.status).toBe(200);
+    expect(avisos[0].mensaje).toContain('(Cuido a mi mamá)');
+  });
+
+  it('el supervisor ve en el caso que el guardia no puede quedarse y por qué; solo se avisa una vez', async () => {
+    await guardia().post('/no-puedo', { motivo: 'cansancio', nota: 'Llevo 16 h' });
+    expect((await sup().get('/')).body.data.items[0].noPuede).toMatchObject({
+      motivo: 'cansancio',
+      nota: 'Llevo 16 h',
+    });
+    expect((await guardia().post('/no-puedo', { motivo: 'salud' })).status).toBe(409);
+  });
+
+  it('con el plan ya dejado, "No puedo quedarme" no aplica', async () => {
+    await sup().post('/100/resolver', { motivo: 'relevo_no_llego', decision: 'en_camino' });
+    repo.caso = { ...repo.caso!, estado: 'resuelto' };
+    expect((await guardia().post('/no-puedo', { motivo: 'salud' })).status).toBe(409);
   });
 
   it('sin horas extra abiertas "No puedo quedarme" no aplica; el supervisor no usa esa ruta', async () => {
     repo.abierta = false;
-    expect((await guardia().post('/no-puedo')).status).toBe(409);
-    expect((await sup().post('/no-puedo')).status).toBe(403);
+    expect((await guardia().post('/no-puedo', { motivo: 'salud' })).status).toBe(409);
+    expect((await sup().post('/no-puedo', { motivo: 'salud' })).status).toBe(403);
   });
 });

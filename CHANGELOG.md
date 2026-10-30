@@ -5,6 +5,29 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-30 #31 — Etiqueta de Asistencia, fines de semana, motivo obligatorio y cambiar o cancelar el plan (A-33 a A-35, A-45, A-46)
+
+#### Añadido
+
+- Motivo obligatorio (A-35). El guardia que toca "No puedo quedarme" elige un motivo de una lista (otro compromiso, salud, cansancio, no tengo cómo regresar, urgencia familiar u otro) y con "otro" debe explicarlo; el supervisor, al dejar el plan de un caso de cobertura, elige el suyo (relevo no llegó, falta de personal, necesidad del cliente, emergencia u otro). Sin motivo el servidor responde 400. El motivo queda en el caso, en la bitácora del guardia, en la auditoría (`casos_cobertura.no_puede_quedarse`) y en los avisos a ambos.
+- Cuando el guardia dice que no puede quedarse, el supervisor recibe "No puede quedarse: elige quién cubre" con el motivo; en Casos de cobertura el caso muestra el motivo y el plan se abre ya en "Mando a otro guardia". Solo se puede avisar una vez y no si el plan ya está dejado (409).
+- Migración `20261030000000_motivos_cobertura`: `casos_cobertura.motivo` y `horas_extra.no_puede_en / no_puede_motivo / no_puede_nota`.
+
+- Cancelar o cambiar un plan de cobertura ya confirmado (A-45), solo mientras el guardia sigue con sus horas extra abiertas. `POST /api/casos-cobertura/:entradaId/cancelar` (motivo obligatorio: el relevo ya llegó, me equivoqué, cambió la situación u otro) y `POST /api/casos-cobertura/:entradaId/cambiar` (mismo cuerpo que resolver, con el motivo del cambio). Se deshace lo que creó el plan: se cancelan sus coberturas (avisando a quienes las tenían), se quitan los descansos en pausa y el caso vuelve a "Sin decidir"; el guardia recibe "Plan cancelado: quédate en tu puesto". Queda en la bitácora y la auditoría (`casos_cobertura.cancelar` / `.cambiar`). En Casos de cobertura, los casos confirmados muestran "Cambiar plan" y "Cancelar plan". Migración `20261030010000_plan_coberturas` (`casos_cobertura.coberturas_ids`); los planes anteriores a ella solo deshacen la primera cobertura y los descansos.
+- Nota opcional al quedarse (A-46): en "¿Sigues en turno?" el guardia puede escribir algo para su supervisor (p. ej. "no puedo quedarme mucho tiempo"). Queda como motivo de las horas extra, en la bitácora y en el aviso "Pidió extender su horario".
+
+#### Cambiado
+
+- Calendario de cobertura (A-34): en un sitio con turnos de lunes a viernes (días de la semana), sábado y domingo salen "Sin turno" y no "Sin cubrir". Los ciclos (24x24, 12x12) y los turnos diarios siguen exigiendo cobertura todos los días.
+- La etiqueta azul del horario del guardia en Asistencia (`HoraMarca`) baja de línea en el celular en vez de cortarse (A-33).
+- El botón "No puedo quedarme" se queda: se descartó quitarlo.
+
+#### Pendiente
+
+- Probar en el celular la etiqueta de A-33, la ventana de motivo de A-35 y cancelar/cambiar plan de A-45.
+- Sigue el plan de [docs/PLAN.md](docs/PLAN.md), "Orden de ejecución": A-36 en adelante.
+- Subir al servidor: requiere `docker compose exec api npm run db:deploy` tras el build.
+
 ### Sesión 2026-10-29 #30 — Observaciones del primer guardia: rostro, calendario, acceso del cliente, avisos y rutas (A-26 a A-32)
 
 #### Añadido

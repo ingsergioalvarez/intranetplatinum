@@ -28,6 +28,51 @@ export const HORAS_CANSANCIO = 16;
 /** Horas de descanso que el supervisor puede agregar a las del patrón. */
 export const DESCANSO_EXTRA_MAX_HORAS = 72;
 
+/** Por qué el supervisor deja el plan (A-35): queda en el caso, la bitácora y la auditoría. */
+export const MOTIVOS_PLAN = ['relevo_no_llego', 'falta_personal', 'necesidad_cliente', 'emergencia', 'otro'] as const;
+export type MotivoPlan = (typeof MOTIVOS_PLAN)[number];
+
+export const MOTIVO_PLAN_LABEL: Record<MotivoPlan, string> = {
+  relevo_no_llego: 'El relevo no llegó',
+  falta_personal: 'Falta de personal',
+  necesidad_cliente: 'Necesidad del cliente',
+  emergencia: 'Emergencia en el sitio',
+  otro: 'Otro',
+};
+
+/** Por qué un guardia no puede quedarse (A-35). */
+export const MOTIVOS_NO_PUEDE = ['compromiso', 'salud', 'cansancio', 'transporte', 'familiar', 'otro'] as const;
+export type MotivoNoPuede = (typeof MOTIVOS_NO_PUEDE)[number];
+
+export const MOTIVO_NO_PUEDE_LABEL: Record<MotivoNoPuede, string> = {
+  compromiso: 'Tengo otro compromiso',
+  salud: 'Cuestión de salud',
+  cansancio: 'Estoy muy cansado',
+  transporte: 'No tengo cómo regresar a casa más tarde',
+  familiar: 'Urgencia familiar',
+  otro: 'Otro',
+};
+
+/** Por qué se cancela un plan ya confirmado (A-45). */
+export const MOTIVOS_CANCELAR_PLAN = ['relevo_llego', 'error', 'cambio_situacion', 'otro'] as const;
+export type MotivoCancelarPlan = (typeof MOTIVOS_CANCELAR_PLAN)[number];
+
+export const MOTIVO_CANCELAR_PLAN_LABEL: Record<MotivoCancelarPlan, string> = {
+  relevo_llego: 'El relevo ya llegó',
+  error: 'Me equivoqué al elegir el plan',
+  cambio_situacion: 'Cambió la situación',
+  otro: 'Otro',
+};
+
+const notaSchema = z.string().trim().max(255, 'Máximo 255 caracteres').optional();
+
+/** "Otro" no dice nada por sí solo: pide explicarlo. */
+const pedirDetalleSiOtro = (d: { motivo: string; nota?: string | undefined }, ctx: z.RefinementCtx) => {
+  if (d.motivo === 'otro' && !d.nota?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['nota'], message: 'Explica el motivo' });
+  }
+};
+
 const descansoExtraSchema = z.coerce
   .number('Indica las horas')
   .int('Solo horas enteras')
@@ -45,9 +90,13 @@ export const resolverCasoSchema = z
     descansoExtraHoras: descansoExtraSchema.default(0),
     /** Quien cubre: el turno del relevo ("mando a otro") o el hueco que deja el descanso. */
     cubridorId: z.coerce.number().int().positive().optional(),
-    nota: z.string().trim().max(255, 'Máximo 255 caracteres').optional(),
+    /** Por qué se deja este plan (obligatorio). */
+    motivo: z.enum(MOTIVOS_PLAN, 'Elige el motivo'),
+    /** Detalle del motivo; obligatorio si el motivo es "otro". */
+    nota: notaSchema,
   })
   .superRefine((d, ctx) => {
+    pedirDetalleSiOtro(d, ctx);
     if (d.decision === 'no_llegara' && !d.siguiente) {
       ctx.addIssue({ code: 'custom', path: ['siguiente'], message: 'Elige qué pasa con su siguiente turno' });
     }
@@ -57,6 +106,26 @@ export const resolverCasoSchema = z
   });
 export type ResolverCasoInput = z.input<typeof resolverCasoSchema>;
 export type ResolverCasoData = z.output<typeof resolverCasoSchema>;
+
+/** El guardia avisa que no puede quedarse (A-35): siempre con su motivo. */
+export const noPuedoQuedarmeSchema = z
+  .object({
+    motivo: z.enum(MOTIVOS_NO_PUEDE, 'Elige el motivo'),
+    nota: notaSchema,
+  })
+  .superRefine(pedirDetalleSiOtro);
+export type NoPuedoQuedarmeInput = z.input<typeof noPuedoQuedarmeSchema>;
+export type NoPuedoQuedarmeData = z.output<typeof noPuedoQuedarmeSchema>;
+
+/** Cancelar un plan confirmado (A-45): siempre con su motivo. */
+export const cancelarPlanSchema = z
+  .object({
+    motivo: z.enum(MOTIVOS_CANCELAR_PLAN, 'Elige el motivo'),
+    nota: notaSchema,
+  })
+  .superRefine(pedirDetalleSiOtro);
+export type CancelarPlanInput = z.input<typeof cancelarPlanSchema>;
+export type CancelarPlanData = z.output<typeof cancelarPlanSchema>;
 
 export const entradaIdParamSchema = z.object({ entradaId: z.coerce.number().int().positive() });
 export type EntradaIdParam = z.infer<typeof entradaIdParamSchema>;
@@ -80,7 +149,11 @@ export interface CasoCobertura {
   decision: DecisionCaso | null;
   siguiente: SiguienteTurno | null;
   regresaEn: string | null;
+  /** Por qué el supervisor dejó el plan (null mientras no hay plan). */
+  motivo: MotivoPlan | null;
   nota: string | null;
+  /** El guardia avisó que no puede quedarse (A-35); el supervisor decide quién cubre. */
+  noPuede: { motivo: MotivoNoPuede; nota: string | null; en: string } | null;
 }
 
 export interface CasosCoberturaLista {

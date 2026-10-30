@@ -54,13 +54,47 @@
 | A-23 | Celular bien ajustado: nada ensancha la pantalla (modales y Asistencia sin recortes a 360–412px), y sin zoom de pellizco en la app (solo en las fotos) | Usuario 2026-10-29 | A-23                | Terminado (falta ver con datos reales en el celular) |
 | A-24 | Un retardo justificado se ve como "Retardo justificado" en todas las pantallas (lista del día, tarjeta de jornada, checador) | Usuario 2026-10-29 | A-24                | Terminado         |
 | A-25 | Decisiones ante un retardo: Justificar / Aceptar con retardo / Mandar a casa (solo con jornada abierta; cuenta como falta, horas no cuentan; confirmación con consecuencias; avisa a guardia y, si el sitio queda solo, a admin) | Usuario 2026-10-29 | A-25 (ver A-24)     | Terminado         |
-| A-26 | Solicitud formal al admin para cubrir un sitio con un guardia de otro supervisor, y aviso al supervisor del guardia prestado; recordatorio a los 30 min si nadie llega | Usuario 2026-10-29 | A-26 (ver A-25)     | Parcial: la solicitud llega como aviso al admin y el recordatorio a los 30 min ya funciona; falta la lista formal de solicitudes |
+| A-26 | Solicitud formal al admin para cubrir un sitio con un guardia de otro supervisor, y aviso al supervisor del guardia prestado; recordatorio a los 30 min si nadie llega | Usuario 2026-10-29 | A-26 (ver A-25)     | Parcial: la solicitud llega como aviso al admin y el recordatorio a los 30 min ya funciona; falta la lista formal de solicitudes (ver A-39) |
 | A-27 | Incidencia de rostro atendible: botón visible "Revisar y atender" (falsa alarma / confirmada cierra la incidencia; una nota sola no) y el aviso de arriba dice qué incidencias faltan | Usuario 2026-10-29 | A-27 | Terminado |
 | A-28 | Calendario de cobertura: un guardia de turno de 24 h que llega muy tarde (9 h) cuenta como presente, no "Sin registro" | Usuario 2026-10-29 | A-28 | Terminado |
 | A-29 | El admin crea el acceso del cliente desde su ficha (nombre y correo, contraseña temporal y mensaje para copiar), máximo 2 usuarios por cliente; liga solo usuarios cliente sin cliente elegidos de una lista (nunca escribiendo un correo existente) y pide confirmación explicando a qué cliente quedará ligado; su correo queda como contacto que recibe avisos | Usuario 2026-10-29 | A-29 | Terminado |
 | A-30 | Avisos de reportes: el supervisor ve la pantalla bloqueada (solo lectura, también en el servidor); solo el admin cambia a quién se avisa | Usuario 2026-10-29 | A-30 (ver A-29) | Terminado |
 | A-31 | Ventana de confirmación al marcar una incidencia de rostro (falsa alarma / confirmada) que explica qué significa y qué pasará, y aviso claro al terminar | Usuario 2026-10-29 | A-31 (ver A-27) | Terminado |
 | A-32 | Cada aviso y notificación push lleva directo a lo que indica (una cosa: a ella; varias: a la lista filtrada; si ya no existe: a la lista con mensaje); los del guardia por retardo o mandado a casa van a su historial y los de sitios, grupos y horarios a Mis sitios | Usuario 2026-10-29 | A-32 (ver A-22) | Terminado |
+| A-33 | Asistencia: la etiqueta azul del horario del guardia ("Entra a las 8:00 a.m. · 1 h 52 min tarde") se ve completa en celular, sin cortarse | Usuario 2026-10-30 | A-33 | Terminado (falta verlo en el celular) |
+| A-34 | Calendario de cobertura: en sitios con turno de lunes a viernes, sábado y domingo salen "Sin turno", no "Sin cubrir"; los ciclos continuos (24x24, 12x12) siguen exigiendo cobertura todos los días | Usuario 2026-10-30 | A-34 (ver A-28) | Terminado |
+| A-35 | "No puedo quedarme" se queda, pero con motivo obligatorio (lista corta + "otro" con texto) tanto para el guardia al declinar como para el supervisor al dejar o cambiar el plan; el supervisor ve el motivo y que el guardia no puede quedarse, con la opción de elegir quién cubre | Usuario 2026-10-30 | A-35 (ver A-19) | Terminado (con migración 20261030000000) |
+| A-36 | Cámara de asistencia legible: óvalo más alto y claro, exterior en negro semitransparente, instrucciones de los gestos un poco más grandes sobre cápsula oscura (sin romper el diseño) | Usuario 2026-10-30 | A-36 | Pendiente |
+| A-37 | Cámara con proceso de centrado: 1) cara dentro del óvalo (borde verde), 2) se mantiene unos segundos ("No te muevas, mira al frente"), 3) recién entonces el gesto con 15 s para hacerlo, 4) captura; pocos mensajes (el detalle fino solo si lleva ~3 s mal) | Usuario 2026-10-30 | A-37 (ver A-36) | Pendiente |
+| A-38 | Portal del cliente: ve todos los guardias asignados a sus sitios (foto, nombre, turno, si hoy trabaja o descansa y quién cubre), solo lo confirmado; presente / en curso como hoy, sin retardos ni alertas ni datos de contacto; aviso al cliente cuando cambia la asignación o hay cobertura | Usuario 2026-10-30 | A-38 (ver F5-01) | Pendiente |
+| A-39 | Lista formal de solicitudes de cobertura (tabla con migración): las crea el supervisor al pedir un guardia de otro supervisor; el admin las atiende desde la lista (lleva al calendario del sitio), se cierran al asignar la cobertura, avisan a quien las pidió; el supervisor ve solo las suyas | Usuario 2026-10-30 | A-39 (completa A-26) | Pendiente |
+| A-40 | Perfiles rápidos solo para guardias: el celular recuerda al guardia (nombre, correo, foto o iniciales) y muestra tarjetas deslizables al entrar; toca la suya y pone contraseña o un PIN opcional (token por dispositivo, bloqueo tras 5 fallos, "Quitar de este dispositivo"); al final "Usar otro perfil". Admin y supervisor solo con contraseña | Usuario 2026-10-30 | A-40 | Pendiente |
+| A-41 | Correo (SMTP): envío real de lo encolado en `notificaciones` con reintentos y "Olvidé mi contraseña" (cierra A-06 y A-15); necesita host, puerto, usuario, remitente y SPF/DKIM del dominio; la contraseña la pone el usuario en el `.env` del servidor | Usuario 2026-10-30 | A-41 (ver A-06, A-15) | Pendiente (esperando datos del correo) |
+| A-42 | Respaldos: copia periódica de MySQL y de las fotos (uploads) fuera del servidor, con prueba de restauración | Usuario 2026-10-30 | A-42 (ver F4-04) | Pendiente |
+| A-43 | Faltas justificadas (AS4-03 de [ASISTENCIA.md](ASISTENCIA.md)) | Usuario 2026-10-20 | AS4-03 | Pendiente |
+| A-44 | Manual de usuario: un PDF general con todas las funciones y vistas, y después un extracto por rol (admin, supervisor, guardia, cliente); se hace al final, con las capturas ya definitivas | Usuario 2026-10-30 | A-44 | Pendiente (al final) |
+| A-45 | Cambiar o cancelar un plan de cobertura ya confirmado, con motivo obligatorio; deshace sus efectos (descansos en pausa y coberturas creadas) y avisa al guardia | Usuario 2026-10-30 | A-45 (ver A-35) | Terminado (con migración 20261030010000) |
+| A-46 | "Me quedo" / "Sí, sigo aquí" admite una nota opcional para el supervisor (p. ej. "no puedo quedarme mucho tiempo"); queda como motivo de las horas extra, en la bitácora y en el aviso | Usuario 2026-10-30 | A-46 (ver A-35) | Terminado |
+
+### Orden de ejecución (de lo rápido a lo tardado)
+
+| #  | Alcance | Tamaño | Migración | Depende de |
+| -- | ------- | ------ | --------- | ---------- |
+| 1  | A-33 Etiqueta azul de Asistencia | Muy chico | No | — |
+| 2  | A-34 Fin de semana "Sin turno" | Chico | No | — |
+| 3  | A-35 Motivo obligatorio en "No puedo quedarme" y en el plan | Mediano | Sí | — |
+| 3b | A-45 Cambiar o cancelar un plan confirmado | Mediano | Sí | A-35 |
+| 4  | A-36 Óvalo alto, fondo oscuro e instrucciones grandes | Chico | No | — |
+| 5  | A-37 Centrado, mantener y gesto de 15 s | Mediano | No | A-36 |
+| 6  | A-38 Portal del cliente con guardias | Mediano | No | — |
+| 7  | A-39 Lista formal de solicitudes de cobertura | Mediano | Sí | — |
+| 8  | A-40 Perfiles rápidos y PIN (guardias) | Grande | Sí | — |
+| 9  | A-41 Correo SMTP y recuperación de contraseña | Grande | Posible | Datos del correo |
+| 10 | A-42 Respaldos | Grande | No | Acceso al servidor y destino de la copia |
+| 11 | A-43 Faltas justificadas | Mediano | Por ver | — |
+| 12 | A-44 Manual de usuario | Grande | No | Todo lo anterior y las ideas nuevas del usuario |
+
+Las ideas nuevas que traiga el usuario se agregan como A-45 en adelante y se ubican en este orden según su tamaño.
 
 ### Alcances propuestos (sugeridos, sin confirmar)
 

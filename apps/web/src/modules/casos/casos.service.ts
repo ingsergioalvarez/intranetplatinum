@@ -1,6 +1,8 @@
 import type {
+  CancelarPlanInput,
   CasosCoberturaLista,
   CasoCobertura,
+  NoPuedoQuedarmeInput,
   ResolverCasoInput,
   VistaPreviaCaso,
 } from '@platinum/shared';
@@ -21,6 +23,12 @@ export const casosService = {
     }),
   resolver: (entradaId: number, input: ResolverCasoInput) =>
     api.post<CasoCobertura>(`/casos-cobertura/${entradaId}/resolver`, input),
-  /** El guardia avisa que no puede quedarse. */
-  noPuedo: () => api.post<{ ok: boolean }>('/casos-cobertura/no-puedo', {}),
+  /** Cambia un plan confirmado: deshace el anterior y confirma el nuevo (A-45). */
+  cambiar: (entradaId: number, input: ResolverCasoInput) =>
+    api.post<CasoCobertura>(`/casos-cobertura/${entradaId}/cambiar`, input),
+  /** Cancela un plan confirmado con su motivo (A-45). */
+  cancelar: (entradaId: number, input: CancelarPlanInput) =>
+    api.post<CasoCobertura>(`/casos-cobertura/${entradaId}/cancelar`, input),
+  /** El guardia avisa que no puede quedarse, con su motivo (A-35). */
+  noPuedo: (input: NoPuedoQuedarmeInput) => api.post<{ ok: boolean }>('/casos-cobertura/no-puedo', input),
 };

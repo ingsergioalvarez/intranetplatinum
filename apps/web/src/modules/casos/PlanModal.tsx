@@ -4,14 +4,18 @@ import { TriangleAlert } from 'lucide-react';
 import {
   DESCANSO_EXTRA_MAX_HORAS,
   HORAS_RECONSULTA_CASO,
+  MOTIVOS_PLAN,
+  MOTIVO_NO_PUEDE_LABEL,
+  MOTIVO_PLAN_LABEL,
   horaLegible,
   type CandidatoCobertura,
   type CasoCobertura,
   type DecisionCaso,
+  type MotivoPlan,
   type SiguienteTurno,
 } from '@platinum/shared';
 import { ApiError, mensajeDeError } from '../../core/api';
-import { FormField, FormModal, Input, Spinner, Textarea, cn, toast } from '../../components/ui';
+import { FormField, FormModal, Input, Select, Spinner, Textarea, cn, toast } from '../../components/ui';
 import { casosService } from './casos.service';
 import { ElegirCubridor } from './ElegirCubridor';
 import { aInputLocal, cuando, fechaLocal, hora24 } from './formato';
@@ -49,14 +53,26 @@ function Opcion({
  * El plan del supervisor (AS6-05, AS6-06): qué pasa con el relevo que no llegó, con el siguiente
  * turno del guardia que se queda y quién cubre el hueco. Lo deja todo listo desde el inicio.
  */
-export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () => void }) {
+export function PlanModal({
+  caso,
+  onClose,
+  cambiar = false,
+}: {
+  caso: CasoCobertura;
+  onClose: () => void;
+  /** Ya hay un plan confirmado: se deshace y se confirma este (A-45). */
+  cambiar?: boolean;
+}) {
   const qc = useQueryClient();
-  const { guardia, sitio, relevo } = caso;
-  const [decision, setDecision] = useState<DecisionCaso | null>(null);
+  const { guardia, sitio, relevo, noPuede } = caso;
+  // Si el guardia dijo que no puede quedarse, lo natural es elegir quién cubre.
+  const [decision, setDecision] = useState<DecisionCaso | null>(noPuede ? 'otro_cubre' : null);
   const [siguiente, setSiguiente] = useState<SiguienteTurno | null>(null);
   const [extra, setExtra] = useState('0');
   const [cubridor, setCubridor] = useState<CandidatoCobertura | null>(null);
+  const [motivo, setMotivo] = useState<MotivoPlan | ''>(noPuede ? 'relevo_no_llego' : '');
   const [nota, setNota] = useState('');
+  const [errorMotivo, setErrorMotivo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Hasta cuándo se queda (hora local). `null` = sin tocar: se usa la que propone el sistema.
   const [hastaEditado, setHastaEditado] = useState<string | null>(null);
@@ -84,12 +100,13 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
   const quien = relevo ? `el turno de ${relevo.nombre}` : 'ese turno';
   const guardar = useMutation({
     mutationFn: () =>
-      casosService.resolver(caso.entradaId, {
+      (cambiar ? casosService.cambiar : casosService.resolver)(caso.entradaId, {
         decision: decision!,
         ...(decision === 'no_llegara'
           ? { siguiente: siguiente!, descansoExtraHoras: horasExtra, ...(hasta ? { finCubierto: new Date(hasta).toISOString() } : {}) }
           : {}),
         ...(cubridor && tramo ? { cubridorId: cubridor.guardia.id } : {}),
+        motivo: motivo as MotivoPlan,
         ...(nota.trim() ? { nota: nota.trim() } : {}),
       }),
     onSuccess: () => {
@@ -97,12 +114,16 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
       void qc.invalidateQueries({ queryKey: ['cobertura'] });
       void qc.invalidateQueries({ queryKey: ['asistencia'] });
       void qc.invalidateQueries({ queryKey: ['horas-extra'] });
-      toast.success('Plan guardado; avisamos a los guardias');
+      toast.success(
+        cambiar ? 'Plan cambiado: deshicimos el anterior y avisamos a los guardias' : 'Plan guardado; avisamos a los guardias',
+      );
       onClose();
     },
     onError: (e) => {
       const campo = e instanceof ApiError ? e.fieldErrors.finCubierto : undefined;
-      if (campo) setErrorHasta(campo);
+      const campoMotivo = e instanceof ApiError ? (e.fieldErrors.motivo ?? e.fieldErrors.nota) : undefined;
+      if (campoMotivo) setErrorMotivo(campoMotivo);
+      else if (campo) setErrorHasta(campo);
       else setError(mensajeDeError(e));
     },
   });
@@ -110,7 +131,10 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
   const confirmar = () => {
     setError(null);
     setErrorHasta(null);
+    setErrorMotivo(null);
     if (!decision) return setError('Elige qué pasa con el relevo');
+    if (!motivo) return setErrorMotivo('Elige el motivo');
+    if (motivo === 'otro' && !nota.trim()) return setErrorMotivo('Explica el motivo');
     if (decision === 'otro_cubre' && !cubridor) return setError('Elige quién cubre');
     if (decision === 'no_llegara') {
       if (!hasta) return setErrorHasta('Indica hasta qué hora se queda');
@@ -123,7 +147,7 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
 
   return (
     <FormModal
-      title={`Plan para ${sitio.nombre}`}
+      title={cambiar ? `Cambiar el plan de ${sitio.nombre}` : `Plan para ${sitio.nombre}`}
       description={
         relevo
           ? `${guardia.nombre} sigue en el sitio y ${relevo.nombre} no llegó (le tocaba a las ${horaLegible(hora24(relevo.inicio))})`
@@ -131,11 +155,29 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
       }
       onClose={onClose}
       onSubmit={confirmar}
-      submitLabel="Confirmar plan"
+      submitLabel={cambiar ? 'Cambiar plan' : 'Confirmar plan'}
       loading={guardar.isPending}
       dirty
       size="lg"
     >
+      {cambiar && (
+        <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Al confirmar se <strong>deshace el plan actual</strong> (se cancelan las coberturas que creó y los descansos
+            en pausa) y se aplica el nuevo. Se avisa al guardia.
+          </span>
+        </p>
+      )}
+      {noPuede && (
+        <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <span>
+            {guardia.nombre} avisó que <strong>no puede quedarse</strong> ({MOTIVO_NO_PUEDE_LABEL[noPuede.motivo]}
+            {noPuede.nota ? `: ${noPuede.nota}` : ''}). Elige quién cubre.
+          </span>
+        </p>
+      )}
       <div>
         <p className="mb-1.5 text-sm font-medium text-slate-700">
           1. ¿Qué pasa con {relevo ? relevo.nombre : 'el relevo'}?
@@ -286,8 +328,19 @@ export function PlanModal({ caso, onClose }: { caso: CasoCobertura; onClose: () 
         </p>
       )}
 
-      <FormField label="Nota (opcional)">
-        <Textarea rows={2} maxLength={255} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Queda en la bitácora del guardia" />
+      <FormField label={cambiar ? 'Motivo del cambio' : 'Motivo del plan'} required error={errorMotivo ?? undefined} hint="Queda en la bitácora del guardia y en la auditoría.">
+        <Select
+          value={motivo}
+          onChange={(e) => {
+            setMotivo(e.target.value as MotivoPlan | '');
+            setErrorMotivo(null);
+          }}
+          placeholder="Elige el motivo"
+          options={MOTIVOS_PLAN.map((m) => ({ value: m, label: MOTIVO_PLAN_LABEL[m] }))}
+        />
+      </FormField>
+      <FormField label={motivo === 'otro' ? 'Explica el motivo' : 'Detalle (opcional)'} required={motivo === 'otro'}>
+        <Textarea rows={2} maxLength={255} value={nota} onChange={(e) => setNota(e.target.value)} />
       </FormField>
       {error && (
         <p role="alert" className="text-sm text-red-600">

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, CircleCheck, Route } from 'lucide-react';
-import { DECISION_CASO_LABEL, horaLegible, type CasoCobertura } from '@platinum/shared';
+import { ArrowLeft, CircleCheck, Pencil, Route, X } from 'lucide-react';
+import { DECISION_CASO_LABEL, MOTIVO_NO_PUEDE_LABEL, MOTIVO_PLAN_LABEL, horaLegible, type CasoCobertura } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import { Badge, Button, Card, EmptyState, Spinner } from '../../components/ui';
 import { casosService } from './casos.service';
 import { cuando, hora24 } from './formato';
+import { CancelarPlanModal } from './CancelarPlanModal';
 import { PlanModal } from './PlanModal';
 
 /** Lo que quedó decidido, en una frase. */
@@ -25,6 +26,8 @@ function resumen(c: CasoCobertura) {
  */
 export function CasosPage() {
   const [plan, setPlan] = useState<CasoCobertura | null>(null);
+  const [cambiando, setCambiando] = useState<CasoCobertura | null>(null);
+  const [cancelando, setCancelando] = useState<CasoCobertura | null>(null);
   const lista = useQuery({
     queryKey: casosService.keys.lista,
     queryFn: casosService.lista,
@@ -89,11 +92,32 @@ export function CasosPage() {
                         : '; no hay un relevo registrado como ausente'}
                     </p>
                     {resumen(c) && <p className="mt-1 text-sm text-slate-600">{resumen(c)}</p>}
+                    {c.motivo && (
+                      <p className="mt-1 text-sm text-slate-600">
+                        Motivo: {MOTIVO_PLAN_LABEL[c.motivo]}
+                        {c.nota ? ` · ${c.nota}` : ''}
+                      </p>
+                    )}
+                    {c.noPuede && c.estado !== 'resuelto' && (
+                      <p className="mt-1 text-sm font-medium text-amber-700">
+                        Avisó que no puede quedarse: {MOTIVO_NO_PUEDE_LABEL[c.noPuede.motivo]}
+                        {c.noPuede.nota ? ` · ${c.noPuede.nota}` : ''}
+                      </p>
+                    )}
                   </div>
-                  {c.estado !== 'resuelto' && (
+                  {c.estado !== 'resuelto' ? (
                     <Button size="sm" icon={<Route className="size-4" />} onClick={() => setPlan(c)}>
                       Definir plan
                     </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" icon={<Pencil className="size-4" />} onClick={() => setCambiando(c)}>
+                        Cambiar plan
+                      </Button>
+                      <Button size="sm" variant="secondary" icon={<X className="size-4" />} onClick={() => setCancelando(c)}>
+                        Cancelar plan
+                      </Button>
+                    </div>
                   )}
                 </div>
               </Card>
@@ -102,6 +126,8 @@ export function CasosPage() {
         </ul>
       )}
       {plan && <PlanModal caso={plan} onClose={() => setPlan(null)} />}
+      {cambiando && <PlanModal caso={cambiando} cambiar onClose={() => setCambiando(null)} />}
+      {cancelando && <CancelarPlanModal caso={cancelando} onClose={() => setCancelando(null)} />}
     </>
   );
 }
