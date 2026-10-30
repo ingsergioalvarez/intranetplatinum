@@ -352,13 +352,16 @@ export interface Ovalo {
   ry: number;
 }
 
-/** Óvalo guía (proporción 3:4, 70 % del alto, máximo 80 % del ancho) centrado en el visor. */
+/**
+ * Óvalo guía (A-36): más alto y angosto que antes (proporción 0.72, 78 % del alto, máximo 82 % del
+ * ancho y 92 % del alto) centrado en el visor.
+ */
 export function geometriaOvalo(ancho: number, alto: number): Ovalo {
-  let h = alto * 0.7;
-  let w = h * 0.75;
-  if (w > ancho * 0.8) {
-    w = ancho * 0.8;
-    h = w / 0.75;
+  let h = alto * 0.78;
+  let w = h * 0.72;
+  if (w > ancho * 0.82) {
+    w = ancho * 0.82;
+    h = Math.min(w / 0.72, alto * 0.92);
   }
   return { cx: ancho / 2, cy: alto / 2, rx: w / 2, ry: h / 2 };
 }

@@ -5,6 +5,21 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-30 #32 — Cámara de asistencia: centrado, óvalo y gesto de 15 s (A-36, A-37)
+
+#### Cambiado
+
+- Óvalo más alto y angosto (78 % del alto, proporción 0.72), con borde sólido y grueso, y el exterior en negro semitransparente para que resalte dónde poner la cara. La revisión del encuadre usa el mismo óvalo, así que pide estar un poco más cerca (A-36).
+- Proceso de centrado (A-37): el borde del óvalo se pone **verde** cuando la cara queda dentro; con todo bien se pide quedarse quieto 2 s ("No te muevas, mira al frente") y solo entonces aparece el gesto. Antes eran 1 s y arrancaba directo.
+- El gesto dura **15 s** (antes 6 s); la barra de tiempo usa el mismo valor.
+- Menos mensajes: mientras el encuadre está mal solo sale "Centra tu cara y mira al frente"; el detalle ("Acércate", "Aléjate", "Mira de frente"…) aparece si el problema dura 3 s. Se agrega "Pon tu cara aquí" dentro del óvalo hasta que la cara esté ubicada. El aviso de subir o bajar el teléfono se mantiene.
+- Instrucciones un poco más grandes: texto del panel de `text-sm` a `text-base`, tarjeta del gesto más ancha con `text-2xl`, avisos del teléfono y "¡Listo!" en `text-lg` (A-36).
+
+#### Pendiente
+
+- Probar con guardias reales, sobre todo los que batallan: si el encuadre resulta estricto, se ajustan los topes de `evaluarEncuadre` (0.55 a 1.05 de la altura del óvalo) y `ESTABLE_MS`.
+- No se verificó visualmente (la cámara necesita un celular real).
+
 ### Sesión 2026-10-30 #31 — Etiqueta de Asistencia, fines de semana, motivo obligatorio y cambiar o cancelar el plan (A-33 a A-35, A-45, A-46)
 
 #### Añadido

@@ -143,8 +143,13 @@ const ANCHO_ANALISIS = 360;
 const ANCHO_FOTO = 960;
 /** Luz y lentes se revisan cada medio segundo (leer los píxeles en cada cuadro es lento). */
 const LUZ_CADA_MS = 500;
-/** Todo en verde y la cara dentro del óvalo durante este tiempo antes de pedir el parpadeo. */
-const ESTABLE_MS = 1000;
+/**
+ * Proceso de centrado (A-37): con la cara bien colocada y quieta durante este tiempo ("No te muevas,
+ * mira al frente") recién se pide el gesto.
+ */
+const ESTABLE_MS = 2000;
+/** Una corrección ("Acércate", "Mira de frente"…) solo se detalla si el problema dura este tiempo. */
+const MENSAJE_DETALLE_MS = 3000;
 /** Tras el parpadeo se espera a que los ojos estén bien abiertos antes de la foto. */
 const ESPERA_TRAS_PARPADEO_MS = 400;
 const MAX_ESPERA_OJOS_MS = 1500;
@@ -166,14 +171,27 @@ const SIN_CARA_REINICIA_MS = 600;
 const PRIORIDAD_MALLA_MS = 500;
 /** Mensaje cuando la foto final no pasa la revisión. */
 const RECHAZO_MS = 1800;
-/** Tiempo para hacer el gesto pedido (DA-29). */
-const TIEMPO_GESTO_MS = 6000;
+/** Tiempo para hacer el gesto pedido (DA-29; A-37: 15 s, a varios guardias 6 s les quedaba corto). */
+const TIEMPO_GESTO_MS = 15_000;
 /** Gestos no completados a tiempo antes de reportar la incidencia. */
 const FALLOS_PARA_AVISO = 3;
 /** Detector de pantalla (DA-30): por debajo es pantalla o foto; entre ambos, duda (segundo gesto). */
 const UMBRAL_PANTALLA = 0.2;
 const UMBRAL_DUDA = 0.8;
 const espera = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
+
+/**
+ * Para no llenar la pantalla de mensajes: mientras el problema de encuadre es reciente solo se dice
+ * "Centra tu cara"; el detalle aparece si sigue igual pasados unos segundos.
+ */
+function correccionVisible(desde: { current: number | null }, texto: string | null, ahora: number) {
+  if (!texto) {
+    desde.current = null;
+    return null;
+  }
+  desde.current ??= ahora;
+  return ahora - desde.current >= MENSAJE_DETALLE_MS ? texto : 'Centra tu cara y mira al frente';
+}
 
 function mensajeCamara(err: unknown) {
   const nombre = (err as { name?: string })?.name;
@@ -192,8 +210,9 @@ function mensajeCamara(err: unknown) {
 
 /**
  * Cámara frontal a pantalla completa con guía en vivo (luz, mirada, posición dentro del óvalo).
- * Cuando todo está en verde durante 1 s aparece la animación "¡Listo! Parpadea" y la foto se toma
- * al parpadear (prueba de vida). "Tomar foto" aparece solo como respaldo a los 10 s.
+ * Proceso (A-37): 1) centrar la cara en el óvalo (el borde se pone verde), 2) quedarse quieto 2 s ("No te
+ * muevas, mira al frente"), 3) hacer el gesto o parpadear y 4) la foto. "Tomar foto" aparece solo
+ * como respaldo a los 10 s.
  *
  * Con `titular` (marcas) además:
  * - Busca al dueño de la cuenta desde que abre (DA-28): hasta confirmarlo no hay foto; si es otra
@@ -226,6 +245,7 @@ export function EscanerRostro({
   const ultimaConfianzaRef = useRef(0);
   const parpadeoRef = useRef(new DetectorParpadeo());
   const listoDesdeRef = useRef<number | null>(null);
+  const correccionDesdeRef = useRef<number | null>(null);
   const noListoDesdeRef = useRef<number | null>(null);
   const bloqueoHastaRef = useRef(0);
   const pausadoRef = useRef(pausado);
@@ -661,6 +681,7 @@ export function EscanerRostro({
         parpadeoRef.current.reiniciar();
         listoDesdeRef.current = null;
         sinCaraDesdeRef.current ??= ahora;
+        correccionDesdeRef.current = null;
         if (ahora - sinCaraDesdeRef.current >= SIN_CARA_REINICIA_MS) {
           caraDesdeRef.current = null;
           reiniciarIdentidad();
@@ -807,15 +828,18 @@ export function EscanerRostro({
                           ? 'Quítate los lentes para continuar'
                           : ojosBorrosos
                             ? 'No se ven bien tus ojos: quítate los lentes o busca más luz'
-                            : (encuadre.instruccion ??
-                              pose.instruccion ??
+                            : (correccionVisible(
+                                correccionDesdeRef,
+                                encuadre.instruccion ?? pose.instruccion,
+                                ahora,
+                              ) ??
                               (!esTitular
                                 ? identidadRef.current === 'no_titular'
                                   ? 'El rostro frente a la cámara no es el titular de esta cuenta'
                                   : 'Verificando que seas el titular…'
                                 : armado
                                   ? '¡Listo! Tomando foto…'
-                                  : 'No te muevas…')),
+                                  : 'No te muevas, mira al frente')),
         };
       }
       dibujarMalla(mallaRef.current, puntos, w, h, siguiente.listo);
@@ -918,7 +942,7 @@ export function EscanerRostro({
       etiqueta={etiqueta}
       onCerrar={onCerrar}
       fondo={
-        <div ref={visorRef} className="absolute inset-0">
+        <div ref={visorRef} className="absolute inset-0 overflow-hidden">
           <style>{ANIMACIONES}</style>
           <video
             ref={videoRef}
@@ -930,20 +954,20 @@ export function EscanerRostro({
           {activo && ovalo && (
             <div
               className={cn(
-                'pointer-events-none absolute rounded-[50%] border-4 border-dashed transition-colors',
+                'pointer-events-none absolute rounded-[50%] border-[5px] border-solid transition-colors',
                 noTitular || pantalla
                   ? 'border-red-500'
-                  : calidad.armado
+                  : calidad.posicion === 'ok'
                     ? 'border-emerald-400'
-                    : calidad.listo
-                      ? 'border-emerald-300/80'
-                      : 'border-white/70',
+                    : 'border-white',
               )}
               style={{
                 left: ovalo.cx - ovalo.rx,
                 top: ovalo.cy - ovalo.ry,
                 width: ovalo.rx * 2,
                 height: ovalo.ry * 2,
+                // Lo de afuera se oscurece para que resalte dónde poner la cara (A-36).
+                boxShadow: '0 0 0 100vmax rgba(2, 6, 23, 0.62)',
               }}
             />
           )}
@@ -985,17 +1009,43 @@ export function EscanerRostro({
             <>
               <FlechaGuia direccion={calidad.telefono === 'bajo' ? 'arriba' : 'abajo'} ovalo={ovalo} />
               <div
-                className="pointer-events-none absolute left-1/2 flex w-72 max-w-[92%] -translate-x-1/2 items-center gap-3 rounded-2xl bg-amber-500/95 px-4 py-3 text-white shadow-lg"
+                className="pointer-events-none absolute left-1/2 flex w-80 max-w-[94%] -translate-x-1/2 items-center gap-3 rounded-2xl bg-amber-500/95 px-4 py-3 text-white shadow-lg"
                 style={{ top: ovalo.cy + ovalo.ry - 56 }}
                 role="status"
               >
                 <TelefonoMoviendo sube={calidad.telefono === 'bajo'} />
-                <p className="text-base leading-tight font-semibold">
+                <p className="text-lg leading-tight font-semibold">
                   {calidad.telefono === 'bajo' ? 'Sube' : 'Baja'} el teléfono a la altura de tus ojos
                 </p>
               </div>
             </>
           )}
+
+          {activo && !capturando && ovalo && !reto && !calidad.telefono && calidad.posicion !== 'ok' && calidad.posicion !== 'obstruido' && (
+            <div
+              className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full bg-slate-950/70 px-4 py-2 text-lg font-semibold whitespace-nowrap text-white"
+              style={{ top: ovalo.cy - 18 }}
+            >
+              Pon tu cara aquí
+            </div>
+          )}
+
+          {activo &&
+            !capturando &&
+            ovalo &&
+            !reto &&
+            objetivo.tipo === 'frente' &&
+            !calidad.telefono &&
+            calidad.listo &&
+            !calidad.armado && (
+              <div
+                className="pointer-events-none absolute left-1/2 flex w-80 max-w-[94%] -translate-x-1/2 items-center justify-center gap-2 rounded-2xl bg-emerald-600/95 px-4 py-3 text-center text-xl leading-tight font-semibold text-white shadow-lg"
+                style={{ top: ovalo.cy + ovalo.ry - 40 }}
+                role="status"
+              >
+                <CircleCheck className="size-6 shrink-0" /> No te muevas, mira al frente
+              </div>
+            )}
 
           {activo && !capturando && ovalo && reto && !reto.regresando && DIRECCION_GESTO[reto.gesto] && (
             <FlechaGuia direccion={DIRECCION_GESTO[reto.gesto]!} ovalo={ovalo} />
@@ -1003,7 +1053,7 @@ export function EscanerRostro({
 
           {activo && !capturando && ovalo && reto && (
             <div
-              className="pointer-events-none absolute left-1/2 w-72 max-w-[92%] -translate-x-1/2 overflow-hidden rounded-2xl bg-slate-950/85 text-white shadow-lg"
+              className="pointer-events-none absolute left-1/2 w-80 max-w-[94%] -translate-x-1/2 overflow-hidden rounded-2xl bg-slate-950/85 text-white shadow-lg"
               style={{ top: ovalo.cy + ovalo.ry - 40 }}
             >
               <div className="flex items-center gap-3 px-4 py-3">
@@ -1012,11 +1062,11 @@ export function EscanerRostro({
                 </span>
                 <div className="min-w-0">
                   {reto.total > 1 && (
-                    <p className="text-xs text-white/70">
+                    <p className="text-sm text-white/70">
                       Gesto {reto.paso} de {reto.total}
                     </p>
                   )}
-                  <p className="text-xl leading-tight font-semibold">
+                  <p className="text-2xl leading-tight font-semibold">
                     {reto.regresando ? '¡Bien! Regresa al frente' : TEXTO_GESTO[reto.gesto]}
                   </p>
                 </div>
@@ -1059,7 +1109,7 @@ export function EscanerRostro({
                 {calidad.armado ? (
                   <>
                     <CircleCheck className="size-5 text-emerald-400" />
-                    <span className="font-semibold">¡Listo! Tomando foto…</span>
+                    <span className="text-lg font-semibold">¡Listo! Tomando foto…</span>
                   </>
                 ) : (
                   <>
@@ -1189,7 +1239,7 @@ export function EscanerRostro({
                 <p
                   role="status"
                   className={cn(
-                    'flex min-h-6 items-center justify-center gap-1.5 text-center text-sm font-medium',
+                    'flex min-h-6 items-center justify-center gap-1.5 text-center text-base font-semibold',
                     calidad.armado ? 'text-emerald-600' : 'text-slate-700',
                   )}
                 >
