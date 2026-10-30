@@ -47,6 +47,13 @@ class MemoryBitacoraRepository extends BitacoraRepository {
     });
   }
   async crearFaltaDesde(e: EventoBitacoraRow, en: Date) {
+    const previa = this.eventosGuardados.find(
+      (x) => x.tipo === 'falta' && x.usuarioId === e.usuarioId && x.sitio?.id === e.sitio?.id && x.datos !== null,
+    );
+    if (previa) {
+      Object.assign(this.eventosGuardados.find((x) => x.id === e.id)!, { decision: 'superado', decididoEn: en });
+      return previa.id;
+    }
     const id = this.eventosGuardados.length + 100;
     this.eventosGuardados.push({ ...evento(id, 'falta', en.toISOString(), e.usuarioId), sitio: e.sitio });
     Object.assign(this.eventosGuardados.find((x) => x.id === e.id)!, { decision: 'superado', decididoEn: en });
@@ -312,6 +319,20 @@ describe('bitácora del guardia (DA-41)', () => {
     await sup().post('/eventos/21/confirmar-falta', { categoria: 'sin_aviso' });
     await sup().post('/eventos/22/justificar', { categoria: 'permiso' });
     expect(await faltas()).toMatchObject({ asistencia: 2, pendientes: 2 });
+  });
+
+  it('confirmar un "No se presentó" cuyo turno ya tiene falta no crea otra: confirma la existente (A-48)', async () => {
+    const sitio = { id: 1, nombre: 'POETAS' };
+    repo.eventosGuardados.push(
+      { ...evento(30, 'no_se_presento', '2026-10-17T14:15:00.000Z'), sitio },
+      { ...evento(31, 'falta', '2026-10-17T16:00:00.000Z'), sitio, datos: { programada: '2026-10-17T14:00:00.000Z' } },
+    );
+    const total = repo.eventosGuardados.length;
+    const res = await sup().post('/eventos/30/confirmar-falta', { categoria: 'sin_aviso' });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ id: 31, tipo: 'falta', decision: { tipo: 'falta' } });
+    expect(repo.eventosGuardados).toHaveLength(total);
+    expect(repo.eventosGuardados.find((x) => x.id === 30)!.decision).toBe('superado');
   });
 
   it('sin medida (o "ninguna") no se guarda nada en el historial', async () => {

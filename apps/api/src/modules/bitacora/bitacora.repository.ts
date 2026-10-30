@@ -65,7 +65,8 @@ export abstract class BitacoraRepository {
   abstract justificar(eventoId: number, porId: number, motivo: string, en: Date): Promise<void>;
   /**
    * Confirmar un "No se presentó" sin esperar las 2 h (A-48): crea la falta, la liga al turno del día
-   * (así no se genera otra a las 2 h) y cierra el aviso. Devuelve el id de la falta.
+   * (así no se genera otra a las 2 h) y cierra el aviso. Si el turno ya tenía su falta no crea otra: cierra
+   * el aviso y devuelve la existente. Devuelve el id de la falta.
    */
   abstract crearFaltaDesde(noSePresento: EventoBitacoraRow, en: Date): Promise<number>;
   abstract decidir(
@@ -208,6 +209,14 @@ export class PrismaBitacoraRepository extends BitacoraRepository {
   async crearFaltaDesde(e: EventoBitacoraRow, en: Date) {
     const programada = new Date(e.ocurrioEn.getTime() - MIN_NO_SE_PRESENTO * 60_000);
     return getPrisma().$transaction(async (tx) => {
+      const turno = await tx.turnoDia.findUnique({
+        where: { usuarioId_programadaEntrada: { usuarioId: e.usuarioId, programadaEntrada: programada } },
+        select: { faltaEventoId: true },
+      });
+      if (turno?.faltaEventoId) {
+        await tx.eventoBitacora.update({ where: { id: e.id }, data: { decision: 'superado', decididoEn: en } });
+        return turno.faltaEventoId;
+      }
       const falta = await tx.eventoBitacora.create({
         data: {
           usuarioId: e.usuarioId,

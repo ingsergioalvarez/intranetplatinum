@@ -16,6 +16,10 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - Una falta sin revisar **ya no cuenta** como falta (A-51): ni en el resumen del guardia ni en el reporte, donde el día sale como "Por revisar" (con su cifra aparte). Solo cuenta al confirmarla; si se justifica, no cuenta. "No se presentó" es un aviso y no suma por sí mismo.
 - **Lentes** (A-50): detectarlos ya no bloquea el checador ni el registro de rostro. Se recomienda quitárselos, pero se deja continuar; no se pide parpadear (se sortean giros u otros gestos) y el servidor acepta un margen un poco más amplio (0.56 en lugar de 0.50 para el titular, 0.66 en lugar de 0.60 para descartarlo). Otro guardia bloquea si queda más cerca o a menos de 0.06 del propio, así el margen extra no deja pasar a un compañero. Se quitó el botón "No traigo lentes". Sin marca visible para el supervisor; la distancia se sigue guardando.
 
+#### Corregido
+
+- Confirmar un "No se presentó" cuyo turno ya tenía su falta creaba una segunda falta: ahora confirma la existente y cierra el aviso. Migración `20261030030000_cerrar_no_se_presento_viejos`: cierra los "No se presentó" anteriores que ya pasaron a falta o cuyo guardia llegó (A-48).
+
 #### Pendiente
 
 - Probar con guardias que usan lentes y ajustar los márgenes con datos reales.

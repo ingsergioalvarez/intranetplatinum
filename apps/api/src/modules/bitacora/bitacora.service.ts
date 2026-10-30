@@ -211,10 +211,12 @@ export class BitacoraService extends BaseService {
     }
     if (e.justificadoEn) throw HttpError.conflict('Ya está justificado');
     if (e.decision) throw HttpError.conflict('Ya se decidió');
-    // Sin esperar las 2 h: se crea la falta y la decisión se toma sobre ella.
+    // Sin esperar las 2 h: se crea la falta (o se toma la que el turno ya tiene) y la decisión va sobre ella.
     if (e.tipo === 'no_se_presento') {
       id = await this.repo.crearFaltaDesde(e, this.ahora());
       e = (await this.repo.findById(id))!;
+      if (e.justificadoEn) throw HttpError.conflict('Ya está justificado');
+      if (e.decision) throw HttpError.conflict('Ya se decidió');
     }
     const motivo = textoMotivoLista(MOTIVO_FALTA_LABEL[categoria], nota);
     await this.repo.decidir(id, ctx.actorId, 'falta', this.ahora(), motivo);
