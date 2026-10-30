@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { PERMISOS, ROLES } from '@platinum/shared';
 import { AppShell } from '../components/layout/AppShell';
 import { ProtectedRoute } from '../core/auth/ProtectedRoute';
+import { AccesoRapidoPage } from '../modules/auth/AccesoRapidoPage';
 import { CambiarPasswordPage } from '../modules/auth/CambiarPasswordPage';
 import { LoginPage } from '../modules/auth/LoginPage';
 import { InicioPage } from '../modules/inicio/InicioPage';
@@ -51,6 +52,14 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <InicioPage /> },
+      {
+        path: 'acceso-rapido',
+        element: (
+          <ProtectedRoute roles={[ROLES.GUARDIA]}>
+            <AccesoRapidoPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'mis-sitios',
         element: (

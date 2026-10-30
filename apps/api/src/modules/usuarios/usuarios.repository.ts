@@ -147,5 +147,10 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
       where: { usuarioId: id, revocadoEn: null },
       data: { revocadoEn: new Date() },
     });
+    // Baja o contraseña temporal: también se quitan sus perfiles rápidos (A-40).
+    await getPrisma().dispositivoUsuario.updateMany({
+      where: { usuarioId: id, revocadoEn: null },
+      data: { revocadoEn: new Date() },
+    });
   }
 }

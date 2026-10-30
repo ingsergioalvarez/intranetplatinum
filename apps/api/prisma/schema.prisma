@@ -105,6 +105,7 @@ model Usuario {
   bitacoraActor        EventoBitacora[]     @relation("BitacoraActor")
   bitacoraJustifico    EventoBitacora[]     @relation("BitacoraJustifico")
   medidasRecibidas     MedidaDisciplinaria[] @relation("MedidaDe")
+  dispositivos         DispositivoUsuario[]
   medidasAplicadas     MedidaDisciplinaria[] @relation("MedidaAplico")
   bitacoraComentarios  ComentarioBitacora[]
 
@@ -1167,4 +1168,23 @@ model MedidaDisciplinaria {
   @@index([usuarioId, createdAt])
   @@index([aplicadaPorId])
   @@map("medidas_disciplinarias")
+}
+
+/// Celular de un guardia con perfil rápido (A-40): clave propia del celular (solo su hash) y PIN opcional
+/// de 4 dígitos. Sin la clave del celular el PIN no sirve; 5 PIN incorrectos bloquean hasta entrar con contraseña.
+model DispositivoUsuario {
+  id              Int       @id @default(autoincrement())
+  usuarioId       Int       @map("usuario_id")
+  tokenHash       String    @unique @map("token_hash") @db.Char(64)
+  pinHash         String?   @map("pin_hash") @db.VarChar(255)
+  etiqueta        String    @db.VarChar(120)
+  intentosFallidos Int      @default(0) @map("intentos_fallidos")
+  bloqueadoEn     DateTime? @map("bloqueado_en")
+  ultimoUso       DateTime? @map("ultimo_uso")
+  revocadoEn      DateTime? @map("revocado_en")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, revocadoEn])
+  @@map("dispositivos_usuario")
 }

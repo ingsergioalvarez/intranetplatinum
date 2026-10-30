@@ -5,6 +5,21 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-10-30 #35 — Perfiles rápidos y PIN para guardias (A-40)
+
+#### Añadido
+
+- **Perfiles rápidos**: al entrar con correo y contraseña, un guardia queda guardado en ese celular sin preguntarle. La pantalla de entrada muestra tarjetas con sus iniciales y nombre completo; tocar una pide el PIN de 4 dígitos (teclado numérico), o la contraseña si no tiene PIN. "Usar otro perfil" abre el formulario de siempre. Cerrar sesión no borra la tarjeta; el menú `⋮` de la tarjeta la quita ("Quitar de este dispositivo", también en el servidor).
+- **PIN** de 4 dígitos por celular, opcional: se crea o cambia en "Acceso rápido" (pide la contraseña) y un aviso en pantalla lo ofrece una vez ("Ahora no" lo oculta). 5 PIN incorrectos bloquean la tarjeta hasta entrar con la contraseña. El PIN solo sirve con la clave propia de ese celular (el servidor guarda solo su hash).
+- Solo guardias. Admin, supervisor y cliente entran siempre con contraseña.
+- **Admin**: en Usuarios, el botón "Celulares" de cada guardia lista sus celulares y permite quitar uno o todos (queda en la auditoría). El supervisor no lo ve.
+- Se quitan solos todos los perfiles rápidos cuando el usuario se da de baja o el admin le genera una contraseña temporal.
+- API: `POST /api/auth/perfil-rapido`, `POST /api/auth/perfil-rapido/quitar`, `GET/DELETE /api/auth/dispositivos`, `PUT/DELETE /api/auth/dispositivos/:id/pin`, y para el admin `GET/DELETE /api/auth/usuarios/:id/dispositivos`. `POST /api/auth/login` devuelve `dispositivo` en el login de un guardia. Migración `20261030040000_dispositivos_usuario`.
+
+#### Pendiente
+
+- Probar en el celular (no se vieron las pantallas en un navegador). El PIN usa 4 dígitos por decisión del usuario: la protección es la clave del celular y el bloqueo a los 5 intentos.
+
 ### Sesión 2026-10-30 #34 — Faltas por revisar y lentes menos estrictos (A-50, A-51)
 
 #### Añadido

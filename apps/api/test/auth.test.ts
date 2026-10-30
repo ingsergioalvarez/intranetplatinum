@@ -8,6 +8,7 @@ import { createAuthModule } from '../src/modules/auth';
 import { REFRESH_COOKIE } from '../src/modules/auth/auth.controller';
 import {
   AuthRepository,
+  type DispositivoRow,
   type NuevoRefreshToken,
   type RefreshTokenRecord,
   type UsuarioAuth,
@@ -62,6 +63,48 @@ class MemoryAuthRepository extends AuthRepository {
   }
   async revocarRefreshTokensDeUsuario(usuarioId: number) {
     for (const t of this.tokens) if (t.usuarioId === usuarioId) t.revocadoEn ??= new Date();
+  }
+
+  dispositivos: (DispositivoRow & { tokenHash: string })[] = [];
+  async crearDispositivo(data: { usuarioId: number; tokenHash: string; etiqueta: string }) {
+    const d = {
+      id: this.dispositivos.length + 1,
+      pinHash: null,
+      intentosFallidos: 0,
+      bloqueadoEn: null,
+      ultimoUso: new Date(),
+      revocadoEn: null,
+      createdAt: new Date(),
+      ...data,
+    };
+    this.dispositivos.push(d);
+    return d;
+  }
+  async findDispositivoPorToken(tokenHash: string) {
+    return this.dispositivos.find((d) => d.tokenHash === tokenHash) ?? null;
+  }
+  async findDispositivo(id: number) {
+    return this.dispositivos.find((d) => d.id === id) ?? null;
+  }
+  async dispositivosDe(usuarioId: number) {
+    return this.dispositivos.filter((d) => d.usuarioId === usuarioId && !d.revocadoEn);
+  }
+  async registrarUsoDispositivo(id: number) {
+    Object.assign(this.dispositivos.find((d) => d.id === id)!, { ultimoUso: new Date(), intentosFallidos: 0, bloqueadoEn: null });
+  }
+  async registrarFalloPin(id: number, intentos: number, bloqueadoEn: Date | null) {
+    Object.assign(this.dispositivos.find((d) => d.id === id)!, { intentosFallidos: intentos, bloqueadoEn });
+  }
+  async guardarPin(id: number, pinHash: string | null) {
+    Object.assign(this.dispositivos.find((d) => d.id === id)!, { pinHash, intentosFallidos: 0, bloqueadoEn: null });
+  }
+  async revocarDispositivo(id: number) {
+    this.dispositivos.find((d) => d.id === id)!.revocadoEn ??= new Date();
+  }
+  async revocarDispositivosDeUsuario(usuarioId: number) {
+    const vigentes = this.dispositivos.filter((d) => d.usuarioId === usuarioId && !d.revocadoEn);
+    for (const d of vigentes) d.revocadoEn = new Date();
+    return vigentes.length;
   }
 }
 
@@ -135,7 +178,7 @@ describe('POST /api/auth/login', () => {
     expect(setCookie).toMatch(/SameSite=Strict/);
     expect(repo.tokens).toHaveLength(1);
     expect(repo.tokens[0].tokenHash).not.toBe(refreshCookie(res));
-    expect(audit.acciones()).toEqual(['auth.login']);
+    expect(audit.acciones()).toEqual(['auth.login', 'auth.dispositivo_guardado']);
 
     const me = await request(app)
       .get('/api/health/me')
@@ -373,5 +416,151 @@ describe('POST /api/auth/cambiar-password', () => {
 
   it('sin token responde 401', async () => {
     expect((await request(app).post('/api/auth/cambiar-password').send({})).status).toBe(401);
+  });
+});
+
+// ---------- Perfiles rápidos (A-40) ----------
+// El PIN se guarda con bcrypt (costo 12): con el equipo ocupado cada comprobación tarda más.
+describe('perfiles rápidos de guardias (A-40)', { timeout: 30_000 }, () => {
+  const entrar = async (extra: object = {}, email = 'ana@platinum.local') =>
+    request(app).post('/api/auth/login').send({ email, password: PASSWORD, ...extra });
+  const conToken = (r: request.Response) => ({ Authorization: `Bearer ${r.body.data.accessToken}` });
+  const pinPor = (token: string, pin: string) => request(app).post('/api/auth/perfil-rapido').send({ token, pin });
+  const definir = (r: request.Response, id: number, pin = '1234', password = PASSWORD) =>
+    request(app).put(`/api/auth/dispositivos/${id}/pin`).set(conToken(r)).send({ pin, password });
+
+  it('al entrar un guardia, el celular se guarda solo y devuelve su clave una vez', async () => {
+    const r = await entrar();
+    expect(r.body.data.dispositivo).toMatchObject({ id: 1, tienePin: false, token: expect.any(String) });
+    expect(repo.dispositivos[0].tokenHash).not.toBe(r.body.data.dispositivo.token);
+    // Con su clave, el mismo celular no crea otro ni la devuelve de nuevo.
+    const otra = await entrar({ dispositivoToken: r.body.data.dispositivo.token });
+    expect(otra.body.data.dispositivo).toEqual({ id: 1, tienePin: false });
+    expect(repo.dispositivos).toHaveLength(1);
+    // Una clave que no es suya o inventada: crea un celular nuevo.
+    expect((await entrar({ dispositivoToken: 'inventada' })).body.data.dispositivo.token).toBeDefined();
+    expect(repo.dispositivos).toHaveLength(2);
+  });
+
+  it('solo los guardias: admin, supervisor y cliente no guardan perfil', async () => {
+    repo.usuarios.push(usuario({ id: 2, email: 'admin@platinum.local', rol: ROLES.ADMIN, permisos: PERMISOS_POR_ROL[ROLES.ADMIN] }));
+    const r = await entrar({}, 'admin@platinum.local');
+    expect(r.body.data.dispositivo).toBeUndefined();
+    expect(repo.dispositivos).toHaveLength(0);
+  });
+
+  it('crear el PIN pide la contraseña y 4 dígitos; con él se entra con la tarjeta', async () => {
+    const r = await entrar();
+    const { id, token } = r.body.data.dispositivo;
+    expect((await definir(r, id, '12', PASSWORD)).status).toBe(400);
+    expect((await definir(r, id, '1234', 'mala-contraseña')).status).toBe(400);
+    expect((await definir(r, id)).status).toBe(204);
+
+    const res = await pinPor(token, '1234');
+    expect(res.status).toBe(200);
+    expect(res.body.data.user).toMatchObject({ id: 1, rol: 'guardia' });
+    expect(res.body.data.dispositivo).toEqual({ id: 1, tienePin: true });
+    expect(refreshCookie(res)).toBeTruthy();
+    expect(audit.acciones()).toContain('auth.login_pin');
+  });
+
+  it('PIN incorrecto: cuenta intentos y al 5.º bloquea hasta entrar con contraseña', async () => {
+    const r = await entrar();
+    const { id, token } = r.body.data.dispositivo;
+    await definir(r, id);
+    const primero = await pinPor(token, '0000');
+    expect(primero.status).toBe(401);
+    expect(primero.body.error).toMatchObject({ code: 'PIN_INVALID', details: { intentosRestantes: 4 } });
+    for (let i = 0; i < 3; i++) await pinPor(token, '0000');
+    const quinto = await pinPor(token, '0000');
+    expect(quinto.status).toBe(423);
+    expect(quinto.body.error.code).toBe('PIN_BLOCKED');
+    // Bloqueado: ni el PIN bueno entra.
+    expect((await pinPor(token, '1234')).status).toBe(423);
+    // Entrar con la contraseña lo libera.
+    await entrar({ dispositivoToken: token });
+    expect((await pinPor(token, '1234')).status).toBe(200);
+  });
+
+  it('un PIN correcto reinicia los intentos fallidos', async () => {
+    const r = await entrar();
+    const { id, token } = r.body.data.dispositivo;
+    await definir(r, id);
+    await pinPor(token, '0000');
+    await pinPor(token, '0000');
+    expect((await pinPor(token, '1234')).status).toBe(200);
+    expect(repo.dispositivos[0].intentosFallidos).toBe(0);
+  });
+
+  it('sin PIN, con clave inventada, quitado o con el usuario de baja: DEVICE_INVALID o PIN_NOT_SET', async () => {
+    const r = await entrar();
+    const { id, token } = r.body.data.dispositivo;
+    expect((await pinPor(token, '1234')).body.error.code).toBe('PIN_NOT_SET');
+    expect((await pinPor('inventada', '1234')).body.error.code).toBe('DEVICE_INVALID');
+    await definir(r, id);
+    const quitado = await request(app).delete(`/api/auth/dispositivos/${id}`).set(conToken(r));
+    expect(quitado.status).toBe(204);
+    expect((await pinPor(token, '1234')).body.error.code).toBe('DEVICE_INVALID');
+
+    const r2 = await entrar();
+    await definir(r2, r2.body.data.dispositivo.id);
+    repo.usuarios[0].activo = false;
+    expect((await pinPor(r2.body.data.dispositivo.token, '1234')).body.error.code).toBe('DEVICE_INVALID');
+    expect(repo.dispositivos[1].revocadoEn).not.toBeNull();
+  });
+
+  it('el guardia lista sus celulares, quita su PIN y no toca los de otro', async () => {
+    const r = await entrar();
+    const { id } = r.body.data.dispositivo;
+    await definir(r, id);
+    const lista = await request(app).get('/api/auth/dispositivos').set(conToken(r));
+    expect(lista.body.data).toEqual([
+      expect.objectContaining({ id, tienePin: true, bloqueado: false, etiqueta: expect.any(String) }),
+    ]);
+    expect((await request(app).delete(`/api/auth/dispositivos/${id}/pin`).set(conToken(r))).status).toBe(204);
+    expect((await request(app).get('/api/auth/dispositivos').set(conToken(r))).body.data[0].tienePin).toBe(false);
+
+    repo.usuarios.push(usuario({ id: 3, email: 'otro@platinum.local' }));
+    const otro = await entrar({}, 'otro@platinum.local');
+    const ajeno = otro.body.data.dispositivo.id;
+    expect((await request(app).delete(`/api/auth/dispositivos/${ajeno}`).set(conToken(r))).status).toBe(404);
+    expect((await definir(r, ajeno)).status).toBe(404);
+  });
+
+  it('"Quitar de este dispositivo" desde la entrada: basta la clave del celular y no falla si ya no existe', async () => {
+    const r = await entrar();
+    const { token } = r.body.data.dispositivo;
+    const quitar = (t: string) => request(app).post('/api/auth/perfil-rapido/quitar').send({ token: t });
+    expect((await quitar('inventada')).status).toBe(204);
+    expect(repo.dispositivos[0].revocadoEn).toBeNull();
+    expect((await quitar(token)).status).toBe(204);
+    expect(repo.dispositivos[0].revocadoEn).not.toBeNull();
+    expect((await quitar(token)).status).toBe(204);
+    expect(audit.acciones().filter((a) => a === 'auth.dispositivo_quitado')).toHaveLength(1);
+  });
+
+  it('solo el admin ve y quita los celulares de un guardia (el supervisor no)', async () => {
+    const r = await entrar();
+    const { id } = r.body.data.dispositivo;
+    repo.usuarios.push(
+      usuario({ id: 2, email: 'admin@platinum.local', rol: ROLES.ADMIN, permisos: PERMISOS_POR_ROL[ROLES.ADMIN] }),
+      usuario({ id: 4, email: 'sup@platinum.local', rol: ROLES.SUPERVISOR, permisos: PERMISOS_POR_ROL[ROLES.SUPERVISOR] }),
+    );
+    const admin = await entrar({}, 'admin@platinum.local');
+    const sup = await entrar({}, 'sup@platinum.local');
+    expect((await request(app).get('/api/auth/usuarios/1/dispositivos').set(conToken(sup))).status).toBe(403);
+    expect((await request(app).delete('/api/auth/usuarios/1/dispositivos').set(conToken(sup))).status).toBe(403);
+    expect((await request(app).get('/api/auth/usuarios/1/dispositivos').set(conToken(r))).status).toBe(403);
+
+    const lista = await request(app).get('/api/auth/usuarios/1/dispositivos').set(conToken(admin));
+    expect(lista.body.data).toHaveLength(1);
+    expect((await request(app).delete(`/api/auth/usuarios/1/dispositivos/${id}`).set(conToken(admin))).status).toBe(204);
+    expect(audit.acciones()).toContain('auth.dispositivo_quitado_admin');
+
+    await entrar();
+    await entrar({ dispositivoToken: 'otra-clave' });
+    const todos = await request(app).delete('/api/auth/usuarios/1/dispositivos').set(conToken(admin));
+    expect(todos.body.data).toEqual({ quitados: 2 });
+    expect(audit.acciones()).toContain('auth.dispositivos_quitados_admin');
   });
 });

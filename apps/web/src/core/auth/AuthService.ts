@@ -1,6 +1,7 @@
 import type { AuthSession, CambiarPasswordInput, LoginInput } from '@platinum/shared';
 import { ApiError, api, queryClient, type ApiClient } from '../api';
 import { useAuthStore } from './authStore';
+import { actualizarPerfil, guardarPerfil as guardarTarjeta, perfilPorCorreo, type PerfilRapido } from './perfiles';
 
 const PERFIL = 'offline.perfil';
 
@@ -35,9 +36,44 @@ export class AuthService {
   }
 
   async login(input: LoginInput) {
-    const sesion = await this.http.post<AuthSession>('/auth/login', input, { skipAuthRefresh: true });
+    // Si este celular ya tiene perfil rápido de ese correo, manda su clave para reutilizarlo (A-40).
+    const previo = perfilPorCorreo(input.email);
+    const sesion = await this.http.post<AuthSession>(
+      '/auth/login',
+      { ...input, ...(previo && { dispositivoToken: previo.token }) },
+      { skipAuthRefresh: true },
+    );
+    this.recordarPerfil(sesion, previo);
     this.aplicar(sesion);
     return sesion.user;
+  }
+
+  /** Entra con la tarjeta de un perfil guardado en este celular y su PIN (A-40). */
+  async loginConPin(perfil: PerfilRapido, pin: string) {
+    const sesion = await this.http.post<AuthSession>(
+      '/auth/perfil-rapido',
+      { token: perfil.token, pin },
+      { skipAuthRefresh: true },
+    );
+    actualizarPerfil(perfil.usuarioId, { tienePin: true, bloqueado: false, nombre: sesion.user.nombre });
+    this.aplicar(sesion);
+    return sesion.user;
+  }
+
+  /** El celular recuerda al guardia sin preguntar: guarda su tarjeta con el estado que dice el servidor. */
+  private recordarPerfil(sesion: AuthSession, previo: PerfilRapido | undefined) {
+    const d = sesion.dispositivo;
+    const token = d?.token ?? previo?.token;
+    if (!d || !token) return;
+    guardarTarjeta({
+      usuarioId: sesion.user.id,
+      nombre: sesion.user.nombre,
+      email: sesion.user.email,
+      dispositivoId: d.id,
+      token,
+      tienePin: d.tienePin,
+      bloqueado: false,
+    });
   }
 
   /** Cambia la contraseña propia; el servidor cierra las demás sesiones y entrega una nueva. */

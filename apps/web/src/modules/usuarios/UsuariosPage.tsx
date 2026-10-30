@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ScanFace, Search, UserPlus } from 'lucide-react';
+import { ScanFace, Search, Smartphone, UserPlus } from 'lucide-react';
 import {
   PERMISOS,
   ROL_DESCRIPCIONES,
@@ -26,6 +26,7 @@ import {
   type Column,
 } from '../../components/ui';
 import { RegistrarRostroModal } from '../asistencia/RegistrarRostroModal';
+import { DispositivosModal } from './DispositivosModal';
 import { estadoUsuario } from './estadoUsuario';
 import { PasswordTemporalModal } from './PasswordTemporalModal';
 import { UsuarioModal } from './UsuarioModal';
@@ -56,6 +57,9 @@ export function UsuariosPage() {
   /** Guardia cuyo rostro se registra (asistencia, AS1-02). */
   const [rostroDe, setRostroDe] = useState<Usuario | null>(null);
   const puedeRostros = hasPermission(yo, PERMISOS.ASISTENCIA_ROSTROS);
+  /** Guardia cuyos celulares con acceso rápido se administran: solo el admin (A-40). */
+  const [dispositivosDe, setDispositivosDe] = useState<Usuario | null>(null);
+  const esAdmin = yo?.rol === ROLES.ADMIN;
 
   const q = useDebounced(busqueda.trim());
   useEffect(() => setPage(1), [q, rol, estado]);
@@ -166,17 +170,31 @@ export function UsuariosPage() {
             loading={lista.isPending}
             onRowClick={setEditando}
             actions={
-              puedeRostros
+              puedeRostros || esAdmin
                 ? (u) =>
                     u.rol === ROLES.GUARDIA && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={<ScanFace className="size-4" />}
-                        onClick={() => setRostroDe(u)}
-                      >
-                        Rostro
-                      </Button>
+                      <>
+                        {puedeRostros && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<ScanFace className="size-4" />}
+                            onClick={() => setRostroDe(u)}
+                          >
+                            Rostro
+                          </Button>
+                        )}
+                        {esAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<Smartphone className="size-4" />}
+                            onClick={() => setDispositivosDe(u)}
+                          >
+                            Celulares
+                          </Button>
+                        )}
+                      </>
                     )
                 : undefined
             }
@@ -200,6 +218,7 @@ export function UsuariosPage() {
       )}
 
       {rostroDe && <RegistrarRostroModal guardia={rostroDe} onClose={() => setRostroDe(null)} />}
+      {dispositivosDe && <DispositivosModal guardia={dispositivosDe} onClose={() => setDispositivosDe(null)} />}
 
       <PasswordTemporalModal
         resultado={temporal?.resultado ?? null}

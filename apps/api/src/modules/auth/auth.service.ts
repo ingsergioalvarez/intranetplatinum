@@ -1,4 +1,15 @@
-import type { AuthSession, CambiarPasswordInput, LoginInput, SessionUser } from '@platinum/shared';
+import {
+  PIN_MAX_INTENTOS,
+  ROLES,
+  type AuthSession,
+  type CambiarPasswordInput,
+  type DefinirPinInput,
+  type DispositivoSesion,
+  type DispositivoUsuarioVista,
+  type LoginInput,
+  type PerfilRapidoInput,
+  type SessionUser,
+} from '@platinum/shared';
 import { env } from '../../config/env';
 import {
   AuditLogger,
@@ -11,7 +22,7 @@ import {
   verifyPassword,
   type RequestContext,
 } from '../../core';
-import type { AuthRepository, UsuarioAuth } from './auth.repository';
+import type { AuthRepository, DispositivoRow, UsuarioAuth } from './auth.repository';
 
 /** Sesión emitida: lo que va en el body más el refresh token que va en cookie. */
 export interface IssuedSession extends AuthSession {
@@ -35,6 +46,25 @@ const credencialesInvalidas = () =>
   new HttpError(401, 'INVALID_CREDENTIALS', 'Correo o contraseña incorrectos');
 const refreshInvalido = () =>
   new HttpError(401, 'REFRESH_INVALID', 'Sesión expirada, vuelve a iniciar sesión');
+const dispositivoInvalido = () =>
+  new HttpError(401, 'DEVICE_INVALID', 'Este perfil ya no está disponible en este celular. Entra con tu contraseña.');
+
+const vistaDispositivo = (d: DispositivoRow): DispositivoUsuarioVista => ({
+  id: d.id,
+  etiqueta: d.etiqueta,
+  tienePin: d.pinHash !== null,
+  bloqueado: d.bloqueadoEn !== null,
+  ultimoUso: d.ultimoUso?.toISOString() ?? null,
+  createdAt: d.createdAt.toISOString(),
+});
+
+/** Nombre corto del celular a partir del user agent ("Android · Chrome"). */
+function etiquetaDeCelular(userAgent: string | undefined): string {
+  const ua = userAgent ?? '';
+  const sistema = /iphone|ipad/i.test(ua) ? 'iPhone' : /android/i.test(ua) ? 'Android' : /windows/i.test(ua) ? 'Windows' : /mac os/i.test(ua) ? 'Mac' : 'Celular';
+  const nav = /edg\//i.test(ua) ? 'Edge' : /firefox/i.test(ua) ? 'Firefox' : /chrome|crios/i.test(ua) ? 'Chrome' : /safari/i.test(ua) ? 'Safari' : '';
+  return nav ? `${sistema} · ${nav}` : sistema;
+}
 
 export class AuthService extends BaseService {
   /** Hash de relleno para comparar aunque el correo no exista (mismo tiempo de respuesta). */
@@ -52,7 +82,7 @@ export class AuthService extends BaseService {
     super();
   }
 
-  async login({ email, password }: LoginInput, ctx: RequestContext): Promise<IssuedSession> {
+  async login({ email, password, dispositivoToken }: LoginInput, ctx: RequestContext): Promise<IssuedSession> {
     const usuario = await this.repo.findUsuarioByEmail(email);
 
     if (!usuario) {
@@ -95,7 +125,131 @@ export class AuthService extends BaseService {
     const sesion = await this.emitirSesion(usuario, ctx);
     await this.audit.registrar({ ...ctx, usuarioId: usuario.id, accion: 'auth.login' });
     this.log('login', { usuarioId: usuario.id });
+    // Guardias: el celular recuerda su perfil sin preguntar (A-40).
+    if (usuario.rol === ROLES.GUARDIA) sesion.dispositivo = await this.vincularDispositivo(usuario, dispositivoToken, ctx);
     return sesion;
+  }
+
+  /**
+   * Liga este celular al guardia: si ya traía una clave vigente suya la reutiliza (y entrar con contraseña
+   * libera un bloqueo por PIN); si no, crea una nueva y devuelve la clave una sola vez.
+   */
+  private async vincularDispositivo(
+    usuario: UsuarioAuth,
+    token: string | undefined,
+    ctx: RequestContext,
+  ): Promise<DispositivoSesion> {
+    const existente = token ? await this.repo.findDispositivoPorToken(hashToken(token)) : null;
+    if (existente && existente.usuarioId === usuario.id && !existente.revocadoEn) {
+      await this.repo.registrarUsoDispositivo(existente.id);
+      return { id: existente.id, tienePin: existente.pinHash !== null };
+    }
+    const nuevo = generateOpaqueToken();
+    const d = await this.repo.crearDispositivo({
+      usuarioId: usuario.id,
+      tokenHash: hashToken(nuevo),
+      etiqueta: etiquetaDeCelular(ctx.userAgent),
+    });
+    await this.audit.registrar({ ...ctx, usuarioId: usuario.id, accion: 'auth.dispositivo_guardado', entidad: 'dispositivos_usuario', entidadId: d.id });
+    return { id: d.id, token: nuevo, tienePin: false };
+  }
+
+  /** Entrar con la tarjeta del perfil guardado en este celular y su PIN (A-40). */
+  async loginConPin({ token, pin }: PerfilRapidoInput, ctx: RequestContext): Promise<IssuedSession> {
+    const d = await this.repo.findDispositivoPorToken(hashToken(token));
+    if (!d || d.revocadoEn) throw dispositivoInvalido();
+    const usuario = await this.repo.findUsuarioById(d.usuarioId);
+    if (!usuario || !usuario.activo || usuario.deletedAt || usuario.rol !== ROLES.GUARDIA) {
+      await this.repo.revocarDispositivo(d.id);
+      throw dispositivoInvalido();
+    }
+    if (usuario.bloqueadoHasta && usuario.bloqueadoHasta > new Date()) throw this.cuentaBloqueada(usuario.bloqueadoHasta);
+    if (!d.pinHash) {
+      throw new HttpError(400, 'PIN_NOT_SET', 'Este perfil no tiene PIN. Entra con tu contraseña.');
+    }
+    if (d.bloqueadoEn) {
+      throw new HttpError(423, 'PIN_BLOCKED', 'Demasiados PIN incorrectos. Entra con tu contraseña para volver a usarlo.');
+    }
+    if (!(await verifyPassword(pin, d.pinHash))) {
+      const intentos = d.intentosFallidos + 1;
+      const bloquear = intentos >= PIN_MAX_INTENTOS;
+      await this.repo.registrarFalloPin(d.id, intentos, bloquear ? new Date() : null);
+      await this.audit.registrar({
+        ...ctx,
+        usuarioId: usuario.id,
+        accion: bloquear ? 'auth.pin_bloqueado' : 'auth.pin_fallido',
+        datos: { intentos },
+      });
+      if (bloquear) {
+        throw new HttpError(423, 'PIN_BLOCKED', 'Demasiados PIN incorrectos. Entra con tu contraseña para volver a usarlo.');
+      }
+      throw new HttpError(401, 'PIN_INVALID', `PIN incorrecto. Te quedan ${PIN_MAX_INTENTOS - intentos} intentos.`, {
+        intentosRestantes: PIN_MAX_INTENTOS - intentos,
+      });
+    }
+    await this.repo.registrarUsoDispositivo(d.id);
+    await this.repo.registrarAccesoExitoso(usuario.id);
+    const sesion = await this.emitirSesion(usuario, ctx);
+    await this.audit.registrar({ ...ctx, usuarioId: usuario.id, accion: 'auth.login_pin' });
+    return { ...sesion, dispositivo: { id: d.id, tienePin: true } };
+  }
+
+  // ---------- Dispositivos (A-40) ----------
+
+  /** "Quitar de este dispositivo" desde la pantalla de entrada: quien tiene la clave del celular puede quitarla. Idempotente. */
+  async quitarPerfilRapido(token: string, ctx: RequestContext): Promise<void> {
+    const d = await this.repo.findDispositivoPorToken(hashToken(token));
+    if (!d || d.revocadoEn) return;
+    await this.repo.revocarDispositivo(d.id);
+    await this.audit.registrar({ ...ctx, usuarioId: d.usuarioId, accion: 'auth.dispositivo_quitado', entidad: 'dispositivos_usuario', entidadId: d.id });
+  }
+
+  /** Celulares con perfil rápido de un guardia. */
+  async dispositivosDe(usuarioId: number): Promise<DispositivoUsuarioVista[]> {
+    return (await this.repo.dispositivosDe(usuarioId)).map(vistaDispositivo);
+  }
+
+  private async propio(usuarioId: number, id: number): Promise<DispositivoRow> {
+    const d = await this.repo.findDispositivo(id);
+    if (!d || d.revocadoEn || d.usuarioId !== usuarioId) throw HttpError.notFound('Celular no encontrado');
+    return d;
+  }
+
+  /** El guardia crea o cambia el PIN de este celular; pide su contraseña. */
+  async definirPin(usuarioId: number, id: number, { pin, password }: DefinirPinInput, ctx: RequestContext) {
+    const d = await this.propio(usuarioId, id);
+    const usuario = await this.repo.findUsuarioById(usuarioId);
+    if (!usuario || !(await verifyPassword(password, usuario.passwordHash))) {
+      throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [{ path: 'password', message: 'La contraseña no es correcta' }]);
+    }
+    await this.repo.guardarPin(d.id, await hashPassword(pin));
+    await this.audit.registrar({ ...ctx, usuarioId, accion: d.pinHash ? 'auth.pin_cambiado' : 'auth.pin_creado', entidad: 'dispositivos_usuario', entidadId: d.id });
+  }
+
+  async quitarPin(usuarioId: number, id: number, ctx: RequestContext) {
+    const d = await this.propio(usuarioId, id);
+    await this.repo.guardarPin(d.id, null);
+    await this.audit.registrar({ ...ctx, usuarioId, accion: 'auth.pin_quitado', entidad: 'dispositivos_usuario', entidadId: d.id });
+  }
+
+  /** El guardia quita este celular de sus perfiles rápidos. */
+  async quitarMiDispositivo(usuarioId: number, id: number, ctx: RequestContext) {
+    const d = await this.propio(usuarioId, id);
+    await this.repo.revocarDispositivo(d.id);
+    await this.audit.registrar({ ...ctx, usuarioId, accion: 'auth.dispositivo_quitado', entidad: 'dispositivos_usuario', entidadId: d.id });
+  }
+
+  /** Admin: quita un celular de un guardia (p. ej. si lo perdió). */
+  async quitarDispositivoDe(actorId: number, usuarioId: number, id: number, ctx: RequestContext) {
+    const d = await this.propio(usuarioId, id);
+    await this.repo.revocarDispositivo(d.id);
+    await this.audit.registrar({ ...ctx, usuarioId: actorId, accion: 'auth.dispositivo_quitado_admin', entidad: 'dispositivos_usuario', entidadId: d.id, datos: { guardiaId: usuarioId } });
+  }
+
+  async quitarTodosDe(actorId: number, usuarioId: number, ctx: RequestContext): Promise<number> {
+    const quitados = await this.repo.revocarDispositivosDeUsuario(usuarioId);
+    await this.audit.registrar({ ...ctx, usuarioId: actorId, accion: 'auth.dispositivos_quitados_admin', entidad: 'usuarios', entidadId: usuarioId, datos: { quitados } });
+    return quitados;
   }
 
   async refresh(refreshToken: string | undefined, ctx: RequestContext): Promise<IssuedSession> {

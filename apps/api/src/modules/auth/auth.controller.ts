@@ -1,5 +1,12 @@
 import type { CookieOptions, Request, Response } from 'express';
-import type { AuthSession, CambiarPasswordInput, LoginInput } from '@platinum/shared';
+import type {
+  AuthSession,
+  CambiarPasswordInput,
+  DefinirPinInput,
+  IdParam,
+  LoginInput,
+  PerfilRapidoInput,
+} from '@platinum/shared';
 import { isProduction } from '../../config/env';
 import { BaseController, requestContext } from '../../core';
 import type { AuthService, IssuedSession } from './auth.service';
@@ -14,6 +21,10 @@ const cookieOptions: CookieOptions = {
   path: '/api/auth',
 };
 
+interface UsuarioDispositivoParam {
+  usuarioId: number;
+}
+
 export class AuthController extends BaseController {
   constructor(private readonly service: AuthService) {
     super();
@@ -22,6 +33,50 @@ export class AuthController extends BaseController {
   login = async (req: Request, res: Response) => {
     const sesion = await this.service.login(this.body<LoginInput>(req), requestContext(req));
     return this.ok(res, this.enviarSesion(res, sesion));
+  };
+
+  quitarPerfilRapido = async (req: Request, res: Response) => {
+    await this.service.quitarPerfilRapido(this.body<{ token: string }>(req).token, requestContext(req));
+    return this.noContent(res);
+  };
+
+  perfilRapido = async (req: Request, res: Response) => {
+    const sesion = await this.service.loginConPin(this.body<PerfilRapidoInput>(req), requestContext(req));
+    return this.ok(res, this.enviarSesion(res, sesion));
+  };
+
+  /** El guardia: sus celulares, PIN y quitar. */
+  misDispositivos = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.dispositivosDe(this.currentUser(req).id));
+
+  definirPin = async (req: Request, res: Response) => {
+    await this.service.definirPin(this.currentUser(req).id, this.params<IdParam>(req).id, this.body<DefinirPinInput>(req), requestContext(req));
+    return this.noContent(res);
+  };
+
+  quitarPin = async (req: Request, res: Response) => {
+    await this.service.quitarPin(this.currentUser(req).id, this.params<IdParam>(req).id, requestContext(req));
+    return this.noContent(res);
+  };
+
+  quitarMiDispositivo = async (req: Request, res: Response) => {
+    await this.service.quitarMiDispositivo(this.currentUser(req).id, this.params<IdParam>(req).id, requestContext(req));
+    return this.noContent(res);
+  };
+
+  /** Admin: celulares de un guardia. */
+  dispositivosDe = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.dispositivosDe(this.params<UsuarioDispositivoParam>(req).usuarioId));
+
+  quitarDispositivoDe = async (req: Request, res: Response) => {
+    const { usuarioId, id } = this.params<UsuarioDispositivoParam & IdParam>(req);
+    await this.service.quitarDispositivoDe(this.currentUser(req).id, usuarioId, id, requestContext(req));
+    return this.noContent(res);
+  };
+
+  quitarTodosDe = async (req: Request, res: Response) => {
+    const quitados = await this.service.quitarTodosDe(this.currentUser(req).id, this.params<UsuarioDispositivoParam>(req).usuarioId, requestContext(req));
+    return this.ok(res, { quitados });
   };
 
   refresh = async (req: Request, res: Response) => {

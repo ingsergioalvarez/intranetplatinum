@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Ellipsis, KeyRound, LogOut, ShieldCheck } from 'lucide-react';
+import { Ellipsis, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
 import { ROL_DESCRIPCIONES, type BandejaAvisos } from '@platinum/shared';
 import { api } from '../../core/api';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
 import { Modal, cn } from '../ui';
 import { useSincronizacion } from '../../core/offline/sincronizar';
+import { AvisoPin } from '../../modules/auth/AvisoPin';
 import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
 import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
 import { Campanita } from './Campanita';
@@ -88,9 +89,14 @@ function Sidebar() {
         <div className="border-t border-brand-800 p-4">
           <p className="truncate text-sm font-medium">{user.nombre}</p>
           <p className="truncate text-xs text-brand-200">{ROL_DESCRIPCIONES[user.rol]}</p>
+          {user.rol === 'guardia' && (
+            <Link to="/acceso-rapido" className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white">
+              <LockKeyhole className="size-4" /> Acceso rápido (PIN)
+            </Link>
+          )}
           <Link
             to="/cambiar-password"
-            className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white"
+            className={cn('flex items-center gap-2 text-sm text-brand-200 hover:text-white', user.rol === 'guardia' ? 'mt-2' : 'mt-3')}
           >
             <KeyRound className="size-4" /> Cambiar contraseña
           </Link>
@@ -115,6 +121,15 @@ function Topbar() {
         {user && (
           <div className="flex items-center gap-1">
             <Campanita />
+            {user.rol === 'guardia' && (
+              <Link
+                to="/acceso-rapido"
+                className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
+                aria-label="Acceso rápido con PIN"
+              >
+                <LockKeyhole className="size-5" />
+              </Link>
+            )}
             <Link
               to="/cambiar-password"
               className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
@@ -247,6 +262,7 @@ export function AppShell() {
         <Topbar />
         <main className="flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-8 md:pt-8">
           <div className="mx-auto max-w-6xl">
+            <AvisoPin />
             <Outlet />
           </div>
         </main>

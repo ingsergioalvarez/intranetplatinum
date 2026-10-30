@@ -33,6 +33,19 @@ export interface NuevoRefreshToken {
   userAgent?: string;
 }
 
+/** Celular con perfil rápido (A-40). */
+export interface DispositivoRow {
+  id: number;
+  usuarioId: number;
+  pinHash: string | null;
+  etiqueta: string;
+  intentosFallidos: number;
+  bloqueadoEn: Date | null;
+  ultimoUso: Date | null;
+  revocadoEn: Date | null;
+  createdAt: Date;
+}
+
 /** Acceso a datos de autenticación, independiente del ORM. */
 export abstract class AuthRepository {
   abstract findUsuarioByEmail(email: string): Promise<UsuarioAuth | null>;
@@ -52,6 +65,21 @@ export abstract class AuthRepository {
   abstract rotarRefreshToken(id: number, nuevo: NuevoRefreshToken): Promise<boolean>;
   abstract revocarRefreshToken(id: number): Promise<void>;
   abstract revocarRefreshTokensDeUsuario(usuarioId: number): Promise<void>;
+
+  // ---- Perfiles rápidos (A-40) ----
+  abstract crearDispositivo(data: { usuarioId: number; tokenHash: string; etiqueta: string }): Promise<DispositivoRow>;
+  abstract findDispositivoPorToken(tokenHash: string): Promise<DispositivoRow | null>;
+  abstract findDispositivo(id: number): Promise<DispositivoRow | null>;
+  /** Dispositivos vigentes del usuario, el de uso más reciente primero. */
+  abstract dispositivosDe(usuarioId: number): Promise<DispositivoRow[]>;
+  /** Entró con contraseña o con PIN: guarda el uso y quita intentos fallidos y bloqueo. */
+  abstract registrarUsoDispositivo(id: number): Promise<void>;
+  abstract registrarFalloPin(id: number, intentos: number, bloqueadoEn: Date | null): Promise<void>;
+  /** Guarda (o quita, con null) el PIN y reinicia intentos y bloqueo. */
+  abstract guardarPin(id: number, pinHash: string | null): Promise<void>;
+  abstract revocarDispositivo(id: number): Promise<void>;
+  /** Devuelve cuántos quitó. */
+  abstract revocarDispositivosDeUsuario(usuarioId: number): Promise<number>;
 }
 
 const usuarioAuthInclude = {
@@ -120,6 +148,55 @@ export class PrismaAuthRepository extends AuthRepository {
       where: { usuarioId, revocadoEn: null },
       data: { revocadoEn: new Date() },
     });
+  }
+
+  async crearDispositivo(data: { usuarioId: number; tokenHash: string; etiqueta: string }) {
+    return getPrisma().dispositivoUsuario.create({ data: { ...data, ultimoUso: new Date() } });
+  }
+
+  async findDispositivoPorToken(tokenHash: string) {
+    return getPrisma().dispositivoUsuario.findUnique({ where: { tokenHash } });
+  }
+
+  async findDispositivo(id: number) {
+    return getPrisma().dispositivoUsuario.findUnique({ where: { id } });
+  }
+
+  async dispositivosDe(usuarioId: number) {
+    return getPrisma().dispositivoUsuario.findMany({
+      where: { usuarioId, revocadoEn: null },
+      orderBy: [{ ultimoUso: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }],
+    });
+  }
+
+  async registrarUsoDispositivo(id: number) {
+    await getPrisma().dispositivoUsuario.update({
+      where: { id },
+      data: { ultimoUso: new Date(), intentosFallidos: 0, bloqueadoEn: null },
+    });
+  }
+
+  async registrarFalloPin(id: number, intentos: number, bloqueadoEn: Date | null) {
+    await getPrisma().dispositivoUsuario.update({ where: { id }, data: { intentosFallidos: intentos, bloqueadoEn } });
+  }
+
+  async guardarPin(id: number, pinHash: string | null) {
+    await getPrisma().dispositivoUsuario.update({
+      where: { id },
+      data: { pinHash, intentosFallidos: 0, bloqueadoEn: null },
+    });
+  }
+
+  async revocarDispositivo(id: number) {
+    await getPrisma().dispositivoUsuario.updateMany({ where: { id, revocadoEn: null }, data: { revocadoEn: new Date() } });
+  }
+
+  async revocarDispositivosDeUsuario(usuarioId: number) {
+    const { count } = await getPrisma().dispositivoUsuario.updateMany({
+      where: { usuarioId, revocadoEn: null },
+      data: { revocadoEn: new Date() },
+    });
+    return count;
   }
 
   private toUsuarioAuth(u: {
