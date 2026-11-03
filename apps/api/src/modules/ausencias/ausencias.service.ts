@@ -147,7 +147,7 @@ export class AusenciasService extends BaseService {
     const rango = rangoTexto(data.desde, data.hasta);
     const quien =
       user.rol === ROLES.GUARDIA ? guardia.nombre : `${(await this.repo.nombreDe(user.id)) ?? 'Un supervisor'} (por ${guardia.nombre})`;
-    await this.avisar(await this.repo.admins(), {
+    await this.avisar(await this.repo.admins({ guardiaId: guardia.id }), {
       tipo: 'asignacion',
       titulo: 'Solicitud de ausencia',
       mensaje: `${quien} pide ${TIPO_AUSENCIA_LABEL[data.tipo].toLowerCase()} ${rango}${
@@ -157,7 +157,7 @@ export class AusenciasService extends BaseService {
       entidad: { tipo: 'ausencia', id: fila.id },
     });
     if (user.rol === ROLES.GUARDIA) {
-      const admins = new Set(await this.repo.admins());
+      const admins = new Set(await this.repo.admins({ guardiaId: guardia.id }));
       const supervisores = (await this.repo.supervisoresDe(usuarioId, this.hoy())).filter((s) => !admins.has(s));
       await this.avisar(supervisores, {
         tipo: 'asignacion',
@@ -226,7 +226,7 @@ export class AusenciasService extends BaseService {
         ruta: RUTA_ADMIN,
       });
     }
-    const admins = new Set(await this.repo.admins());
+    const admins = new Set(await this.repo.admins({ guardiaId: fila.guardia.id }));
     const supervisores = (await this.repo.supervisoresDe(fila.guardia.id, this.hoy())).filter(
       (s) => s !== actorId && s !== fila.solicitante.id && !admins.has(s),
     );
@@ -287,7 +287,9 @@ export class AusenciasService extends BaseService {
     await this.audit.registrarAccion(ctx, 'ausencias.cancelar', 'ausencias', id, { guardiaId: fila.guardia.id, motivo });
     const rango = rangoTexto(fila.desde, fila.hasta);
     await this.avisar(
-      [...new Set([fila.guardia.id, fila.solicitante.id, ...(await this.repo.admins())])].filter((u) => u !== ctx.actorId),
+      [...new Set([fila.guardia.id, fila.solicitante.id, ...(await this.repo.admins({ guardiaId: fila.guardia.id }))])].filter(
+        (u) => u !== ctx.actorId,
+      ),
       {
         tipo: 'asignacion',
         titulo: 'Ausencia cancelada',

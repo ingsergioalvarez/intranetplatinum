@@ -15,7 +15,7 @@ export abstract class RecordatoriosIncidenciasRepository {
   abstract pendientes(desde: Date): Promise<PendienteRow[]>;
   /** Supervisor del sitio; sin supervisor, los admin. */
   abstract revisoresDe(destino: { sitioId: number | null; guardiaId: number }): Promise<number[]>;
-  abstract admins(): Promise<number[]>;
+  abstract admins(contexto?: { guardiaId?: number | null; sitioId?: number | null }): Promise<number[]>;
   /** El usuario ya recibió ese aviso (por título) desde esa fecha. */
   abstract yaAvisado(usuarioId: number, titulo: string, desde: Date): Promise<boolean>;
 }
@@ -40,8 +40,8 @@ export class PrismaRecordatoriosIncidenciasRepository extends RecordatoriosIncid
     return this.asistencia.revisoresDe({ sitioId: destino.sitioId, guardiaId: destino.guardiaId });
   }
 
-  admins() {
-    return this.asistencia.admins();
+  admins(contexto?: { guardiaId?: number | null; sitioId?: number | null }) {
+    return this.asistencia.admins(contexto);
   }
 
   async yaAvisado(usuarioId: number, titulo: string, desde: Date) {
@@ -110,9 +110,14 @@ export class RecordatorioIncidencias {
     }
 
     // Más de 24 h sin atender: también los admin (una vez al día).
-    const viejas = pendientes.filter((p) => ahora.getTime() - p.ocurrioEn.getTime() >= ATRASO_ESCALA_MS).length;
-    if (viejas === 0) return;
-    for (const admin of await this.repo.admins()) {
+    // Cada admin se entera solo de las de su cartera (A-65).
+    const viejasPorAdmin = new Map<number, number>();
+    for (const p of pendientes.filter((p) => ahora.getTime() - p.ocurrioEn.getTime() >= ATRASO_ESCALA_MS)) {
+      for (const admin of await this.repo.admins({ guardiaId: p.usuarioId, sitioId: p.sitioId })) {
+        viejasPorAdmin.set(admin, (viejasPorAdmin.get(admin) ?? 0) + 1);
+      }
+    }
+    for (const [admin, viejas] of viejasPorAdmin) {
       if (await this.repo.yaAvisado(admin, TITULO_ADMIN, inicioDia)) continue;
       await this.avisar([admin], {
         tipo: 'retardo',

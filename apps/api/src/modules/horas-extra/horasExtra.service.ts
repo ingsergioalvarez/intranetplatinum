@@ -112,7 +112,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
 
   /** Quien decide: el supervisor del sitio o, si no tiene, los admins. */
   private async revisores(sitio: SitioExtra) {
-    return sitio.supervisorId ? [sitio.supervisorId] : await this.repo.admins();
+    return sitio.supervisorId ? [sitio.supervisorId] : await this.repo.admins({ sitioId: sitio.id });
   }
 
   private async cargar(id: number, alcance: Alcance | null) {
@@ -657,7 +657,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     // 3. El supervisor no responde: el aviso sube a los admins.
     const antes = new Date(ahora.getTime() - HORAS_ESCALAR_EXTRA * HORA);
     for (const r of await this.repo.sinResponder(antes)) {
-      await this.avisar(await this.repo.admins(), {
+      await this.avisar(await this.repo.admins({ guardiaId: r.guardia.id, sitioId: r.sitio.id }), {
         tipo: 'horas_extra',
         titulo: 'Horas extra sin respuesta',
         mensaje: `${r.guardia.nombre} · ${r.sitio.nombre}: horas extra del ${fechaCorta(r.fecha)} llevan más de ${HORAS_ESCALAR_EXTRA} h sin respuesta`,

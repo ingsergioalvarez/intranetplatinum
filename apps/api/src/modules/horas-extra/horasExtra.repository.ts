@@ -1,6 +1,7 @@
 import type { EstadoHoraExtra, OrigenHoraExtra, Rol } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
+import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 import type { Prisma } from '../../generated/prisma/client';
 
 export interface Persona {
@@ -87,7 +88,7 @@ export abstract class HorasExtraRepository {
   abstract guardiasActivos(): Promise<Persona[]>;
   abstract sitiosActivos(): Promise<Persona[]>;
   /** Admins activos (a quienes sube el aviso si el sitio no tiene supervisor o no responde). */
-  abstract admins(): Promise<number[]>;
+  abstract admins(contexto?: ContextoDueno): Promise<number[]>;
   abstract crear(d: NuevaHoraExtra): Promise<HoraExtraRow>;
   abstract findById(id: number): Promise<HoraExtraRow | null>;
   abstract porEntrada(entradaId: number): Promise<HoraExtraRow | null>;
@@ -216,12 +217,8 @@ export class PrismaHorasExtraRepository extends HorasExtraRepository {
     });
   }
 
-  async admins() {
-    const r = await getPrisma().usuario.findMany({
-      where: { activo: true, deletedAt: null, rol: { clave: 'admin' } },
-      select: { id: true },
-    });
-    return r.map((u) => u.id);
+  admins(contexto?: ContextoDueno) {
+    return adminsDe(contexto);
   }
 
   async crear(d: NuevaHoraExtra) {

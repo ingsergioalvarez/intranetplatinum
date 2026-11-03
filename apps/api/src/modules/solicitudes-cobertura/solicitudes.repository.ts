@@ -2,6 +2,7 @@ import type { EstadoSolicitud, SolicitudCobertura } from '@platinum/shared';
 import { ROLES } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
+import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 
 export interface NuevaSolicitud {
   sitioId: number;
@@ -38,7 +39,7 @@ export abstract class SolicitudesRepository {
   abstract porRecordar(creadasAntes: Date, recordadasAntes: Date): Promise<SolicitudRow[]>;
   abstract marcarRecordada(id: number, en: Date): Promise<void>;
   /** Usuarios admin activos. */
-  abstract admins(): Promise<number[]>;
+  abstract admins(contexto?: ContextoDueno): Promise<number[]>;
   abstract nombreDe(usuarioId: number): Promise<string | null>;
 }
 
@@ -133,12 +134,8 @@ export class PrismaSolicitudesRepository extends SolicitudesRepository {
     await getPrisma().solicitudCobertura.update({ where: { id }, data: { recordadaEn: en } });
   }
 
-  async admins() {
-    const rows = await getPrisma().usuario.findMany({
-      where: { activo: true, deletedAt: null, rol: { clave: ROLES.ADMIN } },
-      select: { id: true },
-    });
-    return rows.map((r) => r.id);
+  admins(contexto?: ContextoDueno) {
+    return adminsDe(contexto);
   }
 
   async nombreDe(usuarioId: number) {

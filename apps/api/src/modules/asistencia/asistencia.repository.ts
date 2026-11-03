@@ -12,6 +12,7 @@ import type {
 import { ROLES, tituloDeAviso, trabajaEl } from '@platinum/shared';
 import type { EntidadAviso } from '../avisos/atencion';
 import { getPrisma } from '../../core/data/prisma';
+import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 import { dateAFecha, fechaADate, hoyISO } from '../../core';
 import { asignadaA, vigenteEn } from '../clientes/clientes.repository';
 import { turnoDeDb } from '../sitios/sitios.repository';
@@ -259,7 +260,7 @@ export abstract class AsistenciaRepository {
   /** Guarda lo que decidió el supervisor sobre un retardo. */
   abstract decidirRetardo(id: number, porId: number, decision: DecisionRetardo, en: Date): Promise<void>;
   /** Usuarios admin activos. */
-  abstract admins(): Promise<number[]>;
+  abstract admins(contexto?: ContextoDueno): Promise<number[]>;
 }
 
 /** Evento de bitácora de un retardo, con lo necesario para decidirlo. */
@@ -599,11 +600,8 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
         ).map((a) => a.sitio);
     const ids = [...new Set(supervisores.map((s) => s.supervisorId!))];
     if (ids.length) return ids;
-    const admins = await db.usuario.findMany({
-      where: { ...activo, rol: { clave: ROLES.ADMIN } },
-      select: { id: true },
-    });
-    return admins.map((a) => a.id);
+    // Sin supervisor: los admin dueños del guardia y del cliente del sitio (A-65).
+    return adminsDe({ guardiaId: guardiaId || null, sitioId });
   }
 
   async avisar(usuarioIds: number[], { tipo, titulo, mensaje, ruta, fotoClave = null, entidad }: AvisoAsistencia) {
@@ -664,12 +662,8 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
     });
   }
 
-  async admins() {
-    const rows = await getPrisma().usuario.findMany({
-      where: { activo: true, deletedAt: null, rol: { clave: ROLES.ADMIN } },
-      select: { id: true },
-    });
-    return rows.map((r) => r.id);
+  admins(contexto?: ContextoDueno) {
+    return adminsDe(contexto);
   }
 
   async crearIncidencia(data: NuevaIncidencia) {

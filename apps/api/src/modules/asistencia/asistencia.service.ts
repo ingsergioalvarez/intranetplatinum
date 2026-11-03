@@ -1579,7 +1579,9 @@ export class AsistenciaService extends BaseService {
     });
     if (solo) {
       const guardia = (await this.repo.findUsuarioRostro(ev.usuarioId))?.nombre ?? 'El guardia';
-      const admins = (await this.repo.admins()).filter((id) => id !== ctx.actorId);
+      const admins = (await this.repo.admins({ guardiaId: ev.usuarioId, sitioId: entrada.sitio?.id ?? null })).filter(
+        (id) => id !== ctx.actorId,
+      );
       const detalle = {
         queda_solo: 'Se queda sin guardia hasta el siguiente turno, bajo su responsabilidad.',
         cubrire: 'Enviará a alguien de sus guardias a cubrir; si necesita uno de otro supervisor, lo pedirá aquí.',

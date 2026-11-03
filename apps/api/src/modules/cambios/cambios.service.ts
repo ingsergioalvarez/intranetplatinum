@@ -125,7 +125,9 @@ export class CambiosService extends BaseService {
 
   /** Quien aprueba: el supervisor del sitio o, si no tiene, los admins. */
   private async aprobadores(r: CambioRow) {
-    return r.sitio.supervisorId ? [r.sitio.supervisorId] : await this.repo.admins();
+    return r.sitio.supervisorId
+      ? [r.sitio.supervisorId]
+      : await this.repo.admins({ guardiaId: r.guardia.id, sitioId: r.sitio.id });
   }
 
   /** Guardias y turnos entre los que puede elegir quien pide. */
