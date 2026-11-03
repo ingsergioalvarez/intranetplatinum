@@ -2,7 +2,7 @@ import { useCallback, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, EllipsisVertical, LockKeyhole, Plus } from 'lucide-react';
-import { loginSchema, type LoginInput } from '@platinum/shared';
+import { ROL_DESCRIPCIONES, ROLES, loginSchema, type LoginInput } from '@platinum/shared';
 import { ApiError, api } from '../../core/api';
 import { useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
@@ -212,6 +212,9 @@ export function LoginPage() {
                     <span className="block text-base leading-tight font-semibold break-words text-slate-900">
                       {p.nombre}
                     </span>
+                    {p.rol && p.rol !== ROLES.GUARDIA && (
+                      <span className="block text-xs font-medium text-brand-700">{ROL_DESCRIPCIONES[p.rol]}</span>
+                    )}
                     <span className="mt-0.5 block text-xs text-slate-500">
                       {p.bloqueado ? 'PIN bloqueado: usa tu contraseña' : p.tienePin ? 'Entra con tu PIN' : 'Entra con tu contraseña'}
                     </span>

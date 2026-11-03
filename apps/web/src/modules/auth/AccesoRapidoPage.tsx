@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Smartphone, Trash2 } from 'lucide-react';
-import { definirPinSchema, pinSchema, type DispositivoUsuarioVista } from '@platinum/shared';
+import { ROLES, definirPinSchema, pinSchema, type DispositivoUsuarioVista } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
   Badge,
@@ -19,6 +19,7 @@ import {
   toast,
 } from '../../components/ui';
 import { ApiError, mensajeDeError } from '../../core/api';
+import { authService } from '../../core/auth/AuthService';
 import { useAuthStore } from '../../core/auth/authStore';
 import { actualizarPerfil, perfilDeUsuario, quitarPerfil } from '../../core/auth/perfiles';
 import { formatFechaHora } from '../../core/format/fechas';
@@ -75,6 +76,15 @@ export function AccesoRapidoPage() {
     onError: (e) => toast.error(mensajeDeError(e)),
   });
 
+  const guardarCelular = useMutation({
+    mutationFn: () => authService.guardarPerfilEnEsteCelular(),
+    onSuccess: () => {
+      toast.success('Perfil guardado en este celular');
+      refrescar();
+    },
+    onError: (e) => toast.error(mensajeDeError(e)),
+  });
+
   const quitar = useMutation({
     mutationFn: (d: DispositivoUsuarioVista) => dispositivosService.quitarMio(d.id),
     onSuccess: (_r, d) => {
@@ -99,10 +109,18 @@ export function AccesoRapidoPage() {
           <CardHeader title="PIN de este celular" />
           <div className="space-y-3 px-4 pb-4">
             {!perfil || !esteId ? (
-              <p className="text-sm text-slate-600">
-                Este celular aún no tiene tu perfil guardado. Cierra sesión y vuelve a entrar con tu contraseña:
-                se guarda solo.
-              </p>
+              <>
+                <p className="text-sm text-slate-600">Este celular aún no tiene tu perfil guardado.</p>
+                {user.rol !== ROLES.GUARDIA && (
+                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    Hazlo <strong>solo si es tu celular personal</strong>: quien tenga este teléfono y tu PIN podría
+                    entrar a tu cuenta.
+                  </p>
+                )}
+                <Button onClick={() => guardarCelular.mutate()} loading={guardarCelular.isPending}>
+                  Guardar este celular
+                </Button>
+              </>
             ) : (
               <>
                 <p className="flex flex-wrap items-center gap-2 text-sm text-slate-700">

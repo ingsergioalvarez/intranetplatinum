@@ -9,6 +9,7 @@ import { authService } from '../../core/auth/AuthService';
 import { Modal, cn } from '../ui';
 import { useSincronizacion } from '../../core/offline/sincronizar';
 import { AvisoPin } from '../../modules/auth/AvisoPin';
+import { OfertaPerfil } from '../../modules/auth/OfertaPerfil';
 import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
 import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
 import { Campanita } from './Campanita';
@@ -89,14 +90,12 @@ function Sidebar() {
         <div className="border-t border-brand-800 p-4">
           <p className="truncate text-sm font-medium">{user.nombre}</p>
           <p className="truncate text-xs text-brand-200">{ROL_DESCRIPCIONES[user.rol]}</p>
-          {user.rol === 'guardia' && (
-            <Link to="/acceso-rapido" className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white">
-              <LockKeyhole className="size-4" /> Acceso rápido (PIN)
-            </Link>
-          )}
+          <Link to="/acceso-rapido" className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white">
+            <LockKeyhole className="size-4" /> Acceso rápido (PIN)
+          </Link>
           <Link
             to="/cambiar-password"
-            className={cn('flex items-center gap-2 text-sm text-brand-200 hover:text-white', user.rol === 'guardia' ? 'mt-2' : 'mt-3')}
+            className="mt-2 flex items-center gap-2 text-sm text-brand-200 hover:text-white"
           >
             <KeyRound className="size-4" /> Cambiar contraseña
           </Link>
@@ -121,15 +120,13 @@ function Topbar() {
         {user && (
           <div className="flex items-center gap-1">
             <Campanita />
-            {user.rol === 'guardia' && (
-              <Link
-                to="/acceso-rapido"
-                className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
-                aria-label="Acceso rápido con PIN"
-              >
-                <LockKeyhole className="size-5" />
-              </Link>
-            )}
+            <Link
+              to="/acceso-rapido"
+              className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
+              aria-label="Acceso rápido con PIN"
+            >
+              <LockKeyhole className="size-5" />
+            </Link>
             <Link
               to="/cambiar-password"
               className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
@@ -272,6 +269,7 @@ export function AppShell() {
       <BienvenidaRostro />
       <VentanaTurno />
       <VentanaComida />
+      <OfertaPerfil />
     </div>
   );
 }

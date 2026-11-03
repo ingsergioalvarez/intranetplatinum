@@ -49,6 +49,9 @@ export class AuthController extends BaseController {
   misDispositivos = async (req: Request, res: Response) =>
     this.ok(res, await this.service.dispositivosDe(this.currentUser(req).id));
 
+  guardarMiDispositivo = async (req: Request, res: Response) =>
+    this.created(res, await this.service.guardarMiDispositivo(this.currentUser(req).id, requestContext(req)));
+
   definirPin = async (req: Request, res: Response) => {
     await this.service.definirPin(this.currentUser(req).id, this.params<IdParam>(req).id, this.body<DefinirPinInput>(req), requestContext(req));
     return this.noContent(res);

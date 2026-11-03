@@ -1,6 +1,7 @@
 import type { AuthSession, CambiarPasswordInput, LoginInput } from '@platinum/shared';
 import { ApiError, api, queryClient, type ApiClient } from '../api';
 import { useAuthStore } from './authStore';
+import { useOfertaPerfil } from './ofertaPerfil';
 import { actualizarPerfil, guardarPerfil as guardarTarjeta, perfilPorCorreo, type PerfilRapido } from './perfiles';
 
 const PERFIL = 'offline.perfil';
@@ -45,7 +46,27 @@ export class AuthService {
     );
     this.recordarPerfil(sesion, previo);
     this.aplicar(sesion);
+    // Admin, supervisor y cliente deciden si guardan su perfil en este celular (A-40).
+    if (sesion.ofrecerPerfil) useOfertaPerfil.getState().ofrecer();
     return sesion.user;
+  }
+
+  /** Guarda este celular para el usuario en sesión (la respuesta a "¿Guardar tu perfil en este celular?"). */
+  async guardarPerfilEnEsteCelular() {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+    const d = await this.http.post<NonNullable<AuthSession['dispositivo']>>('/auth/dispositivos');
+    if (!d.token) return;
+    guardarTarjeta({
+      usuarioId: user.id,
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol,
+      dispositivoId: d.id,
+      token: d.token,
+      tienePin: false,
+      bloqueado: false,
+    });
   }
 
   /** Entra con la tarjeta de un perfil guardado en este celular y su PIN (A-40). */
@@ -55,7 +76,7 @@ export class AuthService {
       { token: perfil.token, pin },
       { skipAuthRefresh: true },
     );
-    actualizarPerfil(perfil.usuarioId, { tienePin: true, bloqueado: false, nombre: sesion.user.nombre });
+    actualizarPerfil(perfil.usuarioId, { tienePin: true, bloqueado: false, nombre: sesion.user.nombre, rol: sesion.user.rol });
     this.aplicar(sesion);
     return sesion.user;
   }
@@ -69,6 +90,7 @@ export class AuthService {
       usuarioId: sesion.user.id,
       nombre: sesion.user.nombre,
       email: sesion.user.email,
+      rol: sesion.user.rol,
       dispositivoId: d.id,
       token,
       tienePin: d.tienePin,

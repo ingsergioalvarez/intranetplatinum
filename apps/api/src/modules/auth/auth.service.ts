@@ -125,8 +125,11 @@ export class AuthService extends BaseService {
     const sesion = await this.emitirSesion(usuario, ctx);
     await this.audit.registrar({ ...ctx, usuarioId: usuario.id, accion: 'auth.login' });
     this.log('login', { usuarioId: usuario.id });
-    // Guardias: el celular recuerda su perfil sin preguntar (A-40).
-    if (usuario.rol === ROLES.GUARDIA) sesion.dispositivo = await this.vincularDispositivo(usuario, dispositivoToken, ctx);
+    // Perfil rápido (A-40): si este celular ya traía su clave se reutiliza; los guardias se guardan solos y
+    // el resto (admin, supervisor, cliente) decide: la app pregunta y crea el celular al confirmar.
+    const dispositivo = await this.vincularDispositivo(usuario, dispositivoToken, ctx, usuario.rol === ROLES.GUARDIA);
+    if (dispositivo) sesion.dispositivo = dispositivo;
+    else sesion.ofrecerPerfil = true;
     return sesion;
   }
 
@@ -138,19 +141,31 @@ export class AuthService extends BaseService {
     usuario: UsuarioAuth,
     token: string | undefined,
     ctx: RequestContext,
-  ): Promise<DispositivoSesion> {
+    crear: boolean,
+  ): Promise<DispositivoSesion | null> {
     const existente = token ? await this.repo.findDispositivoPorToken(hashToken(token)) : null;
     if (existente && existente.usuarioId === usuario.id && !existente.revocadoEn) {
       await this.repo.registrarUsoDispositivo(existente.id);
       return { id: existente.id, tienePin: existente.pinHash !== null };
     }
+    return crear ? this.crearDispositivo(usuario.id, ctx) : null;
+  }
+
+  /** Guarda este celular para el usuario (los guardias, solo; el resto, al confirmar). Devuelve la clave una sola vez. */
+  async guardarMiDispositivo(usuarioId: number, ctx: RequestContext): Promise<DispositivoSesion> {
+    const usuario = await this.repo.findUsuarioById(usuarioId);
+    if (!usuario || !usuario.activo || usuario.deletedAt) throw HttpError.unauthorized();
+    return this.crearDispositivo(usuarioId, ctx);
+  }
+
+  private async crearDispositivo(usuarioId: number, ctx: RequestContext): Promise<DispositivoSesion> {
     const nuevo = generateOpaqueToken();
     const d = await this.repo.crearDispositivo({
-      usuarioId: usuario.id,
+      usuarioId,
       tokenHash: hashToken(nuevo),
       etiqueta: etiquetaDeCelular(ctx.userAgent),
     });
-    await this.audit.registrar({ ...ctx, usuarioId: usuario.id, accion: 'auth.dispositivo_guardado', entidad: 'dispositivos_usuario', entidadId: d.id });
+    await this.audit.registrar({ ...ctx, usuarioId, accion: 'auth.dispositivo_guardado', entidad: 'dispositivos_usuario', entidadId: d.id });
     return { id: d.id, token: nuevo, tienePin: false };
   }
 
@@ -159,7 +174,7 @@ export class AuthService extends BaseService {
     const d = await this.repo.findDispositivoPorToken(hashToken(token));
     if (!d || d.revocadoEn) throw dispositivoInvalido();
     const usuario = await this.repo.findUsuarioById(d.usuarioId);
-    if (!usuario || !usuario.activo || usuario.deletedAt || usuario.rol !== ROLES.GUARDIA) {
+    if (!usuario || !usuario.activo || usuario.deletedAt) {
       await this.repo.revocarDispositivo(d.id);
       throw dispositivoInvalido();
     }

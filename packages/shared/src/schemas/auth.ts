@@ -89,6 +89,8 @@ export interface DispositivoSesion {
 export interface AuthSession {
   user: SessionUser;
   accessToken: string;
-  /** Perfil rápido de este celular (A-40); solo en el login de un guardia. */
+  /** Perfil rápido de este celular (A-40): guardado solo (guardia) o reutilizado. */
   dispositivo?: DispositivoSesion;
+  /** Admin, supervisor y cliente deciden si guardan su perfil en este celular: la app pregunta (A-40). */
+  ofrecerPerfil?: boolean;
 }

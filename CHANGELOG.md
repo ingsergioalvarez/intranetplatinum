@@ -5,6 +5,16 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-02 #36 — Perfiles rápidos para todos los roles (A-40)
+
+#### Cambiado
+
+- El perfil rápido y el PIN de 4 dígitos ya no son solo de guardias: aplican a **todos los roles**. El guardia se guarda solo al entrar con contraseña, como antes.
+- **Admin, supervisor y cliente deciden**: al entrar con contraseña sale "¿Guardar tu perfil en este celular?" con el aviso de hacerlo solo en un celular personal (quien tenga el teléfono y el PIN podría entrar a la cuenta). "Sí" lo guarda; "No, solo esta vez" no guarda nada y se les vuelve a preguntar la próxima vez que entren con contraseña. También pueden guardarlo desde Acceso rápido, con la misma advertencia.
+- Las tarjetas de la pantalla de entrada muestran el rol debajo del nombre (salvo guardias), por si el celular se comparte.
+- Acceso rápido, el aviso "Entra más rápido" y el candado del menú están disponibles para todos. En Usuarios, el admin ve el botón "Celulares" en cualquier usuario (el supervisor sigue sin verlo).
+- API: `POST /api/auth/dispositivos` (guardar este celular, con sesión); `POST /api/auth/login` devuelve `ofrecerPerfil: true` cuando la app debe preguntar. Sin migración nueva.
+
 ### Sesión 2026-10-30 #35 — Perfiles rápidos y PIN para guardias (A-40)
 
 #### Añadido

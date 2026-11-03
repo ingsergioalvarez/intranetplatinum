@@ -69,7 +69,9 @@ export function createAuthModule({
     validate({ body: quitarPerfilSchema }),
     controller.quitarPerfilRapido,
   );
-  const guardia = [authenticate, requireRoles(ROLES.GUARDIA)];
+  // Cualquier usuario con sesión maneja sus propios celulares.
+  const guardia = [authenticate];
+  router.post('/dispositivos', ...guardia, controller.guardarMiDispositivo);
   router.get('/dispositivos', ...guardia, controller.misDispositivos);
   router.put('/dispositivos/:id/pin', ...guardia, validate({ params: idParamSchema, body: definirPinSchema }), controller.definirPin);
   router.delete('/dispositivos/:id/pin', ...guardia, validate({ params: idParamSchema }), controller.quitarPin);

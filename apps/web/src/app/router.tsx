@@ -55,7 +55,7 @@ export const router = createBrowserRouter([
       {
         path: 'acceso-rapido',
         element: (
-          <ProtectedRoute roles={[ROLES.GUARDIA]}>
+          <ProtectedRoute>
             <AccesoRapidoPage />
           </ProtectedRoute>
         ),

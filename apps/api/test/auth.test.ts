@@ -442,11 +442,46 @@ describe('perfiles rápidos de guardias (A-40)', { timeout: 30_000 }, () => {
     expect(repo.dispositivos).toHaveLength(2);
   });
 
-  it('solo los guardias: admin, supervisor y cliente no guardan perfil', async () => {
-    repo.usuarios.push(usuario({ id: 2, email: 'admin@platinum.local', rol: ROLES.ADMIN, permisos: PERMISOS_POR_ROL[ROLES.ADMIN] }));
-    const r = await entrar({}, 'admin@platinum.local');
-    expect(r.body.data.dispositivo).toBeUndefined();
+  it('admin, supervisor y cliente no se guardan solos: el login pide decidir y guardan al confirmar', async () => {
+    repo.usuarios.push(
+      usuario({ id: 2, email: 'admin@platinum.local', rol: ROLES.ADMIN, permisos: PERMISOS_POR_ROL[ROLES.ADMIN] }),
+      usuario({ id: 4, email: 'sup@platinum.local', rol: ROLES.SUPERVISOR, permisos: PERMISOS_POR_ROL[ROLES.SUPERVISOR] }),
+      usuario({ id: 5, email: 'cli@platinum.local', rol: ROLES.CLIENTE, permisos: PERMISOS_POR_ROL[ROLES.CLIENTE] }),
+    );
+    for (const correo of ['admin@platinum.local', 'sup@platinum.local', 'cli@platinum.local']) {
+      const r = await entrar({}, correo);
+      expect(r.body.data.dispositivo).toBeUndefined();
+      expect(r.body.data.ofrecerPerfil).toBe(true);
+    }
     expect(repo.dispositivos).toHaveLength(0);
+
+    // Si deciden guardar: se crea el celular, con su clave una sola vez, y de ahí en adelante se reutiliza.
+    const sup = await entrar({}, 'sup@platinum.local');
+    const guardado = await request(app).post('/api/auth/dispositivos').set(conToken(sup));
+    expect(guardado.status).toBe(201);
+    expect(guardado.body.data).toMatchObject({ tienePin: false, token: expect.any(String) });
+    const otra = await entrar({ dispositivoToken: guardado.body.data.token }, 'sup@platinum.local');
+    expect(otra.body.data.dispositivo).toEqual({ id: guardado.body.data.id, tienePin: false });
+    expect(otra.body.data.ofrecerPerfil).toBeUndefined();
+    // Una clave de otro usuario no se reutiliza.
+    const ajena = await entrar({ dispositivoToken: guardado.body.data.token }, 'admin@platinum.local');
+    expect(ajena.body.data.ofrecerPerfil).toBe(true);
+    // Un guardia sí se guarda solo.
+    expect((await entrar()).body.data.dispositivo.token).toBeDefined();
+  });
+
+  it('el PIN funciona igual para supervisor y admin (y se bloquea a los 5 intentos)', async () => {
+    repo.usuarios.push(
+      usuario({ id: 4, email: 'sup@platinum.local', rol: ROLES.SUPERVISOR, permisos: PERMISOS_POR_ROL[ROLES.SUPERVISOR] }),
+    );
+    const sup = await entrar({}, 'sup@platinum.local');
+    const { id, token } = (await request(app).post('/api/auth/dispositivos').set(conToken(sup))).body.data;
+    expect((await definir(sup, id)).status).toBe(204);
+    const bien = await pinPor(token, '1234');
+    expect(bien.status).toBe(200);
+    expect(bien.body.data.user).toMatchObject({ id: 4, rol: 'supervisor' });
+    for (let i = 0; i < 5; i++) await pinPor(token, '0000');
+    expect((await pinPor(token, '1234')).body.error.code).toBe('PIN_BLOCKED');
   });
 
   it('crear el PIN pide la contraseña y 4 dígitos; con él se entra con la tarjeta', async () => {

@@ -171,10 +171,9 @@ export function UsuariosPage() {
             onRowClick={setEditando}
             actions={
               puedeRostros || esAdmin
-                ? (u) =>
-                    u.rol === ROLES.GUARDIA && (
+                ? (u) => (
                       <>
-                        {puedeRostros && (
+                        {puedeRostros && u.rol === ROLES.GUARDIA && (
                           <Button
                             variant="ghost"
                             size="sm"

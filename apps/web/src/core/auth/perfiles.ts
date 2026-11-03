@@ -1,5 +1,7 @@
+import type { Rol } from '@platinum/shared';
+
 /**
- * Perfiles rápidos de guardias (A-40): el celular recuerda a quienes han entrado en él para mostrar sus
+ * Perfiles rápidos (A-40): el celular recuerda a quienes han entrado en él para mostrar sus
  * tarjetas en la pantalla de entrada. Guarda la clave propia del celular (el servidor solo conserva su
  * hash); sin el PIN o la contraseña esa clave no abre nada. Cerrar sesión no borra la tarjeta.
  */
@@ -7,6 +9,8 @@ export interface PerfilRapido {
   usuarioId: number;
   nombre: string;
   email: string;
+  /** Rol, para distinguir las tarjetas en un celular compartido (las guardadas antes eran de guardias). */
+  rol?: Rol;
   /** Id del celular en el servidor (para sincronizar su estado). */
   dispositivoId: number;
   token: string;

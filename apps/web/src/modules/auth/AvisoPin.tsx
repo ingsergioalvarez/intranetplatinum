@@ -1,19 +1,18 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LockKeyhole } from 'lucide-react';
-import { ROLES } from '@platinum/shared';
 import { Button } from '../../components/ui';
 import { useAuthStore } from '../../core/auth/authStore';
 import { avisoPinOculto, ocultarAvisoPin, perfilDeUsuario } from '../../core/auth/perfiles';
 
 /**
- * "Entra más rápido" (A-40): a los guardias con el perfil guardado en este celular y sin PIN les ofrece
+ * "Entra más rápido" (A-40): a quien tiene su perfil guardado en este celular y no tiene PIN le ofrece
  * crearlo. "Ahora no" lo oculta; siempre se puede crear después en Acceso rápido.
  */
 export function AvisoPin() {
   const user = useAuthStore((s) => s.user);
   const [, rerender] = useState(0);
-  if (!user || user.rol !== ROLES.GUARDIA || user.debeCambiarPassword) return null;
+  if (!user || user.debeCambiarPassword) return null;
   const perfil = perfilDeUsuario(user.id);
   if (!perfil || perfil.tienePin || avisoPinOculto(user.id)) return null;
 
