@@ -55,8 +55,8 @@ Cada instalación se actualiza **solo cuando el usuario lo indica**, desde **su*
 
 ## Pendientes por definir (poco a poco)
 
-- Nombre del subdominio de Comunicalo y detalles del despliegue en el servidor (confirmar contra los archivos de Docker).
-- Separar los documentos de la rama `gestion-comunicalo`.
+- ~~Subdominio y despliegue~~: definidos (`gestion.grupocomunicalo.mx`, túnel `gestion-comunicalo`, proyecto Docker `comunicalo`, puerto 5191). Falta el DNS (C-02).
+- ~~Separar los documentos~~: hecho en `gestion-comunicalo`; los de Platinum quedan archivados en `docs/platinum/`.
 - Cómo se generaliza "sitio" hacia áreas, técnicos y home office.
 - Menús visibles en Comunicalo (por ejemplo, empezar solo con Asistencia) sin afectar a Platinum.
 - Correo (SMTP): se aborda cuando se fusionen ambos conceptos; ERPModular ya envía correos desde `smtp.uservers.net`.
