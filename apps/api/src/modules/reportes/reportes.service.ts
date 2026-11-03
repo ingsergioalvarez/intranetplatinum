@@ -16,6 +16,7 @@ import {
   BaseService,
   HttpError,
   StorageService,
+  carteraDe,
   dateAFecha,
   detectarImagen,
   fechaADate,
@@ -188,7 +189,11 @@ export class ReportesService extends BaseService {
   // ---------- Apoyo ----------
 
   private visibilidad(user: AuthUser): Visibilidad {
-    if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) return { tipo: 'todos' };
+    if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) {
+      // Un admin ve los reportes de sus clientes y un supervisor los de los clientes de su admin (A-66).
+      const cartera = carteraDe(user);
+      return cartera === undefined ? { tipo: 'todos' } : { tipo: 'cartera', propietarioId: cartera };
+    }
     if (user.rol === ROLES.CLIENTE && user.clienteId && tienePermiso(user, PERMISOS.REPORTES_VER_PROPIOS)) {
       return { tipo: 'cliente', clienteId: user.clienteId };
     }
@@ -200,7 +205,10 @@ export class ReportesService extends BaseService {
 
   /** Sitios que puede consultar/reportar según su rol. */
   private restriccionSitios(user: AuthUser): RestriccionSitio {
-    if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) return null;
+    if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) {
+      const cartera = carteraDe(user);
+      return cartera === undefined ? null : { tipo: 'cartera', propietarioId: cartera };
+    }
     if (user.rol === ROLES.CLIENTE && user.clienteId) {
       return { tipo: 'cliente', clienteId: user.clienteId };
     }

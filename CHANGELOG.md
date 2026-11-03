@@ -5,6 +5,21 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-04 #45 — Super admin y carteras, fase 2 (A-66)
+
+#### Añadido
+
+- **Todo lo demás filtra por cartera**: un admin (que no es super admin) ve en **asistencia, tablero, calendario de cobertura, bitácora, medidas, informes y reportes de asistencia, horarios en PDF, horas extra, ausencias, cambios de turno, casos y coberturas** solo los sitios de sus clientes y sus guardias (más quienes estén asignados a esos sitios). Se hizo ampliando el alcance que ya usaban los supervisores, así que todas esas pantallas lo respetan igual, también al capturar, aprobar o cancelar.
+- **Reportes de servicio**: un admin ve y crea reportes solo en los sitios de sus clientes; un supervisor, los de los clientes de su admin. El super admin ve todos.
+- **Solicitudes de cobertura**: un admin ve y cancela solo las de los sitios de sus clientes.
+- **Avisos de reportes nuevos y comentarios**: llegan al supervisor del sitio y al admin dueño del cliente (antes llegaban a todos los admin y supervisores).
+- Sin migración nueva.
+
+#### Pendiente
+
+- Probar con dos admin en pantalla: que el admin B no vea asistencia, reportes ni informes de los guardias del admin A.
+- Un guardia de otro admin no se puede mandar a cubrir un sitio si no está asignado a un sitio de ese admin (limitación a propósito: cada quien opera con lo suyo; el super admin sí puede).
+
 ### Sesión 2026-11-04 #44 — Super admin y carteras, fase 1 (A-64, A-65)
 
 #### Añadido

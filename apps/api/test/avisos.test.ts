@@ -29,8 +29,10 @@ class MemoryAvisos extends AvisosRepository {
   async guardiasDelSitio() {
     return this.guardias;
   }
-  async supervisores() {
-    return [1, 2]; // admin y supervisor
+  sitiosConsultados: number[] = [];
+  async supervisores(sitioId: number) {
+    this.sitiosConsultados.push(sitioId);
+    return [1, 2]; // admin y supervisor del sitio
   }
   async reglasDelCliente() {
     return this.reglas;
@@ -104,6 +106,16 @@ describe('reglas de aviso (D-016)', () => {
     repo.guardias = [4, 5];
     await notificador.reporteCreado(reporte(), 3);
     expect(repo.destinatarios()).toEqual([1, 2, 4, 5]);
+  });
+});
+
+describe('avisos de reportes por sitio (A-66)', () => {
+  it('pregunta por el supervisor y el admin dueño del sitio del reporte, no por todos', async () => {
+    const repo = new MemoryAvisos();
+    const n = new NotificadorAvisos(repo);
+    await n.reporteCreado(reporte('alta'), 3);
+    await n.comentarioAgregado(reporte('alta'), 3, 'Gabriel');
+    expect(repo.sitiosConsultados).toEqual([1, 1]);
   });
 });
 

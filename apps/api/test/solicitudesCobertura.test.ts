@@ -14,6 +14,8 @@ import { MemoryAuditLogger } from './helpers/memoryAudit';
 
 const NOMBRES: Record<number, string> = { 1: 'Admin Ada', 2: 'Admin Beto', 5: 'Sofía Sup', 6: 'Pedro Sup', 10: 'Juan Pérez' };
 const SITIOS: Record<number, string> = { 1: 'POETAS', 2: 'Plaza Norte' };
+/** Admin dueño del cliente de cada sitio (A-66): POETAS es del admin 10 y Plaza Norte del admin 11. */
+const DUENOS: Record<number, number> = { 1: 10, 2: 11 };
 
 class Memoria extends SolicitudesRepository {
   filas: SolicitudRow[] = [];
@@ -23,6 +25,7 @@ class Memoria extends SolicitudesRepository {
       id: this.filas.length + 1,
       estado: 'pendiente',
       sitio: { id: d.sitioId, nombre: SITIOS[d.sitioId] },
+      sitioDueno: DUENOS[d.sitioId] ?? null,
       solicitante: { id: d.solicitanteId, nombre: NOMBRES[d.solicitanteId] },
       guardia: d.guardiaId ? { id: d.guardiaId, nombre: NOMBRES[d.guardiaId] } : null,
       fecha: d.fecha,
@@ -39,9 +42,10 @@ class Memoria extends SolicitudesRepository {
   async findById(id: number) {
     return this.filas.find((f) => f.id === id) ?? null;
   }
-  async listar(solicitanteId: number | null) {
+  async listar(solicitanteId: number | null, _limite: number, cartera?: number) {
     return this.filas
       .filter((f) => !solicitanteId || f.solicitante.id === solicitanteId)
+      .filter((f) => cartera === undefined || f.sitioDueno === cartera)
       .sort((a, b) => Number(b.estado === 'pendiente') - Number(a.estado === 'pendiente'));
   }
   async pendientesDelSitio(sitioId: number) {
@@ -79,14 +83,18 @@ let ahora: Date;
 let app: ReturnType<typeof createApp>;
 let servicio: ReturnType<typeof crearServicioSolicitudes>;
 
-const token = (id: number, rol: Rol) =>
-  `Bearer ${signAccessToken({ id, email: 'x@x.mx', rol, permisos: PERMISOS_POR_ROL[rol] })}`;
-const como = (id: number, rol: Rol) => ({
-  get: () => request(app).get('/api/solicitudes-cobertura').set('Authorization', token(id, rol)),
+const token = (id: number, rol: Rol, esSuperAdmin = false) =>
+  `Bearer ${signAccessToken({ id, email: 'x@x.mx', rol, permisos: PERMISOS_POR_ROL[rol], esSuperAdmin })}`;
+const como = (id: number, rol: Rol, esSuperAdmin = false) => ({
+  get: () => request(app).get('/api/solicitudes-cobertura').set('Authorization', token(id, rol, esSuperAdmin)),
   cancelar: (solicitud: number, b: object = {}) =>
-    request(app).post(`/api/solicitudes-cobertura/${solicitud}/cancelar`).set('Authorization', token(id, rol)).send(b),
+    request(app)
+      .post(`/api/solicitudes-cobertura/${solicitud}/cancelar`)
+      .set('Authorization', token(id, rol, esSuperAdmin))
+      .send(b),
 });
-const admin = () => como(1, ROLES.ADMIN);
+/** El admin 1 de estas pruebas es el super admin: ve todo. */
+const admin = () => como(1, ROLES.ADMIN, true);
 const sup = () => como(5, ROLES.SUPERVISOR);
 
 const pedir = (sitioId = 1, solicitanteId = 5, fecha = '2026-11-03') =>
@@ -247,5 +255,23 @@ describe('solicitudes de cobertura (A-39)', () => {
     ahora = new Date('2026-11-04T10:00:00.000Z');
     await servicio.recordar();
     expect(avisos).toHaveLength(2);
+  });
+});
+
+describe('solicitudes de cobertura: cada admin ve las de su cartera (A-66)', () => {
+  it('un admin ve solo las solicitudes de los sitios de sus clientes; el super admin, todas', async () => {
+    await pedir(1);
+    await pedir(2, 6);
+    const ids = async (c: ReturnType<typeof como>) => (await c.get()).body.data.items.map((s: { sitio: { id: number } }) => s.sitio.id);
+    expect(await ids(como(10, ROLES.ADMIN))).toEqual([1]);
+    expect(await ids(como(11, ROLES.ADMIN))).toEqual([2]);
+    expect((await ids(admin())).sort()).toEqual([1, 2]);
+    expect(await ids(como(12, ROLES.ADMIN))).toEqual([]);
+  });
+
+  it('un admin no cancela la solicitud de un sitio que no es de su cartera', async () => {
+    await pedir(2, 6);
+    expect((await como(10, ROLES.ADMIN).cancelar(1, { categoria: 'ya_no_se_necesita' })).status).toBe(404);
+    expect((await como(11, ROLES.ADMIN).cancelar(1, { categoria: 'ya_no_se_necesita' })).status).toBe(200);
   });
 });

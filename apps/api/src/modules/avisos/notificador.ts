@@ -43,7 +43,7 @@ export class NotificadorAvisos implements NotificadorReportes {
       const destinatarios = new Set<number>();
 
       if (avisaASupervisor(destino)) {
-        for (const sup of await this.repo.supervisores()) destinatarios.add(sup);
+        for (const sup of await this.repo.supervisores(r.sitio.id)) destinatarios.add(sup);
       }
       // Notifica también a los compañeros asignados a este sitio
       for (const g of guardiasSitio) destinatarios.add(g);
@@ -85,7 +85,7 @@ export class NotificadorAvisos implements NotificadorReportes {
   async comentarioAgregado(r: ReporteAviso, actorId: number, actorNombre: string) {
     await this.seguro('comentarioAgregado', async () => {
       const destino = resolverDestino(await this.repo.reglasDelCliente(r.cliente.id), r.prioridad);
-      const supervisores = avisaASupervisor(destino) ? await this.repo.supervisores() : [];
+      const supervisores = avisaASupervisor(destino) ? await this.repo.supervisores(r.sitio.id) : [];
       const clientes = await this.repo.usuariosDelCliente(r.cliente.id);
       const destinatarios = [...new Set([...supervisores, r.creadoPor.id, ...clientes])];
       await this.repo.crear(this.sin(destinatarios, actorId), {

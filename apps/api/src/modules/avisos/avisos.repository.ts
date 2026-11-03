@@ -1,7 +1,8 @@
-import { PERMISOS, ROLES, tituloDeAviso, type Aviso, type ReglasAviso, type TipoAviso } from '@platinum/shared';
+import { tituloDeAviso, type Aviso, type ReglasAviso, type TipoAviso } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import { firmarArchivo } from '../../core';
 import { notificarPush } from '../push/enviar';
+import { adminsDe } from './duenos';
 
 export interface NuevoAviso {
   tipo: TipoAviso;
@@ -19,8 +20,8 @@ export abstract class AvisosRepository {
   /** Devuelve false si el aviso no existe o es de otro usuario. */
   abstract marcarLeido(id: number, usuarioId: number): Promise<boolean>;
   abstract marcarTodos(usuarioId: number): Promise<void>;
-  /** Usuarios activos que dan seguimiento: con permiso `reportes.estatus` (supervisores y admin). */
-  abstract supervisores(): Promise<number[]>;
+  /** Quienes dan seguimiento a un reporte de este sitio: su supervisor y el admin dueño del cliente (A-66). */
+  abstract supervisores(sitioId: number): Promise<number[]>;
   /** Guardias asignados (directos o por grupo) o cubriendo el sitio hoy. */
   abstract guardiasDelSitio(sitioId: number, hoy: string): Promise<number[]>;
   abstract reglasDelCliente(clienteId: number): Promise<ReglasAviso>;
@@ -89,19 +90,13 @@ export class PrismaAvisosRepository extends AvisosRepository {
     });
   }
 
-  async supervisores() {
-    const rows = await getPrisma().usuario.findMany({
-      where: {
-        activo: true,
-        deletedAt: null,
-        OR: [
-          { rol: { clave: ROLES.ADMIN } },
-          { rol: { permisos: { some: { permiso: { clave: PERMISOS.REPORTES_ESTATUS } } } } },
-        ],
-      },
-      select: { id: true },
+  async supervisores(sitioId: number) {
+    const s = await getPrisma().sitio.findUnique({
+      where: { id: sitioId },
+      select: { supervisor: { select: { id: true, activo: true, deletedAt: true } } },
     });
-    return rows.map((r) => r.id);
+    const supervisor = s?.supervisor && s.supervisor.activo && !s.supervisor.deletedAt ? [s.supervisor.id] : [];
+    return [...new Set([...supervisor, ...(await adminsDe({ sitioId }))])];
   }
 
   async guardiasDelSitio(sitioId: number, hoy: string): Promise<number[]> {
