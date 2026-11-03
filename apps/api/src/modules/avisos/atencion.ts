@@ -4,9 +4,9 @@ import { getPrisma } from '../../core/data/prisma';
 export interface EntidadAviso {
   /**
    * `rostro`, `incidencia` (de rostro), `bitacora` (un evento de la bitácora del guardia), `marca` (una checada:
-   * retardo, salida anticipada o comida fuera), `cambio` (de turno), `hora_extra`, `caso` (de cobertura, por entrada) o `solicitud` (de cobertura al admin).
+   * retardo, salida anticipada o comida fuera), `cambio` (de turno), `hora_extra`, `caso` (de cobertura, por entrada) o `solicitud` (de cobertura al admin) o `ausencia`.
    */
-  tipo: 'rostro' | 'incidencia' | 'bitacora' | 'marca' | 'cambio' | 'hora_extra' | 'caso' | 'solicitud';
+  tipo: 'rostro' | 'incidencia' | 'bitacora' | 'marca' | 'cambio' | 'hora_extra' | 'caso' | 'solicitud' | 'ausencia';
   id: number;
 }
 

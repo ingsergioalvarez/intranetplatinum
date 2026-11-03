@@ -67,6 +67,7 @@ export const ESTADOS_DIA_INFORME = [
   'falta',
   'falta_justificada',
   'por_revisar',
+  'ausencia_justificada',
   'descanso',
   'sin_salida',
   'cerrada',
@@ -80,6 +81,7 @@ export const ESTADO_DIA_INFORME_LABEL: Record<EstadoDiaInforme, string> = {
   falta: 'Falta',
   falta_justificada: 'Falta justificada',
   por_revisar: 'Por revisar',
+  ausencia_justificada: 'Ausencia justificada',
   descanso: 'Descanso',
   sin_salida: 'Sin salida',
   cerrada: 'Cerrada por supervisor',
@@ -115,6 +117,8 @@ export interface InformeResumen {
   justificadas: number;
   /** Días con falta que el supervisor aún no revisa: no cuentan como falta (A-51). Reportes anteriores no lo traen. */
   porRevisar?: number;
+  /** Días de ausencia justificada por adelantado (vacaciones, incapacidad…), A-43. No cuentan como falta ni como programados. */
+  ausencias?: number;
   retardos: number;
   retardoMin: number;
   salidasAntes: number;

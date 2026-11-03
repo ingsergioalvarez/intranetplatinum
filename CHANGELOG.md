@@ -5,6 +5,20 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-03 #41 — Ausencias justificadas por adelantado (A-43, AS4-03)
+
+#### Añadido
+
+- **Ausencias justificadas**: vacaciones, incapacidad médica, cita o consulta médica, permiso u otro, con rango de fechas (máximo 180 días, también pasadas). **El admin las registra** (quedan aprobadas) **o las aprueba**; **el guardia pide la suya** ("Mis ausencias", nuevo botón del menú del guardia) y **el supervisor la de un guardia suyo** (Asistencia → Ausencias); ambas esperan al admin, que aprueba o rechaza con motivo de lista. Se puede cancelar: una pendiente, quien la pidió o el admin; una aprobada que aún no empieza, solo el admin.
+- **Comprobante**: foto obligatoria en incapacidad y cita médica; opcional en permiso y otro; vacaciones no la pide. Permiso y otro piden motivo. Se ve desde la solicitud.
+- **Efectos al aprobar**: durante la ausencia no se generan "No se presentó" ni "Falta" ni avisos a los supervisores; las faltas y "No se presentó" ya marcados en esos días **se justifican solos** (el admin lo ve antes de guardar); el guardia, quien la pidió y los supervisores del guardia reciben aviso (el sitio puede quedar sin cubrir y sigue viéndose como hueco en el calendario); queda en la bitácora del guardia (tipo "Ausencia justificada") y en la auditoría.
+- **Reporte de asistencia**: los días de ausencia salen como "Ausencia justificada" (con su tipo), separados de las faltas; no cuentan como falta ni como días programados y el resumen suma "Días de ausencia justificada".
+- API: `GET/POST /api/ausencias`, `GET /api/ausencias/vista-previa`, `POST /api/ausencias/:id/resolver` (solo admin) y `/:id/cancelar`. Los avisos se actualizan al resolverse (A-54). Migración `20261103020000_ausencias` (tabla `ausencias` y tipo de bitácora `ausencia`).
+
+#### Pendiente
+
+- Probarlo con un guardia, un supervisor y el admin. El cliente ve a ese guardia como "Descansa hoy" (no se le dice el motivo).
+
 ### Sesión 2026-11-03 #40 — Solicitudes de cobertura (A-39, completa A-26)
 
 #### Añadido

@@ -8,7 +8,7 @@ import type {
   TipoAsignacion,
   Turno,
 } from '@platinum/shared';
-import { ROLES } from '@platinum/shared';
+import { ROLES, sumarDiasFecha } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma, TurnoGuardia } from '../../generated/prisma/client';
@@ -546,6 +546,14 @@ export class PrismaSitiosRepository extends SitiosRepository {
         select: { fecha: true },
       })
     ).map((p) => dateAFecha(p.fecha));
+    // Ausencias justificadas aprobadas (A-43): esos días tampoco trabaja.
+    const ausencias = await getPrisma().ausencia.findMany({
+      where: { usuarioId, estado: 'aprobada', desde: { lte: enDosSemanas }, hasta: { gte: ayer } },
+      select: { desde: true, hasta: true },
+    });
+    for (const a of ausencias) {
+      for (let f = dateAFecha(a.desde); f <= dateAFecha(a.hasta); f = sumarDiasFecha(f, 1)) pausas.push(f);
+    }
     const vistos = new Set<number>();
     return rows
       .filter((r) => (vistos.has(r.sitio.id) ? false : (vistos.add(r.sitio.id), true)))

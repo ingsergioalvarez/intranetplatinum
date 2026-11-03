@@ -107,6 +107,8 @@ model Usuario {
   medidasRecibidas     MedidaDisciplinaria[] @relation("MedidaDe")
   dispositivos         DispositivoUsuario[]
   solicitudesPedidas   SolicitudCobertura[]  @relation("SolicitudDe")
+  ausencias            Ausencia[]            @relation("AusenciaDe")
+  ausenciasPedidas     Ausencia[]            @relation("AusenciaPidio")
   solicitudesPorGuardia SolicitudCobertura[] @relation("SolicitudGuardia")
   medidasAplicadas     MedidaDisciplinaria[] @relation("MedidaAplico")
   bitacoraComentarios  ComentarioBitacora[]
@@ -793,6 +795,7 @@ enum TipoEventoBitacora {
   jornada_cerrada
   horas_extra
   medida_disciplinaria
+  ausencia
 }
 
 /// Bitácora del guardia (DA-41): control interno de supervisores y admin. Cada evento se guarda al
@@ -1230,4 +1233,36 @@ model SolicitudCobertura {
   @@index([sitioId, estado])
   @@index([guardiaId])
   @@map("solicitudes_cobertura")
+}
+
+/// Ausencia justificada por adelantado (A-43): vacaciones, incapacidad, permiso… Solo el admin la registra o
+/// la aprueba; el guardia o su supervisor la piden. Aprobada, sus días no generan falta y salen en el reporte.
+model Ausencia {
+  id                 Int       @id @default(autoincrement())
+  usuarioId          Int       @map("usuario_id")
+  /// vacaciones | incapacidad | cita_medica | permiso | otro
+  tipo               String    @db.VarChar(20)
+  desde              DateTime  @db.Date
+  hasta              DateTime  @db.Date
+  motivo             String?   @db.VarChar(255)
+  /// pendiente | aprobada | rechazada | cancelada
+  estado             String    @default("pendiente") @db.VarChar(15)
+  /// Quién la pidió o registró (el guardia, su supervisor o el admin).
+  solicitanteId      Int       @map("solicitante_id")
+  /// Foto del comprobante (clave en el almacenamiento); obligatoria en lo médico.
+  comprobanteClave   String?   @map("comprobante_clave") @db.VarChar(255)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  resueltaEn         DateTime? @map("resuelta_en")
+  resueltaPor        String?   @map("resuelta_por") @db.VarChar(120)
+  /// Por qué se rechazó o se canceló.
+  resolucion         String?   @db.VarChar(255)
+  /// Faltas que se justificaron solas al aprobarla.
+  faltasJustificadas Int       @default(0) @map("faltas_justificadas")
+  usuario            Usuario   @relation("AusenciaDe", fields: [usuarioId], references: [id], onDelete: Cascade)
+  solicitante        Usuario   @relation("AusenciaPidio", fields: [solicitanteId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, estado, desde])
+  @@index([estado, createdAt])
+  @@index([solicitanteId])
+  @@map("ausencias")
 }

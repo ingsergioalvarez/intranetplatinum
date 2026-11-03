@@ -94,6 +94,7 @@ const ICONO: Record<TipoEventoBitacora, typeof Clock> = {
   jornada_cerrada: LogOut,
   horas_extra: Clock,
   medida_disciplinaria: Gavel,
+  ausencia: CalendarX,
 };
 
 /** Color del ícono: rojo lo grave, ámbar lo de asistencia, verde lo bueno, gris lo administrativo. */

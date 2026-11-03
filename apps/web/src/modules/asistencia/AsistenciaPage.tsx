@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRightLeft, CalendarDays, CalendarRange, HandHelping, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, CalendarOff, CalendarRange, HandHelping, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -22,6 +22,7 @@ import { useDebounced } from '../../core/hooks/useDebounced';
 import { cambiosService } from '../cambios/cambios.service';
 import { casosService } from '../casos/casos.service';
 import { solicitudesService } from '../solicitudes/solicitudes.service';
+import { ausenciasService } from '../ausencias/ausencias.service';
 import { coberturaService } from '../cobertura/cobertura.service';
 import { rangoProximos } from '../cobertura/estados';
 import { horasExtraService } from '../horas-extra/horasExtra.service';
@@ -203,6 +204,7 @@ export function AsistenciaPage() {
               <BotonHorasExtra />
               <BotonCasos />
               <BotonSolicitudes />
+              <BotonAusencias />
               <BotonCalendario />
               <BotonHorario />
               <Link
@@ -408,6 +410,28 @@ function BotonSolicitudes() {
       )}
     >
       <HandHelping className="size-4" /> Solicitudes de cobertura
+      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+    </Link>
+  );
+}
+
+/** Ausencias justificadas (A-43): siempre disponible; marca las que esperan aprobación del administrador. */
+function BotonAusencias() {
+  const lista = useQuery({
+    queryKey: ausenciasService.keys.lista,
+    queryFn: ausenciasService.lista,
+    refetchInterval: 60_000,
+  });
+  const n = lista.data?.pendientes ?? 0;
+  return (
+    <Link
+      to="/asistencia/ausencias"
+      className={cn(
+        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
+        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
+      )}
+    >
+      <CalendarOff className="size-4" /> Ausencias
       {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
     </Link>
   );

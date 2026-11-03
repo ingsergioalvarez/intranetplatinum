@@ -35,6 +35,7 @@ export const TIPOS_EVENTO_BITACORA = [
   'jornada_cerrada',
   'horas_extra',
   'medida_disciplinaria',
+  'ausencia',
 ] as const;
 export type TipoEventoBitacora = (typeof TIPOS_EVENTO_BITACORA)[number];
 
@@ -186,6 +187,7 @@ export const TIPO_EVENTO_BITACORA_LABEL: Record<TipoEventoBitacora, string> = {
   jornada_cerrada: 'Jornada cerrada',
   horas_extra: 'Horas extra',
   medida_disciplinaria: 'Medida disciplinaria',
+  ausencia: 'Ausencia justificada',
 };
 
 const mesSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Mes inválido (AAAA-MM)');

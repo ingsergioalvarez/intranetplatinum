@@ -29,6 +29,7 @@ const TONO: Record<EstadoDiaInforme, BadgeTone> = {
   falta: 'danger',
   falta_justificada: 'warning',
   por_revisar: 'warning',
+  ausencia_justificada: 'info',
   descanso: 'neutral',
   sin_salida: 'warning',
   cerrada: 'info',

@@ -3,6 +3,7 @@ import {
   sumarDiasFecha,
   trabajaEl,
   type PatronTurno,
+  type TipoAusencia,
   type TipoEventoBitacora,
 } from '@platinum/shared';
 import { hoyISO, inicioDelDia } from '../../core';
@@ -20,6 +21,8 @@ export interface TurnoProgramado {
   patron: PatronTurno;
   /** Días en que el guardia cubre otro sitio: su turno normal queda en pausa (sin faltas). */
   pausas?: { desde: string; hasta: string }[];
+  /** Ausencias justificadas aprobadas (A-43): también pausan el turno; el reporte las distingue de un descanso. */
+  ausencias?: { desde: string; hasta: string; tipo: TipoAusencia }[];
 }
 
 export interface TurnoDiaRow {

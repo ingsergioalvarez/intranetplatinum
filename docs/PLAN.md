@@ -71,7 +71,7 @@
 | A-40 | Perfiles rápidos solo para guardias: al entrar con correo y contraseña el celular guarda su perfil solo (sin preguntar) y la pantalla de entrada muestra tarjetas con iniciales y nombre completo; tocar una pide el PIN de 4 dígitos (opcional; sin PIN pide la contraseña). 5 PIN incorrectos bloquean la tarjeta hasta entrar con contraseña. Cerrar sesión no borra la tarjeta; "Quitar de este dispositivo" sí. El PIN se crea desde un aviso en Inicio o en "Acceso rápido". Solo el admin ve y quita los celulares de un usuario (Usuarios). Desde 2026-11-02 aplica a todos los roles: el guardia se guarda solo; admin, supervisor y cliente deciden con un aviso sobre usar solo celulares personales | Usuario 2026-10-30 | A-40 | Terminado (con migración 20261030040000; falta probarlo en el celular) |
 | A-41 | Correo (SMTP): envío real de lo encolado en `notificaciones` con reintentos y "Olvidé mi contraseña" (cierra A-06 y A-15); necesita host, puerto, usuario, remitente y SPF/DKIM del dominio; la contraseña la pone el usuario en el `.env` del servidor | Usuario 2026-10-30 | A-41 (ver A-06, A-15) | Pendiente (esperando datos del correo) |
 | A-42 | Respaldos: copia periódica de MySQL y de las fotos (uploads) fuera del servidor, con prueba de restauración | Usuario 2026-10-30 | A-42 (ver F4-04) | Pendiente |
-| A-43 | Faltas justificadas (AS4-03 de [ASISTENCIA.md](ASISTENCIA.md)) | Usuario 2026-10-20 | AS4-03 | Pendiente |
+| A-43 | Ausencias justificadas por adelantado (AS4-03 de [ASISTENCIA.md](ASISTENCIA.md)): vacaciones, incapacidad, cita médica, permiso u otro. El admin las registra (quedan aprobadas) o las aprueba; el guardia pide la suya y el supervisor la de un guardia suyo. Lo médico exige foto del comprobante; permiso y otro, motivo. Pueden ser de fechas pasadas y justifican solas las faltas ya marcadas en esos días. Sin falsos avisos mientras duran, salen en el reporte como "Ausencia justificada" y el hueco sigue en el calendario de cobertura | Usuario 2026-10-20 / 2026-11-03 | AS4-03 | Terminado (con migración 20261103020000) |
 | A-44 | Manual de usuario: un PDF general con todas las funciones y vistas, y después un extracto por rol (admin, supervisor, guardia, cliente); se hace al final, con las capturas ya definitivas | Usuario 2026-10-30 | A-44 | Pendiente (al final) |
 | A-45 | Cambiar o cancelar un plan de cobertura ya confirmado, con motivo obligatorio; deshace sus efectos (descansos en pausa y coberturas creadas) y avisa al guardia | Usuario 2026-10-30 | A-45 (ver A-35) | Terminado (con migración 20261030010000) |
 | A-46 | "Me quedo" / "Sí, sigo aquí" admite una nota opcional para el supervisor (p. ej. "no puedo quedarme mucho tiempo"); queda como motivo de las horas extra, en la bitácora y en el aviso | Usuario 2026-10-30 | A-46 (ver A-35) | Terminado |
@@ -113,7 +113,7 @@
 | 8  | A-40 Perfiles rápidos y PIN (guardias) | Grande | Sí | — |
 | 9  | A-41 Correo SMTP y recuperación de contraseña | Grande | Posible | Datos del correo |
 | 10 | A-42 Respaldos | Grande | No | Acceso al servidor y destino de la copia |
-| 11 | A-43 Faltas justificadas | Mediano | Por ver | — |
+| 11 | A-43 Ausencias justificadas por adelantado | Mediano | Sí | — |
 | 12 | A-44 Manual de usuario | Grande | No | Todo lo anterior y las ideas nuevas del usuario |
 
 Las ideas nuevas que traiga el usuario se agregan como A-45 en adelante y se ubican en este orden según su tamaño.

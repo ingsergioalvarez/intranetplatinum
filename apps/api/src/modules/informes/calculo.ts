@@ -1,6 +1,7 @@
 import {
   HORAS_TURNO,
   SALIDA_ANTICIPADA_MIN,
+  TIPO_AUSENCIA_LABEL,
   TIPO_EVENTO_BITACORA_LABEL,
   TOLERANCIA_RETARDO_MIN,
   COMIDA_MIN,
@@ -68,6 +69,7 @@ const vacio = (): InformeResumen => ({
   faltas: 0,
   justificadas: 0,
   porRevisar: 0,
+  ausencias: 0,
   retardos: 0,
   retardoMin: 0,
   salidasAntes: 0,
@@ -119,6 +121,11 @@ const eventoDeMarca = (eventos: EventoBitacoraRow[], tipo: TipoEventoBitacora, i
 function resumirDias(dias: InformeDia[]): InformeResumen {
   const r = vacio();
   for (const d of dias) {
+    // Ausencia justificada por adelantado (A-43): no es falta ni cuenta como día programado.
+    if (d.estado === 'ausencia_justificada') {
+      r.ausencias = (r.ausencias ?? 0) + 1;
+      continue;
+    }
     if (d.estado === 'descanso' || (d.estado === 'en_curso' && !d.entrada)) continue;
     const programado = d.esperadosMin !== null || d.horario !== null;
     if (programado) {
@@ -166,6 +173,9 @@ function diasDelGuardia(g: GuardiaInforme, e: EntradaCalculo): InformeDia[] {
     );
     const usadas = new Set<JornadaDe>();
     const candidatas = porFecha.get(f) ?? [];
+    // Ausencia justificada aprobada (A-43): si ese día le tocaba trabajar y no checó, sale como ausencia.
+    const ausente = candidatas.length === 0 ? turnos.find((t) => !t.coberturaId && trabajaEl(f, t.patron) && t.ausencias?.some((a) => f >= a.desde && f <= a.hasta)) : undefined;
+    if (ausente) dias.push(diaAusencia(f, ausente));
 
     for (const t of delDia) {
       const j =
@@ -182,7 +192,7 @@ function diasDelGuardia(g: GuardiaInforme, e: EntradaCalculo): InformeDia[] {
     for (const j of candidatas.filter((c) => !usadas.has(c))) {
       dias.push(diaConJornada(f, j, eventos, null, e));
     }
-    if (delDia.length === 0 && candidatas.length === 0) {
+    if (delDia.length === 0 && candidatas.length === 0 && !ausente) {
       const asignado = turnos.some(
         (t) => !t.coberturaId && f >= t.patron.desde && (!t.patron.hasta || f <= t.patron.hasta),
       );
@@ -190,6 +200,26 @@ function diasDelGuardia(g: GuardiaInforme, e: EntradaCalculo): InformeDia[] {
     }
   }
   return dias;
+}
+
+/** Día de una ausencia justificada por adelantado (A-43): vacaciones, incapacidad, permiso… */
+function diaAusencia(f: string, t: TurnoProgramado): InformeDia {
+  const a = t.ausencias!.find((x) => f >= x.desde && f <= x.hasta)!;
+  return {
+    fecha: f,
+    sitio: t.sitio.nombre,
+    horario: null,
+    entrada: null,
+    retardoMin: null,
+    salidaAnticipadaMin: null,
+    comidas: [],
+    salida: null,
+    minutos: null,
+    esperadosMin: null,
+    estado: 'ausencia_justificada',
+    cobertura: false,
+    notas: [`${TIPO_AUSENCIA_LABEL[a.tipo]}, justificada por adelantado (${a.desde === a.hasta ? a.desde : `${a.desde} a ${a.hasta}`})`],
+  };
 }
 
 function diaDescanso(f: string, turnos: TurnoProgramado[]): InformeDia {

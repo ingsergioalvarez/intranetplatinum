@@ -17,6 +17,7 @@ import { horasExtraModule } from './horas-extra';
 import { informesModule } from './informes';
 import { horariosModule } from './horarios';
 import { solicitudesCoberturaModule } from './solicitudes-cobertura';
+import { ausenciasModule } from './ausencias';
 import { pushModule } from './push';
 import { reportesModule } from './reportes';
 import { sitiosModule } from './sitios';
@@ -46,6 +47,7 @@ export const modules: AppModule[] = [
   informesModule,
   horariosModule,
   solicitudesCoberturaModule,
+  ausenciasModule,
   horasExtraModule,
   adminModule,
 ];

@@ -247,7 +247,7 @@ Los **guardias** registran su **entrada, salida y comida** desde el celular (la 
 | ------ | ------------------------------------------------------------------------------ | ------ |
 | AS4-01 | Reporte por guardia y periodo: días, entradas/salidas, horas, comidas, alertas | [x]    |
 | AS4-02 | Exportar a Excel (formato por definir)                                         | [x]    |
-| AS4-03 | Ausencias justificadas (vacaciones, incapacidad, permiso): no cuentan como falta y salen en el reporte | [ ]    |
+| AS4-03 | Ausencias justificadas (vacaciones, incapacidad, permiso): no cuentan como falta y salen en el reporte | [x]    |
 
 ### Fase 5 — Horas extra (DA-55)
 

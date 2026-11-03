@@ -1,3 +1,4 @@
+import type { TipoAusencia } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { atencionConPrisma } from '../avisos/atencion';
@@ -116,7 +117,22 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
       const f = dateAFecha(p.fecha);
       pausas.set(p.usuarioId, [...(pausas.get(p.usuarioId) ?? []), { desde: f, hasta: f }]);
     }
-    for (const t of turnos) if (!t.coberturaId) t.pausas = pausas.get(t.guardia.id);
+    // Ausencias justificadas aprobadas (A-43): pausan el turno y se anotan aparte para el reporte.
+    const ausenciasPorGuardia = new Map<number, { desde: string; hasta: string; tipo: TipoAusencia }[]>();
+    const ausentes = await getPrisma().ausencia.findMany({
+      where: { estado: 'aprobada', desde: { lte: fechaADate(hasta) }, hasta: { gte: fechaADate(desde) } },
+      select: { usuarioId: true, desde: true, hasta: true, tipo: true },
+    });
+    for (const a of ausentes) {
+      const dias = { desde: dateAFecha(a.desde), hasta: dateAFecha(a.hasta) };
+      pausas.set(a.usuarioId, [...(pausas.get(a.usuarioId) ?? []), dias]);
+      ausenciasPorGuardia.set(a.usuarioId, [...(ausenciasPorGuardia.get(a.usuarioId) ?? []), { ...dias, tipo: a.tipo as TipoAusencia }]);
+    }
+    for (const t of turnos) {
+      if (t.coberturaId) continue;
+      t.pausas = pausas.get(t.guardia.id);
+      t.ausencias = ausenciasPorGuardia.get(t.guardia.id);
+    }
     return turnos;
   }
 
