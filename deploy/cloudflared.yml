@@ -1,9 +1,9 @@
-# Túnel propio de Platinum (no es el del escáner ni el de arco). El túnel `platinum` se creó con
-# `cloudflared tunnel create platinum`; su archivo de credenciales NO va en el repositorio: se monta
-# desde el servidor (ver docker-compose.yml).
-tunnel: fe51bf90-21ae-4768-9202-250300febaf3
+# Túnel propio de Comunicalo (no es el de Platinum, ni el del escáner ni el de arco). El túnel `gestion-comunicalo`
+# se creó con `cloudflared tunnel create gestion-comunicalo`; su archivo de credenciales NO va en el repositorio:
+# se monta desde el servidor (ver docker-compose.yml).
+tunnel: 14edb25a-d16d-4757-835c-2127225af245
 credentials-file: /etc/cloudflared/credentials.json
 ingress:
-  - hostname: platinum.grupocomunicalo.mx
+  - hostname: gestion.grupocomunicalo.mx
     service: http://web:80
   - service: http_status:404
