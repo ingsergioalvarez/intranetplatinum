@@ -27,7 +27,7 @@ class Memoria extends EmergenciasRepository {
     const f: EmergenciaRow = {
       id: this.filas.length + 1,
       estado: 'activa',
-      usuario: { id: d.usuarioId, nombre: NOMBRES[d.usuarioId], rol: ROL_DE[d.usuarioId], telefono: null },
+      usuario: { id: d.usuarioId, nombre: NOMBRES[d.usuarioId], rol: ROL_DE[d.usuarioId], telefono: null, telefonoEtiqueta: null },
       sitio: sitio ? { id: sitio.id, nombre: sitio.nombre } : null,
       tipo: null,
       lat: d.lat ?? null,
@@ -93,6 +93,9 @@ class Memoria extends EmergenciasRepository {
   async nombreDe(id: number) {
     return NOMBRES[id] ?? null;
   }
+  async contactoDe(id: number) {
+    return id === 5 ? { nombre: NOMBRES[5], telefono: '5550001111', telefonoEtiqueta: 'empresa' as const } : null;
+  }
 }
 
 let repo: Memoria;
@@ -147,13 +150,17 @@ describe('botón de pánico (A-60)', () => {
     expect(avisos[0].usuarioIds.sort()).toEqual([1, 5]);
     expect(avisos[0]).toMatchObject({ titulo: 'EMERGENCIA', urgente: true });
     expect(avisos[0].mensaje).toBe('Juan Pérez pidió ayuda en POETAS');
+    // Al guardia se le da el teléfono de su supervisor para llamarle desde su pantalla.
     expect(audit.acciones()).toContain('emergencias.crear');
+    expect(r.body.data.supervisor).toEqual({ nombre: 'Sofía Sup', telefono: '5550001111', telefonoEtiqueta: 'empresa' });
+    expect((await juan().get('/mia')).body.data.supervisor.nombre).toBe('Sofía Sup');
   });
 
   it('sin ubicación también se manda (el GPS puede fallar justo en una emergencia)', async () => {
     const r = await ana().post('');
     expect(r.status).toBe(201);
     expect(r.body.data.lat).toBeNull();
+    expect(r.body.data.supervisor).toBeNull();
     // Ana no tiene sitio: se avisa a todos los supervisores y admin.
     expect(avisos[0].usuarioIds.sort()).toEqual([1, 5, 6]);
   });

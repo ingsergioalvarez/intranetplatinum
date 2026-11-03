@@ -5,6 +5,21 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-03 #43 — Teléfonos, marcador y sirena de la alerta (A-63, completa A-60)
+
+#### Añadido
+
+- **Teléfono de contacto obligatorio** al crear o editar guardias y supervisores (puede ser el compartido de la empresa; el admin no lo necesita) y **teléfono personal opcional**. En la lista de usuarios, los guardias y supervisores sin teléfono salen con "Sin teléfono" para completarlos. Los que ya existían no se bloquean hasta que se editen.
+- **"Llamar a Juan (personal / empresa)"** en la alerta del supervisor y admin y en Emergencias: marca el número personal si lo tiene y si no el de contacto, y dice cuál es.
+- **Pantalla del guardia**: "Abrir marcador (911)" y "Llamar a (su supervisor del sitio)", con la nota "Se abrirá tu teléfono: presiona el botón verde para llamar". Solo se muestran en celulares.
+- **Sirena** para quien recibe la alerta (admin y supervisor): suena mientras nadie la reciba y se repite si se escala; el guardia que la lanza no escucha nada. El primer toque en la app desbloquea el audio; si el navegador lo bloquea, la alerta lo avisa. Botón **"Probar sonido"** en Asistencia → Emergencias.
+- Migración `20261103040000_telefono_personal` (columna `telefono_personal` en `usuarios`).
+
+#### Pendiente
+
+- Con la app cerrada o el celular bloqueado el sonido lo decide el celular (tono de notificación): pedir a supervisores y admin que dejen las notificaciones de Platinum con sonido alto y fuera de "No molestar".
+- Modo simulacro (A-60) y prueba de rendimiento (A-62, mañana).
+
 ### Sesión 2026-11-03 #42 — Botón de pánico (A-60)
 
 #### Añadido

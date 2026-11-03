@@ -80,6 +80,11 @@ export function UsuariosPage() {
         <span className="font-medium text-slate-900">
           {u.nombre}
           {u.id === yo?.id && <span className="ml-1.5 text-xs font-normal text-slate-500">(tú)</span>}
+          {!u.deletedAt && !u.telefono && (u.rol === ROLES.GUARDIA || u.rol === ROLES.SUPERVISOR) && (
+            <span className="ml-1.5">
+              <Badge tone="warning">Sin teléfono</Badge>
+            </span>
+          )}
         </span>
       ),
     },

@@ -3,6 +3,7 @@ import {
   ROLES,
   SEGUNDOS_ESCALAR_EMERGENCIA,
   TIPO_EMERGENCIA_LABEL,
+  type ContactoTelefono,
   type Emergencia,
   type EmergenciaCerrarInput,
   type EmergenciaCreateInput,
@@ -16,8 +17,12 @@ import type { EmergenciaRow, EmergenciasRepository } from './emergencias.reposit
 
 const RUTA = '/asistencia/emergencias';
 
-const aEmergencia = ({ createdAt, acusadaEn, cerradaEn, ...e }: EmergenciaRow): Emergencia => ({
+const aEmergencia = (
+  { createdAt, acusadaEn, cerradaEn, ...e }: EmergenciaRow,
+  supervisor?: ContactoTelefono | null,
+): Emergencia => ({
   ...e,
+  ...(supervisor !== undefined && { supervisor }),
   createdAt: createdAt.toISOString(),
   acusadaEn: acusadaEn?.toISOString() ?? null,
   cerradaEn: cerradaEn?.toISOString() ?? null,
@@ -54,7 +59,7 @@ export class EmergenciasService extends BaseService {
   /** Lanza la alerta. Si ya tiene una activa, devuelve esa (un doble toque no la duplica). */
   async crear(input: EmergenciaCreateInput, user: AuthUser, ctx: AccionCtx): Promise<Emergencia> {
     const previa = await this.repo.activaDe(user.id);
-    if (previa) return aEmergencia(previa);
+    if (previa) return aEmergencia(previa, await this.supervisorDe(user));
     const sitio = user.rol === ROLES.GUARDIA ? await this.repo.sitioDe(user.id, hoyISO()) : null;
     const e = await this.repo.crear({ usuarioId: user.id, sitioId: sitio?.id ?? null, ...input });
     await this.audit.registrarAccion(ctx, 'emergencias.crear', 'emergencias', e.id, {
@@ -71,13 +76,20 @@ export class EmergenciasService extends BaseService {
       entidad: { tipo: 'emergencia', id: e.id },
       urgente: true,
     });
-    return aEmergencia(e);
+    return aEmergencia(e, await this.supervisorDe(user));
+  }
+
+  /** A quién llamar desde la alerta propia: el supervisor del sitio del guardia (null si no tiene). */
+  private async supervisorDe(user: AuthUser): Promise<ContactoTelefono | null> {
+    if (user.rol !== ROLES.GUARDIA) return null;
+    const id = (await this.repo.sitioDe(user.id, hoyISO()))?.supervisorId;
+    return id ? this.repo.contactoDe(id) : null;
   }
 
   /** La activa del propio usuario (para que vea su estado), o null. */
   async mia(user: AuthUser): Promise<Emergencia | null> {
     const e = await this.repo.activaDe(user.id);
-    return e && aEmergencia(e);
+    return e && aEmergencia(e, await this.supervisorDe(user));
   }
 
   /** Quien la lanzó dice de qué se trata (después de enviar). Solo él. */
@@ -119,7 +131,7 @@ export class EmergenciasService extends BaseService {
   /** Admin y supervisor: activas o todas, lo más nuevo arriba. */
   async listar(soloActivas: boolean): Promise<EmergenciasLista> {
     const filas = await this.repo.listar(soloActivas, 100);
-    return { items: filas.map(aEmergencia), activas: filas.filter((f) => f.estado === 'activa').length };
+    return { items: filas.map((f) => aEmergencia(f)), activas: filas.filter((f) => f.estado === 'activa').length };
   }
 
   /** "Voy en camino": queda registrado quién la recibió y se le avisa a quien la lanzó. */

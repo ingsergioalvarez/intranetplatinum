@@ -63,6 +63,7 @@ class MemoryUsuariosRepository extends UsuariosRepository {
       sesionesActivas: 0,
       ...data,
       telefono: data.telefono ?? null,
+      telefonoPersonal: data.telefonoPersonal ?? null,
     };
     this.filas.push(f);
     return this.pub(f);
@@ -99,6 +100,7 @@ function semilla(id: number, rol: Rol, over: Partial<Fila> = {}): Fila {
     nombre: `Usuario ${id}`,
     email: `u${id}@platinum.local`,
     telefono: null,
+    telefonoPersonal: null,
     rol,
     activo: true,
     debeCambiarPassword: false,
@@ -193,14 +195,15 @@ describe('POST /api/usuarios (F1-08)', () => {
     const res = await como(ADMIN).post('/', {
       nombre: '  Nora Nueva ',
       email: 'NORA@Platinum.local',
-      telefono: '',
+      telefono: '5559998888',
       rol: 'guardia',
     });
     expect(res.status).toBe(201);
     expect(res.body.data.usuario).toMatchObject({
       nombre: 'Nora Nueva',
       email: 'nora@platinum.local',
-      telefono: null,
+      telefono: '5559998888',
+      telefonoPersonal: null,
       debeCambiarPassword: true,
     });
     const { passwordTemporal } = res.body.data;
@@ -218,12 +221,41 @@ describe('POST /api/usuarios (F1-08)', () => {
     const res = await como(ADMIN).post('/', {
       nombre: 'Otra Persona',
       email: 'u4@platinum.local',
+      telefono: '5550001111',
       rol: 'guardia',
     });
     expect(res.status).toBe(409);
     expect(res.body.error.details).toEqual([
       { path: 'email', message: 'Ya existe un usuario con este correo' },
     ]);
+  });
+
+  it('guardia y supervisor deben tener teléfono de contacto; el admin no; el personal es opcional (A-60)', async () => {
+    for (const rol of ['guardia', 'supervisor']) {
+      const res = await como(ADMIN).post('/', { nombre: 'Sin Teléfono', email: `${rol}@x.mx`, rol });
+      expect(res.status).toBe(400);
+      expect(res.body.error.details[0]).toMatchObject({ path: 'telefono' });
+    }
+    expect((await como(ADMIN).post('/', { nombre: 'Otro Admin', email: 'adm@x.mx', rol: 'admin' })).status).toBe(201);
+    const ok = await como(ADMIN).post('/', {
+      nombre: 'Con Personal',
+      email: 'cp@x.mx',
+      rol: 'guardia',
+      telefono: '5550001111',
+      telefonoPersonal: '5552223333',
+    });
+    expect(ok.status).toBe(201);
+    expect(ok.body.data.usuario).toMatchObject({ telefono: '5550001111', telefonoPersonal: '5552223333' });
+  });
+
+  it('un guardia existente no puede quedarse sin teléfono al editarlo', async () => {
+    expect((await como(ADMIN).patch('/3', { nombre: 'Gabriel G.' })).status).toBe(200);
+    const res = await como(ADMIN).patch('/3', { telefono: '' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details[0]).toMatchObject({ path: 'telefono' });
+    expect((await como(ADMIN).patch('/3', { telefonoPersonal: '5557776666' })).body.data.telefonoPersonal).toBe(
+      '5557776666',
+    );
   });
 
   it('valida campos obligatorios', async () => {

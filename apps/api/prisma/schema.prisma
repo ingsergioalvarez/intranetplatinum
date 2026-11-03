@@ -53,6 +53,8 @@ model Usuario {
   nombre               String               @db.VarChar(120)
   email                String               @unique @db.VarChar(160)
   telefono             String?              @db.VarChar(30)
+  /// Número personal, opcional; el de contacto (`telefono`) puede ser el compartido de la empresa (A-60).
+  telefonoPersonal     String?              @map("telefono_personal") @db.VarChar(30)
   passwordHash         String               @map("password_hash") @db.VarChar(255)
   rolId                Int                  @map("rol_id")
   // Usuario de rol cliente: a qué cliente pertenece (portal F5-01).

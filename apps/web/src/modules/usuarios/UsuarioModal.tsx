@@ -24,6 +24,7 @@ interface Campos {
   nombre: string;
   email: string;
   telefono: string;
+  telefonoPersonal: string;
   rol: Rol | '';
 }
 type FieldErrors = Partial<Record<keyof Campos, string>>;
@@ -63,6 +64,7 @@ export function UsuarioModal({
     nombre: usuario?.nombre ?? '',
     email: usuario?.email ?? '',
     telefono: usuario?.telefono ?? '',
+    telefonoPersonal: usuario?.telefonoPersonal ?? '',
     rol: usuario?.rol ?? '',
   };
   const [form, setForm] = useState<Campos>(inicial);
@@ -176,7 +178,12 @@ export function UsuarioModal({
             />
           </FormField>
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Teléfono" error={fieldErrors.telefono}>
+            <FormField
+              label="Teléfono de contacto"
+              required={form.rol === ROLES.GUARDIA || form.rol === ROLES.SUPERVISOR}
+              error={fieldErrors.telefono}
+              hint="Puede ser el de la empresa."
+            >
               <Input
                 type="tel"
                 inputMode="tel"
@@ -201,6 +208,20 @@ export function UsuarioModal({
               />
             </FormField>
           </div>
+          <FormField
+            label="Teléfono personal (opcional)"
+            error={fieldErrors.telefonoPersonal}
+            hint="Si lo tiene, es el que se marca primero en una emergencia."
+          >
+            <Input
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              value={form.telefonoPersonal}
+              onChange={onChange('telefonoPersonal')}
+              disabled={!puedeEditar}
+            />
+          </FormField>
         </form>
 
         {usuario && (

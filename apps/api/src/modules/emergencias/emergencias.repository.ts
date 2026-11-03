@@ -1,4 +1,12 @@
-import { ROLES, type Emergencia, type EstadoEmergencia, type ResultadoEmergencia, type TipoEmergencia } from '@platinum/shared';
+import {
+  ROLES,
+  telefonoDeContacto,
+  type ContactoTelefono,
+  type Emergencia,
+  type EstadoEmergencia,
+  type ResultadoEmergencia,
+  type TipoEmergencia,
+} from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import { asignadaA } from '../clientes/clientes.repository';
 
@@ -11,7 +19,7 @@ export interface NuevaEmergencia {
   bateria?: number;
 }
 
-export type EmergenciaRow = Omit<Emergencia, 'createdAt' | 'acusadaEn' | 'cerradaEn'> & {
+export type EmergenciaRow = Omit<Emergencia, 'createdAt' | 'acusadaEn' | 'cerradaEn' | 'supervisor'> & {
   createdAt: Date;
   acusadaEn: Date | null;
   cerradaEn: Date | null;
@@ -44,6 +52,8 @@ export abstract class EmergenciasRepository {
   abstract admins(): Promise<number[]>;
   abstract supervisores(): Promise<number[]>;
   abstract nombreDe(usuarioId: number): Promise<string | null>;
+  /** Nombre y teléfono al que se le llama (personal, o el de contacto de la empresa). */
+  abstract contactoDe(usuarioId: number): Promise<ContactoTelefono | null>;
 }
 
 const select = {
@@ -62,7 +72,7 @@ const select = {
   cerradaPor: true,
   resultado: true,
   nota: true,
-  usuario: { select: { id: true, nombre: true, telefono: true, rol: { select: { clave: true } } } },
+  usuario: { select: { id: true, nombre: true, telefono: true, telefonoPersonal: true, rol: { select: { clave: true } } } },
   sitio: { select: { id: true, nombre: true } },
 } as const;
 
@@ -82,7 +92,7 @@ type Fila = {
   cerradaPor: string | null;
   resultado: string | null;
   nota: string | null;
-  usuario: { id: number; nombre: string; telefono: string | null; rol: { clave: string } };
+  usuario: { id: number; nombre: string; telefono: string | null; telefonoPersonal: string | null; rol: { clave: string } };
   sitio: { id: number; nombre: string } | null;
 };
 
@@ -93,7 +103,7 @@ const aRow = ({ usuario, lat, lng, ...r }: Fila): EmergenciaRow => ({
   resultado: r.resultado as ResultadoEmergencia | null,
   lat: lat?.toNumber() ?? null,
   lng: lng?.toNumber() ?? null,
-  usuario: { id: usuario.id, nombre: usuario.nombre, telefono: usuario.telefono, rol: usuario.rol.clave },
+  usuario: { id: usuario.id, nombre: usuario.nombre, rol: usuario.rol.clave, ...telefonoDeContacto(usuario) },
 });
 
 const usuariosDeRol = async (rol: string) =>
@@ -185,5 +195,13 @@ export class PrismaEmergenciasRepository extends EmergenciasRepository {
 
   async nombreDe(usuarioId: number) {
     return (await getPrisma().usuario.findUnique({ where: { id: usuarioId }, select: { nombre: true } }))?.nombre ?? null;
+  }
+
+  async contactoDe(usuarioId: number) {
+    const u = await getPrisma().usuario.findUnique({
+      where: { id: usuarioId },
+      select: { nombre: true, telefono: true, telefonoPersonal: true },
+    });
+    return u && { nombre: u.nombre, ...telefonoDeContacto(u) };
   }
 }

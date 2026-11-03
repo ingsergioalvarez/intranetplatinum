@@ -7,6 +7,7 @@ export interface UsuarioCreateData {
   nombre: string;
   email: string;
   telefono?: string | null;
+  telefonoPersonal?: string | null;
   rol: Rol;
   passwordHash: string;
   debeCambiarPassword: boolean;
@@ -16,6 +17,7 @@ export interface UsuarioUpdateData {
   nombre?: string;
   email?: string;
   telefono?: string | null;
+  telefonoPersonal?: string | null;
   rol?: Rol;
 }
 
@@ -42,6 +44,7 @@ const select = {
   nombre: true,
   email: true,
   telefono: true,
+  telefonoPersonal: true,
   activo: true,
   debeCambiarPassword: true,
   bloqueadoHasta: true,
@@ -59,6 +62,7 @@ function toUsuario(u: UsuarioRow): Usuario {
     nombre: u.nombre,
     email: u.email,
     telefono: u.telefono,
+    telefonoPersonal: u.telefonoPersonal,
     rol: u.rol.clave as Rol,
     activo: u.activo,
     debeCambiarPassword: u.debeCambiarPassword,
@@ -89,7 +93,7 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
       ...(estado === 'baja' && { deletedAt: { not: null } }),
       ...(rol && { rol: { clave: rol } }),
       ...(q && {
-        OR: [{ nombre: { contains: q } }, { email: { contains: q } }, { telefono: { contains: q } }],
+        OR: [{ nombre: { contains: q } }, { email: { contains: q } }, { telefono: { contains: q } }, { telefonoPersonal: { contains: q } }],
       }),
     };
     const prisma = getPrisma();

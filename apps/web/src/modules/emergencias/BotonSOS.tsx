@@ -163,20 +163,44 @@ function Capa({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Los botones abren el marcador del teléfono con el número escrito: la persona debe presionar llamar (la web no
+ * puede marcar sola). En computadora no hacen nada útil, por eso solo se muestran en celulares.
+ */
+function Marcador({ supervisor }: { supervisor?: Emergencia['supervisor'] }) {
+  return (
+    <div className="hidden space-y-2 pointer-coarse:block">
+      {supervisor?.telefono && (
+        <a
+          href={`tel:${supervisor.telefono}`}
+          className="flex h-12 items-center justify-center gap-2 rounded-lg bg-slate-800 font-semibold text-white"
+        >
+          <Phone className="size-5" /> Llamar a {supervisor.nombre.split(' ')[0]}
+          <span className="text-xs font-normal text-slate-300">
+            ({supervisor.telefonoEtiqueta === 'personal' ? 'personal' : 'empresa'})
+          </span>
+        </a>
+      )}
+      <a
+        href="tel:911"
+        className="flex h-12 items-center justify-center gap-2 rounded-lg bg-red-600 font-semibold text-white"
+      >
+        <Phone className="size-5" /> Abrir marcador (911)
+      </a>
+      <p className="text-center text-xs text-slate-500">Se abrirá tu teléfono: presiona el botón verde para llamar.</p>
+    </div>
+  );
+}
+
 function FalloEnvio({ onReintentar, onCerrar }: { onReintentar: () => void; onCerrar: () => void }) {
   return (
     <Capa>
       <div className="space-y-3 p-5">
         <h2 className="text-lg font-bold text-red-700">No se pudo enviar la alerta</h2>
         <p className="text-sm text-slate-700">
-          Parece que no hay internet. Llama directo a tu supervisor o al 911 mientras se reintenta.
+          Parece que no hay internet. Llama directo a tu supervisor o al 911.
         </p>
-        <a
-          href="tel:911"
-          className="flex h-12 items-center justify-center gap-2 rounded-lg bg-red-600 font-semibold text-white"
-        >
-          <Phone className="size-5" /> Llamar al 911
-        </a>
+        <Marcador />
         <div className="flex gap-2">
           <Button className="flex-1" onClick={onReintentar}>
             Reintentar
@@ -264,12 +288,7 @@ function EstadoAlerta({ emergencia: e }: { emergencia: Emergencia }) {
           </div>
         </div>
 
-        <a
-          href="tel:911"
-          className="flex h-12 items-center justify-center gap-2 rounded-lg bg-red-600 font-semibold text-white"
-        >
-          <Phone className="size-5" /> Llamar al 911
-        </a>
+        <Marcador supervisor={e.supervisor} />
 
         {confirmando ? (
           <div className="space-y-2 rounded-lg bg-slate-50 p-3">

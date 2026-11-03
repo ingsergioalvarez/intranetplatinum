@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { notaSchema } from './medidas';
+import type { ContactoTelefono, EtiquetaTelefono } from './usuarios';
 
 /**
  * Botón de pánico (A-60): el guardia, el supervisor o el admin mantienen presionado el botón SOS y se avisa de
@@ -59,7 +60,9 @@ export interface Emergencia {
   id: number;
   estado: EstadoEmergencia;
   /** Quien la lanzó. */
-  usuario: { id: number; nombre: string; rol: string; telefono: string | null };
+  usuario: { id: number; nombre: string; rol: string; telefono: string | null; telefonoEtiqueta: EtiquetaTelefono | null };
+  /** Solo en la alerta propia del guardia: a quién llamar (su supervisor del sitio). */
+  supervisor?: ContactoTelefono | null;
   sitio: { id: number; nombre: string } | null;
   tipo: TipoEmergencia | null;
   lat: number | null;

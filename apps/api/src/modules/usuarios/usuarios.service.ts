@@ -1,5 +1,7 @@
 import {
+  MENSAJE_TELEFONO_OBLIGATORIO,
   ROLES,
+  ROLES_CON_TELEFONO,
   type Paginated,
   type Usuario,
   type UsuarioConPassword,
@@ -72,6 +74,19 @@ export class UsuariosService extends BaseService {
       if (actual.rol === ROLES.ADMIN && !actual.deletedAt && (await this.repo.countAdminsActivos()) <= 1) {
         throw ultimoAdmin();
       }
+    }
+
+    // Guardias y supervisores no pueden quedarse sin teléfono de contacto (se marca en una emergencia, A-60).
+    const rolFinal = data.rol ?? actual.rol;
+    const telefonoFinal = data.telefono !== undefined ? data.telefono : actual.telefono;
+    if (
+      (data.telefono !== undefined || data.rol) &&
+      ROLES_CON_TELEFONO.includes(rolFinal) &&
+      !telefonoFinal
+    ) {
+      throw HttpError.badRequest(MENSAJE_TELEFONO_OBLIGATORIO, [
+        { path: 'telefono', message: MENSAJE_TELEFONO_OBLIGATORIO },
+      ]);
     }
 
     const { antes, despues, hayCambios } = calcularCambios<Usuario>(actual, data);

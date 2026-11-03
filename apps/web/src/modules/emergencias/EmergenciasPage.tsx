@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, MapPin, Phone, Siren } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Siren, Volume2 } from 'lucide-react';
 import {
   RESULTADO_EMERGENCIA_LABEL,
   RESULTADOS_EMERGENCIA,
@@ -18,6 +18,7 @@ import { formatFechaHora } from '../../core/format/fechas';
 import { Chips } from '../asistencia/BitacoraGuardia';
 import { MotivoLista } from '../asistencia/MotivoLista';
 import { emergenciasService, enlaceMapa } from './emergencias.service';
+import { probarSirena } from './sirena';
 
 /** Emergencias (A-60): las alertas del botón de pánico, activas y el historial. Atenderlas y cerrarlas. */
 export function EmergenciasPage() {
@@ -44,7 +45,23 @@ export function EmergenciasPage() {
       <Link to="/asistencia" className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-slate-500">
         <ArrowLeft className="size-4" /> Asistencia
       </Link>
-      <PageHeader title="Emergencias" subtitle="Alertas del botón de pánico de guardias y supervisores" />
+      <PageHeader
+        title="Emergencias"
+        subtitle="Alertas del botón de pánico de guardias y supervisores"
+        actions={
+          <Button
+            variant="secondary"
+            icon={<Volume2 className="size-4" />}
+            onClick={() =>
+              probarSirena()
+                ? toast.success('Si no la escuchaste, sube el volumen y revisa que no esté en silencio')
+                : toast.error('El navegador bloqueó el sonido: toca la pantalla e inténtalo de nuevo')
+            }
+          >
+            Probar sonido
+          </Button>
+        }
+      />
       <div className="mb-4">
         <Chips
           label="Mostrar"
@@ -146,7 +163,12 @@ function Tarjeta({
             href={`tel:${e.usuario.telefono}`}
             className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset"
           >
-            <Phone className="size-4" /> Llamar
+            <Phone className="size-4" /> Llamar a {e.usuario.nombre.split(' ')[0]}
+            {e.usuario.telefonoEtiqueta && (
+              <span className="text-xs font-normal text-slate-500">
+                ({e.usuario.telefonoEtiqueta === 'personal' ? 'personal' : 'empresa'})
+              </span>
+            )}
           </a>
         )}
         {activa && !e.acusadaPor && (
