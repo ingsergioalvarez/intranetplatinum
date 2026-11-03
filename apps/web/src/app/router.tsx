@@ -26,6 +26,7 @@ import { MarcarPage } from '../modules/asistencia/MarcarPage';
 import { CambiosTurnoPage } from '../modules/cambios/CambiosTurnoPage';
 import { CasosPage } from '../modules/casos/CasosPage';
 import { SolicitudesPage } from '../modules/solicitudes/SolicitudesPage';
+import { EmergenciasPage } from '../modules/emergencias/EmergenciasPage';
 import { AusenciasPage } from '../modules/ausencias/AusenciasPage';
 import { CalendarioPage } from '../modules/cobertura/CalendarioPage';
 import { HorasExtraPage } from '../modules/horas-extra/HorasExtraPage';
@@ -140,6 +141,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.ASISTENCIA_MARCAR} roles={[ROLES.GUARDIA]}>
             <AusenciasPage propias />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/emergencias',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+            <EmergenciasPage />
           </ProtectedRoute>
         ),
       },

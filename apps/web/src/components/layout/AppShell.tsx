@@ -10,6 +10,8 @@ import { AvisoPin } from '../../modules/auth/AvisoPin';
 import { OfertaPerfil } from '../../modules/auth/OfertaPerfil';
 import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
 import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
+import { AlertaEmergencia } from '../../modules/emergencias/AlertaEmergencia';
+import { BotonSOS } from '../../modules/emergencias/BotonSOS';
 import { Campanita } from './Campanita';
 import { ExigirPush } from './ExigirPush';
 import { useBadgesMenu } from './badgesMenu';
@@ -267,6 +269,8 @@ export function AppShell() {
       <VentanaTurno />
       <VentanaComida />
       <OfertaPerfil />
+      {user && user.rol !== 'cliente' && <BotonSOS />}
+      {(user?.rol === 'admin' || user?.rol === 'supervisor') && <AlertaEmergencia />}
     </div>
   );
 }

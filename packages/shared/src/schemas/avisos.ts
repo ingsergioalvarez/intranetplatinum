@@ -62,6 +62,7 @@ export const TIPOS_AVISO = [
   'marca_alerta',
   'horas_extra',
   'cobertura',
+  'emergencia',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 
@@ -111,6 +112,7 @@ export const TITULO_AVISO: Record<TipoAviso, string> = {
   marca_alerta: 'Marca con alerta',
   horas_extra: 'Horas extra',
   cobertura: 'Turno sin cubrir',
+  emergencia: 'Emergencia',
 };
 
 // ---------- Notificaciones push (A-20) ----------
@@ -140,4 +142,6 @@ export interface PayloadPush {
   /** Pantalla a la que lleva al tocar la notificación. */
   ruta: string;
   tipo: TipoAviso;
+  /** Alerta urgente (A-60): suena, vibra y no se descarta sola. */
+  urgente?: boolean;
 }

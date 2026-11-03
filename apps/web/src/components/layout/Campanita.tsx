@@ -19,6 +19,7 @@ import {
   RefreshCw,
   ScanFace,
   ShieldAlert,
+  Siren,
   SmartphoneNfc,
   TriangleAlert,
 } from 'lucide-react';
@@ -46,6 +47,7 @@ const TIPO: Record<TipoAviso, { icono: typeof Bell; tono: Tono }> = {
   marca_alerta: { icono: TriangleAlert, tono: 'ambar' },
   horas_extra: { icono: Clock, tono: 'ambar' },
   cobertura: { icono: CalendarDays, tono: 'rojo' },
+  emergencia: { icono: Siren, tono: 'rojo' },
   // Para el guardia (DA-34)
   rostro_aprobado: { icono: UserCheck, tono: 'verde' },
   rostro_rechazado: { icono: UserX, tono: 'rojo' },

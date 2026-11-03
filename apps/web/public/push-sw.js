@@ -16,7 +16,11 @@ self.addEventListener('push', (event) => {
       icon: '/icon-192.png',
       // Android pinta el badge en la barra de estado: solo usa su transparencia (escudo blanco).
       badge: '/push-badge.png',
-      vibrate: [200, 100, 200],
+      // Emergencias (A-60): vibra largo, no se descarta sola y vuelve a sonar aunque ya hubiera una igual.
+      vibrate: datos.urgente ? [500, 200, 500, 200, 500, 200, 500] : [200, 100, 200],
+      requireInteraction: !!datos.urgente,
+      renotify: !!datos.urgente,
+      tag: datos.urgente ? 'emergencia' : undefined,
       actions: [{ action: 'ver', title: 'Ver' }],
       data: { ruta: datos.ruta || '/' },
     }),

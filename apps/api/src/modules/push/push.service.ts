@@ -21,6 +21,7 @@ export interface AvisoPush {
   mensaje: string;
   ruta?: string | null;
   reporteId?: number | null;
+  urgente?: boolean;
 }
 
 /** El texto del push es corto: en la pantalla bloqueada no cabe más. */
@@ -60,6 +61,7 @@ export class PushService extends BaseService {
         cuerpo: aviso.mensaje.slice(0, CUERPO_MAX),
         ruta: aviso.reporteId ? `/reportes/${aviso.reporteId}` : (aviso.ruta ?? '/'),
         tipo: aviso.tipo,
+        ...(aviso.urgente ? { urgente: true } : {}),
       };
       const texto = JSON.stringify(payload);
       const subs = await this.repo.deUsuarios([...new Set(usuarioIds)]);

@@ -14,6 +14,8 @@ export interface AvisoUsuario {
   fotoClave?: string | null;
   /** Qué cosa atiende (A-54): al atenderla, el aviso se actualiza. */
   entidad?: EntidadAviso;
+  /** Alerta urgente (A-60): el push suena y no se descarta sola. */
+  urgente?: boolean;
 }
 
 /** Crea un aviso de campanita para cada usuario. Nunca rompe la operación que lo origina. */
@@ -21,7 +23,7 @@ export type AvisarUsuarios = (usuarioIds: number[], aviso: AvisoUsuario) => Prom
 
 export const avisarConPrisma: AvisarUsuarios = async (
   usuarioIds,
-  { tipo, titulo, mensaje, ruta = null, fotoClave = null, entidad },
+  { tipo, titulo, mensaje, ruta = null, fotoClave = null, entidad, urgente },
 ) => {
   const ids = [...new Set(usuarioIds)];
   if (ids.length === 0) return;
@@ -39,7 +41,7 @@ export const avisarConPrisma: AvisarUsuarios = async (
         entidadId: entidad?.id ?? null,
       })),
     });
-    notificarPush(ids, { tipo, titulo: t, mensaje, ruta });
+    notificarPush(ids, { tipo, titulo: t, mensaje, ruta, urgente });
   } catch (err) {
     console.error('[avisos] No se pudo crear el aviso', err);
   }

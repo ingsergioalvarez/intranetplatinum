@@ -5,6 +5,23 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-03 #42 — Botón de pánico (A-60)
+
+#### Añadido
+
+- **Botón SOS** flotante rojo en todas las pantallas de guardia, supervisor y admin (el cliente no lo tiene). **Se mantiene presionado 2 segundos** (anillo que se llena) para evitar toques accidentales; al completarse la alerta sale **al instante, sin preguntar nada**, con ubicación (si el GPS responde en 1.5 s), hora del servidor, sitio y batería. Un doble toque no duplica la alerta; si no hay internet se ofrece reintentar y llamar al 911.
+- **A quién le llega**: si la lanza un guardia, a su supervisor del sitio y a los admin; si la lanza un supervisor o admin, a los demás supervisores y admin. Aviso de campanita (tipo nuevo "Emergencia") y **push urgente** (vibra largo, no se descarta solo y vuelve a sonar).
+- **Alerta a pantalla completa** para supervisor y admin sobre cualquier pantalla (se consulta cada 8 s) mientras nadie la haya recibido: "Voy en camino", Llamar, Ver mapa. Quien la recibe queda registrado y al guardia se le avisa.
+- **Escalado**: si en 60 s nadie la recibe, la alerta se repite a todos los supervisores y admin, y se sigue repitiendo cada minuto hasta que alguien la reciba. Queda en la auditoría.
+- **Lo que ve el guardia**: pantalla de estado ("Alerta enviada" / "X recibió tu alerta y va en camino"), tipo opcional (Agresión o robo, Intruso, Emergencia médica, Incendio, Otro), "Llamar al 911" y **"Fue sin querer"** (cierra como falsa alarma y avisa a quienes la recibieron).
+- **Asistencia → Emergencias**: activas y todas, con ver mapa, llamar, "Voy en camino" y "Atender y cerrar" con resultado (atendida, falsa alarma, otro con texto). Los avisos se actualizan al atenderse (A-54).
+- API: `POST /api/emergencias`, `GET /api/emergencias/mia`, `POST /api/emergencias/:id/tipo` y `/cancelar` (guardia, supervisor y admin, solo la suya), `GET /api/emergencias`, `POST /api/emergencias/:id/acusar` y `/cerrar` (supervisor y admin). Migración `20261103030000_emergencias` (tabla `emergencias` y tipo de aviso `emergencia`).
+
+#### Pendiente
+
+- "Llamar a mi supervisor" en la pantalla del guardia (hoy llama al 911; falta mostrar el teléfono del supervisor) y modo simulacro.
+- Probarlo en el celular con push real. Necesita internet: no sustituye al radio ni al 911. Conexión con el C2: A-61, esperando los datos del jefe.
+
 ### Sesión 2026-11-03 #41 — Ausencias justificadas por adelantado (A-43, AS4-03)
 
 #### Añadido

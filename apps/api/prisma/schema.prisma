@@ -107,6 +107,7 @@ model Usuario {
   medidasRecibidas     MedidaDisciplinaria[] @relation("MedidaDe")
   dispositivos         DispositivoUsuario[]
   solicitudesPedidas   SolicitudCobertura[]  @relation("SolicitudDe")
+  emergencias          Emergencia[]          @relation("EmergenciaDe")
   ausencias            Ausencia[]            @relation("AusenciaDe")
   ausenciasPedidas     Ausencia[]            @relation("AusenciaPidio")
   solicitudesPorGuardia SolicitudCobertura[] @relation("SolicitudGuardia")
@@ -261,6 +262,7 @@ model Sitio {
   turnosDia      TurnoDia[]
   coberturas     Cobertura[]
   solicitudesCobertura SolicitudCobertura[]
+  emergencias    Emergencia[]
   informes       InformeAsistencia[]
   cambiosTurno   CambioTurno[]
   horasExtra     HoraExtra[]
@@ -544,6 +546,7 @@ enum TipoAviso {
   marca_alerta
   horas_extra
   cobertura
+  emergencia
 }
 
 /// Aviso dentro de la app (campanita) para un usuario.
@@ -1265,4 +1268,37 @@ model Ausencia {
   @@index([estado, createdAt])
   @@index([solicitanteId])
   @@map("ausencias")
+}
+
+/// Botón de pánico (A-60): alerta de un guardia, supervisor o admin. Se escala si nadie la acusa.
+model Emergencia {
+  id           Int       @id @default(autoincrement())
+  usuarioId    Int       @map("usuario_id")
+  sitioId      Int?      @map("sitio_id")
+  /// activa | cerrada
+  estado       String    @default("activa") @db.VarChar(10)
+  /// agresion | intruso | medica | incendio | otro (se elige después de enviar)
+  tipo         String?   @db.VarChar(15)
+  lat          Decimal?  @db.Decimal(10, 7)
+  lng          Decimal?  @db.Decimal(10, 7)
+  precisionM   Int?      @map("precision_m")
+  bateria      Int?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  acusadaPorId Int?      @map("acusada_por_id")
+  acusadaPor   String?   @map("acusada_por") @db.VarChar(120)
+  acusadaEn    DateTime? @map("acusada_en")
+  /// Veces que se repitió la alerta por falta de acuse y cuándo fue la última.
+  escaladas    Int       @default(0)
+  escaladaEn   DateTime? @map("escalada_en")
+  cerradaEn    DateTime? @map("cerrada_en")
+  cerradaPor   String?   @map("cerrada_por") @db.VarChar(120)
+  /// atendida | falsa_alarma | otro
+  resultado    String?   @db.VarChar(15)
+  nota         String?   @db.VarChar(255)
+  usuario      Usuario   @relation("EmergenciaDe", fields: [usuarioId], references: [id], onDelete: Cascade)
+  sitio        Sitio?    @relation(fields: [sitioId], references: [id], onDelete: SetNull)
+
+  @@index([estado, createdAt])
+  @@index([usuarioId, createdAt])
+  @@map("emergencias")
 }

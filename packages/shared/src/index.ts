@@ -22,3 +22,4 @@ export * from './schemas/cambios';
 export * from './schemas/horasExtra';
 export * from './schemas/cobertura';
 export * from './schemas/casosCobertura';
+export * from './schemas/emergencias';

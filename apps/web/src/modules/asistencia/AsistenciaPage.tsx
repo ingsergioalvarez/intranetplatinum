@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRightLeft, CalendarDays, CalendarOff, CalendarRange, HandHelping, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, CalendarOff, CalendarRange, HandHelping, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle, Siren } from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -21,6 +21,7 @@ import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { cambiosService } from '../cambios/cambios.service';
 import { casosService } from '../casos/casos.service';
+import { emergenciasService } from '../emergencias/emergencias.service';
 import { solicitudesService } from '../solicitudes/solicitudes.service';
 import { ausenciasService } from '../ausencias/ausencias.service';
 import { coberturaService } from '../cobertura/cobertura.service';
@@ -203,6 +204,7 @@ export function AsistenciaPage() {
               <BotonCambios />
               <BotonHorasExtra />
               <BotonCasos />
+              <BotonEmergencias />
               <BotonSolicitudes />
               <BotonAusencias />
               <BotonCalendario />
@@ -387,6 +389,28 @@ function BotonCasos() {
       )}
     >
       <Route className="size-4" /> Casos de cobertura
+      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+    </Link>
+  );
+}
+
+/** Emergencias (A-60): siempre disponible; se pone roja con el número de alertas activas. */
+function BotonEmergencias() {
+  const lista = useQuery({
+    queryKey: emergenciasService.keys.activas,
+    queryFn: () => emergenciasService.lista('activas'),
+    refetchInterval: 10_000,
+  });
+  const n = lista.data?.activas ?? 0;
+  return (
+    <Link
+      to="/asistencia/emergencias"
+      className={cn(
+        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
+        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
+      )}
+    >
+      <Siren className="size-4" /> Emergencias
       {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
     </Link>
   );

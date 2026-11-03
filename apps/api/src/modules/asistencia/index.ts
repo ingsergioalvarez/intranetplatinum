@@ -31,6 +31,7 @@ import {
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { avisarConPrisma } from '../avisos/avisar';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
+import { crearServicioEmergencias } from '../emergencias';
 import { crearServicioSolicitudes } from '../solicitudes-cobertura';
 import type { SolicitudesPuerto } from '../solicitudes-cobertura/solicitudes.service';
 import { medidasConPrisma, type MedidasPuerto } from '../medidas/medidas';
@@ -206,6 +207,7 @@ export function iniciarVigilanciaTurnos() {
   const sitioSolo = new RecordatorioSitioSolo(new PrismaSitioSoloRepository(), avisarConPrisma, bitacoraConPrisma);
   const incidencias = new RecordatorioIncidencias(new PrismaRecordatoriosIncidenciasRepository(), avisarConPrisma);
   const solicitudes = crearServicioSolicitudes();
+  const emergencias = crearServicioEmergencias();
   let corriendo = false;
   const revisar = async () => {
     if (corriendo) return;
@@ -219,6 +221,7 @@ export function iniciarVigilanciaTurnos() {
       await sitioSolo.revisar();
       await incidencias.revisar();
       await solicitudes.recordar();
+      await emergencias.escalar();
     } catch (err) {
       console.error('[vigilancia] Falló la revisión de turnos', err);
     } finally {
