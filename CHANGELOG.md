@@ -5,6 +5,16 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-03 #39 — Avisos que se actualizan al atenderse, completo (A-54)
+
+#### Añadido
+
+- Los avisos que faltaban ahora también se actualizan al atenderse (verde, "por X · resultado", leído para todos): **cambios de turno** (Aprobado, Rechazado o Cancelado), **horas extra** (Aprobadas o Rechazadas), **casos de cobertura** (Plan definido; si el supervisor cancela el plan vuelve a quedar por atender) y **retardos, salidas anticipadas y comida fuera** (al justificarlos, aceptar el retardo o mandar al guardia a casa). Si el admin revierte una decisión, esos avisos se reabren. Sin migración nueva (usa la de A-54).
+
+#### Pendiente
+
+- Los avisos de "Retardos seguidos" (patrón) no se amarran a una decisión y se quedan como están.
+
 ### Sesión 2026-11-03 #38 — Portal del cliente: sus guardias (A-38)
 
 #### Añadido

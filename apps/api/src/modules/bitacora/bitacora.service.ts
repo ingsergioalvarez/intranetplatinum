@@ -196,6 +196,10 @@ export class BitacoraService extends BaseService {
     if (e.decision) throw HttpError.conflict('Ya se decidió');
     await this.repo.justificar(id, ctx.actorId, motivo, this.ahora());
     await this.atencion.atender({ tipo: 'bitacora', id }, { porId: ctx.actorId, resultado: 'Justificada' });
+    // Retardo, salida anticipada o comida fuera: sus avisos cuelgan de la checada (A-54).
+    if (e.marcacionId !== null) {
+      await this.atencion.atender({ tipo: 'marca', id: e.marcacionId }, { porId: ctx.actorId, resultado: 'Justificado' });
+    }
     await this.audit.registrarAccion(ctx, 'bitacora.justificar', 'bitacora_eventos', id, {
       guardiaId: e.usuarioId,
       tipo: e.tipo,
@@ -281,6 +285,7 @@ export class BitacoraService extends BaseService {
     const motivo = textoMotivoLista(MOTIVO_REVERTIR_LABEL[categoria], nota);
     await this.repo.revertir(id);
     await this.atencion.reabrir({ tipo: 'bitacora', id });
+    if (e.marcacionId !== null) await this.atencion.reabrir({ tipo: 'marca', id: e.marcacionId });
     await this.repo.comentar(id, ctx.actorId, `Decisión revertida (${antes}). Motivo: ${motivo}`.slice(0, 500));
     await this.audit.registrarAccion(ctx, 'bitacora.revertir_decision', 'bitacora_eventos', id, {
       guardiaId: e.usuarioId,

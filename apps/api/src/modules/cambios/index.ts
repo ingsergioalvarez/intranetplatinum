@@ -21,6 +21,7 @@ import {
 } from '../../core';
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
+import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { PrismaCoberturasRepository } from '../coberturas/coberturas.repository';
 import { CoberturasService, type TurnosFn } from '../coberturas/coberturas.service';
@@ -94,6 +95,7 @@ interface CambiosModuleDeps {
   alcance?: AlcanceFn;
   hoy?: () => string;
   ahora?: () => Date;
+  atencion?: AvisosAtencion;
 }
 
 /** Cambios de turno (TC-22, DA-54): el guardia pide, el supervisor aprueba; el supervisor también los hace. */
@@ -107,6 +109,7 @@ export function createCambiosModule({
   alcance = alcanceConPrisma,
   hoy,
   ahora,
+  atencion = atencionConPrisma,
 }: CambiosModuleDeps = {}): AppModule {
   const servicioCoberturas = new CoberturasService(
     new PrismaCoberturasRepository(),
@@ -122,7 +125,7 @@ export function createCambiosModule({
     crear: (d, ctx) => servicioCoberturas.crear(d, ctx, null),
     cancelar: (id, ctx) => servicioCoberturas.cancelar(id, ctx, null),
   };
-  const c = new CambiosController(new CambiosService(repo, turnos, puerto, audit, avisar, bitacora, hoy, ahora), alcance);
+  const c = new CambiosController(new CambiosService(repo, turnos, puerto, audit, avisar, bitacora, hoy, ahora, atencion), alcance);
   const router = Router();
   // El guardia pide los suyos; admin y supervisor, todos los de su alcance.
   router.use(authenticate, requireRoles(ROLES.GUARDIA, ROLES.SUPERVISOR, ROLES.ADMIN));

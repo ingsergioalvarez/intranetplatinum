@@ -23,6 +23,7 @@ import {
 } from '../../core';
 import type { TurnoProgramado } from '../asistencia/vigilancia';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
+import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import type { TurnosFn } from '../coberturas/coberturas.service';
 import type { Alcance } from '../sitios/alcance';
@@ -93,6 +94,8 @@ export class CambiosService extends BaseService {
     private readonly bitacora: RegistrarBitacora = sinBitacora,
     private readonly hoy: () => string = () => hoyISO(),
     private readonly ahora: () => Date = () => new Date(),
+    /** Avisos que se actualizan al atenderse (A-54). */
+    private readonly atencion: AvisosAtencion = sinAtencion,
   ) {
     super();
   }
@@ -239,6 +242,7 @@ export class CambiosService extends BaseService {
       titulo: 'Cambio de turno por aprobar',
       mensaje: `${persona.nombre} pide ${this.resumen(fila)}. Motivo: ${fila.motivo}`,
       ruta: '/asistencia/cambios',
+      entidad: { tipo: 'cambio', id: fila.id },
     });
     return this.aCambio(fila);
   }
@@ -312,6 +316,7 @@ export class CambiosService extends BaseService {
       mensaje: `Se aprobó tu cambio de turno: ${this.resumen(r)}`,
       ruta: '/mis-sitios',
     });
+    await this.atencion.atender({ tipo: 'cambio', id: r.id }, { porId: resueltoPorId, resultado: 'Aprobado' });
     const actualizada = await this.repo.findById(r.id);
     return this.aCambio(actualizada!);
   }
@@ -376,6 +381,7 @@ export class CambiosService extends BaseService {
         mensaje: `Se rechazó tu cambio de turno (${this.resumen(r)})${nota ? `: ${nota}` : ''}`,
         ruta: '/mis-sitios',
       });
+      await this.atencion.atender({ tipo: 'cambio', id: r.id }, { porId: user.id, resultado: 'Rechazado' });
       return this.aCambio((await this.repo.findById(r.id))!);
     }
     if ((r.fechaNueva ?? r.fecha) < this.hoy() || r.fecha < this.hoy()) {
@@ -409,6 +415,10 @@ export class CambiosService extends BaseService {
       en: this.ahora(),
       nota: null,
     });
+    await this.atencion.atender(
+      { tipo: 'cambio', id: r.id },
+      { porId: this.esGuardia(user) ? null : user.id, resultado: 'Cancelado' },
+    );
     await this.audit.registrarAccion(ctx, 'cambios_turno.cancelar', 'cambios_turno', r.id, {
       guardia: r.guardia.nombre,
       eraAprobado: r.estado === 'aprobado',

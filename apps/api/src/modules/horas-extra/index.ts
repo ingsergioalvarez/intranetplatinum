@@ -32,6 +32,7 @@ import { PrismaCasosCoberturaRepository } from '../casos-cobertura/casos.reposit
 import type { CasoDeJornada } from './puerto';
 import type { MisSitiosFn } from '../asistencia/asistencia.service';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
+import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import type { TurnosFn } from '../coberturas/coberturas.service';
 import { alcanceConPrisma, type AlcanceFn } from '../sitios/alcance';
@@ -101,6 +102,7 @@ export interface HorasExtraDeps {
   alcance?: AlcanceFn;
   ahora?: () => Date;
   casoDe?: CasoDeJornada;
+  atencion?: AvisosAtencion;
 }
 
 /** El servicio con sus dependencias reales (lo usan las rutas, la asistencia y la vigilancia). */
@@ -113,8 +115,9 @@ export function crearServicioHorasExtra({
   bitacora = bitacoraConPrisma,
   ahora,
   casoDe = (entradaId) => new PrismaCasosCoberturaRepository().casoPorEntrada(entradaId),
+  atencion = atencionConPrisma,
 }: HorasExtraDeps = {}) {
-  return new HorasExtraService(repo, turnos, misSitios, audit, avisar, bitacora, ahora, casoDe);
+  return new HorasExtraService(repo, turnos, misSitios, audit, avisar, bitacora, ahora, casoDe, atencion);
 }
 
 /**

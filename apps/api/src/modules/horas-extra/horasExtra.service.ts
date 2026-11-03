@@ -34,6 +34,7 @@ import type { MisSitiosFn } from '../asistencia/asistencia.service';
 import { horaLocal } from '../asistencia/formato';
 import type { TurnosFn } from '../coberturas/coberturas.service';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
+import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import type { Alcance } from '../sitios/alcance';
 import type {
@@ -74,6 +75,8 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
     private readonly ahora: () => Date = () => new Date(),
     /** Plan de cobertura de la jornada (AS6): con "no llegará" las horas se aprueban solas. */
     private readonly casoDe: CasoDeJornada = async () => null,
+    /** Avisos que se actualizan al atenderse (A-54). */
+    private readonly atencion: AvisosAtencion = sinAtencion,
   ) {
     super();
   }
@@ -142,6 +145,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
       titulo: 'Horas extra por aprobar',
       mensaje: `${r.guardia.nombre} · ${r.sitio.nombre}: ${t} de horas extra por aprobar (${fechaCorta(r.fecha)})`,
       ruta: RUTA,
+      entidad: { tipo: 'hora_extra', id: r.id },
     });
   }
 
@@ -201,6 +205,10 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
       `${aprueba ? 'Aprobó' : 'Rechazó'} las horas extra del ${fechaCorta(r.fecha)} en ${r.sitio.nombre} (${t})${nota ? `. Motivo: ${nota}` : ''}`,
       { decision: input.decision, minutos: r.minutos },
       ctx.actorId,
+    );
+    await this.atencion.atender(
+      { tipo: 'hora_extra', id },
+      { porId: ctx.actorId, resultado: aprueba ? 'Aprobadas' : 'Rechazadas' },
     );
     await this.avisar([r.guardia.id], {
       tipo: 'horas_extra',
@@ -415,6 +423,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
       titulo: 'Pidió extender su horario',
       mensaje: `${entrada.guardia} · ${entrada.sitio.nombre}: pidió extender su horario desde las ${horaLocal(desde)}${nota ? `. Nota del guardia: ${nota}` : ''}`,
       ruta: RUTA,
+      entidad: { tipo: 'hora_extra', id: fila.id },
     });
     return { id: fila.id, estado: fila.estado, desde: fila.desde.toISOString(), hasta: null, minutos: null };
   }
@@ -641,6 +650,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
         titulo: 'Horas extra sin salida',
         mensaje: `${nueva.guardia.nombre} · ${nueva.sitio.nombre}: horas extra sin salida del ${fechaCorta(nueva.fecha)}. Fija la hora en que terminó`,
         ruta: RUTA,
+        entidad: { tipo: 'hora_extra', id: nueva.id },
       });
     }
 
@@ -652,6 +662,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
         titulo: 'Horas extra sin respuesta',
         mensaje: `${r.guardia.nombre} · ${r.sitio.nombre}: horas extra del ${fechaCorta(r.fecha)} llevan más de ${HORAS_ESCALAR_EXTRA} h sin respuesta`,
         ruta: RUTA,
+        entidad: { tipo: 'hora_extra', id: r.id },
       });
       await this.repo.actualizar(r.id, { escaladaEn: ahora });
     }
@@ -681,6 +692,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
       titulo: 'Falta marcar su salida',
       mensaje: `${e.guardia} · ${e.sitio.nombre}: no ha marcado su salida (le tocaba a las ${hora})`,
       ruta: RUTA,
+      entidad: { tipo: 'hora_extra', id: fila.id },
     });
     await this.avisar([e.usuarioId], {
       tipo: 'horas_extra',

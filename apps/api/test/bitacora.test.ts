@@ -397,6 +397,13 @@ describe('bitácora del guardia (DA-41)', () => {
     expect(atencion).toEqual(['atendido 50: Justificada', 'atendido 51: Falta confirmada', 'reabierto 51']);
   });
 
+  it('justificar un retardo deja atendidos también los avisos de su checada (A-54)', async () => {
+    repo.eventosGuardados.push({ ...evento(60, 'retardo', '2026-10-25T14:20:00.000Z'), marcacionId: 77 });
+    await sup().post('/eventos/60/justificar', { categoria: 'transporte' });
+    await como(ROLES.ADMIN).post('/eventos/60/revertir', { categoria: 'error_supervisor' });
+    expect(atencion).toEqual(['atendido 60: Justificada', 'atendido 77: Justificado', 'reabierto 60', 'reabierto 77']);
+  });
+
   it('confirmar un "No se presentó" deja atendido su aviso y el de la falta que crea (A-54)', async () => {
     repo.eventosGuardados.push(evento(52, 'no_se_presento', '2026-10-24T14:15:00.000Z'));
     const res = await sup().post('/eventos/52/confirmar-falta', { categoria: 'sin_aviso' });

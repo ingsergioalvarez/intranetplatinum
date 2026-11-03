@@ -25,6 +25,7 @@ import {
 } from '../../core';
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
+import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { PrismaCoberturasRepository } from '../coberturas/coberturas.repository';
 import { CoberturasService, type TurnosFn } from '../coberturas/coberturas.service';
@@ -106,6 +107,7 @@ export interface CasosCoberturaDeps {
   bitacora?: RegistrarBitacora;
   alcance?: AlcanceFn;
   ahora?: () => Date;
+  atencion?: AvisosAtencion;
 }
 
 /** El servicio con sus dependencias reales (lo usan las rutas y la vigilancia). */
@@ -118,6 +120,7 @@ export function crearServicioCasos({
   cubrir,
   cancelarCobertura,
   ahora,
+  atencion = atencionConPrisma,
 }: CasosCoberturaDeps = {}) {
   const coberturas = new CoberturasService(new PrismaCoberturasRepository(), turnos, audit, avisar, bitacora);
   return new CasosCoberturaService(
@@ -129,6 +132,7 @@ export function crearServicioCasos({
     bitacora,
     ahora,
     cancelarCobertura ?? ((id, ctx, alcance) => coberturas.cancelar(id, ctx, alcance)),
+    atencion,
   );
 }
 

@@ -21,6 +21,7 @@ import {
 import { AuditLogger, BaseService, HttpError, hoyISO, type AccionCtx } from '../../core';
 import { horaLocal } from '../asistencia/formato';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
+import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import type { TurnosFn } from '../coberturas/coberturas.service';
 import type { Alcance } from '../sitios/alcance';
@@ -77,6 +78,8 @@ export class CasosCoberturaService extends BaseService {
     private readonly bitacora: RegistrarBitacora = sinBitacora,
     private readonly ahora: () => Date = () => new Date(),
     private readonly cancelarCobertura: CancelarCoberturaFn = async () => undefined,
+    /** Avisos que se actualizan al atenderse (A-54). */
+    private readonly atencion: AvisosAtencion = sinAtencion,
   ) {
     super();
   }
@@ -382,6 +385,7 @@ export class CasosCoberturaService extends BaseService {
       sitioId: sitio.id,
       actorId: ctx.actorId,
     });
+    await this.atencion.atender({ tipo: 'caso', id: c.entrada.id }, { porId: ctx.actorId, resultado: 'Plan definido' });
     await this.avisar([c.entrada.usuarioId], {
       tipo: 'cobertura',
       titulo: tituloGuardia,
@@ -461,6 +465,7 @@ export class CasosCoberturaService extends BaseService {
       sitioId: sitio.id,
       actorId: ctx.actorId,
     });
+    await this.atencion.reabrir({ tipo: 'caso', id: c.entrada.id });
     await this.avisar([c.entrada.usuarioId], {
       tipo: 'cobertura',
       titulo: 'Plan cancelado: quédate en tu puesto',
@@ -534,6 +539,7 @@ export class CasosCoberturaService extends BaseService {
       titulo: 'No puede quedarse: elige quién cubre',
       mensaje: `${guardia} · ${sitio.nombre}: avisó que no puede quedarse (${motivo}). Elige quién cubre`,
       ruta: RUTA,
+      entidad: { tipo: 'caso', id: c.entrada.id },
     });
     return { ok: true };
   }
@@ -558,6 +564,7 @@ export class CasosCoberturaService extends BaseService {
             ? `${sitio.nombre}: ${relevo.nombre} no llegó (le tocaba a las ${horaLocal(relevo.inicio)}) y ${guardia} sigue en el sitio. Define el plan`
             : `${sitio.nombre}: ${guardia} sigue en el sitio después de su hora. Define el plan`,
           ruta: RUTA,
+          entidad: { tipo: 'caso', id: c.entrada.id },
         });
         await this.avisar([usuarioId], {
           tipo: 'cobertura',
@@ -603,6 +610,7 @@ export class CasosCoberturaService extends BaseService {
         titulo: 'Relevo tardó: define qué hacer',
         mensaje: `${c.entrada.guardia} · ${c.entrada.sitio.nombre}: lleva ${duracion(Math.max(esperando, 0))} de más esperando a su relevo. Define qué hacer`,
         ruta: RUTA,
+        entidad: { tipo: 'caso', id: c.entrada.id },
       });
       await this.repo.actualizarCaso(c.caso.id, {
         reconsultarEn: new Date(ahora.getTime() + HORAS_RECONSULTA_CASO * HORA),

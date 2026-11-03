@@ -187,6 +187,8 @@ class MemoryHorasExtraRepository extends HorasExtraRepository {
 let repo: MemoryHorasExtraRepository;
 let audit: MemoryAuditLogger;
 let avisos: { usuarioIds: number[]; mensaje: string }[];
+let atendidos: string[];
+let entidades: string[];
 let bitacora: EventoNuevo[];
 let alcance: Alcance | null;
 let ahora: Date;
@@ -224,6 +226,8 @@ beforeEach(() => {
   repo = new MemoryHorasExtraRepository();
   audit = new MemoryAuditLogger();
   avisos = [];
+  atendidos = [];
+  entidades = [];
   bitacora = [];
   alcance = null;
   ahora = en('2026-10-27T03:00:00Z'); // 21:00 locales del lunes
@@ -233,9 +237,17 @@ beforeEach(() => {
     audit,
     turnos: async () => TURNOS,
     misSitios: async () => [{ sitio: { id: 1, nombre: 'POETAS' } }] as never,
-    avisar: async (usuarioIds: number[], a: { mensaje: string }) => void avisos.push({ usuarioIds, mensaje: a.mensaje }),
+    avisar: async (usuarioIds: number[], a: { mensaje: string; entidad?: { tipo: string; id: number } }) => {
+      avisos.push({ usuarioIds, mensaje: a.mensaje });
+      if (a.entidad) entidades.push(`${a.entidad.tipo}:${a.entidad.id}`);
+    },
     bitacora: async (e: EventoNuevo) => void bitacora.push(e),
     ahora: () => ahora,
+    atencion: {
+      atender: async (e: { tipo: string; id: number }, a: { resultado: string }) =>
+        void atendidos.push(`${e.tipo}:${e.id}:${a.resultado}`),
+      reabrir: async (e: { tipo: string; id: number }) => void atendidos.push(`reabrir ${e.tipo}:${e.id}`),
+    },
   };
   servicio = new HorasExtraService(
     repo,
@@ -448,6 +460,16 @@ describe('horas extra: supervisor y admin (AS5-04)', () => {
     expect(avisos).toEqual([{ usuarioIds: [10], mensaje: expect.stringContaining('fueron aprobadas') }]);
     // Ya resuelta.
     expect((await sup().post(`/${id}/resolver`, { decision: 'rechazar', nota: 'x' })).status).toBe(409);
+  });
+
+  it('los avisos al supervisor se actualizan al aprobar o rechazar las horas extra (A-54)', async () => {
+    await servicio.alSalir({ entrada: marca(ENTRADA_LUNES), salida: salida('2026-10-27T04:30:00Z') });
+    const id = repo.filas[0].id;
+    // El servicio de esta prueba no es el del módulo: se revisa con lo que avisó la ruta al resolver.
+    const res = await sup().post(`/${id}/resolver`, { decision: 'aprobar' });
+    expect(res.status).toBe(200);
+    expect(atendidos).toEqual([`hora_extra:${id}:Aprobadas`]);
+    expect(entidades).toEqual([`hora_extra:${id}`]);
   });
 
   it('rechazar pide el motivo y lo guarda', async () => {

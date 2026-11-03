@@ -787,6 +787,7 @@ export class AsistenciaService extends BaseService {
           titulo: 'Marca fuera del sitio',
           mensaje: `${guardia} · ${TIPO_MARCACION_LABEL[tipo]} en ${sitio}: fuera del sitio (${distanciaTexto(m.fueraDelSitio)})`,
           ruta,
+          entidad: { tipo: 'marca', id: marcacionId },
         },
       );
     }
@@ -798,6 +799,7 @@ export class AsistenciaService extends BaseService {
           titulo: 'Llegó tarde',
           mensaje: `${guardia} · ${sitio}: llegó ${duracionTexto(m.retardoMin!)} tarde (debía entrar a las ${horaLegible(m.horaEntrada!)})`,
           ruta,
+          entidad: { tipo: 'marca', id: marcacionId },
         },
       );
     }
@@ -809,6 +811,7 @@ export class AsistenciaService extends BaseService {
           titulo: 'Salida anticipada',
           mensaje: `${guardia} · Salida en ${sitio}: salió ${duracionTexto(m.salidaAnticipadaMin!)} antes de su hora`,
           ruta,
+          entidad: { tipo: 'marca', id: marcacionId },
         },
       );
     }
@@ -1515,6 +1518,7 @@ export class AsistenciaService extends BaseService {
 
     if (decision === 'aceptado') {
       await this.repo.decidirRetardo(eventoId, ctx.actorId, decision, this.ahora());
+      await this.atencion.atender({ tipo: 'marca', id: entrada.id }, { porId: ctx.actorId, resultado: 'Aceptado con retardo' });
       await this.audit.registrarAccion(ctx, 'asistencia.aceptar_retardo', 'bitacora_eventos', eventoId, {
         guardiaId: ev.usuarioId,
         sitio,
@@ -1561,6 +1565,7 @@ export class AsistenciaService extends BaseService {
       true,
     );
     await this.repo.decidirRetardo(eventoId, ctx.actorId, decision, this.ahora());
+    await this.atencion.atender({ tipo: 'marca', id: entrada.id }, { porId: ctx.actorId, resultado: 'Mandado a casa' });
     await this.audit.registrarAccion(ctx, 'asistencia.decidir_retardo', 'bitacora_eventos', eventoId, {
       guardiaId: ev.usuarioId,
       decision,

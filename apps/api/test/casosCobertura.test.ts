@@ -117,6 +117,8 @@ class MemoriaCasos extends CasosCoberturaRepository {
 let repo: MemoriaCasos;
 let audit: MemoryAuditLogger;
 let avisos: { usuarioIds: number[]; mensaje: string; ruta?: string | null }[];
+let atendidos: string[];
+let entidades: string[];
 let bitacora: EventoNuevo[];
 let coberturas: CoberturaData[];
 let canceladas: number[];
@@ -137,6 +139,8 @@ beforeEach(() => {
   repo = new MemoriaCasos();
   audit = new MemoryAuditLogger();
   avisos = [];
+  atendidos = [];
+  entidades = [];
   bitacora = [];
   coberturas = [];
   canceladas = [];
@@ -147,8 +151,10 @@ beforeEach(() => {
     repo,
     audit,
     turnos: async () => TURNOS,
-    avisar: async (usuarioIds: number[], a: { mensaje: string; ruta?: string | null }) =>
-      void avisos.push({ usuarioIds, mensaje: a.mensaje, ruta: a.ruta }),
+    avisar: async (usuarioIds: number[], a: { mensaje: string; ruta?: string | null; entidad?: { tipo: string; id: number } }) => {
+      avisos.push({ usuarioIds, mensaje: a.mensaje, ruta: a.ruta });
+      if (a.entidad) entidades.push(`${a.entidad.tipo}:${a.entidad.id}`);
+    },
     bitacora: async (e: EventoNuevo) => void bitacora.push(e),
     cubrir: async (data: CoberturaData, _ctx: AccionCtx): Promise<CoberturaCreada> => {
       coberturas.push(data);
@@ -156,6 +162,11 @@ beforeEach(() => {
     },
     cancelarCobertura: async (id: number) => void canceladas.push(id),
     ahora: () => ahora,
+    atencion: {
+      atender: async (e: { tipo: string; id: number }, a: { resultado: string }) =>
+        void atendidos.push(`${e.tipo}:${e.id}:${a.resultado}`),
+      reabrir: async (e: { tipo: string; id: number }) => void atendidos.push(`reabrir ${e.tipo}:${e.id}`),
+    },
   };
   servicio = new CasosCoberturaService(repo, deps.turnos, deps.cubrir, audit, deps.avisar, deps.bitacora, deps.ahora, deps.cancelarCobertura);
   app = createApp([createCasosCoberturaModule({ ...deps, alcance: async (u) => (u.rol === ROLES.SUPERVISOR ? alcance : null) })]);
@@ -441,6 +452,16 @@ describe('casos de cobertura: avisos y el guardia (AS6-05, AS6-08)', () => {
     expect(bitacora[0]).toMatchObject({ tipo: 'cobertura', usuarioIds: [10], actorId: 10 });
     expect(bitacora[0].detalle).toContain('Motivo: Cuestión de salud');
     expect(audit.eventos.map((e) => e.accion)).toContain('casos_cobertura.no_puede_quedarse');
+  });
+
+  it('los avisos del caso se actualizan al dejar el plan y se reabren si se cancela (A-54)', async () => {
+    await guardia().post('/no-puedo', { motivo: 'salud' });
+    expect(entidades).toEqual(['caso:100']);
+    const plan = { motivo: 'relevo_no_llego', decision: 'otro_cubre', cubridorId: 12 };
+    expect((await sup().post('/100/resolver', plan)).status).toBe(200);
+    expect(atendidos).toEqual(['caso:100:Plan definido']);
+    expect((await sup().post('/100/cancelar', { motivo: 'relevo_llego' })).status).toBe(200);
+    expect(atendidos.at(-1)).toBe('reabrir caso:100');
   });
 
   it('con "otro" el detalle es obligatorio y es lo que se ve como motivo', async () => {

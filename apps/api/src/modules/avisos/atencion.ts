@@ -2,8 +2,11 @@ import { getPrisma } from '../../core/data/prisma';
 
 /** A qué cosa pertenece un aviso (A-54): así se sabe qué avisos actualizar cuando alguien la atiende. */
 export interface EntidadAviso {
-  /** `rostro`, `incidencia` (de rostro) o `bitacora` (un evento de la bitácora del guardia). */
-  tipo: 'rostro' | 'incidencia' | 'bitacora';
+  /**
+   * `rostro`, `incidencia` (de rostro), `bitacora` (un evento de la bitácora del guardia), `marca` (una checada:
+   * retardo, salida anticipada o comida fuera), `cambio` (de turno), `hora_extra` o `caso` (de cobertura, por entrada).
+   */
+  tipo: 'rostro' | 'incidencia' | 'bitacora' | 'marca' | 'cambio' | 'hora_extra' | 'caso';
   id: number;
 }
 

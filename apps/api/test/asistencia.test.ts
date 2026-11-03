@@ -1468,6 +1468,8 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
       expect(repo.decisionesRetardo).toEqual([{ id: 77, porId: 5, decision: 'aceptado' }]);
       expect(audit.acciones()).toContain('asistencia.aceptar_retardo');
       expect(repo.avisos.at(-1)).toMatchObject({ usuarioIds: [10], titulo: 'Retardo aceptado' });
+      // Los avisos de ese retardo (cuelgan de la checada) quedan atendidos (A-54).
+      expect(atendidos).toEqual([{ entidad: { tipo: 'marca', id: repo.marcas[0].id }, resultado: 'Aceptado con retardo' }]);
       // La jornada sigue abierta.
       expect(repo.marcas.some((m) => m.tipo === 'salida')).toBe(false);
       // Una sola vez.

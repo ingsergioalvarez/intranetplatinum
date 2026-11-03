@@ -125,6 +125,8 @@ class MemoryCambiosRepository extends CambiosRepository {
 let repo: MemoryCambiosRepository;
 let audit: MemoryAuditLogger;
 let avisos: { usuarioIds: number[]; mensaje: string }[];
+let atendidos: string[];
+let entidades: string[];
 let bitacora: EventoNuevo[];
 let creadas: { usuarioId: number; sitioId: number; desde: string; cubreAId?: number }[];
 let canceladas: number[];
@@ -147,6 +149,8 @@ beforeEach(() => {
   repo = new MemoryCambiosRepository();
   audit = new MemoryAuditLogger();
   avisos = [];
+  atendidos = [];
+  entidades = [];
   bitacora = [];
   creadas = [];
   canceladas = [];
@@ -163,7 +167,15 @@ beforeEach(() => {
         },
         cancelar: async (id) => void canceladas.push(id),
       },
-      avisar: async (usuarioIds, a) => void avisos.push({ usuarioIds, mensaje: a.mensaje }),
+      avisar: async (usuarioIds, a) => {
+        avisos.push({ usuarioIds, mensaje: a.mensaje });
+        if (a.entidad) entidades.push(`${a.entidad.tipo}:${a.entidad.id}`);
+      },
+      atencion: {
+        atender: async (e: { tipo: string; id: number }, a: { resultado: string }) =>
+          void atendidos.push(`${e.tipo}:${e.id}:${a.resultado}`),
+        reabrir: async (e: { tipo: string; id: number }) => void atendidos.push(`reabrir ${e.tipo}:${e.id}`),
+      },
       bitacora: async (e) => void bitacora.push(e),
       alcance: async (u) => (u.rol === ROLES.SUPERVISOR ? alcance : null),
       hoy: () => HOY,
@@ -209,6 +221,21 @@ describe('cambios de turno (TC-22)', () => {
     expect(avisos.at(-1)?.mensaje).toContain('Falta personal ese día');
     // Ya resuelto: no se puede volver a resolver.
     expect((await sup().post(`/${body.data.id}/resolver`, { decision: 'aprobar' })).status).toBe(409);
+  });
+
+  it('los avisos del supervisor se actualizan al aprobar, rechazar o cancelar el cambio (A-54)', async () => {
+    const a = await guardia().post('', cubrir);
+    expect(entidades).toEqual([`cambio:${a.body.data.id}`]);
+    await sup().post(`/${a.body.data.id}/resolver`, { decision: 'aprobar' });
+    const b = await guardia().post('', { ...cubrir, fecha: '2026-10-28' });
+    await sup().post(`/${b.body.data.id}/resolver`, { decision: 'rechazar', nota: 'No hay personal' });
+    const c = await guardia().post('', { ...cubrir, fecha: '2026-10-29' });
+    await guardia().post(`/${c.body.data.id}/cancelar`);
+    expect(atendidos).toEqual([
+      `cambio:${a.body.data.id}:Aprobado`,
+      `cambio:${b.body.data.id}:Rechazado`,
+      `cambio:${c.body.data.id}:Cancelado`,
+    ]);
   });
 
   it('si lo hace el supervisor queda aprobado al momento', async () => {
