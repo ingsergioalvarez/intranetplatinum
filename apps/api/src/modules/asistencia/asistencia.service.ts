@@ -1678,7 +1678,8 @@ export class AsistenciaService extends BaseService {
           (a.jornada?.entrada.registradaEn ?? '').localeCompare(b.jornada?.entrada.registradaEn ?? ''),
       );
 
-    return { items: filas.slice((page - 1) * limit, page * limit), total: filas.length, page, limit };
+    const items = await this.conFotosDeReferencia(filas.slice((page - 1) * limit, page * limit));
+    return { items, total: filas.length, page, limit };
   }
 
   /**
@@ -1750,7 +1751,23 @@ export class AsistenciaService extends BaseService {
       this.misJornadas(usuarioId, mes),
       this.misSitios(usuarioId, this.hoy()),
     ]);
-    return { guardia, rostro, jornadas, asignaciones };
+    // La foto del guardia es la de su registro vigente (aprobada o por revisar); el portal del cliente solo muestra las aprobadas.
+    const conFoto = rostro && rostro.estado !== 'rechazado' ? { foto: rostro.fotoUrl, fotoAprobada: rostro.estado === 'aprobado' } : {};
+    return { guardia: { ...guardia, ...conFoto }, rostro, jornadas, asignaciones };
+  }
+
+  /**
+   * Completa la foto de referencia de los guardias de una lista (A-53) cuando no hay otra (la de la marca
+   * del día): así la lista no queda con iniciales aunque ya tengan su rostro registrado.
+   */
+  private async conFotosDeReferencia(filas: FilaAsistencia[]): Promise<FilaAsistencia[]> {
+    const sin = filas.filter((f) => !f.guardia.foto).map((f) => f.guardia.id);
+    if (sin.length === 0) return filas;
+    const fotos = await this.repo.fotosVigentes([...new Set(sin)]);
+    return filas.map((f) => {
+      const foto = !f.guardia.foto ? fotos.get(f.guardia.id) : undefined;
+      return foto ? { ...f, guardia: { ...f.guardia, foto: firmarArchivo(foto.fotoClave), fotoAprobada: foto.aprobada } } : f;
+    });
   }
 
   /** Qué puede marcar según su última jornada (SIGUIENTES_MARCAS). */

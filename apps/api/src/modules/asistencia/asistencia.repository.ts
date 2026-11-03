@@ -200,6 +200,8 @@ export abstract class AsistenciaRepository {
   /** Guardias activos con asignación vigente el día `AAAA-MM-DD` (sitio y cliente activos). */
   abstract guardiasAsignados(fecha: string): Promise<GuardiaAsignado[]>;
   abstract findGuardia(usuarioId: number): Promise<GuardiaResumen | null>;
+  /** Foto de referencia vigente (la que no está rechazada) de cada guardia, para las listas (A-53). */
+  abstract fotosVigentes(usuarioIds: number[]): Promise<Map<number, { fotoClave: string; aprobada: boolean }>>;
   // ---- Rostros (AS1-02) ----
   /** Último rostro no reemplazado del usuario (puede estar pendiente, aprobado o rechazado). */
   abstract rostroActual(usuarioId: number): Promise<RostroRow | null>;
@@ -486,6 +488,18 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
       }
     }
     return [...vistos.values()];
+  }
+
+  async fotosVigentes(usuarioIds: number[]) {
+    if (usuarioIds.length === 0) return new Map<number, { fotoClave: string; aprobada: boolean }>();
+    const rows = await getPrisma().rostroGuardia.findMany({
+      where: { usuarioId: { in: usuarioIds }, reemplazadoEn: null, estado: { not: 'rechazado' } },
+      orderBy: { id: 'desc' },
+      select: { usuarioId: true, fotoClave: true, estado: true },
+    });
+    const mapa = new Map<number, { fotoClave: string; aprobada: boolean }>();
+    for (const r of rows) if (!mapa.has(r.usuarioId)) mapa.set(r.usuarioId, { fotoClave: r.fotoClave, aprobada: r.estado === 'aprobado' });
+    return mapa;
   }
 
   async findGuardia(usuarioId: number) {

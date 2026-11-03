@@ -41,8 +41,13 @@ export function jornadaParaCliente(j: Jornada): Jornada {
   };
 }
 
+/** El cliente solo ve la foto del registro si está aprobada (A-53); la de una marca del día no depende de eso. */
+const guardiaParaCliente = <T extends FilaAsistencia['guardia']>(g: T): T =>
+  g.fotoAprobada === false ? { ...g, foto: null, fotoAprobada: undefined } : g;
+
 export const filaParaCliente = (f: FilaAsistencia): FilaAsistencia => ({
   ...f,
+  guardia: guardiaParaCliente(f.guardia),
   jornada: f.jornada && jornadaParaCliente(f.jornada),
 });
 
@@ -55,6 +60,7 @@ export function fichaParaCliente(ficha: AsistenciaGuardia, alcance: Alcance | nu
     !alcance || (sitioId !== undefined && alcance.sitioIds.has(sitioId));
   return {
     ...ficha,
+    guardia: guardiaParaCliente(ficha.guardia),
     rostro: null,
     jornadas: ficha.jornadas.filter((j) => suyo(j.sitio?.id)).map(jornadaParaCliente),
     asignaciones: ficha.asignaciones.filter((a) => suyo(a.sitio.id)),

@@ -50,6 +50,24 @@ describe('asistencia para el cliente (DA-48): sin biometría ni datos de otros c
     expect(j.retardoMin).toBe(12);
   });
 
+  it('el cliente solo ve la foto del registro del guardia si está aprobada (A-53)', () => {
+    const base = { sitio: null, jornada: null };
+    const aprobada = filaParaCliente({
+      ...base,
+      guardia: { id: 4, nombre: 'Juan', email: 'j@x.mx', foto: '/api/archivos/a.jpg', fotoAprobada: true },
+    });
+    expect(aprobada.guardia.foto).toBe('/api/archivos/a.jpg');
+    const pendiente = filaParaCliente({
+      ...base,
+      guardia: { id: 5, nombre: 'Ana', email: 'a@x.mx', foto: '/api/archivos/b.jpg', fotoAprobada: false },
+    });
+    expect(pendiente.guardia.foto).toBeNull();
+    // La foto de una marca del día (sin la bandera) no se toca.
+    expect(
+      filaParaCliente({ ...base, guardia: { id: 6, nombre: 'Rosa', email: 'r@x.mx', foto: '/api/archivos/c.jpg' } }).guardia.foto,
+    ).toBe('/api/archivos/c.jpg');
+  });
+
   it('la fila del día pasa por el mismo filtro', () => {
     const f = filaParaCliente({
       guardia: { id: 4, nombre: 'Juan', email: 'j@x.mx' },

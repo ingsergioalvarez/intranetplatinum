@@ -509,6 +509,8 @@ export interface GuardiaResumen {
   nombre: string;
   email: string;
   foto?: string | null;
+  /** Si `foto` es la de referencia del registro: ¿está aprobada? El portal del cliente solo muestra las aprobadas (A-53). */
+  fotoAprobada?: boolean;
 }
 
 /**

@@ -5,6 +5,17 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-03 #37 — Decisión definitiva y fotos del guardia (A-52, A-53)
+
+#### Cambiado
+
+- Tras confirmar o justificar una falta (o decidir un retardo) ya **no salen "Justificar" ni "Confirmar falta"** (A-52). El servidor también lo rechaza (409). Solo el **admin** ve "Revertir decisión", con motivo de lista (se decidió por error, hay información nueva, otro con texto): quita la decisión y el evento vuelve a quedar sin atender; queda una nota en el evento y el registro en la auditoría. No se revierte lo que cerró el sistema ("No se presentó" superado) ni mandar a casa (la jornada ya se cerró). Una medida disciplinaria ya aplicada se queda en el historial. `POST /api/bitacora/eventos/:id/revertir`.
+- **Fotos del guardia** (A-53): la ficha y la lista del día traen la foto de su registro vigente; el **portal del cliente** muestra solo la foto **aprobada** de sus guardias (sin datos biométricos). Cuando una foto no carga porque su enlace firmado caducó (60 min), la app vuelve a pedir los datos para traer enlaces nuevos; si el archivo ya no existe (p. ej. la miniatura rota de un aviso) se muestra una silueta neutra en lugar de la imagen rota.
+
+#### Pendiente
+
+- A-54 (avisos que se actualizan al atender), A-57 y A-58 (burbujas) y A-55 (PDF de horarios).
+
 ### Sesión 2026-11-02 #36 — Perfiles rápidos para todos los roles (A-40)
 
 #### Cambiado

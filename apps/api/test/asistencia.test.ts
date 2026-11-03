@@ -113,6 +113,15 @@ class MemoryAsistenciaRepository extends AsistenciaRepository {
   async rostroActual(usuarioId: number) {
     return this.rostros.filter((r) => r.usuarioId === usuarioId && !r.reemplazadoEn).at(-1) ?? null;
   }
+  async fotosVigentes(ids: number[]) {
+    const mapa = new Map<number, { fotoClave: string; aprobada: boolean }>();
+    for (const r of this.rostros) {
+      if (ids.includes(r.usuarioId) && !r.reemplazadoEn && r.estado !== 'rechazado') {
+        mapa.set(r.usuarioId, { fotoClave: r.fotoClave, aprobada: r.estado === 'aprobado' });
+      }
+    }
+    return mapa;
+  }
   async rostrosDeOtros(usuarioId: number) {
     return this.rostros
       .filter((r) => r.usuarioId !== usuarioId && !r.reemplazadoEn && r.estado !== 'rechazado')
