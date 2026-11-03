@@ -10,12 +10,14 @@ interface ProtectedRouteProps {
   permiso?: Permiso;
   /** Roles permitidos; vacío = cualquier rol con sesión. */
   roles?: Rol[];
+  /** Solo el super admin (A-65). */
+  superAdmin?: boolean;
   /** Admite usuarios con contraseña temporal (solo la pantalla para cambiarla, D-012). */
   allowTemporaryPassword?: boolean;
 }
 
 /** Exige sesión (y opcionalmente permiso/rol). Sin sesión redirige a /login conservando el destino. */
-export function ProtectedRoute({ children, permiso, roles, allowTemporaryPassword }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, permiso, roles, superAdmin, allowTemporaryPassword }: ProtectedRouteProps) {
   const { user, restoring, loggedOut } = useAuthStore();
   const location = useLocation();
 
@@ -35,7 +37,7 @@ export function ProtectedRoute({ children, permiso, roles, allowTemporaryPasswor
     return <Navigate to="/cambiar-password" replace />;
   }
 
-  if (!hasRole(user, roles) || !hasPermission(user, permiso)) {
+  if (!hasRole(user, roles) || !hasPermission(user, permiso) || (superAdmin && !user.esSuperAdmin)) {
     return <EmptyState title="Sin acceso" description="No tienes permiso para ver esta sección." />;
   }
 

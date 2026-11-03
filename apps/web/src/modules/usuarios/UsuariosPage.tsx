@@ -26,6 +26,7 @@ import {
   type Column,
 } from '../../components/ui';
 import { RegistrarRostroModal } from '../asistencia/RegistrarRostroModal';
+import { carterasService } from '../carteras/carteras.service';
 import { DispositivosModal } from './DispositivosModal';
 import { estadoUsuario } from './estadoUsuario';
 import { PasswordTemporalModal } from './PasswordTemporalModal';
@@ -51,6 +52,8 @@ export function UsuariosPage() {
   const [rol, setRol] = useState<Rol | ''>('');
   const [estado, setEstado] = useState<EstadoUsuarioFiltro>('activos');
   const [page, setPage] = useState(1);
+  /** Solo el super admin: ver los de un admin o los sin asignar (A-65). */
+  const [dueno, setDueno] = useState(() => (new URLSearchParams(window.location.search).has('sinAsignar') ? 'sin-asignar' : ''));
   /** undefined = cerrado, null = alta, Usuario = edición. */
   const [editando, setEditando] = useState<Usuario | null | undefined>(undefined);
   const [temporal, setTemporal] = useState<{ resultado: UsuarioConPassword; titulo: string } | null>(null);
@@ -60,11 +63,25 @@ export function UsuariosPage() {
   /** Guardia cuyos celulares con acceso rápido se administran: solo el admin (A-40). */
   const [dispositivosDe, setDispositivosDe] = useState<Usuario | null>(null);
   const esAdmin = yo?.rol === ROLES.ADMIN;
+  const esSuper = !!yo?.esSuperAdmin;
+  const carteras = useQuery({
+    queryKey: carterasService.keys.resumen,
+    queryFn: carterasService.resumen,
+    enabled: esSuper,
+  });
 
   const q = useDebounced(busqueda.trim());
-  useEffect(() => setPage(1), [q, rol, estado]);
+  useEffect(() => setPage(1), [q, rol, estado, dueno]);
 
-  const params = { page, limit: LIMIT, q: q || undefined, rol: rol || undefined, estado };
+  const params = {
+    page,
+    limit: LIMIT,
+    q: q || undefined,
+    rol: rol || undefined,
+    estado,
+    ...(esSuper && dueno === 'sin-asignar' && { sinAsignar: true }),
+    ...(esSuper && dueno && dueno !== 'sin-asignar' && { propietarioId: Number(dueno) }),
+  };
   const lista = useQuery({
     queryKey: usuariosService.keys.list(params),
     queryFn: () => usuariosService.list(params),
@@ -80,6 +97,11 @@ export function UsuariosPage() {
         <span className="font-medium text-slate-900">
           {u.nombre}
           {u.id === yo?.id && <span className="ml-1.5 text-xs font-normal text-slate-500">(tú)</span>}
+          {u.esSuperAdmin && (
+            <span className="ml-1.5">
+              <Badge tone="brand">Super admin</Badge>
+            </span>
+          )}
           {!u.deletedAt && !u.telefono && (u.rol === ROLES.GUARDIA || u.rol === ROLES.SUPERVISOR) && (
             <span className="ml-1.5">
               <Badge tone="warning">Sin teléfono</Badge>
@@ -89,6 +111,16 @@ export function UsuariosPage() {
       ),
     },
     { key: 'email', header: 'Correo', mobile: 'subtitle', render: (u) => u.email },
+    ...(esSuper
+      ? [
+          {
+            key: 'dueno',
+            header: 'Administrador',
+            render: (u: Usuario) =>
+              u.esSuperAdmin ? '—' : (u.propietario?.nombre ?? <span className="text-amber-700">Sin asignar</span>),
+          },
+        ]
+      : []),
     {
       key: 'rol',
       header: 'Rol',
@@ -110,7 +142,7 @@ export function UsuariosPage() {
     },
   ];
 
-  const hayFiltros = !!(q || rol || estado !== 'activos');
+  const hayFiltros = !!(q || rol || estado !== 'activos' || dueno);
 
   return (
     <>
@@ -129,7 +161,13 @@ export function UsuariosPage() {
       />
 
       <Card>
-        <div className="grid gap-3 border-b border-slate-100 p-4 md:grid-cols-[1fr_200px_180px]">
+        <div
+          className={
+            esSuper
+              ? 'grid gap-3 border-b border-slate-100 p-4 md:grid-cols-[1fr_200px_180px_200px]'
+              : 'grid gap-3 border-b border-slate-100 p-4 md:grid-cols-[1fr_200px_180px]'
+          }
+        >
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -155,6 +193,18 @@ export function UsuariosPage() {
               onChange={(e) => setEstado(e.target.value as EstadoUsuarioFiltro)}
             />
           </div>
+          {esSuper && (
+            <Select
+              aria-label="Filtrar por administrador"
+              value={dueno}
+              onChange={(e) => setDueno(e.target.value)}
+              options={[
+                { value: '', label: 'Administrador: todos' },
+                { value: 'sin-asignar', label: 'Sin asignar' },
+                ...(carteras.data?.admins ?? []).map((a) => ({ value: String(a.id), label: a.nombre })),
+              ]}
+            />
+          )}
         </div>
 
         {lista.isError ? (

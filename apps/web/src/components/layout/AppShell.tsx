@@ -19,7 +19,9 @@ import { navItems } from './navItems';
 
 function useVisibleNav() {
   const user = useAuthStore((s) => s.user);
-  return navItems.filter((i) => hasPermission(user, i.permiso) && hasRole(user, i.roles));
+  return navItems.filter(
+    (i) => hasPermission(user, i.permiso) && hasRole(user, i.roles) && (!i.superAdmin || !!user?.esSuperAdmin),
+  );
 }
 
 function Brand({ className }: { className?: string }) {

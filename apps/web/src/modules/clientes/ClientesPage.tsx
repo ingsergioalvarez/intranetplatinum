@@ -22,6 +22,7 @@ import {
   Select,
   type Column,
 } from '../../components/ui';
+import { carterasService } from '../carteras/carteras.service';
 import { ClienteModal } from './ClienteModal';
 import { EstatusClienteBadge } from './EstatusClienteBadge';
 import { clientesService } from './clientes.service';
@@ -73,20 +74,43 @@ export function ClientesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [estatus, setEstatus] = useState<EstatusCliente | ''>('');
   const [estado, setEstado] = useState<Estado>('activos');
+  /** Solo el super admin: los clientes de un admin o los sin asignar (A-65). */
+  const [dueno, setDueno] = useState('');
+  const esSuper = !!useAuthStore((s) => s.user?.esSuperAdmin);
+  const carteras = useQuery({ queryKey: carterasService.keys.resumen, queryFn: carterasService.resumen, enabled: esSuper });
   const [page, setPage] = useState(1);
   const [creando, setCreando] = useState(false);
 
   const q = useDebounced(busqueda.trim());
-  useEffect(() => setPage(1), [q, estatus, estado]);
+  useEffect(() => setPage(1), [q, estatus, estado, dueno]);
 
-  const params = { page, limit: LIMIT, q: q || undefined, estatus: estatus || undefined, estado };
+  const params = {
+    page,
+    limit: LIMIT,
+    q: q || undefined,
+    estatus: estatus || undefined,
+    estado,
+    ...(esSuper && dueno === 'sin-asignar' && { sinAsignar: true }),
+    ...(esSuper && dueno && dueno !== 'sin-asignar' && { propietarioId: Number(dueno) }),
+  };
   const lista = useQuery({
     queryKey: clientesService.keys.list(params),
     queryFn: () => clientesService.list(params),
     placeholderData: keepPreviousData,
   });
 
-  const hayFiltros = !!(q || estatus || estado !== 'activos');
+  const hayFiltros = !!(q || estatus || estado !== 'activos' || dueno);
+  const columnas: Column<ClienteResumen>[] = esSuper
+    ? [
+        ...columns.slice(0, 3),
+        {
+          key: 'dueno',
+          header: 'Administrador',
+          render: (c) => c.propietario?.nombre ?? <span className="text-amber-700">Sin asignar</span>,
+        },
+        ...columns.slice(3),
+      ]
+    : columns;
 
   return (
     <>
@@ -105,7 +129,13 @@ export function ClientesPage() {
       />
 
       <Card>
-        <div className="grid gap-3 border-b border-slate-100 p-4 md:grid-cols-[1fr_200px_180px]">
+        <div
+          className={
+            esSuper
+              ? 'grid gap-3 border-b border-slate-100 p-4 md:grid-cols-[1fr_200px_180px_200px]'
+              : 'grid gap-3 border-b border-slate-100 p-4 md:grid-cols-[1fr_200px_180px]'
+          }
+        >
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -130,6 +160,18 @@ export function ClientesPage() {
               value={estado}
               onChange={(e) => setEstado(e.target.value as Estado)}
             />
+            {esSuper && (
+              <Select
+                aria-label="Filtrar por administrador"
+                value={dueno}
+                onChange={(e) => setDueno(e.target.value)}
+                options={[
+                  { value: '', label: 'Administrador: todos' },
+                  { value: 'sin-asignar', label: 'Sin asignar' },
+                  ...(carteras.data?.admins ?? []).map((a) => ({ value: String(a.id), label: a.nombre })),
+                ]}
+              />
+            )}
           </div>
         </div>
 
@@ -145,7 +187,7 @@ export function ClientesPage() {
           />
         ) : (
           <DataTable
-            columns={columns}
+            columns={columnas}
             rows={lista.data?.items ?? []}
             rowKey={(c) => c.id}
             loading={lista.isPending}

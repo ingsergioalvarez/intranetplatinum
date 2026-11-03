@@ -101,6 +101,8 @@ async function main() {
         email,
         passwordHash: await bcrypt.hash(password, 12),
         rolId: admin.id,
+        // El primer administrador de una instalación nueva es el super admin (A-65).
+        esSuperAdmin: !(await prisma.usuario.findFirst({ where: { esSuperAdmin: true }, select: { id: true } })),
       },
     });
     console.log(`[seed] Administrador creado: ${email}`);

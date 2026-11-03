@@ -1,4 +1,4 @@
-import { ROLES, sumarDiasFecha, type EstadoAusencia, type TipoAusencia } from '@platinum/shared';
+import { sumarDiasFecha, type EstadoAusencia, type TipoAusencia } from '@platinum/shared';
 import { dateAFecha, fechaADate, hoyISO, inicioDelDia } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';

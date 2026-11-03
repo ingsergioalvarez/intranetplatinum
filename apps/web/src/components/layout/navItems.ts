@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  Briefcase,
   Building2,
   ClipboardCheck,
   ClipboardList,
@@ -23,6 +24,8 @@ export interface NavItem {
   permiso?: Permiso;
   /** Si se define, solo lo ven estos roles (aunque el admin tenga el permiso). */
   roles?: Rol[];
+  /** Solo el super admin (A-65). */
+  superAdmin?: boolean;
 }
 
 /** Menú principal. El orden es el de la navegación inferior en celular (máx. 5). */
@@ -63,6 +66,7 @@ export const navItems: NavItem[] = [
   { label: 'Clientes', to: '/clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
   { label: 'Grupos', to: '/grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
   { label: 'Usuarios', to: '/usuarios', icon: Users, permiso: PERMISOS.USUARIOS_VER },
+  { label: 'Carteras', to: '/carteras', icon: Briefcase, superAdmin: true },
   {
     label: 'Turnos',
     to: '/catalogos/turnos',

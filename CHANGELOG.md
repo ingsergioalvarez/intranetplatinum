@@ -5,6 +5,28 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-04 #44 — Super admin y carteras, fase 1 (A-64, A-65)
+
+#### Añadido
+
+- **Super admin**: una marca en la cuenta (no un rol que se pueda asignar) que se pone solo con un comando en el servidor (`npm run db:superadmin -w @platinum/api -- correo`; en Docker `docker compose exec api npx tsx prisma/superadmin.ts correo`). Controla todo y a todos; nadie más puede editar, reiniciar, dar de baja ni eliminar su cuenta. En una instalación nueva, el primer admin del seed lo es.
+- **Carteras**: cada usuario, cliente (con sus sitios) y grupo guarda qué admin lo creó. Un admin ve y administra solo lo suyo, **no ve a otros admin**, y un supervisor ve la cartera de su admin. Solo el super admin crea o cambia administradores. Aplica a usuarios, clientes, sitios (asignar guardias, turnos y supervisor), grupos, listas para elegir guardias y supervisores, celulares de acceso rápido y borrado definitivo. Lo que no tiene dueño queda **"Sin asignar"** y solo lo ve el super admin; los sitios siguen funcionando igual.
+- **Carteras (super admin)**: pantalla con lo que tiene cada admin y lo sin asignar; **pasar la cartera** de un admin (activo, de baja o sin asignar) a un admin activo, completa o eligiendo elementos, con la cadena (al pasar un supervisor, sus guardias y los clientes con sus sitios que supervisa; al pasar un cliente, sus accesos). Se hace completo o no se hace, queda en la auditoría y se avisa a ambos admin. Al dar de baja a un admin, antes se abre este asistente; lo que no se pase queda sin asignar. Filtros "Administrador" y columna en Usuarios y Clientes.
+- **Avisos pendientes viajan con la cartera**: los avisos que seguían sin atender de lo que se pasa (rostros, incidencias, bitácora, checadas, cambios de turno, horas extra, casos, solicitudes de cobertura y ausencias) pasan al admin nuevo.
+- **Avisos a admin solo al dueño**: lo que antes llegaba a "todos los admin" (sitio sin supervisor, ausencias, cambios, horas extra, solicitudes, recordatorios de más de 24 h) ahora llega al dueño del guardia o del cliente del sitio.
+- **Emergencias**: la alerta llega al supervisor del sitio, a su admin y a los admin dueños del guardia y del cliente; de un supervisor, a su admin; de un admin, a sus supervisores y al super admin. Sin nadie asignado, al super admin. Solo quienes la recibieron la ven y la atienden (el super admin las ve todas); si pasan 60 s sin respuesta se repite a los mismos y también al super admin. Se guarda a quiénes se avisó.
+- Migraciones `20261104000000_super_admin_carteras` y `20261104010000_emergencias_destinatarios`.
+
+#### Cambiado
+
+- Los avisos de **"Retardos seguidos" y "Salidas anticipadas seguidas"** ahora van ligados a su checada (A-64): se ponen verdes con "Atendido por X" al atenderse y viajan con la cartera.
+
+#### Pendiente
+
+- **Al desplegar hay que correr el comando del super admin** justo después de `db:deploy`: mientras no exista, todo está "sin asignar" y ningún admin normal verá datos.
+- Fase 2 (A-66): asistencia, tablero, calendario, bitácora, reportes, informes, horas extra, ausencias, cambios de turno, solicitudes y casos de cobertura todavía no filtran por cartera; los avisos de reportes nuevos siguen llegando a todos los admin y supervisores.
+- No probado con dos admin reales en pantalla ni con una base grande.
+
 ### Sesión 2026-11-04 #44 — Prueba de carga preparada (A-62)
 
 #### Añadido

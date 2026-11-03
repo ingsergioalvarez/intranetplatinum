@@ -26,6 +26,7 @@ import { MarcarPage } from '../modules/asistencia/MarcarPage';
 import { CambiosTurnoPage } from '../modules/cambios/CambiosTurnoPage';
 import { CasosPage } from '../modules/casos/CasosPage';
 import { SolicitudesPage } from '../modules/solicitudes/SolicitudesPage';
+import { CarterasPage } from '../modules/carteras/CarterasPage';
 import { EmergenciasPage } from '../modules/emergencias/EmergenciasPage';
 import { AusenciasPage } from '../modules/ausencias/AusenciasPage';
 import { CalendarioPage } from '../modules/cobertura/CalendarioPage';
@@ -263,6 +264,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.CLIENTES_VER}>
             <ClienteDetallePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'carteras',
+        element: (
+          <ProtectedRoute superAdmin>
+            <CarterasPage />
           </ProtectedRoute>
         ),
       },

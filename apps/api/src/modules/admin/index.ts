@@ -20,14 +20,14 @@ class AdminController extends BaseController {
   }
 
   historial = async (req: Request, res: Response) => {
-    return this.ok(res, await this.service.historial(this.params<IdParam>(req).id));
+    return this.ok(res, await this.service.historial(this.params<IdParam>(req).id, this.currentUser(req)));
   };
 
   historialSitio = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.historialSitio(this.params<IdParam>(req).id));
+    this.ok(res, await this.service.historialSitio(this.params<IdParam>(req).id, this.currentUser(req)));
 
   historialCliente = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.historialCliente(this.params<IdParam>(req).id));
+    this.ok(res, await this.service.historialCliente(this.params<IdParam>(req).id, this.currentUser(req)));
 
   eliminarSitio = async (req: Request, res: Response) => {
     await this.service.eliminarSitio(this.params<IdParam>(req).id, this.accionCtx(req));

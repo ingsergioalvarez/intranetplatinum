@@ -21,7 +21,8 @@ export function AlertaEmergencia() {
     queryFn: () => emergenciasService.lista('activas'),
     refetchInterval: 8000,
   });
-  const sinAcuse = (activas.data?.items ?? []).filter((e) => !e.acusadaEn);
+  // Solo las que le avisaron a esta persona: el super admin ve las demás en Emergencias, pero no le saltan.
+  const sinAcuse = (activas.data?.items ?? []).filter((e) => !e.acusadaEn && e.paraMi !== false);
   const e = sinAcuse[0];
 
   const hay = !!e;

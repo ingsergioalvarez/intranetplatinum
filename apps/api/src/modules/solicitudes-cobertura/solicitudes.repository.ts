@@ -1,5 +1,4 @@
 import type { EstadoSolicitud, SolicitudCobertura } from '@platinum/shared';
-import { ROLES } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';

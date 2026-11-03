@@ -9,7 +9,7 @@ import type {
   TipoAviso,
   TipoMarcacion,
 } from '@platinum/shared';
-import { ROLES, tituloDeAviso, trabajaEl } from '@platinum/shared';
+import { tituloDeAviso, trabajaEl } from '@platinum/shared';
 import type { EntidadAviso } from '../avisos/atencion';
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';

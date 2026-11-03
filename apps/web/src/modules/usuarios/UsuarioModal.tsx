@@ -18,6 +18,7 @@ import { formatFechaHora } from '../../core/format/fechas';
 import { Badge, Button, ConfirmDialog, FormField, Input, Modal, Select, toast } from '../../components/ui';
 import { EliminarUsuarioDialog } from './EliminarUsuarioDialog';
 import { estadoUsuario } from './estadoUsuario';
+import { TransferirCarteraModal } from '../carteras/TransferirCarteraModal';
 import { usuariosService } from './usuarios.service';
 
 interface Campos {
@@ -30,7 +31,7 @@ interface Campos {
 type FieldErrors = Partial<Record<keyof Campos, string>>;
 type Accion = 'baja' | 'reactivar' | 'reset';
 
-const rolOptions = (Object.values(ROLES) as Rol[]).map((r) => ({ value: r, label: ROL_DESCRIPCIONES[r] }));
+const todosLosRoles = (Object.values(ROLES) as Rol[]).map((r) => ({ value: r, label: ROL_DESCRIPCIONES[r] }));
 
 const mensajeError = (e: unknown) => (e instanceof ApiError ? e.message : 'Ocurrió un error inesperado');
 
@@ -70,6 +71,11 @@ export function UsuarioModal({
   const [form, setForm] = useState<Campos>(inicial);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [confirmar, setConfirmar] = useState<Accion | null>(null);
+  /** Antes de dar de baja a un admin, el super admin pasa su cartera a otro (A-65). */
+  const [pasandoCartera, setPasandoCartera] = useState(false);
+  const esSuper = !!yo?.esSuperAdmin;
+  // Solo el super admin crea o cambia administradores (A-65).
+  const rolOptions = todosLosRoles.filter((r) => r.value !== ROLES.ADMIN || esSuper || usuario?.rol === ROLES.ADMIN);
   const cambiado = (Object.keys(inicial) as (keyof Campos)[]).some((k) => form[k] !== inicial[k]);
 
   const refrescar = () => qc.invalidateQueries({ queryKey: usuariosService.keys.all });
@@ -236,6 +242,12 @@ export function UsuarioModal({
                 <dt className="text-xs text-slate-500">Último acceso</dt>
                 <dd className="text-slate-800">{formatFechaHora(usuario.ultimoAcceso)}</dd>
               </div>
+              {esSuper && !usuario.esSuperAdmin && (
+                <div>
+                  <dt className="text-xs text-slate-500">Administrador</dt>
+                  <dd className="text-slate-800">{usuario.propietario?.nombre ?? 'Sin asignar'}</dd>
+                </div>
+              )}
               {deBaja && (
                 <div>
                   <dt className="text-xs text-slate-500">Dado de baja</dt>
@@ -269,7 +281,7 @@ export function UsuarioModal({
                       variant="ghost"
                       className="text-red-700 hover:bg-red-50"
                       icon={<UserX className="size-4" />}
-                      onClick={() => setConfirmar('baja')}
+                      onClick={() => (usuario?.rol === ROLES.ADMIN && esSuper ? setPasandoCartera(true) : setConfirmar('baja'))}
                     >
                       Dar de baja
                     </Button>
@@ -297,6 +309,19 @@ export function UsuarioModal({
           onEliminado={() => {
             void refrescar();
             onClose();
+          }}
+        />
+      )}
+
+      {usuario && pasandoCartera && (
+        <TransferirCarteraModal
+          origenId={usuario.id}
+          origenNombre={usuario.nombre}
+          modoBaja
+          onClose={() => setPasandoCartera(false)}
+          onListo={() => {
+            setPasandoCartera(false);
+            setConfirmar('baja');
           }}
         />
       )}
