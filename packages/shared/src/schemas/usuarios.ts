@@ -47,6 +47,10 @@ export const usuarioFiltroSchema = paginationQuerySchema.extend({
   q: z.string().trim().max(100).optional(),
   rol: z.enum(roles).optional(),
   estado: z.enum(ESTADOS_USUARIO).default('activos'),
+  /** Solo el super admin: los de un admin (A-65). */
+  propietarioId: z.coerce.number().int().positive().optional(),
+  /** Solo el super admin: los que no tienen dueño (A-65). */
+  sinAsignar: z.stringbool().optional(),
 });
 
 export type UsuarioFiltro = z.infer<typeof usuarioFiltroSchema>;
@@ -59,6 +63,10 @@ export interface Usuario {
   telefono: string | null;
   telefonoPersonal: string | null;
   rol: Rol;
+  /** Super admin (A-65). */
+  esSuperAdmin: boolean;
+  /** Admin dueño (A-65); null = sin asignar. */
+  propietario: { id: number; nombre: string } | null;
   activo: boolean;
   debeCambiarPassword: boolean;
   bloqueadoHasta: string | null;

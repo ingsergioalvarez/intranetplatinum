@@ -42,6 +42,8 @@ export interface SessionUser {
   debeCambiarPassword: boolean;
   clienteId?: number | null;
   clienteNombre?: string | null;
+  /** Super admin (A-65): ve y controla todo. */
+  esSuperAdmin?: boolean;
 }
 
 /** PIN del perfil rápido (A-40): 4 dígitos. */

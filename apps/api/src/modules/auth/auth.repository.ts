@@ -16,6 +16,8 @@ export interface UsuarioAuth {
   permisos: Permiso[];
   clienteId?: number | null;
   clienteNombre?: string | null;
+  esSuperAdmin?: boolean;
+  propietarioId?: number | null;
 }
 
 export interface RefreshTokenRecord {
@@ -218,6 +220,8 @@ export class PrismaAuthRepository extends AuthRepository {
     rol: { clave: string; permisos: { permiso: { clave: string } }[] };
     clienteId?: number | null;
     cliente?: { id: number; nombreComercial: string } | null;
+    esSuperAdmin?: boolean;
+    propietarioId?: number | null;
   }): UsuarioAuth {
     return {
       id: u.id,
@@ -233,6 +237,8 @@ export class PrismaAuthRepository extends AuthRepository {
       permisos: u.rol.permisos.map((rp) => rp.permiso.clave as Permiso),
       clienteId: u.clienteId ?? u.cliente?.id ?? null,
       clienteNombre: u.cliente?.nombreComercial ?? null,
+      esSuperAdmin: u.esSuperAdmin ?? false,
+      propietarioId: u.propietarioId ?? null,
     };
   }
 }

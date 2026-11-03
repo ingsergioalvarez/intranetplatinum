@@ -55,6 +55,14 @@ model Usuario {
   telefono             String?              @db.VarChar(30)
   /// Número personal, opcional; el de contacto (`telefono`) puede ser el compartido de la empresa (A-60).
   telefonoPersonal     String?              @map("telefono_personal") @db.VarChar(30)
+  /// Super admin (A-65): controla todo y a todos. Solo se asigna por comando en el servidor, nunca desde la app.
+  esSuperAdmin         Boolean              @default(false) @map("es_super_admin")
+  /// Admin dueño de este usuario (A-65): lo ve y lo administra. null = sin asignar (solo lo ve el super admin).
+  propietarioId        Int?                 @map("propietario_id")
+  propietario          Usuario?             @relation("Cartera", fields: [propietarioId], references: [id], onDelete: SetNull)
+  cartera              Usuario[]            @relation("Cartera")
+  clientesPropios      Cliente[]            @relation("ClientesDe")
+  gruposPropios        GrupoGuardias[]      @relation("GruposDe")
   passwordHash         String               @map("password_hash") @db.VarChar(255)
   rolId                Int                  @map("rol_id")
   // Usuario de rol cliente: a qué cliente pertenece (portal F5-01).
@@ -119,6 +127,7 @@ model Usuario {
   @@index([rolId])
   @@index([clienteId])
   @@index([activo, deletedAt])
+  @@index([propietarioId])
   @@map("usuarios")
 }
 
@@ -204,6 +213,9 @@ model Cliente {
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   deletedAt       DateTime?           @map("deleted_at")
+  /// Admin dueño del cliente y de sus sitios (A-65). null = sin asignar.
+  propietarioId   Int?                @map("propietario_id")
+  propietario     Usuario?            @relation("ClientesDe", fields: [propietarioId], references: [id], onDelete: SetNull)
   contactos       ClienteContacto[]
   sitios          Sitio[]
   usuarios        Usuario[]
@@ -212,6 +224,7 @@ model Cliente {
 
   @@index([deletedAt, estatus])
   @@index([nombreComercial])
+  @@index([propietarioId])
   @@map("clientes")
 }
 
@@ -338,9 +351,13 @@ model GrupoGuardias {
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
   deletedAt    DateTime?         @map("deleted_at")
+  /// Admin dueño del grupo (A-65). null = sin asignar.
+  propietarioId Int?             @map("propietario_id")
+  propietario  Usuario?          @relation("GruposDe", fields: [propietarioId], references: [id], onDelete: SetNull)
   integrantes  GrupoIntegrante[]
   asignaciones SitioGuardia[]
 
+  @@index([propietarioId])
   @@map("grupos_guardias")
 }
 

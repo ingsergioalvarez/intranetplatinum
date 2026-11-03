@@ -9,6 +9,8 @@ export interface UsuarioCreateData {
   telefono?: string | null;
   telefonoPersonal?: string | null;
   rol: Rol;
+  /** Admin dueño (A-65). */
+  propietarioId?: number | null;
   passwordHash: string;
   debeCambiarPassword: boolean;
 }
@@ -21,7 +23,10 @@ export interface UsuarioUpdateData {
   rol?: Rol;
 }
 
-export type UsuarioFiltroData = Omit<UsuarioFiltro, 'page' | 'limit'>;
+export type UsuarioFiltroData = Omit<UsuarioFiltro, 'page' | 'limit'> & {
+  /** Admin que consulta: ve a los suyos y a sí mismo (A-65). Sin esto (super admin) ve todos. */
+  cartera?: { adminId: number; /** Además de los de la cartera, estos ids (él mismo). */ tambien: number[] };
+};
 
 export abstract class UsuariosRepository extends BaseRepository<
   Usuario,
@@ -37,6 +42,8 @@ export abstract class UsuariosRepository extends BaseRepository<
   abstract setPasswordTemporal(id: number, passwordHash: string): Promise<void>;
   /** Revoca todos los refresh tokens vigentes (baja, reset de contraseña). */
   abstract revocarSesiones(id: number): Promise<void>;
+  /** Deja "sin asignar" lo que tenía este admin (A-65). Devuelve cuántos usuarios, clientes y grupos eran. */
+  abstract soltarCartera(adminId: number): Promise<{ usuarios: number; clientes: number; grupos: number }>;
 }
 
 const select = {
@@ -46,6 +53,8 @@ const select = {
   telefono: true,
   telefonoPersonal: true,
   activo: true,
+  esSuperAdmin: true,
+  propietario: { select: { id: true, nombre: true } },
   debeCambiarPassword: true,
   bloqueadoHasta: true,
   ultimoAcceso: true,
@@ -64,6 +73,8 @@ function toUsuario(u: UsuarioRow): Usuario {
     telefono: u.telefono,
     telefonoPersonal: u.telefonoPersonal,
     rol: u.rol.clave as Rol,
+    esSuperAdmin: u.esSuperAdmin,
+    propietario: u.propietario,
     activo: u.activo,
     debeCambiarPassword: u.debeCambiarPassword,
     bloqueadoHasta: u.bloqueadoHasta?.toISOString() ?? null,
@@ -85,15 +96,29 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
   }
 
   async findPaged(
-    { q, rol, estado }: UsuarioFiltroData,
+    { q, rol, estado, propietarioId, sinAsignar, cartera }: UsuarioFiltroData,
     { page, limit }: PaginationQuery,
   ): Promise<Paginated<Usuario>> {
     const where: Prisma.UsuarioWhereInput = {
       ...(estado === 'activos' && { deletedAt: null }),
       ...(estado === 'baja' && { deletedAt: { not: null } }),
       ...(rol && { rol: { clave: rol } }),
+      ...(cartera && {
+        OR: [{ propietarioId: cartera.adminId }, { id: { in: [cartera.adminId, ...cartera.tambien] } }],
+      }),
+      ...(!cartera && sinAsignar && { propietarioId: null, esSuperAdmin: false }),
+      ...(!cartera && !sinAsignar && propietarioId && { propietarioId }),
       ...(q && {
-        OR: [{ nombre: { contains: q } }, { email: { contains: q } }, { telefono: { contains: q } }, { telefonoPersonal: { contains: q } }],
+        AND: [
+          {
+            OR: [
+              { nombre: { contains: q } },
+              { email: { contains: q } },
+              { telefono: { contains: q } },
+              { telefonoPersonal: { contains: q } },
+            ],
+          },
+        ],
       }),
     };
     const prisma = getPrisma();
@@ -110,9 +135,13 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
     return { items: rows.map(toUsuario), total, page, limit };
   }
 
-  async create({ rol, ...data }: UsuarioCreateData) {
+  async create({ rol, propietarioId, ...data }: UsuarioCreateData) {
     const u = await getPrisma().usuario.create({
-      data: { ...data, rol: { connect: { clave: rol } } },
+      data: {
+        ...data,
+        rol: { connect: { clave: rol } },
+        ...(propietarioId && { propietario: { connect: { id: propietarioId } } }),
+      },
       select,
     });
     return toUsuario(u);
@@ -137,6 +166,18 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
 
   async countAdminsActivos() {
     return getPrisma().usuario.count({ where: { deletedAt: null, activo: true, rol: { clave: 'admin' } } });
+  }
+
+  async soltarCartera(adminId: number) {
+    const db = getPrisma();
+    const donde = { propietarioId: adminId };
+    const data = { propietarioId: null };
+    const [usuarios, clientes, grupos] = await db.$transaction([
+      db.usuario.updateMany({ where: donde, data }),
+      db.cliente.updateMany({ where: donde, data }),
+      db.grupoGuardias.updateMany({ where: donde, data }),
+    ]);
+    return { usuarios: usuarios.count, clientes: clientes.count, grupos: grupos.count };
   }
 
   async setPasswordTemporal(id: number, passwordHash: string) {

@@ -778,6 +778,7 @@ export class AsistenciaService extends BaseService {
             esRetardo ? 'llegando tarde' : 'saliendo antes de su hora'
           } (${patron.map((n) => `${esRetardo ? '+' : '−'}${n} min`).join(', ')})`,
           ruta,
+          entidad: { tipo: 'marca', id: marcacionId },
         },
       );
       if (m.fueraDelSitio === null) return;

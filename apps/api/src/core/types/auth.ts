@@ -9,6 +9,10 @@ export interface AuthUser {
   debeCambiarPassword?: boolean;
   clienteId?: number | null;
   clienteNombre?: string | null;
+  /** Super admin (A-65). */
+  esSuperAdmin?: boolean;
+  /** Admin dueño de este usuario (A-65); para un supervisor, el admin cuya cartera ve. */
+  propietarioId?: number | null;
 }
 
 export interface ValidatedRequestData {

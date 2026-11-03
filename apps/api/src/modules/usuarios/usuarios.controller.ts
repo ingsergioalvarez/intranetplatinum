@@ -9,13 +9,16 @@ export class UsuariosController extends BaseController {
   }
 
   list = async (req: Request, res: Response) =>
-    this.paginated(res, await this.service.list(this.query<UsuarioFiltro>(req)));
+    this.paginated(res, await this.service.list(this.query<UsuarioFiltro>(req), this.currentUser(req)));
 
   get = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.getById(this.params<IdParam>(req).id));
+    this.ok(res, await this.service.getById(this.params<IdParam>(req).id, this.currentUser(req)));
 
   create = async (req: Request, res: Response) =>
-    this.created(res, await this.service.crear(this.body<UsuarioCreate>(req), this.accionCtx(req)));
+    this.created(
+      res,
+      await this.service.crear(this.body<UsuarioCreate>(req), this.accionCtx(req), this.currentUser(req)),
+    );
 
   update = async (req: Request, res: Response) =>
     this.ok(
@@ -24,19 +27,23 @@ export class UsuariosController extends BaseController {
         this.params<IdParam>(req).id,
         this.body<UsuarioUpdate>(req),
         this.accionCtx(req),
+        this.currentUser(req),
       ),
     );
 
   baja = async (req: Request, res: Response) => {
-    await this.service.darDeBaja(this.params<IdParam>(req).id, this.accionCtx(req));
+    await this.service.darDeBaja(this.params<IdParam>(req).id, this.accionCtx(req), this.currentUser(req));
     return this.noContent(res);
   };
 
   reactivar = async (req: Request, res: Response) => {
-    await this.service.reactivar(this.params<IdParam>(req).id, this.accionCtx(req));
+    await this.service.reactivar(this.params<IdParam>(req).id, this.accionCtx(req), this.currentUser(req));
     return this.noContent(res);
   };
 
   resetPassword = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.resetPassword(this.params<IdParam>(req).id, this.accionCtx(req)));
+    this.ok(
+      res,
+      await this.service.resetPassword(this.params<IdParam>(req).id, this.accionCtx(req), this.currentUser(req)),
+    );
 }
