@@ -77,6 +77,8 @@ export interface Aviso {
   /** Miniatura de la foto de evidencia (incidencias de rostro), URL firmada. */
   foto?: string | null;
   leido: boolean;
+  /** Ya lo atendió alguien (A-54): quién, cuándo y con qué resultado ("Aprobado", "Falta confirmada"…). */
+  atendido?: { por: string | null; en: string; resultado: string } | null;
   createdAt: string;
 }
 

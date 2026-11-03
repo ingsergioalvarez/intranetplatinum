@@ -124,6 +124,7 @@ const evento = (
 let repo: MemoryBitacoraRepository;
 let audit: MemoryAuditLogger;
 let medidas: MedidaNueva[];
+let atencion: string[];
 let app: ReturnType<typeof createApp>;
 
 const token = (rol: Rol) =>
@@ -139,6 +140,7 @@ beforeEach(() => {
   repo = new MemoryBitacoraRepository();
   audit = new MemoryAuditLogger();
   medidas = [];
+  atencion = [];
   repo.eventosGuardados = [
     evento(1, 'retardo', '2026-10-05T14:00:00.000Z'),
     evento(2, 'asignacion', '2026-10-20T15:00:00.000Z'),
@@ -152,6 +154,10 @@ beforeEach(() => {
       ahora: () => new Date('2026-10-21T18:00:00.000Z'),
       alcance: sinAlcance,
       medidas: { ...sinMedidas, aplicar: async (m) => void medidas.push(m) },
+      atencion: {
+        atender: async (e, a) => void atencion.push(`atendido ${(e as { id: number }).id}: ${a.resultado}`),
+        reabrir: async (e) => void atencion.push(`reabierto ${(e as { id: number }).id}`),
+      },
     }),
   ]);
 });
@@ -381,6 +387,20 @@ describe('bitácora del guardia (DA-41)', () => {
     );
     expect((await como(ROLES.ADMIN).post('/eventos/42/revertir', { categoria: 'error_supervisor' })).status).toBe(400);
     expect((await como(ROLES.ADMIN).post('/eventos/43/revertir', { categoria: 'error_supervisor' })).status).toBe(400);
+  });
+
+  it('los avisos del evento se actualizan al justificar, confirmar o revertir (A-54)', async () => {
+    repo.eventosGuardados.push(evento(50, 'falta', '2026-10-22T16:00:00.000Z'), evento(51, 'falta', '2026-10-23T16:00:00.000Z'));
+    await sup().post('/eventos/50/justificar', { categoria: 'permiso' });
+    await sup().post('/eventos/51/confirmar-falta', { categoria: 'sin_aviso' });
+    await como(ROLES.ADMIN).post('/eventos/51/revertir', { categoria: 'error_supervisor' });
+    expect(atencion).toEqual(['atendido 50: Justificada', 'atendido 51: Falta confirmada', 'reabierto 51']);
+  });
+
+  it('confirmar un "No se presentó" deja atendido su aviso y el de la falta que crea (A-54)', async () => {
+    repo.eventosGuardados.push(evento(52, 'no_se_presento', '2026-10-24T14:15:00.000Z'));
+    const res = await sup().post('/eventos/52/confirmar-falta', { categoria: 'sin_aviso' });
+    expect(atencion).toEqual(['atendido 52: Falta confirmada', `atendido ${res.body.data.id}: Falta confirmada`]);
   });
 
   it('sin medida (o "ninguna") no se guarda nada en el historial', async () => {

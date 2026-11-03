@@ -17,6 +17,7 @@ import { StorageService, signAccessToken } from '../src/core';
 import { createAsistenciaModule } from '../src/modules/asistencia';
 import { sinHorasExtra } from '../src/modules/horas-extra/puerto';
 import { sinMedidas, type MedidaNueva } from '../src/modules/medidas/medidas';
+import { sinAtencion } from '../src/modules/avisos/atencion';
 import {
   AsistenciaRepository,
   type FiltroIncidencias,
@@ -352,6 +353,7 @@ let storage: MemoryStorage;
 let audit: MemoryAuditLogger;
 let bitacora: EventoNuevo[];
 let medidasAplicadas: MedidaNueva[];
+let atendidos: { entidad: object; resultado: string }[];
 let salidasSinMarcar = 0;
 let ahora: Date;
 
@@ -420,6 +422,7 @@ const avanzar = (horas: number) => {
 beforeEach(() => {
   bitacora = [];
   medidasAplicadas = [];
+  atendidos = [];
   salidasSinMarcar = 0;
   HORARIOS = {};
   HOY = '2026-10-20';
@@ -457,6 +460,7 @@ beforeEach(() => {
       bitacora: async (e) => void bitacora.push(e),
       alcance: sinAlcance,
       llegada: async () => undefined,
+      atencion: { ...sinAtencion, atender: async (entidad, a) => void atendidos.push({ entidad, resultado: a.resultado }) },
       medidas: {
         ...sinMedidas,
         aplicar: async (m) => void medidasAplicadas.push(m),
@@ -921,6 +925,9 @@ describe('asistencia: autoregistro y revisión del rostro', () => {
     const ok = await revisar(11, 'aprobar');
     expect(ok.body.data).toMatchObject({ estado: 'aprobado', revisadoPor: 'Supervisora' });
     expect(audit.acciones()).toContain('asistencia.aprobar_rostro');
+    // Los avisos de ese rostro quedan atendidos (A-54).
+    expect(atendidos).toEqual([{ entidad: { tipo: 'rostro', id: expect.any(Number) }, resultado: 'Aprobado' }]);
+    expect(repo.avisos.find((a) => a.tipo === 'rostro_pendiente')).toMatchObject({ entidad: { tipo: 'rostro' } });
     const entrada = await marcar(11, marca('entrada'), { descriptor: ROSA_HOY });
     expect(entrada.body.data.alertas).not.toContain('rostro_pendiente');
     expect((await revisar(11, 'aprobar')).status).toBe(409);
@@ -1166,6 +1173,7 @@ describe('asistencia: incidencias de rostro (DA-31)', () => {
       conclusion: 'falsa_alarma',
       nota: 'Era una prueba',
     });
+    expect(atendidos).toEqual([{ entidad: { tipo: 'incidencia', id: 1 }, resultado: expect.any(String) }]);
     expect((await revisar()).status).toBe(409);
     expect((await sup('/incidencias')).body.data.total).toBe(1);
     expect((await sup('/incidencias?estado=revisadas')).body.data.items[0].id).toBe(1);

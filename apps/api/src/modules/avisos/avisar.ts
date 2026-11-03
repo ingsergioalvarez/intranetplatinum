@@ -1,6 +1,7 @@
 import { tituloDeAviso, type TipoAviso } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import { notificarPush } from '../push/enviar';
+import type { EntidadAviso } from './atencion';
 
 export interface AvisoUsuario {
   tipo: TipoAviso;
@@ -11,6 +12,8 @@ export interface AvisoUsuario {
   ruta?: string | null;
   /** Foto en miniatura (clave en el almacenamiento). */
   fotoClave?: string | null;
+  /** Qué cosa atiende (A-54): al atenderla, el aviso se actualiza. */
+  entidad?: EntidadAviso;
 }
 
 /** Crea un aviso de campanita para cada usuario. Nunca rompe la operación que lo origina. */
@@ -18,14 +21,23 @@ export type AvisarUsuarios = (usuarioIds: number[], aviso: AvisoUsuario) => Prom
 
 export const avisarConPrisma: AvisarUsuarios = async (
   usuarioIds,
-  { tipo, titulo, mensaje, ruta = null, fotoClave = null },
+  { tipo, titulo, mensaje, ruta = null, fotoClave = null, entidad },
 ) => {
   const ids = [...new Set(usuarioIds)];
   if (ids.length === 0) return;
   try {
     const t = tituloDeAviso(tipo, titulo);
     await getPrisma().aviso.createMany({
-      data: ids.map((usuarioId) => ({ usuarioId, tipo, titulo: t, mensaje: mensaje.slice(0, 255), ruta, fotoClave })),
+      data: ids.map((usuarioId) => ({
+        usuarioId,
+        tipo,
+        titulo: t,
+        mensaje: mensaje.slice(0, 255),
+        ruta,
+        fotoClave,
+        entidad: entidad?.tipo ?? null,
+        entidadId: entidad?.id ?? null,
+      })),
     });
     notificarPush(ids, { tipo, titulo: t, mensaje, ruta });
   } catch (err) {

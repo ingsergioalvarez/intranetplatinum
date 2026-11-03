@@ -1,5 +1,6 @@
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
+import { atencionConPrisma } from '../avisos/atencion';
 import { turnoDeDb } from '../sitios/sitios.repository';
 import { ComidasRepository } from './comidas';
 import { SitioSoloRepository } from './sitioSolo';
@@ -183,10 +184,16 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
   }
 
   async superarNoSePresento(usuarioId: number, sitioId: number, ocurrioEn: Date) {
-    await getPrisma().eventoBitacora.updateMany({
-      where: { usuarioId, sitioId, tipo: 'no_se_presento', ocurrioEn, decision: null },
-      data: { decision: 'superado', decididoEn: new Date() },
-    });
+    const donde = { usuarioId, sitioId, tipo: 'no_se_presento' as const, ocurrioEn, decision: null };
+    const eventos = await getPrisma().eventoBitacora.findMany({ where: donde, select: { id: true } });
+    await getPrisma().eventoBitacora.updateMany({ where: donde, data: { decision: 'superado', decididoEn: new Date() } });
+    // Los avisos de ese "No se presentó" quedan como atendidos por el sistema (A-54).
+    for (const e of eventos) {
+      await atencionConPrisma.atender(
+        { tipo: 'bitacora', id: e.id },
+        { porId: null, resultado: 'Cerrado solo: el guardia llegó o pasó a falta' },
+      );
+    }
   }
 
   async completarEvento(id: number, datos: Record<string, string | number | boolean | null>) {

@@ -54,14 +54,18 @@ export class PrismaAvisosRepository extends AvisosRepository {
         ruta: true,
         fotoClave: true,
         leidoEn: true,
+        atendidoEn: true,
+        atendidoPor: true,
+        resultado: true,
         createdAt: true,
       },
     });
-    return rows.map(({ leidoEn, createdAt, fotoClave, titulo, ...a }) => ({
+    return rows.map(({ leidoEn, createdAt, fotoClave, titulo, atendidoEn, atendidoPor, resultado, ...a }) => ({
       ...a,
       titulo: tituloDeAviso(a.tipo, titulo),
       foto: fotoClave ? firmarArchivo(fotoClave) : null,
       leido: leidoEn !== null,
+      atendido: atendidoEn ? { por: atendidoPor, en: atendidoEn.toISOString(), resultado: resultado ?? 'Atendido' } : null,
       createdAt: createdAt.toISOString(),
     }));
   }

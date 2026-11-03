@@ -6,6 +6,7 @@ import {
   CalendarDays,
   BellOff,
   CheckCheck,
+  CircleCheck,
   ClipboardList,
   Clock,
   Copy,
@@ -203,8 +204,11 @@ export function Campanita({ className, tono = 'oscuro' }: { className?: string; 
 }
 
 function FilaAviso({ aviso: a, ahora, onAbrir }: { aviso: Aviso; ahora: Date; onAbrir: () => void }) {
-  const { icono: Icono, tono } = TIPO[a.tipo];
+  const { icono: Icono, tono: tonoAviso } = TIPO[a.tipo];
   const { contexto, detalle } = partes(a.mensaje);
+  // Atendido (A-54): se ve verde y dice quién lo atendió y con qué resultado, en lugar de "por revisar".
+  const tono: Tono = a.atendido ? 'verde' : tonoAviso;
+  const Icono2 = a.atendido ? CircleCheck : Icono;
   return (
     <button
       type="button"
@@ -218,7 +222,7 @@ function FilaAviso({ aviso: a, ahora, onAbrir }: { aviso: Aviso; ahora: Date; on
       <span
         className={cn('flex size-9 shrink-0 items-center justify-center rounded-full', COLOR[tono].icono)}
       >
-        <Icono className="size-4.5" />
+        <Icono2 className="size-4.5" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">
@@ -239,7 +243,14 @@ function FilaAviso({ aviso: a, ahora, onAbrir }: { aviso: Aviso; ahora: Date; on
           </time>
         </span>
         <span className="block text-sm text-slate-700">{contexto}</span>
-        {detalle && <span className="block text-sm text-slate-500">{detalle}</span>}
+        {a.atendido ? (
+          <span className="block text-sm font-medium text-emerald-700">
+            {a.atendido.resultado}
+            {a.atendido.por ? ` · por ${a.atendido.por}` : ''} · {horaRelativa(a.atendido.en, ahora)}
+          </span>
+        ) : (
+          detalle && <span className="block text-sm text-slate-500">{detalle}</span>
+        )}
       </span>
       {a.foto && (
         <img

@@ -158,18 +158,20 @@ export class VigilanciaTurnos {
     }
     if (min >= MIN_NO_SE_PRESENTO && !fila.noSePresentoEn) {
       const ruta = `/asistencia/guardias/${t.guardia.id}?vista=bitacora&cat=incidencias`;
-      await this.avisar(await this.repo.revisoresDe({ sitioId: t.sitio.id, guardiaId: t.guardia.id }), {
-        tipo: 'retardo',
-        titulo: 'No se presentó a su turno',
-        mensaje: `${t.guardia.nombre} · ${t.sitio.nombre}: no se presentó a su turno de las ${hora} (pasaron ${MIN_NO_SE_PRESENTO} min)`,
-        ruta,
-      });
-      await this.repo.crearEvento({
+      // Primero el evento: el aviso lleva su id para actualizarse cuando se atienda (A-54).
+      const noSePresentoId = await this.repo.crearEvento({
         usuarioId: t.guardia.id,
         tipo: 'no_se_presento',
         detalle: `No se presentó a su turno de las ${hora} en ${t.sitio.nombre} (${MIN_NO_SE_PRESENTO} min sin entrada)`,
         sitioId: t.sitio.id,
         ocurrioEn: new Date(programada.getTime() + MIN_NO_SE_PRESENTO * 60_000),
+      });
+      await this.avisar(await this.repo.revisoresDe({ sitioId: t.sitio.id, guardiaId: t.guardia.id }), {
+        tipo: 'retardo',
+        titulo: 'No se presentó a su turno',
+        mensaje: `${t.guardia.nombre} · ${t.sitio.nombre}: no se presentó a su turno de las ${hora} (pasaron ${MIN_NO_SE_PRESENTO} min)`,
+        ruta,
+        entidad: { tipo: 'bitacora', id: noSePresentoId },
       });
       await this.repo.actualizarTurnoDia(fila.id, { noSePresentoEn: ahora });
     }
@@ -188,6 +190,7 @@ export class VigilanciaTurnos {
         titulo: 'Falta por revisar',
         mensaje: `${t.guardia.nombre} · ${t.sitio.nombre}: no llegó en 2 h. Aún no cuenta como falta: confírmala o justifícala.`,
         ruta: `/asistencia/guardias/${t.guardia.id}?vista=bitacora&cat=incidencias`,
+        entidad: { tipo: 'bitacora', id: eventoId },
       });
       // La falta reemplaza al aviso de "No se presentó": no quedan dos pendientes por lo mismo.
       await this.repo.superarNoSePresento(
@@ -228,6 +231,7 @@ export class VigilanciaTurnos {
         titulo: 'Llegó tarde con falta: ¿aceptas?',
         mensaje: `${guardia} · ${f.sitio}: llegó ${duracionTexto(tarde)} tarde (tenía falta). ¿Aceptas la asistencia?`,
         ruta: `/asistencia/guardias/${usuarioId}?vista=bitacora&cat=incidencias`,
+        entidad: { tipo: 'bitacora', id: f.faltaEventoId },
       });
     }
   }

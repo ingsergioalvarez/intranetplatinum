@@ -23,6 +23,7 @@ import {
 } from '@platinum/shared';
 import { AuditLogger, BaseService, HttpError, firmarArchivo, inicioDelDia, type AccionCtx } from '../../core';
 import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
+import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinMedidas, type MedidasPuerto } from '../medidas/medidas';
 import type { BitacoraRepository, EventoBitacoraRow } from './bitacora.repository';
 
@@ -77,6 +78,8 @@ export class BitacoraService extends BaseService {
     private readonly ahora: () => Date = () => new Date(),
     /** Medidas disciplinarias (A-48): historial formal del guardia. */
     private readonly medidas: MedidasPuerto = sinMedidas,
+    /** Avisos que se actualizan al atenderse (A-54). */
+    private readonly atencion: AvisosAtencion = sinAtencion,
   ) {
     super();
   }
@@ -192,6 +195,7 @@ export class BitacoraService extends BaseService {
     // Una decisión ya tomada es definitiva (A-52): solo el admin la revierte.
     if (e.decision) throw HttpError.conflict('Ya se decidió');
     await this.repo.justificar(id, ctx.actorId, motivo, this.ahora());
+    await this.atencion.atender({ tipo: 'bitacora', id }, { porId: ctx.actorId, resultado: 'Justificada' });
     await this.audit.registrarAccion(ctx, 'bitacora.justificar', 'bitacora_eventos', id, {
       guardiaId: e.usuarioId,
       tipo: e.tipo,
@@ -218,6 +222,8 @@ export class BitacoraService extends BaseService {
     if (e.decision) throw HttpError.conflict('Ya se decidió');
     // Sin esperar las 2 h: se crea la falta (o se toma la que el turno ya tiene) y la decisión va sobre ella.
     if (e.tipo === 'no_se_presento') {
+      // El aviso de "No se presentó" también queda atendido (la falta lo reemplaza).
+      await this.atencion.atender({ tipo: 'bitacora', id }, { porId: ctx.actorId, resultado: 'Falta confirmada' });
       id = await this.repo.crearFaltaDesde(e, this.ahora());
       e = (await this.repo.findById(id))!;
       if (e.justificadoEn) throw HttpError.conflict('Ya está justificado');
@@ -225,6 +231,7 @@ export class BitacoraService extends BaseService {
     }
     const motivo = textoMotivoLista(MOTIVO_FALTA_LABEL[categoria], nota);
     await this.repo.decidir(id, ctx.actorId, 'falta', this.ahora(), motivo);
+    await this.atencion.atender({ tipo: 'bitacora', id }, { porId: ctx.actorId, resultado: 'Falta confirmada' });
     await this.audit.registrarAccion(ctx, 'bitacora.confirmar_falta', 'bitacora_eventos', id, {
       guardiaId: e.usuarioId,
       motivo,
@@ -273,6 +280,7 @@ export class BitacoraService extends BaseService {
     const antes = fila.justificacion ? `justificada: ${fila.justificacion.motivo}` : `decisión: ${fila.decision!.tipo}`;
     const motivo = textoMotivoLista(MOTIVO_REVERTIR_LABEL[categoria], nota);
     await this.repo.revertir(id);
+    await this.atencion.reabrir({ tipo: 'bitacora', id });
     await this.repo.comentar(id, ctx.actorId, `Decisión revertida (${antes}). Motivo: ${motivo}`.slice(0, 500));
     await this.audit.registrarAccion(ctx, 'bitacora.revertir_decision', 'bitacora_eventos', id, {
       guardiaId: e.usuarioId,
@@ -299,6 +307,10 @@ export class BitacoraService extends BaseService {
     }
     if (e.decision) throw HttpError.conflict('Ya se decidió');
     await this.repo.decidir(id, ctx.actorId, decision, this.ahora());
+    await this.atencion.atender(
+      { tipo: 'bitacora', id },
+      { porId: ctx.actorId, resultado: decision === 'asistencia' ? 'Asistencia aceptada' : 'Falta confirmada' },
+    );
     await this.audit.registrarAccion(ctx, 'bitacora.decidir_falta', 'bitacora_eventos', id, {
       guardiaId: e.usuarioId,
       decision,

@@ -10,6 +10,7 @@ import type {
   TipoMarcacion,
 } from '@platinum/shared';
 import { ROLES, tituloDeAviso, trabajaEl } from '@platinum/shared';
+import type { EntidadAviso } from '../avisos/atencion';
 import { getPrisma } from '../../core/data/prisma';
 import { dateAFecha, fechaADate, hoyISO } from '../../core';
 import { asignadaA, vigenteEn } from '../clientes/clientes.repository';
@@ -125,6 +126,8 @@ export interface AvisoAsistencia {
   titulo?: string;
   mensaje: string;
   ruta: string;
+  /** Qué cosa atiende (A-54): al atenderla, el aviso se actualiza. */
+  entidad?: EntidadAviso;
   /** Foto que se muestra en miniatura en la campanita. */
   fotoClave?: string | null;
 }
@@ -603,7 +606,7 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
     return admins.map((a) => a.id);
   }
 
-  async avisar(usuarioIds: number[], { tipo, titulo, mensaje, ruta, fotoClave = null }: AvisoAsistencia) {
+  async avisar(usuarioIds: number[], { tipo, titulo, mensaje, ruta, fotoClave = null, entidad }: AvisoAsistencia) {
     if (usuarioIds.length === 0) return;
     const t = tituloDeAviso(tipo, titulo);
     await getPrisma().aviso.createMany({
@@ -614,6 +617,8 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
         mensaje: mensaje.slice(0, 255),
         ruta,
         fotoClave,
+        entidad: entidad?.tipo ?? null,
+        entidadId: entidad?.id ?? null,
       })),
     });
     notificarPush(usuarioIds, { tipo, titulo: t, mensaje, ruta });

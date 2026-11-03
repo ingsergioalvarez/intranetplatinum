@@ -555,11 +555,19 @@ model Aviso {
   /// Foto de evidencia que se muestra en miniatura (incidencias de rostro).
   fotoClave String?   @map("foto_clave") @db.VarChar(255)
   leidoEn   DateTime? @map("leido_en")
+  /// Qué cosa atiende este aviso (A-54): `rostro`, `incidencia` o `bitacora` + su id.
+  entidad   String?   @db.VarChar(30)
+  entidadId Int?      @map("entidad_id")
+  /// Cuando alguien la atiende el aviso se actualiza: quién, cuándo y con qué resultado.
+  atendidoEn  DateTime? @map("atendido_en")
+  atendidoPor String?   @map("atendido_por") @db.VarChar(120)
+  resultado   String?   @db.VarChar(120)
   createdAt DateTime  @default(now()) @map("created_at")
   usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   reporte   Reporte?  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId, leidoEn, createdAt])
+  @@index([entidad, entidadId])
   @@map("avisos")
 }
 

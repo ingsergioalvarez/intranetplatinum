@@ -30,6 +30,7 @@ import {
   type AppModule,
 } from '../../core';
 import { alcanceConPrisma, type AlcanceFn } from '../sitios/alcance';
+import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { medidasConPrisma, type MedidasPuerto } from '../medidas/medidas';
 import { BitacoraRepository, PrismaBitacoraRepository } from './bitacora.repository';
 import { BitacoraService } from './bitacora.service';
@@ -134,6 +135,7 @@ interface BitacoraModuleDeps {
   ahora?: () => Date;
   alcance?: AlcanceFn;
   medidas?: MedidasPuerto;
+  atencion?: AvisosAtencion;
 }
 
 /** Bitácora del guardia (DA-41): solo admin y supervisor (permiso de ver asistencia). */
@@ -143,8 +145,9 @@ export function createBitacoraModule({
   ahora,
   alcance = alcanceConPrisma,
   medidas = medidasConPrisma,
+  atencion = atencionConPrisma,
 }: BitacoraModuleDeps = {}): AppModule {
-  const c = new BitacoraController(new BitacoraService(repo, audit, ahora, medidas), alcance);
+  const c = new BitacoraController(new BitacoraService(repo, audit, ahora, medidas, atencion), alcance);
   const id = idParamSchema;
 
   const router = Router();

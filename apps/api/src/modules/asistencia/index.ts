@@ -30,6 +30,7 @@ import {
 } from '../../core';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { avisarConPrisma } from '../avisos/avisar';
+import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { medidasConPrisma, type MedidasPuerto } from '../medidas/medidas';
 import { PrismaRecordatoriosIncidenciasRepository, RecordatorioIncidencias } from '../bitacora/recordatorios';
 import { alcanceConPrisma, type AlcanceFn } from '../sitios/alcance';
@@ -64,6 +65,8 @@ interface AsistenciaModuleDeps {
   extras?: HorasExtraPuerto;
   /** Medidas disciplinarias (A-49); en pruebas, sin ellas. */
   medidas?: MedidasPuerto;
+  /** Avisos que se actualizan al atenderse (A-54); en pruebas, sin ellos. */
+  atencion?: AvisosAtencion;
 }
 
 /**
@@ -87,9 +90,10 @@ export function createAsistenciaModule({
     ),
   extras = sinHorasExtra,
   medidas = medidasConPrisma,
+  atencion = atencionConPrisma,
 }: AsistenciaModuleDeps = {}): AppModule {
   const c = new AsistenciaController(
-    new AsistenciaService(repo, misSitios, storage, audit, ahora, hoy, bitacora, llegada, extras, medidas),
+    new AsistenciaService(repo, misSitios, storage, audit, ahora, hoy, bitacora, llegada, extras, medidas, atencion),
     alcance,
   );
   const marcar = requirePermission(PERMISOS.ASISTENCIA_MARCAR);

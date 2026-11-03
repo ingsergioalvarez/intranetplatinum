@@ -14,6 +14,7 @@ import {
   horaLegible,
   ROLES,
   SIGUIENTES_MARCAS,
+  CONCLUSION_INCIDENCIA_LABEL,
   TIPO_MARCACION_LABEL,
   TIPOS_CON_FOTO,
   MARGEN_OTRO_LENTES,
@@ -71,6 +72,7 @@ import {
   type RequestContext,
 } from '../../core';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
+import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinMedidas, type MedidasPuerto } from '../medidas/medidas';
 import { sinHorasExtra, type HorasExtraPuerto } from '../horas-extra/puerto';
 import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
@@ -434,6 +436,8 @@ export class AsistenciaService extends BaseService {
     private readonly extras: HorasExtraPuerto = sinHorasExtra,
     /** Medidas disciplinarias (A-49): historial formal y contador de salidas sin marcar. */
     private readonly medidas: MedidasPuerto = sinMedidas,
+    /** Avisos que se actualizan al atenderse (A-54). */
+    private readonly atencion: AvisosAtencion = sinAtencion,
   ) {
     super();
   }
@@ -945,6 +949,10 @@ export class AsistenciaService extends BaseService {
       conclusion,
       nota: nota || null,
     });
+    await this.atencion.atender(
+      { tipo: 'incidencia', id },
+      { porId: ctx.actorId, resultado: CONCLUSION_INCIDENCIA_LABEL[conclusion] },
+    );
     await this.audit.registrarAccion(ctx, 'asistencia.revisar_incidencia', 'usuarios', actual.usuario.id, {
       incidenciaId: id,
       motivo: actual.motivo,
@@ -1052,6 +1060,7 @@ export class AsistenciaService extends BaseService {
         mensaje: `${usuario.nombre} registró su rostro: pendiente de revisión`,
         ruta: RUTA_REVISION,
         fotoClave: rostro.fotoClave,
+        entidad: { tipo: 'rostro', id: rostro.id },
       },
     );
     return toRostroRegistro(rostro);
@@ -1160,6 +1169,10 @@ export class AsistenciaService extends BaseService {
       revisadoPorId: ctx.actorId,
       motivoRechazo: motivo,
     });
+    await this.atencion.atender(
+      { tipo: 'rostro', id: actual.id },
+      { porId: ctx.actorId, resultado: estado === 'aprobado' ? 'Aprobado' : 'Rechazado' },
+    );
     await this.audit.registrarAccion(
       ctx,
       estado === 'aprobado' ? 'asistencia.aprobar_rostro' : 'asistencia.rechazar_rostro',
@@ -1270,6 +1283,7 @@ export class AsistenciaService extends BaseService {
             : `${guardia} · ${tipo ? TIPO_MARCACION_LABEL[tipo] : 'Registro'}: ${detalle[motivo]}`,
         ruta: `/asistencia/incidencias?id=${id}`,
         fotoClave,
+        entidad: { tipo: 'incidencia', id },
       },
     );
     // El titular de la cuenta también se entera cuando otra cara o una pantalla intentó marcar (DA-34).
