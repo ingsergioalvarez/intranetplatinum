@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   CalendarDays,
+  CalendarRange,
   ChevronLeft,
   FileText,
   ChevronRight,
@@ -48,6 +49,7 @@ import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { formatFecha, hoyLocal } from '../../core/format/fechas';
 import { describirAsignacion } from '../clientes/asignaciones';
 import { asistenciaService } from './asistencia.service';
+import { DescargarHorarioModal } from '../horarios/DescargarHorarioModal';
 import { CerrarJornadaModal } from './CerrarJornadaModal';
 import { MedidasGuardia } from './MedidasGuardia';
 import { BitacoraGuardia, ListaEventos, type FiltroBitacora } from './BitacoraGuardia';
@@ -247,6 +249,7 @@ export function AsistenciaGuardiaPage() {
   const [cerrando, setCerrando] = useState<Jornada | null>(null);
   // Reporte oficial de asistencia de este guardia (DA-52).
   const [reportando, setReportando] = useState(false);
+  const [horario, setHorario] = useState(false);
   // Jornada de la que se ven sus incidencias (se recalculan de la bitácora al agregar una nota o justificar).
   const [conIncidencias, setConIncidencias] = useState<Jornada | null>(null);
 
@@ -318,6 +321,16 @@ export function AsistenciaGuardiaPage() {
         actions={
           <>
             {selectorMes}
+            {puedeCerrar && (
+              <Button
+                variant="secondary"
+                icon={<CalendarRange className="size-4" />}
+                aria-label="Descargar horario en PDF"
+                onClick={() => setHorario(true)}
+              >
+                <span className="hidden sm:inline">Horario</span>
+              </Button>
+            )}
             {puedeCerrar && (
               <Button
                 variant="secondary"
@@ -462,6 +475,12 @@ export function AsistenciaGuardiaPage() {
         </div>
       )}
 
+      {horario && (
+        <DescargarHorarioModal
+          guardia={{ id, nombre: ficha.data?.guardia.nombre ?? 'Guardia' }}
+          onClose={() => setHorario(false)}
+        />
+      )}
       {reportando && (
         <NuevoInformeModal
           guardia={{ id, nombre: ficha.data?.guardia.nombre ?? 'Guardia' }}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -26,6 +26,7 @@ import { rangoProximos } from '../cobertura/estados';
 import { horasExtraService } from '../horas-extra/horasExtra.service';
 import { asistenciaService } from './asistencia.service';
 import { formatDuracion, formatHora, horasEsperadas } from './formato';
+import { DescargarHorarioModal } from '../horarios/DescargarHorarioModal';
 import { CerrarJornadaModal } from './CerrarJornadaModal';
 import { EstadoJornada } from './EstadoJornada';
 import { HoraMarca } from './HoraMarca';
@@ -201,6 +202,7 @@ export function AsistenciaPage() {
               <BotonHorasExtra />
               <BotonCasos />
               <BotonCalendario />
+              <BotonHorario />
               <Link
                 to="/asistencia/reportes"
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset hover:bg-slate-50"
@@ -383,6 +385,23 @@ function BotonCasos() {
       <Route className="size-4" /> Casos de cobertura
       {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
     </Link>
+  );
+}
+
+/** Descargar el horario de guardias en PDF (A-55), como apoyo para recordárselo a los guardias. */
+function BotonHorario() {
+  const [abierto, setAbierto] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset hover:bg-slate-50"
+      >
+        <CalendarRange className="size-4" /> Horarios (PDF)
+      </button>
+      {abierto && <DescargarHorarioModal onClose={() => setAbierto(false)} />}
+    </>
   );
 }
 

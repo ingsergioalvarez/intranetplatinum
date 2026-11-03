@@ -603,3 +603,7 @@ export async function generarPdf(i: Informe, url: string): Promise<Buffer> {
   doc.end();
   return fin;
 }
+
+// Para el PDF de horarios (A-55), que usa el mismo estilo y tablas.
+export { ALTO_CABECERA, BOTTOM, C as COLORES_PDF, Lienzo, MARGEN, TOP, fechaDia, fechaLarga };
+export type { Col, Fila };

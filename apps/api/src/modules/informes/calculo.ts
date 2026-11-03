@@ -102,7 +102,7 @@ function duracionPatron(p: PatronTurno): number | null {
   return (m(p.horaFin) - m(p.horaInicio) + 1440) % 1440 || 1440;
 }
 
-function horarioDe(p: PatronTurno): string | null {
+export function horarioDe(p: PatronTurno): string | null {
   if (!p.horaInicio) return null;
   const dur = duracionPatron(p);
   if (!dur) return p.horaInicio.slice(0, 5);
