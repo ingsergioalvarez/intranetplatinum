@@ -65,3 +65,15 @@ los servicios `cmc-*`, `pdr-*`, etc.). **Nunca toca la base de producción**: le
 - `login_ms`: el inicio de sesión es el paso más pesado (bcrypt); importa sobre todo en el cambio de turno.
 - Saturación = el escalón donde `fallos` o los tiempos pasan la meta. Con `docker stats`, se ve si el cuello es el
   procesador del API, el de MySQL o la memoria.
+
+## Resultado (2026-11-03)
+
+Servidor: Ryzen 7 7700X (16 hilos), 60 GB, compartido con otros sistemas. Copia aparte con tope de 4 núcleos y 8 GB.
+
+- **300 usuarios virtuales** (≈ 1,800 personas reales en cuanto a consultas) durante ~14 min: **93,046 peticiones, 0 fallos**, ~107 peticiones/s sostenidas.
+- **Consultas** (p95): avisos 11 ms, estado del guardia 110 ms, lista del día 52 ms, tablero 55 ms, usuarios 16 ms. Todas dentro de la meta.
+- **Inicio de sesión: único punto fuera de meta.** p95 3.32 s (meta 3 s), promedio 1.0 s, máximo 3.95 s. Cada login cuesta ~200-350 ms de procesador (bcrypt de costo 12 en JavaScript puro, `bcryptjs`), y el API los atiende en un solo hilo.
+- **Picos aislados** de 5 a 9 s en algunas consultas (máximos), mientras su p95 es de decenas de ms: coinciden con las subidas de usuarios, cuando muchos inician sesión a la vez. Es la hipótesis más probable; no se aisló con una prueba propia.
+- Producción y los demás sistemas del servidor no se afectaron.
+- **Límites:** base casi vacía (sin meses de checadas, bitácora ni reportes), sin checadas con foto/rostro, sin subida de fotos ni PDF.
+- **Pendiente:** prueba de ráfaga de cambio de turno (240 logins en 10 s) y repetir con una base con datos de varios meses.
