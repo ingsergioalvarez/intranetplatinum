@@ -53,7 +53,10 @@ class EmergenciasController extends BaseController {
     this.ok(res, await this.service.cancelar(this.params<IdParam>(req).id, this.currentUser(req), this.accionCtx(req)));
 
   listar = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.listar(this.query<{ estado: 'activas' | 'todas' }>(req).estado === 'activas'));
+    this.ok(
+      res,
+      await this.service.listar(this.query<{ estado: 'activas' | 'todas' }>(req).estado === 'activas', this.currentUser(req)),
+    );
 
   acusar = async (req: Request, res: Response) =>
     this.ok(res, await this.service.acusar(this.params<IdParam>(req).id, this.currentUser(req), this.accionCtx(req)));

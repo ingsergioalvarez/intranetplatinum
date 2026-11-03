@@ -10,7 +10,7 @@ import {
   type EmergenciaTipoInput,
   type EmergenciasLista,
 } from '@platinum/shared';
-import { AuditLogger, BaseService, HttpError, hoyISO, type AccionCtx, type AuthUser } from '../../core';
+import { AuditLogger, BaseService, HttpError, esSuperAdmin, hoyISO, type AccionCtx, type AuthUser } from '../../core';
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type { EmergenciaRow, EmergenciasRepository } from './emergencias.repository';
@@ -44,12 +44,42 @@ export class EmergenciasService extends BaseService {
     super();
   }
 
-  /** A quién le llega la alerta: el supervisor del sitio y los admin; o, si la lanza un supervisor/admin, los demás. */
-  private async destinatarios(e: EmergenciaRow, supervisorDelSitio: number | null) {
-    const admins = await this.repo.admins();
-    const supervisores =
-      e.usuario.rol === ROLES.GUARDIA && supervisorDelSitio ? [supervisorDelSitio] : await this.repo.supervisores();
-    return [...new Set([...admins, ...supervisores])].filter((id) => id !== e.usuario.id);
+  /**
+   * A quién le llega la alerta (A-65): de un guardia, su supervisor del sitio, el admin de ese supervisor y los
+   * admin dueños del guardia y del cliente; de un supervisor, su admin; de un admin, sus supervisores y el super
+   * admin; del super admin, todos los admin. Si no resulta nadie (sin asignar), el super admin.
+   */
+  private async destinatarios(
+    e: { usuario: { id: number; rol: string }; lanzadaPorSuper: boolean },
+    sitio: { id: number; supervisorId: number | null } | null,
+  ) {
+    const ids = new Set<number>();
+    const rol = e.usuario.rol;
+    if (rol === ROLES.GUARDIA) {
+      if (sitio?.supervisorId) {
+        ids.add(sitio.supervisorId);
+        const adminDelSup = await this.repo.propietarioDe(sitio.supervisorId);
+        if (adminDelSup) ids.add(adminDelSup);
+      }
+      for (const a of await this.repo.adminsDe({ guardiaId: e.usuario.id, sitioId: sitio?.id ?? null })) ids.add(a);
+    } else if (rol === ROLES.SUPERVISOR) {
+      const admin = await this.repo.propietarioDe(e.usuario.id);
+      if (admin) ids.add(admin);
+    } else if (e.lanzadaPorSuper) {
+      for (const a of await this.repo.todosAdmins()) ids.add(a);
+    } else {
+      for (const s of await this.repo.supervisoresDe(e.usuario.id)) ids.add(s);
+      for (const a of await this.repo.superAdmins()) ids.add(a);
+    }
+    ids.delete(e.usuario.id);
+    // Sin nadie asignado, que no se pierda: le llega al super admin.
+    if (ids.size === 0) for (const a of await this.repo.superAdmins()) if (a !== e.usuario.id) ids.add(a);
+    return [...ids];
+  }
+
+  /** ¿Esta emergencia le toca a quien consulta? El super admin las ve todas; los demás, solo si se les avisó. */
+  private visibleParaMi(e: EmergenciaRow, user: AuthUser) {
+    return esSuperAdmin(user) || e.destinatarios.includes(user.id);
   }
 
   private mensaje(e: EmergenciaRow) {
@@ -61,14 +91,18 @@ export class EmergenciasService extends BaseService {
     const previa = await this.repo.activaDe(user.id);
     if (previa) return aEmergencia(previa, await this.supervisorDe(user));
     const sitio = user.rol === ROLES.GUARDIA ? await this.repo.sitioDe(user.id, hoyISO()) : null;
-    const e = await this.repo.crear({ usuarioId: user.id, sitioId: sitio?.id ?? null, ...input });
+    const destinatarios = await this.destinatarios(
+      { usuario: { id: user.id, rol: user.rol }, lanzadaPorSuper: esSuperAdmin(user) },
+      sitio,
+    );
+    const e = await this.repo.crear({ usuarioId: user.id, sitioId: sitio?.id ?? null, ...input }, destinatarios);
     await this.audit.registrarAccion(ctx, 'emergencias.crear', 'emergencias', e.id, {
       sitio: e.sitio?.nombre ?? null,
       lat: e.lat,
       lng: e.lng,
       bateria: e.bateria,
     });
-    await this.avisar(await this.destinatarios(e, sitio?.supervisorId ?? null), {
+    await this.avisar(destinatarios, {
       tipo: 'emergencia',
       titulo: 'EMERGENCIA',
       mensaje: this.mensaje(e),
@@ -111,8 +145,7 @@ export class EmergenciasService extends BaseService {
     });
     await this.atencion.atender({ tipo: 'emergencia', id }, { porId: user.id, resultado: 'Falsa alarma (sin querer)' });
     await this.audit.registrarAccion(ctx, 'emergencias.cancelar', 'emergencias', id, {});
-    const sitio = e.usuario.rol === ROLES.GUARDIA ? await this.repo.sitioDe(e.usuario.id, hoyISO()) : null;
-    await this.avisar(await this.destinatarios(e, sitio?.supervisorId ?? null), {
+    await this.avisar(e.destinatarios, {
       tipo: 'emergencia',
       titulo: 'Falsa alarma',
       mensaje: `${e.usuario.nombre} avisó que fue sin querer`,
@@ -129,15 +162,18 @@ export class EmergenciasService extends BaseService {
   }
 
   /** Admin y supervisor: activas o todas, lo más nuevo arriba. */
-  async listar(soloActivas: boolean): Promise<EmergenciasLista> {
-    const filas = await this.repo.listar(soloActivas, 100);
-    return { items: filas.map((f) => aEmergencia(f)), activas: filas.filter((f) => f.estado === 'activa').length };
+  async listar(soloActivas: boolean, user: AuthUser): Promise<EmergenciasLista> {
+    const filas = (await this.repo.listar(soloActivas, 100)).filter((f) => this.visibleParaMi(f, user));
+    return {
+      items: filas.map((f) => ({ ...aEmergencia(f), paraMi: f.destinatarios.includes(user.id) })),
+      activas: filas.filter((f) => f.estado === 'activa').length,
+    };
   }
 
   /** "Voy en camino": queda registrado quién la recibió y se le avisa a quien la lanzó. */
   async acusar(id: number, user: AuthUser, ctx: AccionCtx): Promise<Emergencia> {
     const e = await this.repo.findById(id);
-    if (!e) throw HttpError.notFound('Emergencia no encontrada');
+    if (!e || !this.visibleParaMi(e, user)) throw HttpError.notFound('Emergencia no encontrada');
     if (e.estado !== 'activa') throw HttpError.conflict('Esta emergencia ya se cerró');
     if (e.acusadaEn) return aEmergencia(e);
     const por = (await this.repo.nombreDe(user.id)) ?? 'Alguien';
@@ -157,7 +193,7 @@ export class EmergenciasService extends BaseService {
   /** Cerrar con resultado: atendida, falsa alarma u otro (con nota). Admin y supervisor. */
   async cerrar(id: number, { resultado, nota }: EmergenciaCerrarInput, user: AuthUser, ctx: AccionCtx): Promise<Emergencia> {
     const e = await this.repo.findById(id);
-    if (!e) throw HttpError.notFound('Emergencia no encontrada');
+    if (!e || !this.visibleParaMi(e, user)) throw HttpError.notFound('Emergencia no encontrada');
     if (e.estado !== 'activa') throw HttpError.conflict('Esta emergencia ya se cerró');
     const por = (await this.repo.nombreDe(user.id)) ?? 'Alguien';
     await this.repo.cerrar(id, { cerradaEn: this.ahora(), cerradaPor: por, resultado, nota: nota?.trim() || null });
@@ -188,9 +224,10 @@ export class EmergenciasService extends BaseService {
         entidadId: e.id,
         datos: { veces: e.escaladas + 1 },
       });
-      const todos = [...new Set([...(await this.repo.admins()), ...(await this.repo.supervisores())])].filter(
-        (id) => id !== e.usuario.id,
-      );
+      // Se repite a los mismos y ahora también al super admin (A-65).
+      const supers = (await this.repo.superAdmins()).filter((id) => id !== e.usuario.id);
+      const todos = [...new Set([...e.destinatarios, ...supers])];
+      if (todos.length !== e.destinatarios.length) await this.repo.guardarDestinatarios(e.id, todos);
       await this.avisar(todos, {
         tipo: 'emergencia',
         titulo: 'SIN RESPUESTA',

@@ -61,6 +61,8 @@ export interface Emergencia {
   estado: EstadoEmergencia;
   /** Quien la lanzó. */
   usuario: { id: number; nombre: string; rol: string; telefono: string | null; telefonoEtiqueta: EtiquetaTelefono | null };
+  /** Se le avisó a quien consulta (A-65): solo entonces le salta la alerta a pantalla completa. */
+  paraMi?: boolean;
   /** Solo en la alerta propia del guardia: a quién llamar (su supervisor del sitio). */
   supervisor?: ContactoTelefono | null;
   sitio: { id: number; nombre: string } | null;

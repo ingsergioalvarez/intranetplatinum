@@ -1314,6 +1314,8 @@ model Emergencia {
   /// atendida | falsa_alarma | otro
   resultado    String?   @db.VarChar(15)
   nota         String?   @db.VarChar(255)
+  /// A quiénes se avisó (A-65): solo ellos (y el super admin) la ven. Crece al escalarse.
+  destinatarios Json?
   usuario      Usuario   @relation("EmergenciaDe", fields: [usuarioId], references: [id], onDelete: Cascade)
   sitio        Sitio?    @relation(fields: [sitioId], references: [id], onDelete: SetNull)
 

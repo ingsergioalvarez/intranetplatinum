@@ -8,6 +8,7 @@ import {
   type TipoEmergencia,
 } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
+import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 import { asignadaA } from '../clientes/clientes.repository';
 
 export interface NuevaEmergencia {
@@ -19,7 +20,11 @@ export interface NuevaEmergencia {
   bateria?: number;
 }
 
-export type EmergenciaRow = Omit<Emergencia, 'createdAt' | 'acusadaEn' | 'cerradaEn' | 'supervisor'> & {
+export type EmergenciaRow = Omit<Emergencia, 'createdAt' | 'acusadaEn' | 'cerradaEn' | 'supervisor' | 'paraMi'> & {
+  /** A quiénes se avisó (A-65). */
+  destinatarios: number[];
+  /** La lanzó el super admin. */
+  lanzadaPorSuper: boolean;
   createdAt: Date;
   acusadaEn: Date | null;
   cerradaEn: Date | null;
@@ -33,7 +38,8 @@ export interface SitioDeGuardia {
 
 /** Acceso a datos del botón de pánico (A-60). */
 export abstract class EmergenciasRepository {
-  abstract crear(d: NuevaEmergencia): Promise<EmergenciaRow>;
+  abstract crear(d: NuevaEmergencia, destinatarios: number[]): Promise<EmergenciaRow>;
+  abstract guardarDestinatarios(id: number, ids: number[]): Promise<void>;
   abstract findById(id: number): Promise<EmergenciaRow | null>;
   /** Activa de ese usuario, si tiene una. */
   abstract activaDe(usuarioId: number): Promise<EmergenciaRow | null>;
@@ -49,8 +55,14 @@ export abstract class EmergenciasRepository {
   abstract marcarEscalada(id: number, en: Date): Promise<void>;
   /** Sitio donde está asignado hoy el guardia (y su supervisor). */
   abstract sitioDe(usuarioId: number, hoy: string): Promise<SitioDeGuardia | null>;
-  abstract admins(): Promise<number[]>;
-  abstract supervisores(): Promise<number[]>;
+  /** Admin dueño del guardia o del cliente del sitio (A-65). */
+  abstract adminsDe(contexto: ContextoDueno): Promise<number[]>;
+  /** Admin activo que es dueño de este usuario, o null (A-65). */
+  abstract propietarioDe(usuarioId: number): Promise<number | null>;
+  /** Supervisores que son de la cartera de este admin. */
+  abstract supervisoresDe(adminId: number): Promise<number[]>;
+  abstract superAdmins(): Promise<number[]>;
+  abstract todosAdmins(): Promise<number[]>;
   abstract nombreDe(usuarioId: number): Promise<string | null>;
   /** Nombre y teléfono al que se le llama (personal, o el de contacto de la empresa). */
   abstract contactoDe(usuarioId: number): Promise<ContactoTelefono | null>;
@@ -72,7 +84,10 @@ const select = {
   cerradaPor: true,
   resultado: true,
   nota: true,
-  usuario: { select: { id: true, nombre: true, telefono: true, telefonoPersonal: true, rol: { select: { clave: true } } } },
+  destinatarios: true,
+  usuario: {
+    select: { id: true, nombre: true, telefono: true, telefonoPersonal: true, esSuperAdmin: true, rol: { select: { clave: true } } },
+  },
   sitio: { select: { id: true, nombre: true } },
 } as const;
 
@@ -92,12 +107,22 @@ type Fila = {
   cerradaPor: string | null;
   resultado: string | null;
   nota: string | null;
-  usuario: { id: number; nombre: string; telefono: string | null; telefonoPersonal: string | null; rol: { clave: string } };
+  destinatarios: unknown;
+  usuario: {
+    id: number;
+    nombre: string;
+    telefono: string | null;
+    telefonoPersonal: string | null;
+    esSuperAdmin: boolean;
+    rol: { clave: string };
+  };
   sitio: { id: number; nombre: string } | null;
 };
 
-const aRow = ({ usuario, lat, lng, ...r }: Fila): EmergenciaRow => ({
+const aRow = ({ usuario, lat, lng, destinatarios, ...r }: Fila): EmergenciaRow => ({
   ...r,
+  destinatarios: Array.isArray(destinatarios) ? (destinatarios as number[]) : [],
+  lanzadaPorSuper: usuario.esSuperAdmin,
   estado: r.estado as EstadoEmergencia,
   tipo: r.tipo as TipoEmergencia | null,
   resultado: r.resultado as ResultadoEmergencia | null,
@@ -115,9 +140,13 @@ const usuariosDeRol = async (rol: string) =>
   ).map((u) => u.id);
 
 export class PrismaEmergenciasRepository extends EmergenciasRepository {
-  async crear(d: NuevaEmergencia) {
-    const r = await getPrisma().emergencia.create({ data: d, select });
+  async crear(d: NuevaEmergencia, destinatarios: number[]) {
+    const r = await getPrisma().emergencia.create({ data: { ...d, destinatarios }, select });
     return aRow(r);
+  }
+
+  async guardarDestinatarios(id: number, ids: number[]) {
+    await getPrisma().emergencia.update({ where: { id }, data: { destinatarios: ids } });
   }
 
   async findById(id: number) {
@@ -185,12 +214,36 @@ export class PrismaEmergenciasRepository extends EmergenciasRepository {
     return a?.sitio ?? null;
   }
 
-  admins() {
-    return usuariosDeRol(ROLES.ADMIN);
+  adminsDe(contexto: ContextoDueno) {
+    return adminsDe(contexto);
   }
 
-  supervisores() {
-    return usuariosDeRol(ROLES.SUPERVISOR);
+  async propietarioDe(usuarioId: number) {
+    const u = await getPrisma().usuario.findUnique({
+      where: { id: usuarioId },
+      select: { propietario: { select: { id: true, activo: true, deletedAt: true } } },
+    });
+    return u?.propietario && u.propietario.activo && !u.propietario.deletedAt ? u.propietario.id : null;
+  }
+
+  async supervisoresDe(adminId: number) {
+    const rows = await getPrisma().usuario.findMany({
+      where: { propietarioId: adminId, activo: true, deletedAt: null, rol: { clave: ROLES.SUPERVISOR } },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
+  }
+
+  async superAdmins() {
+    const rows = await getPrisma().usuario.findMany({
+      where: { esSuperAdmin: true, activo: true, deletedAt: null },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
+  }
+
+  todosAdmins() {
+    return usuariosDeRol(ROLES.ADMIN);
   }
 
   async nombreDe(usuarioId: number) {
