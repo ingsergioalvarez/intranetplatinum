@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import { getPrisma } from '../data/prisma';
+import type { AuthUser } from '../types/auth';
 
 export interface RequestContext {
   ip?: string;
@@ -9,6 +10,8 @@ export interface RequestContext {
 /** Contexto de una acción administrativa: quién la hace y desde dónde. */
 export interface AccionCtx extends RequestContext {
   actorId: number;
+  /** Quien hace la acción completo (rol y cartera); lo usan los módulos que acotan por cartera (A-65). */
+  actor?: AuthUser;
 }
 
 export interface AuditEvent extends RequestContext {

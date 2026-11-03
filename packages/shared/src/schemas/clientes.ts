@@ -64,6 +64,10 @@ export const clienteFiltroSchema = paginationQuerySchema.extend({
   q: z.string().trim().max(100).optional(),
   estatus: z.enum(ESTATUS_CLIENTE).optional(),
   estado: z.enum(['activos', 'baja', 'todos']).default('activos'),
+  /** Solo el super admin: los de un admin (A-65). */
+  propietarioId: z.coerce.number().int().positive().optional(),
+  /** Solo el super admin: los que no tienen dueño (A-65). */
+  sinAsignar: z.stringbool().optional(),
 });
 
 export type ClienteFiltro = z.infer<typeof clienteFiltroSchema>;
@@ -90,6 +94,8 @@ export interface ClienteResumen extends Cliente {
   totalContactos: number;
   /** Nombre del primer responsable, para mostrar en la lista. */
   responsable: string | null;
+  /** Admin dueño (A-65); null = sin asignar. */
+  propietario: { id: number; nombre: string } | null;
 }
 
 // ---------- Contactos ----------

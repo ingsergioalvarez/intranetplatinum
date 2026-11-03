@@ -21,10 +21,10 @@ export class ClientesController extends BaseController {
   }
 
   list = async (req: Request, res: Response) =>
-    this.paginated(res, await this.service.list(this.query<ClienteFiltro>(req)));
+    this.paginated(res, await this.service.list(this.query<ClienteFiltro>(req), this.currentUser(req)));
 
   get = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.getDetalle(this.params<IdParam>(req).id));
+    this.ok(res, await this.service.getDetalle(this.params<IdParam>(req).id, this.currentUser(req)));
 
   create = async (req: Request, res: Response) =>
     this.created(res, await this.service.crear(this.body<ClienteCreateData>(req), this.accionCtx(req)));
@@ -71,8 +71,8 @@ export class ClientesController extends BaseController {
       ),
     );
 
-  accesosDisponibles = async (_req: Request, res: Response) =>
-    this.ok(res, await this.service.listarClientesDisponibles());
+  accesosDisponibles = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.listarClientesDisponibles(this.currentUser(req)));
 
   // ----- Contactos -----
 

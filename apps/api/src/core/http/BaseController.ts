@@ -46,6 +46,7 @@ export abstract class BaseController {
 
   /** Quién hace la acción y desde dónde, para auditoría. */
   protected accionCtx(req: Request): AccionCtx {
-    return { actorId: this.currentUser(req).id, ...requestContext(req) };
+    const actor = this.currentUser(req);
+    return { actorId: actor.id, actor, ...requestContext(req) };
   }
 }
