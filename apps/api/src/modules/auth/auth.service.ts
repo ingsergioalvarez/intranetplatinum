@@ -18,9 +18,11 @@ import {
   HttpError,
   generateOpaqueToken,
   hashPassword,
+  carteraDe,
   hashToken,
   signAccessToken,
   verifyPassword,
+  type AuthUser,
   type RequestContext,
 } from '../../core';
 import type { AuthRepository, DispositivoRow, UsuarioAuth } from './auth.repository';
@@ -237,8 +239,22 @@ export class AuthService extends BaseService {
     await this.audit.registrar({ ...ctx, usuarioId: d.usuarioId, accion: 'auth.dispositivo_quitado', entidad: 'dispositivos_usuario', entidadId: d.id });
   }
 
+  /**
+   * Un admin solo maneja los celulares de su cartera (A-65): de otro usuario se responde como si no existiera. Nadie
+   * más que el propio super admin toca los del super admin.
+   */
+  private async exigirEnCartera(actor: AuthUser, usuarioId: number) {
+    const u = await this.repo.findUsuarioById(usuarioId);
+    const cartera = carteraDe(actor);
+    if (!u || (cartera !== undefined && u.propietarioId !== cartera && u.id !== actor.id)) {
+      throw HttpError.notFound('Usuario no encontrado');
+    }
+    if (u.esSuperAdmin && u.id !== actor.id) throw HttpError.notFound('Usuario no encontrado');
+  }
+
   /** Celulares con perfil rápido de un guardia. */
-  async dispositivosDe(usuarioId: number): Promise<DispositivoUsuarioVista[]> {
+  async dispositivosDe(usuarioId: number, actor: AuthUser): Promise<DispositivoUsuarioVista[]> {
+    await this.exigirEnCartera(actor, usuarioId);
     return (await this.repo.dispositivosDe(usuarioId)).map(vistaDispositivo);
   }
 
@@ -273,13 +289,17 @@ export class AuthService extends BaseService {
   }
 
   /** Admin: quita un celular de un guardia (p. ej. si lo perdió). */
-  async quitarDispositivoDe(actorId: number, usuarioId: number, id: number, ctx: RequestContext) {
+  async quitarDispositivoDe(actor: AuthUser, usuarioId: number, id: number, ctx: RequestContext) {
+    await this.exigirEnCartera(actor, usuarioId);
+    const actorId = actor.id;
     const d = await this.propio(usuarioId, id);
     await this.repo.revocarDispositivo(d.id);
     await this.audit.registrar({ ...ctx, usuarioId: actorId, accion: 'auth.dispositivo_quitado_admin', entidad: 'dispositivos_usuario', entidadId: d.id, datos: { guardiaId: usuarioId } });
   }
 
-  async quitarTodosDe(actorId: number, usuarioId: number, ctx: RequestContext): Promise<number> {
+  async quitarTodosDe(actor: AuthUser, usuarioId: number, ctx: RequestContext): Promise<number> {
+    await this.exigirEnCartera(actor, usuarioId);
+    const actorId = actor.id;
     const quitados = await this.repo.revocarDispositivosDeUsuario(usuarioId);
     await this.audit.registrar({ ...ctx, usuarioId: actorId, accion: 'auth.dispositivos_quitados_admin', entidad: 'usuarios', entidadId: usuarioId, datos: { quitados } });
     return quitados;

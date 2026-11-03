@@ -50,7 +50,7 @@ export class AuthController extends BaseController {
 
   /** El guardia: sus celulares, PIN y quitar. */
   misDispositivos = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.dispositivosDe(this.currentUser(req).id));
+    this.ok(res, await this.service.dispositivosDe(this.currentUser(req).id, this.currentUser(req)));
 
   guardarMiDispositivo = async (req: Request, res: Response) =>
     this.created(res, await this.service.guardarMiDispositivo(this.currentUser(req).id, requestContext(req)));
@@ -72,16 +72,16 @@ export class AuthController extends BaseController {
 
   /** Admin: celulares de un guardia. */
   dispositivosDe = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.dispositivosDe(this.params<UsuarioDispositivoParam>(req).usuarioId));
+    this.ok(res, await this.service.dispositivosDe(this.params<UsuarioDispositivoParam>(req).usuarioId, this.currentUser(req)));
 
   quitarDispositivoDe = async (req: Request, res: Response) => {
     const { usuarioId, id } = this.params<UsuarioDispositivoParam & IdParam>(req);
-    await this.service.quitarDispositivoDe(this.currentUser(req).id, usuarioId, id, requestContext(req));
+    await this.service.quitarDispositivoDe(this.currentUser(req), usuarioId, id, requestContext(req));
     return this.noContent(res);
   };
 
   quitarTodosDe = async (req: Request, res: Response) => {
-    const quitados = await this.service.quitarTodosDe(this.currentUser(req).id, this.params<UsuarioDispositivoParam>(req).usuarioId, requestContext(req));
+    const quitados = await this.service.quitarTodosDe(this.currentUser(req), this.params<UsuarioDispositivoParam>(req).usuarioId, requestContext(req));
     return this.ok(res, { quitados });
   };
 
