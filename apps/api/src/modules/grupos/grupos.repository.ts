@@ -11,13 +11,15 @@ export interface GrupoFiltro {
 
 /** Grupos de guardias (F2-06, D-017). */
 export abstract class GruposRepository {
-  abstract listar(filtro: GrupoFiltro, hoy: string): Promise<Grupo[]>;
+  /** Con `cartera`, solo los grupos de ese admin (A-65). */
+  abstract listar(filtro: GrupoFiltro, hoy: string, cartera?: number): Promise<Grupo[]>;
   abstract findById(id: number, hoy: string): Promise<Grupo | null>;
   abstract nombreOcupado(nombre: string, excluirId?: number): Promise<boolean>;
-  abstract crear(data: GrupoData): Promise<number>;
+  abstract crear(data: GrupoData, propietarioId: number | null): Promise<number>;
   abstract actualizar(id: number, data: Partial<GrupoData>): Promise<void>;
   /** De los ids dados, los que son guardias activos. */
-  abstract guardiasActivos(ids: number[]): Promise<number[]>;
+  /** Con `cartera`, solo cuenta a los guardias de ese admin (A-65). */
+  abstract guardiasActivos(ids: number[], cartera?: number): Promise<number[]>;
   abstract setIntegrantes(id: number, usuarioIds: number[]): Promise<void>;
   /** Baja del grupo y término (al día `hoy`) de sus asignaciones ya iniciadas. */
   abstract softDelete(id: number, hoy: string): Promise<void>;
@@ -30,6 +32,7 @@ const select = (hoy: string) =>
     nombre: true,
     descripcion: true,
     deletedAt: true,
+    propietario: { select: { id: true, nombre: true } },
     integrantes: {
       select: { usuario: { select: { id: true, nombre: true, email: true } } },
       orderBy: { usuario: { nombre: 'asc' } },
@@ -47,9 +50,10 @@ const toGrupo = ({ integrantes, _count, deletedAt, ...g }: Row): Grupo => ({
 });
 
 export class PrismaGruposRepository extends GruposRepository {
-  async listar({ q, estado }: GrupoFiltro, hoy: string) {
+  async listar({ q, estado }: GrupoFiltro, hoy: string, cartera?: number) {
     const rows = await getPrisma().grupoGuardias.findMany({
       where: {
+        ...(cartera !== undefined && { propietarioId: cartera }),
         ...(estado === 'activos' && { deletedAt: null }),
         ...(estado === 'baja' && { deletedAt: { not: null } }),
         ...(q && { OR: [{ nombre: { contains: q } }, { descripcion: { contains: q } }] }),
@@ -73,18 +77,29 @@ export class PrismaGruposRepository extends GruposRepository {
     return n > 0;
   }
 
-  async crear(data: GrupoData) {
-    return (await getPrisma().grupoGuardias.create({ data, select: { id: true } })).id;
+  async crear(data: GrupoData, propietarioId: number | null) {
+    return (
+      await getPrisma().grupoGuardias.create({
+        data: { ...data, ...(propietarioId && { propietario: { connect: { id: propietarioId } } }) },
+        select: { id: true },
+      })
+    ).id;
   }
 
   async actualizar(id: number, data: Partial<GrupoData>) {
     await getPrisma().grupoGuardias.update({ where: { id }, data });
   }
 
-  async guardiasActivos(ids: number[]) {
+  async guardiasActivos(ids: number[], cartera?: number) {
     if (ids.length === 0) return [];
     const rows = await getPrisma().usuario.findMany({
-      where: { id: { in: ids }, activo: true, deletedAt: null, rol: { clave: ROLES.GUARDIA } },
+      where: {
+        id: { in: ids },
+        activo: true,
+        deletedAt: null,
+        rol: { clave: ROLES.GUARDIA },
+        ...(cartera !== undefined && { propietarioId: cartera }),
+      },
       select: { id: true },
     });
     return rows.map((r) => r.id);

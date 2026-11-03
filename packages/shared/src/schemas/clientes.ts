@@ -398,6 +398,8 @@ export interface Grupo {
   nombre: string;
   descripcion: string | null;
   deletedAt: string | null;
+  /** Admin dueño (A-65); null = sin asignar. */
+  propietario: { id: number; nombre: string } | null;
   integrantes: { id: number; nombre: string; email: string }[];
   /** Sitios asignados al grupo vigentes hoy. */
   asignacionesVigentes: number;
