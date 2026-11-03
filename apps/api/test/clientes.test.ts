@@ -221,10 +221,16 @@ class MemorySitiosRepository extends SitiosRepository {
     supervisorId: null as number | null,
   };
   guardias: GuardiaEstado[] = [
-    { id: 3, nombre: 'Gabriel', rol: ROLES.GUARDIA, deletedAt: null },
-    { id: 4, nombre: 'Lucía', rol: ROLES.GUARDIA, deletedAt: null },
-    { id: 2, nombre: 'Sofía', rol: ROLES.SUPERVISOR, deletedAt: null },
+    { id: 3, nombre: 'Gabriel', rol: ROLES.GUARDIA, deletedAt: null, propietarioId: 7 },
+    { id: 4, nombre: 'Lucía', rol: ROLES.GUARDIA, deletedAt: null, propietarioId: 7 },
+    { id: 2, nombre: 'Sofía', rol: ROLES.SUPERVISOR, deletedAt: null, propietarioId: 7 },
+    { id: 5, nombre: 'Guardia de otro admin', rol: ROLES.GUARDIA, deletedAt: null, propietarioId: 11 },
   ];
+  /** Dueño del cliente del sitio de prueba (A-65). */
+  duenoDelCliente: number | null = 7;
+  async duenoDeSitio(id: number) {
+    return id === 1 ? { propietarioId: this.duenoDelCliente, supervisorId: this.sitio.supervisorId } : null;
+  }
   turnos = new Map<number, TurnoEstado>([
     [1, { id: 1, nombre: '24 h · 8:00', horas: 24, horaEntrada: '08:00', dias: UNO_Y_UNO, activo: true }],
     [2, { id: 2, nombre: '12 h noche', horas: 12, horaEntrada: '20:00', dias: DIARIO, activo: true }],
@@ -240,9 +246,10 @@ class MemorySitiosRepository extends SitiosRepository {
   async findSitio(id: number) {
     return id === 1 ? this.sitio : null;
   }
-  async supervisores() {
+  async supervisores(cartera?: number) {
     return this.guardias
       .filter((g) => g.rol === ROLES.SUPERVISOR)
+      .filter((g) => cartera === undefined || g.propietarioId === cartera)
       .map((g) => ({ id: g.id, nombre: g.nombre, email: `${g.id}@x.mx`, sitios: 0 }));
   }
   async setSupervisor(_sitioId: number, supervisorId: number | null) {
@@ -338,9 +345,10 @@ class MemorySitiosRepository extends SitiosRepository {
     }
     return mapa;
   }
-  async guardiasActivos() {
+  async guardiasActivos(cartera?: number) {
     return this.guardias
       .filter((g) => g.rol === ROLES.GUARDIA)
+      .filter((g) => cartera === undefined || g.propietarioId === cartera)
       .map((g) => ({ id: g.id, nombre: g.nombre, email: `u${g.id}@x.mx`, fotoClave: null }));
   }
   async eliminarAsignacion(id: number) {
@@ -1119,5 +1127,46 @@ describe('clientes: carteras de admin (A-65)', () => {
     expect(res.status).toBe(201);
     const creado = clientes.usuarios.find((u) => u.email === 'ana@cliente.mx') as { propietarioId?: number | null };
     expect(creado.propietarioId).toBe(10);
+  });
+});
+
+describe('sitios: carteras de admin (A-65)', () => {
+  // El cliente del sitio 1 es del admin 7; el guardia 5 es del admin 11.
+  const A7 = tokenDe(7, ROLES.ADMIN);
+  const A10 = tokenDe(10, ROLES.ADMIN);
+
+  it('un admin solo ve y toca los sitios de sus clientes', async () => {
+    expect((await como(A7).get('/sitios/1/guardias')).status).toBe(200);
+    expect((await como(A10).get('/sitios/1/guardias')).status).toBe(404);
+    expect((await como(A10).post('/sitios/1/guardias', { tipo: 'fija', usuarioId: 3, turno: '24x24', horaInicio: '08:00', desde: HOY })).status).toBe(404);
+    expect((await como(A10).put('/sitios/1/supervisor', { supervisorId: 2 })).status).toBe(404);
+    expect((await como(ADMIN).get('/sitios/1/guardias')).status).toBe(200);
+  });
+
+  it('el supervisor del sitio sigue viéndolo aunque el cliente sea de otro admin', async () => {
+    sitios.duenoDelCliente = 99;
+    sitios.sitio.supervisorId = 2;
+    expect((await como(SUPERVISOR).get('/sitios/1/guardias')).status).toBe(200);
+    sitios.sitio.supervisorId = null;
+    expect((await como(SUPERVISOR).get('/sitios/1/guardias')).status).toBe(404);
+  });
+
+  it('las listas para elegir solo traen a los guardias y supervisores del admin', async () => {
+    const guardias = (await como(A7).get('/sitios/guardias-disponibles')).body.data.map((g: { id: number }) => g.id).sort();
+    expect(guardias).toEqual([3, 4]);
+    expect((await como(A10).get('/sitios/guardias-disponibles')).body.data).toEqual([]);
+    const todos = (await como(ADMIN).get('/sitios/guardias-disponibles')).body.data.map((g: { id: number }) => g.id).sort();
+    expect(todos).toEqual([3, 4, 5]);
+    expect((await como(A7).get('/sitios/supervisores')).body.data.map((s: { id: number }) => s.id)).toEqual([2]);
+    expect((await como(A10).get('/sitios/supervisores')).body.data).toEqual([]);
+  });
+
+  it('no deja asignar a un guardia o supervisor que es de otro admin', async () => {
+    const otroGuardia = await como(A7).post('/sitios/1/guardias', { tipo: 'fija', usuarioId: 5, turno: '24x24', horaInicio: '08:00', desde: HOY });
+    expect(otroGuardia.status).toBe(400);
+    expect((await como(ADMIN).post('/sitios/1/guardias', { tipo: 'fija', usuarioId: 5, turno: '24x24', horaInicio: '08:00', desde: HOY })).status).toBe(201);
+    sitios.guardias.push({ id: 6, nombre: 'Sup ajeno', rol: ROLES.SUPERVISOR, deletedAt: null, propietarioId: 11 });
+    expect((await como(A7).put('/sitios/1/supervisor', { supervisorId: 6 })).status).toBe(400);
+    expect((await como(A7).put('/sitios/1/supervisor', { supervisorId: 2 })).status).toBe(204);
   });
 });
