@@ -6,6 +6,7 @@ Intranet para Platinum Agency (seguridad física intramuros). Uso principal en *
 
 **Al iniciar:**
 
+0. Leer [docs/RAMAS.md](docs/RAMAS.md): hay dos ramas principales (`main` = Platinum, `gestion-comunicalo` = Comunicalo) con instalaciones separadas. Confirmar en cuál se trabaja; no tocar la otra ni subir a producción sin que el usuario lo indique.
 1. Leer [docs/ESTADO.md](docs/ESTADO.md) → dónde nos quedamos y siguiente paso.
 2. Revisar [docs/PLAN.md](docs/PLAN.md) → tareas y alcances; [docs/DECISIONES.md](docs/DECISIONES.md) → pendientes.
 3. Resumir al usuario el estado en 3–5 líneas antes de trabajar.
