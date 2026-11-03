@@ -33,6 +33,8 @@ function CambioItem({ c, esGuardia }: { c: CambioTurno; esGuardia: boolean }) {
     void qc.invalidateQueries({ queryKey: cambiosService.keys.all });
     void qc.invalidateQueries({ queryKey: ['asistencia'] });
     void qc.invalidateQueries({ queryKey: ['coberturas'] });
+    void qc.invalidateQueries({ queryKey: ['solicitudes-cobertura'] });
+    void qc.invalidateQueries({ queryKey: ['avisos'] });
   };
   const resolver = useMutation({
     mutationFn: (decision: 'aprobar' | 'rechazar') =>

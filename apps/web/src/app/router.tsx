@@ -25,6 +25,7 @@ import { IncidenciasPage } from '../modules/asistencia/IncidenciasPage';
 import { MarcarPage } from '../modules/asistencia/MarcarPage';
 import { CambiosTurnoPage } from '../modules/cambios/CambiosTurnoPage';
 import { CasosPage } from '../modules/casos/CasosPage';
+import { SolicitudesPage } from '../modules/solicitudes/SolicitudesPage';
 import { CalendarioPage } from '../modules/cobertura/CalendarioPage';
 import { HorasExtraPage } from '../modules/horas-extra/HorasExtraPage';
 import { InformeVerPage } from '../modules/informes/InformeVerPage';
@@ -122,6 +123,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
             <CasosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'asistencia/solicitudes',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+            <SolicitudesPage />
           </ProtectedRoute>
         ),
       },

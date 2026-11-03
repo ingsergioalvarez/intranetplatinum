@@ -18,6 +18,7 @@ import { createAsistenciaModule } from '../src/modules/asistencia';
 import { sinHorasExtra } from '../src/modules/horas-extra/puerto';
 import { sinMedidas, type MedidaNueva } from '../src/modules/medidas/medidas';
 import { sinAtencion } from '../src/modules/avisos/atencion';
+import { sinSolicitudes, type SolicitudesPuerto } from '../src/modules/solicitudes-cobertura/solicitudes.service';
 import {
   AsistenciaRepository,
   type FiltroIncidencias,
@@ -354,6 +355,7 @@ let audit: MemoryAuditLogger;
 let bitacora: EventoNuevo[];
 let medidasAplicadas: MedidaNueva[];
 let atendidos: { entidad: object; resultado: string }[];
+let solicitudesCreadas: Parameters<SolicitudesPuerto['crear']>[0][];
 let salidasSinMarcar = 0;
 let ahora: Date;
 
@@ -423,6 +425,7 @@ beforeEach(() => {
   bitacora = [];
   medidasAplicadas = [];
   atendidos = [];
+  solicitudesCreadas = [];
   salidasSinMarcar = 0;
   HORARIOS = {};
   HOY = '2026-10-20';
@@ -460,6 +463,7 @@ beforeEach(() => {
       bitacora: async (e) => void bitacora.push(e),
       alcance: sinAlcance,
       llegada: async () => undefined,
+      solicitudes: { ...sinSolicitudes, crear: async (d) => void solicitudesCreadas.push(d) },
       atencion: { ...sinAtencion, atender: async (entidad, a) => void atendidos.push({ entidad, resultado: a.resultado }) },
       medidas: {
         ...sinMedidas,
@@ -1518,9 +1522,11 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
       repo.adminIds = [1];
       const res = await decidir(77, { decision: 'enviado_a_casa', motivo: 'Llegó tarde', responsabilidad: 'pedir_a_admin' });
       expect(res.body.data).toEqual({ sitioSolo: true });
-      const aviso = repo.avisos.find((a) => a.titulo === 'Solicitud de cobertura')!;
-      expect(aviso).toMatchObject({ usuarioIds: [1], ruta: '/asistencia/calendario' });
-      expect(aviso.mensaje).toContain('otro supervisor');
+      // Queda una solicitud formal (A-39); su aviso al admin lo manda ese módulo.
+      expect(solicitudesCreadas).toEqual([
+        expect.objectContaining({ sitioId: 1, solicitanteId: 5, guardiaId: 10, motivo: 'Llegó tarde' }),
+      ]);
+      expect(repo.avisos.find((a) => a.titulo === 'Solicitud de cobertura')).toBeUndefined();
     });
 
     it('al mandar a casa el motivo es obligatorio; solo con la jornada abierta; solo admin o supervisor', async () => {

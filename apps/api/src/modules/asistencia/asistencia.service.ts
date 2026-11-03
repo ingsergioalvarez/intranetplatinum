@@ -73,6 +73,7 @@ import {
 } from '../../core';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
+import { sinSolicitudes, type SolicitudesPuerto } from '../solicitudes-cobertura/solicitudes.service';
 import { sinMedidas, type MedidasPuerto } from '../medidas/medidas';
 import { sinHorasExtra, type HorasExtraPuerto } from '../horas-extra/puerto';
 import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
@@ -438,6 +439,8 @@ export class AsistenciaService extends BaseService {
     private readonly medidas: MedidasPuerto = sinMedidas,
     /** Avisos que se actualizan al atenderse (A-54). */
     private readonly atencion: AvisosAtencion = sinAtencion,
+    /** Solicitudes de cobertura al admin (A-39). */
+    private readonly solicitudes: SolicitudesPuerto = sinSolicitudes,
   ) {
     super();
   }
@@ -1591,6 +1594,19 @@ export class AsistenciaService extends BaseService {
         sitioId: entrada.sitio?.id ?? null,
         actorId: ctx.actorId,
       });
+      // Pedir un guardia de otro supervisor deja una solicitud formal (A-39), con su propio aviso al admin.
+      if (responsabilidad === 'pedir_a_admin' && entrada.sitio) {
+        await this.solicitudes.crear({
+          sitioId: entrada.sitio.id,
+          sitioNombre: sitio,
+          solicitanteId: ctx.actorId,
+          guardiaId: ev.usuarioId,
+          guardiaNombre: guardia,
+          fecha: this.hoy(),
+          motivo: motivo!,
+        });
+        return { sitioSolo: solo };
+      }
       try {
         await this.repo.avisar(admins, {
           tipo: 'marca_alerta',

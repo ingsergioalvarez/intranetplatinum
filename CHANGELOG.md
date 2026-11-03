@@ -5,6 +5,20 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-03 #40 — Solicitudes de cobertura (A-39, completa A-26)
+
+#### Añadido
+
+- **Solicitudes de cobertura**: al mandar a casa a un guardia, quedar el sitio solo y elegir "Necesito un guardia de otro supervisor", se crea una **solicitud guardada** (sitio, quién la pidió, guardia, día, motivo y estado) y se avisa a los admin. Pantalla **Asistencia → Solicitudes de cobertura**: el admin ve todas (con "Elegir quién cubre", que abre el calendario del sitio en ese día); el supervisor, solo las suyas. Las pendientes salen primero.
+- **Se cierran solas** al asignar una cobertura en ese sitio (de ese día o del anterior, por si quedó solo la noche antes), con "Ana cubre el 4 nov", y se avisa a quien la pidió. También funciona cuando la cobertura sale de un plan de caso de cobertura o de un cambio de turno.
+- **Cancelar**: quien la pidió (o el admin) la cancela con motivo de lista ("Ya no se necesita", "Lo resolví con uno de mis guardias", "Se pidió por error", otro con texto); se avisa a la otra parte. Queda en la auditoría.
+- **Recordatorios**: si una solicitud lleva 2 h sin atenderse se le recuerda a los admin, y cada 4 h mientras siga pendiente. Los avisos se actualizan al atenderse o cancelarse (A-54).
+- API: `GET /api/solicitudes-cobertura`, `POST /api/solicitudes-cobertura/:id/cancelar`. Migración `20261103010000_solicitudes_cobertura`.
+
+#### Cambiado
+
+- Pedir un guardia de otro supervisor ya no manda solo un aviso: crea la solicitud, y esa es la que avisa al admin.
+
 ### Sesión 2026-11-03 #39 — Avisos que se actualizan al atenderse, completo (A-54)
 
 #### Añadido

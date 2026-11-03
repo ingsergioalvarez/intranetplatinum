@@ -112,8 +112,14 @@ function MandarACasaModal({ evento: e, onClose }: { evento: EventoBitacora; onCl
       }),
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: asistenciaService.keys.all });
+      void qc.invalidateQueries({ queryKey: ['solicitudes-cobertura'] });
+      void qc.invalidateQueries({ queryKey: ['avisos'] });
       toast.success(
-        r.sitioSolo ? 'Mandado a casa. Se avisó a los administradores que el sitio quedó solo' : 'Mandado a casa',
+        responsabilidad === 'pedir_a_admin'
+          ? 'Mandado a casa. Quedó tu solicitud de cobertura: la ves en Asistencia → Solicitudes de cobertura'
+          : r.sitioSolo
+            ? 'Mandado a casa. Se avisó a los administradores que el sitio quedó solo'
+            : 'Mandado a casa',
       );
       onClose();
     },

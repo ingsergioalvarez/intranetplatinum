@@ -6,6 +6,7 @@ import { signAccessToken } from '../src/core';
 import type { TurnoProgramado } from '../src/modules/asistencia/vigilancia';
 import type { EventoNuevo } from '../src/modules/bitacora/registrar';
 import { createCoberturasModule } from '../src/modules/coberturas';
+import type { SolicitudesPuerto } from '../src/modules/solicitudes-cobertura/solicitudes.service';
 import {
   CoberturasRepository,
   type CoberturaRow,
@@ -114,6 +115,7 @@ const TURNOS: TurnoProgramado[] = [
 let repo: MemoryCoberturasRepository;
 let audit: MemoryAuditLogger;
 let avisos: { usuarioIds: number[]; mensaje: string }[];
+let cerradas: Parameters<SolicitudesPuerto['cerrarPorCobertura']>[0][];
 let bitacora: EventoNuevo[];
 let alcance: Alcance | null;
 let app: ReturnType<typeof createApp>;
@@ -140,6 +142,7 @@ beforeEach(() => {
   repo = new MemoryCoberturasRepository();
   audit = new MemoryAuditLogger();
   avisos = [];
+  cerradas = [];
   bitacora = [];
   alcance = null;
   app = createApp([
@@ -151,6 +154,7 @@ beforeEach(() => {
       bitacora: async (e) => void bitacora.push(e),
       alcance: async () => alcance,
       hoy: () => HOY,
+      solicitudes: { crear: async () => undefined, cerrarPorCobertura: async (d) => void cerradas.push(d) },
     }),
   ]);
 });
@@ -219,6 +223,13 @@ describe('cubrir otro sitio (DA-39, DA-46)', () => {
     repo.clienteUsuarios = [];
     await sup().post({ ...nueva, usuarioId: 11 });
     expect(avisos.map((a) => a.usuarioIds.join())).toEqual(['11', '6']);
+  });
+
+  it('al asignar la cobertura se cierran las solicitudes del sitio con quién cubre y cuándo (A-39)', async () => {
+    await sup().post({ ...nueva, usuarioId: 11 });
+    expect(cerradas).toEqual([
+      expect.objectContaining({ sitioId: 1, sitioNombre: 'POETAS', desde: '2026-10-23', hasta: '2026-10-23', guardiaNombre: 'Ana', coberturaId: 1, actorId: 5 }),
+    ]);
   });
 
   it('motivo obligatorio y sin días pasados', async () => {

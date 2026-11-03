@@ -88,6 +88,9 @@ export function EnviarCubrirModal({
       void qc.invalidateQueries({ queryKey: ['asistencia'] });
       // El calendario de cobertura (AS6) cambia: el hueco pasa a cobertura.
       void qc.invalidateQueries({ queryKey: ['cobertura'] });
+      // Al asignar una cobertura se cierran las solicitudes del sitio y se actualizan los avisos (A-39, A-54).
+      void qc.invalidateQueries({ queryKey: ['solicitudes-cobertura'] });
+      void qc.invalidateQueries({ queryKey: ['avisos'] });
       toast.success(`${r.cobertura.guardia.nombre} cubrirá ${sitio.nombre}`);
       if (r.advertencia) toast.warning(`${r.advertencia}; quedó registrado`);
       onClose();

@@ -21,6 +21,8 @@ import {
 } from '../../core';
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
+import { crearServicioSolicitudes } from '../solicitudes-cobertura';
+import type { SolicitudesPuerto } from '../solicitudes-cobertura/solicitudes.service';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { alcanceConPrisma, type AlcanceFn } from '../sitios/alcance';
 import { CoberturasRepository, PrismaCoberturasRepository } from './coberturas.repository';
@@ -69,6 +71,8 @@ interface CoberturasModuleDeps {
   alcance?: AlcanceFn;
   hoy?: () => string;
   ahora?: () => Date;
+  /** Solicitudes de cobertura (A-39): se cierran al asignar. */
+  solicitudes?: SolicitudesPuerto;
 }
 
 /** Cubrir otro sitio (DA-39, DA-46): solo admin y supervisor. */
@@ -81,9 +85,10 @@ export function createCoberturasModule({
   alcance = alcanceConPrisma,
   hoy,
   ahora,
+  solicitudes = crearServicioSolicitudes({ audit, avisar }),
 }: CoberturasModuleDeps = {}): AppModule {
   const c = new CoberturasController(
-    new CoberturasService(repo, turnos, audit, avisar, bitacora, hoy, ahora),
+    new CoberturasService(repo, turnos, audit, avisar, bitacora, hoy, ahora, solicitudes),
     alcance,
   );
   const router = Router();

@@ -22,6 +22,7 @@ import {
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
+import { crearServicioSolicitudes } from '../solicitudes-cobertura';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { PrismaCoberturasRepository } from '../coberturas/coberturas.repository';
 import { CoberturasService, type TurnosFn } from '../coberturas/coberturas.service';
@@ -119,6 +120,7 @@ export function createCambiosModule({
     bitacora,
     hoy,
     ahora,
+    crearServicioSolicitudes({ audit, avisar }),
   );
   const puerto: CoberturasPuerto = coberturas ?? {
     // Ya lo autorizó quien aprueba: la cobertura se crea sin límite de alcance.

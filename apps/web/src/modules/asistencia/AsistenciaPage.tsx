@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRightLeft, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, CalendarRange, HandHelping, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle } from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -21,6 +21,7 @@ import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { cambiosService } from '../cambios/cambios.service';
 import { casosService } from '../casos/casos.service';
+import { solicitudesService } from '../solicitudes/solicitudes.service';
 import { coberturaService } from '../cobertura/cobertura.service';
 import { rangoProximos } from '../cobertura/estados';
 import { horasExtraService } from '../horas-extra/horasExtra.service';
@@ -201,6 +202,7 @@ export function AsistenciaPage() {
               <BotonCambios />
               <BotonHorasExtra />
               <BotonCasos />
+              <BotonSolicitudes />
               <BotonCalendario />
               <BotonHorario />
               <Link
@@ -383,6 +385,29 @@ function BotonCasos() {
       )}
     >
       <Route className="size-4" /> Casos de cobertura
+      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+    </Link>
+  );
+}
+
+/** Solicitudes de cobertura (A-39): aparece cuando hay alguna y marca las pendientes. */
+function BotonSolicitudes() {
+  const lista = useQuery({
+    queryKey: solicitudesService.keys.lista,
+    queryFn: solicitudesService.lista,
+    refetchInterval: 60_000,
+  });
+  const n = lista.data?.pendientes ?? 0;
+  if (!lista.data || lista.data.items.length === 0) return null;
+  return (
+    <Link
+      to="/asistencia/solicitudes"
+      className={cn(
+        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
+        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
+      )}
+    >
+      <HandHelping className="size-4" /> Solicitudes de cobertura
       {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
     </Link>
   );

@@ -31,6 +31,8 @@ import {
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { avisarConPrisma } from '../avisos/avisar';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
+import { crearServicioSolicitudes } from '../solicitudes-cobertura';
+import type { SolicitudesPuerto } from '../solicitudes-cobertura/solicitudes.service';
 import { medidasConPrisma, type MedidasPuerto } from '../medidas/medidas';
 import { PrismaRecordatoriosIncidenciasRepository, RecordatorioIncidencias } from '../bitacora/recordatorios';
 import { alcanceConPrisma, type AlcanceFn } from '../sitios/alcance';
@@ -67,6 +69,8 @@ interface AsistenciaModuleDeps {
   medidas?: MedidasPuerto;
   /** Avisos que se actualizan al atenderse (A-54); en pruebas, sin ellos. */
   atencion?: AvisosAtencion;
+  /** Solicitudes de cobertura (A-39); en pruebas, sin ellas. */
+  solicitudes?: SolicitudesPuerto;
 }
 
 /**
@@ -91,9 +95,10 @@ export function createAsistenciaModule({
   extras = sinHorasExtra,
   medidas = medidasConPrisma,
   atencion = atencionConPrisma,
+  solicitudes = crearServicioSolicitudes(),
 }: AsistenciaModuleDeps = {}): AppModule {
   const c = new AsistenciaController(
-    new AsistenciaService(repo, misSitios, storage, audit, ahora, hoy, bitacora, llegada, extras, medidas, atencion),
+    new AsistenciaService(repo, misSitios, storage, audit, ahora, hoy, bitacora, llegada, extras, medidas, atencion, solicitudes),
     alcance,
   );
   const marcar = requirePermission(PERMISOS.ASISTENCIA_MARCAR);
@@ -200,6 +205,7 @@ export function iniciarVigilanciaTurnos() {
   const casos = crearServicioCasos();
   const sitioSolo = new RecordatorioSitioSolo(new PrismaSitioSoloRepository(), avisarConPrisma, bitacoraConPrisma);
   const incidencias = new RecordatorioIncidencias(new PrismaRecordatoriosIncidenciasRepository(), avisarConPrisma);
+  const solicitudes = crearServicioSolicitudes();
   let corriendo = false;
   const revisar = async () => {
     if (corriendo) return;
@@ -212,6 +218,7 @@ export function iniciarVigilanciaTurnos() {
       await casos.revisar();
       await sitioSolo.revisar();
       await incidencias.revisar();
+      await solicitudes.recordar();
     } catch (err) {
       console.error('[vigilancia] Falló la revisión de turnos', err);
     } finally {

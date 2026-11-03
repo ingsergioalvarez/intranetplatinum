@@ -21,6 +21,7 @@ import {
 } from '../../core';
 import type { TurnoProgramado } from '../asistencia/vigilancia';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
+import { sinSolicitudes, type SolicitudesPuerto } from '../solicitudes-cobertura/solicitudes.service';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import type { Alcance } from '../sitios/alcance';
 import type { CoberturasRepository } from './coberturas.repository';
@@ -64,6 +65,8 @@ export class CoberturasService extends BaseService {
     private readonly bitacora: RegistrarBitacora = sinBitacora,
     private readonly hoy: () => string = () => hoyISO(),
     private readonly ahora: () => Date = () => new Date(),
+    /** Solicitudes de cobertura al admin (A-39): se cierran al asignar la cobertura. */
+    private readonly solicitudes: SolicitudesPuerto = sinSolicitudes,
   ) {
     super();
   }
@@ -222,6 +225,15 @@ export class CoberturasService extends BaseService {
         ruta: `/asistencia/guardias/${guardia.id}?vista=bitacora`,
       });
     }
+    await this.solicitudes.cerrarPorCobertura({
+      sitioId: sitio.id,
+      sitioNombre: sitio.nombre,
+      desde: data.desde,
+      hasta,
+      guardiaNombre: guardia.nombre,
+      coberturaId: cobertura.id,
+      actorId: ctx.actorId,
+    });
     await this.avisarCliente(sitio.id, 'Un guardia cubrirá en tu sitio', `${guardia.nombre} cubrirá en ${sitio.nombre} ${rango}`);
     return { cobertura, advertencia };
   }

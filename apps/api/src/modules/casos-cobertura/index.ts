@@ -26,6 +26,7 @@ import {
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
+import { crearServicioSolicitudes } from '../solicitudes-cobertura';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { PrismaCoberturasRepository } from '../coberturas/coberturas.repository';
 import { CoberturasService, type TurnosFn } from '../coberturas/coberturas.service';
@@ -122,7 +123,16 @@ export function crearServicioCasos({
   ahora,
   atencion = atencionConPrisma,
 }: CasosCoberturaDeps = {}) {
-  const coberturas = new CoberturasService(new PrismaCoberturasRepository(), turnos, audit, avisar, bitacora);
+  const coberturas = new CoberturasService(
+    new PrismaCoberturasRepository(),
+    turnos,
+    audit,
+    avisar,
+    bitacora,
+    undefined,
+    undefined,
+    crearServicioSolicitudes({ audit, avisar }),
+  );
   return new CasosCoberturaService(
     repo,
     turnos,

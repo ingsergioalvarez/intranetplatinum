@@ -114,6 +114,9 @@ export function PlanModal({
       void qc.invalidateQueries({ queryKey: ['cobertura'] });
       void qc.invalidateQueries({ queryKey: ['asistencia'] });
       void qc.invalidateQueries({ queryKey: ['horas-extra'] });
+      // Al asignar una cobertura se cierran las solicitudes del sitio y se actualizan los avisos (A-39, A-54).
+      void qc.invalidateQueries({ queryKey: ['solicitudes-cobertura'] });
+      void qc.invalidateQueries({ queryKey: ['avisos'] });
       toast.success(
         cambiar ? 'Plan cambiado: deshicimos el anterior y avisamos a los guardias' : 'Plan guardado; avisamos a los guardias',
       );

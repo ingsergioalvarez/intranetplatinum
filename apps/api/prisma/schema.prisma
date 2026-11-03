@@ -106,6 +106,8 @@ model Usuario {
   bitacoraJustifico    EventoBitacora[]     @relation("BitacoraJustifico")
   medidasRecibidas     MedidaDisciplinaria[] @relation("MedidaDe")
   dispositivos         DispositivoUsuario[]
+  solicitudesPedidas   SolicitudCobertura[]  @relation("SolicitudDe")
+  solicitudesPorGuardia SolicitudCobertura[] @relation("SolicitudGuardia")
   medidasAplicadas     MedidaDisciplinaria[] @relation("MedidaAplico")
   bitacoraComentarios  ComentarioBitacora[]
 
@@ -256,6 +258,7 @@ model Sitio {
   bitacora       EventoBitacora[]
   turnosDia      TurnoDia[]
   coberturas     Cobertura[]
+  solicitudesCobertura SolicitudCobertura[]
   informes       InformeAsistencia[]
   cambiosTurno   CambioTurno[]
   horasExtra     HoraExtra[]
@@ -1195,4 +1198,36 @@ model DispositivoUsuario {
 
   @@index([usuarioId, revocadoEn])
   @@map("dispositivos_usuario")
+}
+
+/// Solicitud formal al admin para cubrir un sitio con un guardia de otro supervisor (A-39, A-26). La crea el
+/// supervisor al mandar a casa a un guardia y quedar el sitio solo; se cierra sola al asignar la cobertura.
+model SolicitudCobertura {
+  id            Int       @id @default(autoincrement())
+  sitioId       Int       @map("sitio_id")
+  solicitanteId Int       @map("solicitante_id")
+  /// Guardia al que mandaron a casa (por quien se pide cobertura).
+  guardiaId     Int?      @map("guardia_id")
+  /// Día que se necesita cubrir.
+  fecha         DateTime  @db.Date
+  motivo        String    @db.VarChar(255)
+  /// pendiente | atendida | cancelada
+  estado        String    @default("pendiente") @db.VarChar(15)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  /// Cuándo se cerró (atendida o cancelada), quién y cómo terminó.
+  cerradaEn     DateTime? @map("cerrada_en")
+  cerradaPor    String?   @map("cerrada_por") @db.VarChar(120)
+  resolucion    String?   @db.VarChar(255)
+  coberturaId   Int?      @map("cobertura_id")
+  /// Última vez que se le recordó al admin.
+  recordadaEn   DateTime? @map("recordada_en")
+  sitio         Sitio     @relation(fields: [sitioId], references: [id], onDelete: Cascade)
+  solicitante   Usuario   @relation("SolicitudDe", fields: [solicitanteId], references: [id], onDelete: Cascade)
+  guardia       Usuario?  @relation("SolicitudGuardia", fields: [guardiaId], references: [id], onDelete: SetNull)
+
+  @@index([estado, createdAt])
+  @@index([solicitanteId])
+  @@index([sitioId, estado])
+  @@index([guardiaId])
+  @@map("solicitudes_cobertura")
 }
