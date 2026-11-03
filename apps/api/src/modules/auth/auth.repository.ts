@@ -80,6 +80,8 @@ export abstract class AuthRepository {
   abstract revocarDispositivo(id: number): Promise<void>;
   /** Devuelve cuántos quitó. */
   abstract revocarDispositivosDeUsuario(usuarioId: number): Promise<number>;
+  /** Avisos sin leer de un usuario (A-58). */
+  abstract contarAvisosNoLeidos(usuarioId: number): Promise<number>;
 }
 
 const usuarioAuthInclude = {
@@ -189,6 +191,10 @@ export class PrismaAuthRepository extends AuthRepository {
 
   async revocarDispositivo(id: number) {
     await getPrisma().dispositivoUsuario.updateMany({ where: { id, revocadoEn: null }, data: { revocadoEn: new Date() } });
+  }
+
+  async contarAvisosNoLeidos(usuarioId: number) {
+    return getPrisma().aviso.count({ where: { usuarioId, leidoEn: null } });
   }
 
   async revocarDispositivosDeUsuario(usuarioId: number) {

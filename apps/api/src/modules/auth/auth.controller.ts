@@ -35,6 +35,9 @@ export class AuthController extends BaseController {
     return this.ok(res, this.enviarSesion(res, sesion));
   };
 
+  pendientesPerfiles = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.pendientesPorDispositivo(this.body<{ tokens: string[] }>(req).tokens));
+
   quitarPerfilRapido = async (req: Request, res: Response) => {
     await this.service.quitarPerfilRapido(this.body<{ token: string }>(req).token, requestContext(req));
     return this.noContent(res);

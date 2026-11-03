@@ -101,6 +101,10 @@ class MemoryAuthRepository extends AuthRepository {
   async revocarDispositivo(id: number) {
     this.dispositivos.find((d) => d.id === id)!.revocadoEn ??= new Date();
   }
+  noLeidos = new Map<number, number>();
+  async contarAvisosNoLeidos(usuarioId: number) {
+    return this.noLeidos.get(usuarioId) ?? 0;
+  }
   async revocarDispositivosDeUsuario(usuarioId: number) {
     const vigentes = this.dispositivos.filter((d) => d.usuarioId === usuarioId && !d.revocadoEn);
     for (const d of vigentes) d.revocadoEn = new Date();
@@ -560,6 +564,23 @@ describe('perfiles rápidos de guardias (A-40)', { timeout: 30_000 }, () => {
     const ajeno = otro.body.data.dispositivo.id;
     expect((await request(app).delete(`/api/auth/dispositivos/${ajeno}`).set(conToken(r))).status).toBe(404);
     expect((await definir(r, ajeno)).status).toBe(404);
+  });
+
+  it('la tarjeta consulta cuántos avisos sin leer tiene con la clave del celular, solo el número (A-58)', async () => {
+    const r = await entrar();
+    const { id, token } = r.body.data.dispositivo;
+    repo.noLeidos.set(1, 3);
+    const consultar = (tokens: string[]) => request(app).post('/api/auth/perfiles/pendientes').send({ tokens });
+    expect((await consultar([token])).body.data).toEqual({ items: [{ id, noLeidos: 3 }] });
+    // El correo no sirve de identificación; una clave inventada no devuelve nada.
+    expect((await consultar(['ana@platinum.local'])).body.data).toEqual({ items: [] });
+    expect((await request(app).post('/api/auth/perfiles/pendientes').send({ tokens: [] })).status).toBe(400);
+    // Quitado el celular o dado de baja el usuario, ya no responde.
+    repo.usuarios[0].activo = false;
+    expect((await consultar([token])).body.data).toEqual({ items: [] });
+    repo.usuarios[0].activo = true;
+    await request(app).post('/api/auth/perfil-rapido/quitar').send({ token });
+    expect((await consultar([token])).body.data).toEqual({ items: [] });
   });
 
   it('"Quitar de este dispositivo" desde la entrada: basta la clave del celular y no falla si ya no existe', async () => {

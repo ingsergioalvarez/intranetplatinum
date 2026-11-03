@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { Ellipsis, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
-import { ROL_DESCRIPCIONES, type BandejaAvisos } from '@platinum/shared';
-import { api } from '../../core/api';
+import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
 import { Modal, cn } from '../ui';
@@ -14,21 +12,8 @@ import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
 import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
 import { Campanita } from './Campanita';
 import { ExigirPush } from './ExigirPush';
+import { useBadgesMenu } from './badgesMenu';
 import { navItems } from './navItems';
-
-function useReportesNoLeidos() {
-  const bandeja = useQuery({
-    queryKey: ['avisos'],
-    queryFn: () => api.get<BandejaAvisos>('/avisos'),
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
-  });
-
-  return (
-    bandeja.data?.items.filter((a) => !a.leido && (a.reporteId != null || a.tipo.startsWith('reporte_')))
-      .length ?? 0
-  );
-}
 
 function useVisibleNav() {
   const user = useAuthStore((s) => s.user);
@@ -49,7 +34,7 @@ function Brand({ className }: { className?: string }) {
 function Sidebar() {
   const items = useVisibleNav();
   const user = useAuthStore((s) => s.user);
-  const reportesNoLeidos = useReportesNoLeidos();
+  const badges = useBadgesMenu(items.map((i) => i.to));
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-brand-900 text-white md:sticky md:top-0 md:flex md:h-dvh md:self-start">
@@ -59,7 +44,7 @@ function Sidebar() {
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
         {items.map(({ to, label, icon: Icon }) => {
-          const tieneBadge = to === '/reportes' && reportesNoLeidos > 0;
+          const pendientes = badges.get(to) ?? 0;
           return (
             <NavLink
               key={to}
@@ -74,12 +59,12 @@ function Sidebar() {
             >
               <Icon className="size-5 shrink-0" />
               <span className="flex-1 truncate">{label}</span>
-              {tieneBadge && (
+              {pendientes > 0 && (
                 <span
                   className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white leading-none shadow-xs"
-                  aria-label={`${reportesNoLeidos} novedades`}
+                  aria-label={`${pendientes} pendientes`}
                 >
-                  {reportesNoLeidos > 99 ? '99+' : reportesNoLeidos}
+                  {pendientes > 99 ? '99+' : pendientes}
                 </span>
               )}
             </NavLink>
@@ -150,22 +135,35 @@ function Topbar() {
 
 const MAX_BARRA = 5;
 
+/** Burbuja roja con el número de pendientes, sobre el ícono de un botón del menú (A-57). */
+function BurbujaNumero({ n }: { n: number }) {
+  return (
+    <span
+      className="absolute -top-0.5 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] leading-none font-bold text-white shadow-xs ring-2 ring-white"
+      aria-label={`${n} pendientes`}
+    >
+      {n > 99 ? '99+' : n}
+    </span>
+  );
+}
+
 function BottomNav() {
   const todos = useVisibleNav();
-  const reportesNoLeidos = useReportesNoLeidos();
+  const badges = useBadgesMenu(todos.map((i) => i.to));
   const { pathname } = useLocation();
   const [masAbierto, setMasAbierto] = useState(false);
   // Si no caben todos, la barra lleva los primeros y el resto va en la hoja "Más".
   const desborda = todos.length > MAX_BARRA;
   const items = desborda ? todos.slice(0, MAX_BARRA - 1) : todos;
   const resto = desborda ? todos.slice(MAX_BARRA - 1) : [];
+  const pendientesResto = resto.reduce((n, i) => n + (badges.get(i.to) ?? 0), 0);
   const enResto = resto.some((i) => (i.to === '/' ? pathname === '/' : pathname.startsWith(i.to)));
 
   return (
     <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white md:hidden">
       <ul className="flex">
         {items.map(({ to, label, icon: Icon }) => {
-          const tieneBadge = to === '/reportes' && reportesNoLeidos > 0;
+          const pendientes = badges.get(to) ?? 0;
           return (
             <li key={to} className="flex-1">
               <NavLink
@@ -183,14 +181,7 @@ function BottomNav() {
                       )}
                     >
                       <Icon className="size-6" />
-                      {tieneBadge && (
-                        <span
-                          className="absolute -top-0.5 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] leading-none font-bold text-white shadow-xs ring-2 ring-white"
-                          aria-label={`${reportesNoLeidos} novedades`}
-                        >
-                          {reportesNoLeidos > 99 ? '99+' : reportesNoLeidos}
-                        </span>
-                      )}
+                      {pendientes > 0 && <BurbujaNumero n={pendientes} />}
                     </div>
                     <span className={isActive ? 'font-bold text-brand-700' : 'font-medium text-slate-500'}>
                       {label}
@@ -211,11 +202,12 @@ function BottomNav() {
             >
               <div
                 className={cn(
-                  'flex h-8 w-14 items-center justify-center rounded-full transition-colors',
+                  'relative flex h-8 w-14 items-center justify-center rounded-full transition-colors',
                   enResto ? 'bg-brand-700 text-white' : 'text-slate-500',
                 )}
               >
                 <Ellipsis className="size-6" />
+                {pendientesResto > 0 && <BurbujaNumero n={pendientesResto} />}
               </div>
               <span className={enResto ? 'font-bold text-brand-700' : 'font-medium text-slate-500'}>Más</span>
             </button>
@@ -237,7 +229,12 @@ function BottomNav() {
                 }
               >
                 <Icon className="size-5" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {(badges.get(to) ?? 0) > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+                    {(badges.get(to) ?? 0) > 99 ? '99+' : badges.get(to)}
+                  </span>
+                )}
               </NavLink>
             </li>
           ))}

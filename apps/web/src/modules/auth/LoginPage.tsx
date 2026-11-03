@@ -1,8 +1,14 @@
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowLeft, EllipsisVertical, LockKeyhole, Plus } from 'lucide-react';
-import { ROL_DESCRIPCIONES, ROLES, loginSchema, type LoginInput } from '@platinum/shared';
+import {
+  ROL_DESCRIPCIONES,
+  ROLES,
+  loginSchema,
+  type LoginInput,
+  type PendientesPerfiles,
+} from '@platinum/shared';
 import { ApiError, api } from '../../core/api';
 import { useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
@@ -62,11 +68,34 @@ export function LoginPage() {
   const [pin, setPin] = useState('');
   const [errorPin, setErrorPin] = useState<string | null>(null);
 
+  // Burbuja roja de cada tarjeta (A-58): cuántos avisos sin leer tiene, consultado con la clave del celular.
+  // Una tarjeta que el servidor ya no reconoce (la quitó el admin) se limpia sola.
+  const pendientes = useQuery({
+    queryKey: ['perfilesPendientes', perfiles.map((p) => p.dispositivoId).join(',')],
+    queryFn: () =>
+      api.post<PendientesPerfiles>('/auth/perfiles/pendientes', { tokens: perfiles.map((p) => p.token).slice(0, 10) }, { skipAuthRefresh: true }),
+    enabled: modo === 'tarjetas' && perfiles.length > 0 && !user,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
+  const noLeidosDe = (p: PerfilRapido) => pendientes.data?.items.find((i) => i.id === p.dispositivoId)?.noLeidos ?? 0;
+
   const refrescar = useCallback(() => {
     const lista = perfilesGuardados();
     setPerfiles(lista);
     return lista;
   }, []);
+
+  useEffect(() => {
+    const vigentes = pendientes.data?.items;
+    if (!vigentes) return;
+    const huerfanas = perfiles.filter((p) => !vigentes.some((i) => i.id === p.dispositivoId));
+    if (huerfanas.length === 0) return;
+    for (const p of huerfanas) quitarPerfil(p.usuarioId);
+    const lista = refrescar();
+    if (lista.length === 0) setModo('formulario');
+  }, [pendientes.data, perfiles, refrescar]);
 
   const login = useMutation({
     mutationFn: (input: LoginInput) => authService.login(input),
@@ -207,7 +236,7 @@ export function LoginPage() {
                   onClick={() => elegir(p)}
                   className="flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-xs active:bg-slate-50"
                 >
-                  <PerfilAvatar nombre={p.nombre} />
+                  <PerfilAvatar nombre={p.nombre} pendientes={noLeidosDe(p)} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-base leading-tight font-semibold break-words text-slate-900">
                       {p.nombre}

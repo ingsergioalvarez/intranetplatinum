@@ -84,8 +84,8 @@
 | A-54 | Avisos que se actualizan al atenderse (rostro aprobado/rechazado, falta confirmada o justificada, incidencia revisada…): cambian a "… por Luis · fecha", se marcan leídos para todos y quedan con etiqueta "Atendido"; la miniatura se conserva | Usuario 2026-11-03 | A-54 | Terminado en rostros, incidencias de rostro y faltas/"No se presentó" (con migración 20261103000000); falta extenderlo a cambios de turno, horas extra, casos de cobertura y retardos |
 | A-55 | PDF del horario de guardias para supervisor y admin (uno, varios o un sitio) con rango de fechas elegible y atajos (esta semana, próxima, este mes); lleva fecha de generación y "Horario vigente al…"; el guardia no lo descarga | Usuario 2026-11-03 | A-55 | Pendiente |
 | A-56 | Notificaciones por cuenta guardada en el celular y avisos generales sin sesión | Usuario 2026-11-03 | A-56 | Descartado por ahora (ver DECISIONES D-020) |
-| A-57 | Burbuja roja con número sobre cada botón del menú (celular y escritorio) con los avisos sin leer de esa sección; "Más" suma lo escondido | Usuario 2026-11-03 | A-57 | Pendiente (después de A-54) |
-| A-58 | Burbuja roja con el total de avisos sin leer en cada tarjeta de acceso rápido de la pantalla de entrada, consultada con la clave del celular (solo devuelve el número) | Usuario 2026-11-03 | A-58 | Pendiente (después de A-54) |
+| A-57 | Burbuja roja con número sobre cada botón del menú (celular y escritorio) con los avisos sin leer de esa sección; "Más" suma lo escondido | Usuario 2026-11-03 | A-57 | Terminado |
+| A-58 | Burbuja roja con el total de avisos sin leer en cada tarjeta de acceso rápido de la pantalla de entrada, consultada con la clave del celular (solo devuelve el número) | Usuario 2026-11-03 | A-58 | Terminado |
 | A-51 | Faltas por revisar: una falta que el supervisor no ha atendido no cuenta (ni en el resumen ni en el reporte, donde sale "Por revisar"); solo cuenta al confirmarla. Recordatorio en la campanita a las 8:00 y a las 14:00 hasta que la atienda, y a las 24 h también al admin | Usuario 2026-10-30 | A-51 (ver A-48) | Terminado |
 
 ### Orden de ejecución (de lo rápido a lo tardado)

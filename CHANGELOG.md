@@ -14,9 +14,12 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 - **Avisos que se actualizan al atenderse** (A-54): cuando alguien aprueba o rechaza un rostro, revisa una incidencia de rostro, o justifica / confirma / decide una falta (o un "No se presentó"), los avisos de esa cosa se marcan **leídos para todos** (baja el contador de la campanita) y se ven en verde con "Aprobado · por Luis · hace 2 h" en lugar de "pendiente de revisión". Si el admin revierte la decisión, el aviso vuelve a quedar por atender. Un "No se presentó" que se cierra solo queda como "Cerrado solo". Migración `20261103000000_avisos_atendidos` (el aviso guarda a qué cosa pertenece y quién, cuándo y con qué resultado se atendió).
 
+- **Burbujas rojas con número** (A-57): cada botón del menú (celular y escritorio) muestra cuántos avisos sin leer tiene su sección, según la pantalla a la que lleva cada aviso (Reportes, Asistencia, Checador…); "Más" suma lo que queda escondido y cada opción dentro de "Más" lleva su número. Usan la misma consulta de la campanita, así que coinciden y bajan cuando algo se atiende.
+- **Burbuja en las tarjetas de acceso rápido** (A-58): en la pantalla de entrada cada tarjeta muestra, sobre sus iniciales, cuántos avisos sin leer tiene esa cuenta, aunque no haya sesión. Se consulta con la clave del celular (no con el correo) y solo devuelve el número; se actualiza cada minuto. Una tarjeta que el servidor ya no reconoce (la quitó el admin) se limpia sola. `POST /api/auth/perfiles/pendientes`. Sin migración.
+
 #### Pendiente
 
-- A-54 todavía no cubre cambios de turno, horas extra, casos de cobertura ni los avisos de retardo; A-57 y A-58 (burbujas) y A-55 (PDF de horarios).
+- A-54 todavía no cubre cambios de turno, horas extra, casos de cobertura ni los avisos de retardo; A-55 (PDF de horarios).
 
 ### Sesión 2026-11-02 #36 — Perfiles rápidos para todos los roles (A-40)
 

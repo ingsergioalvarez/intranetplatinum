@@ -6,6 +6,7 @@ import {
   definirPinSchema,
   idParamSchema,
   loginSchema,
+  pendientesPerfilesSchema,
   perfilRapidoSchema,
   quitarPerfilSchema,
 } from '@platinum/shared';
@@ -62,6 +63,13 @@ export function createAuthModule({
     }),
     validate({ body: perfilRapidoSchema }),
     controller.perfilRapido,
+  );
+  // Burbuja roja de las tarjetas (A-58): solo devuelve cuántos avisos sin leer tiene cada una.
+  router.post(
+    '/perfiles/pendientes',
+    rateLimit({ windowMin: 15, max: loginRateLimit }),
+    validate({ body: pendientesPerfilesSchema }),
+    controller.pendientesPerfiles,
   );
   router.post(
     '/perfil-rapido/quitar',

@@ -7,6 +7,7 @@ import {
   type DispositivoSesion,
   type DispositivoUsuarioVista,
   type LoginInput,
+  type PendientesPerfiles,
   type PerfilRapidoInput,
   type SessionUser,
 } from '@platinum/shared';
@@ -210,6 +211,23 @@ export class AuthService extends BaseService {
   }
 
   // ---------- Dispositivos (A-40) ----------
+
+  /**
+   * Avisos sin leer de cada tarjeta guardada en este celular (A-58), para la burbuja roja de la pantalla de
+   * entrada. Se identifica con la clave del celular (no con el correo, que no es secreto) y solo devuelve el número.
+   * Una clave ya revocada o de un usuario dado de baja simplemente no viene en la respuesta.
+   */
+  async pendientesPorDispositivo(tokens: string[]): Promise<PendientesPerfiles> {
+    const items: PendientesPerfiles['items'] = [];
+    for (const token of new Set(tokens)) {
+      const d = await this.repo.findDispositivoPorToken(hashToken(token));
+      if (!d || d.revocadoEn) continue;
+      const usuario = await this.repo.findUsuarioById(d.usuarioId);
+      if (!usuario || !usuario.activo || usuario.deletedAt) continue;
+      items.push({ id: d.id, noLeidos: await this.repo.contarAvisosNoLeidos(d.usuarioId) });
+    }
+    return { items };
+  }
 
   /** "Quitar de este dispositivo" desde la pantalla de entrada: quien tiene la clave del celular puede quitarla. Idempotente. */
   async quitarPerfilRapido(token: string, ctx: RequestContext): Promise<void> {

@@ -54,6 +54,14 @@ export const perfilRapidoSchema = z.object({
 });
 export type PerfilRapidoInput = z.infer<typeof perfilRapidoSchema>;
 
+/** Avisos sin leer de las tarjetas de este celular (A-58): se piden con la clave de cada tarjeta. */
+export const pendientesPerfilesSchema = z.object({ tokens: z.array(z.string().min(1).max(200)).min(1).max(10) });
+
+/** Solo el número por tarjeta (nunca el contenido). Una tarjeta que ya no existe en el servidor no viene. */
+export interface PendientesPerfiles {
+  items: { id: number; noLeidos: number }[];
+}
+
 /** "Quitar de este dispositivo" desde la pantalla de entrada: basta la clave del propio celular. */
 export const quitarPerfilSchema = z.object({ token: z.string().min(1).max(200) });
 
