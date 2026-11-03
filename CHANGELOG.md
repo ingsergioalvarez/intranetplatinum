@@ -17,9 +17,11 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Burbujas rojas con número** (A-57): cada botón del menú (celular y escritorio) muestra cuántos avisos sin leer tiene su sección, según la pantalla a la que lleva cada aviso (Reportes, Asistencia, Checador…); "Más" suma lo que queda escondido y cada opción dentro de "Más" lleva su número. Usan la misma consulta de la campanita, así que coinciden y bajan cuando algo se atiende.
 - **Burbuja en las tarjetas de acceso rápido** (A-58): en la pantalla de entrada cada tarjeta muestra, sobre sus iniciales, cuántos avisos sin leer tiene esa cuenta, aunque no haya sesión. Se consulta con la clave del celular (no con el correo) y solo devuelve el número; se actualiza cada minuto. Una tarjeta que el servidor ya no reconoce (la quitó el admin) se limpia sola. `POST /api/auth/perfiles/pendientes`. Sin migración.
 
+- **Horario de guardias en PDF** (A-55): botón "Horarios (PDF)" en Asistencia y "Horario" en la ficha de cada guardia, solo para supervisor y admin (el guardia no lo baja: el horario válido es el de la app). Se elige el rango (atajos "Esta semana", "Próxima semana", "Este mes"; máximo 62 días) y de quién: todos sus guardias, un sitio o guardias concretos (el supervisor, solo los suyos). Una tabla por guardia con fecha, sitio, horario, descansos y coberturas, tomada de los mismos turnos del calendario. Lleva la fecha y hora de generación y la leyenda "Horario vigente al… El horario válido siempre es el de la app"; en celular se puede compartir (por ejemplo, por WhatsApp). Queda en la auditoría. `GET /api/horarios/pdf`. Sin migración.
+
 #### Pendiente
 
-- A-54 todavía no cubre cambios de turno, horas extra, casos de cobertura ni los avisos de retardo; A-55 (PDF de horarios).
+- A-54 todavía no cubre cambios de turno, horas extra, casos de cobertura ni los avisos de retardo.
 
 ### Sesión 2026-11-02 #36 — Perfiles rápidos para todos los roles (A-40)
 
