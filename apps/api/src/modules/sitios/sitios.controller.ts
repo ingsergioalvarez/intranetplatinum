@@ -18,6 +18,12 @@ export class SitiosController extends BaseController {
   mios = async (req: Request, res: Response) =>
     this.ok(res, await this.service.misSitios(this.currentUser(req).id));
 
+  /** Portal del cliente (A-38): los guardias de los sitios de su empresa. */
+  delCliente = async (req: Request, res: Response) => {
+    const { clienteId } = this.currentUser(req);
+    return this.ok(res, clienteId ? await this.service.misGuardiasDelCliente(clienteId) : []);
+  };
+
   listAsignaciones = async (req: Request, res: Response) =>
     this.ok(
       res,

@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Clock,
   Home,
+  ShieldCheck,
   MapPin,
   Tags,
   Timer,
@@ -40,6 +41,14 @@ export const navItems: NavItem[] = [
     icon: MapPin,
     permiso: PERMISOS.ASISTENCIA_MARCAR,
     roles: [ROLES.GUARDIA],
+  },
+  // Portal del cliente (A-38): los guardias asignados a sus sitios.
+  {
+    label: 'Guardias',
+    to: '/guardias',
+    icon: ShieldCheck,
+    permiso: PERMISOS.ASISTENCIA_VER,
+    roles: [ROLES.CLIENTE],
   },
   { label: 'Reportes', to: '/reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_VER_PROPIOS },
   { label: 'Asistencia', to: '/asistencia', icon: ClipboardCheck, permiso: PERMISOS.ASISTENCIA_VER },

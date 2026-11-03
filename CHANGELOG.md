@@ -5,6 +5,17 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-03 #38 — Portal del cliente: sus guardias (A-38)
+
+#### Añadido
+
+- **"Guardias"** en el menú del cliente: los guardias asignados a los sitios de su empresa (vigentes, próximos y los que cubren desde otro sitio), con foto aprobada, nombre, horario y cómo están hoy: En servicio, Por llegar, Aún sin entrada, Turno cumplido o Descansa hoy. Etiquetas "Nuevo" (asignado en los últimos 14 días) y "Cobertura". Sin correo, teléfono, retardos, faltas ni datos de rostro. Se actualiza cada minuto. `GET /api/sitios/del-cliente` (solo rol cliente).
+- **Avisos al cliente** cuando asignan un guardia o grupo a uno de sus sitios, cambia su horario o fecha de término, o lo quitan o cancelan la asignación; llevan a la pantalla de Guardias y suman en su burbuja del menú. Sin migración.
+
+#### Pendiente
+
+- Probar con una cuenta de cliente. Las coberturas (un guardia que cubre otro sitio) aparecen en la lista pero todavía no generan aviso al cliente.
+
 ### Sesión 2026-11-03 #37 — Decisión definitiva y fotos del guardia (A-52, A-53)
 
 #### Cambiado

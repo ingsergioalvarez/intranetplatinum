@@ -18,6 +18,7 @@ import type {
   ReglasAvisoInput,
   Sitio,
   SitioInput,
+  SitioConMisGuardias,
   SupervisorOpcion,
 } from '@platinum/shared';
 import { api, CrudService } from '../../core/api';
@@ -79,6 +80,7 @@ export const sitiosService = {
     all: ['sitios'] as const,
     guardias: (sitioId: number, historial: boolean) => ['sitios', sitioId, 'guardias', historial] as const,
     mios: ['sitios', 'mios'] as const,
+    misGuardias: ['sitios', 'del-cliente'] as const,
     disponibles: ['sitios', 'guardias-disponibles'] as const,
     supervisores: ['sitios', 'supervisores'] as const,
   },
@@ -96,6 +98,8 @@ export const sitiosService = {
   /** Guardias activos con su foto y lo que ya tienen asignado. */
   guardiasDisponibles: () => api.get<GuardiaDisponible[]>('/sitios/guardias-disponibles'),
   mios: () => api.get<MiSitio[]>('/sitios/mios'),
+  /** Portal del cliente (A-38): los guardias de los sitios de su empresa. */
+  misGuardias: () => api.get<SitioConMisGuardias[]>('/sitios/del-cliente'),
   /** Supervisores que se pueden asignar a un sitio (DA-45). */
   supervisores: () => api.get<SupervisorOpcion[]>('/sitios/supervisores'),
   asignarSupervisor: (sitioId: number, supervisorId: number | null) =>

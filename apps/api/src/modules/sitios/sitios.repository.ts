@@ -49,6 +49,28 @@ export interface TurnoEstado {
 
 export type { AsignacionDeGuardia };
 
+/** Guardia de un sitio del cliente, con la clave de su foto aprobada (A-38). */
+export interface GuardiaDelSitioRow {
+  id: number;
+  nombre: string;
+  fotoClave: string | null;
+  tipo: TipoAsignacion;
+  turno: Turno | null;
+  horaInicio: string | null;
+  horaFin: string | null;
+  horas: number | null;
+  dias: DiasTurno | null;
+  desde: string;
+  hasta: string | null;
+  grupo: string | null;
+  cobertura: boolean;
+}
+export interface SitioDelClienteRow {
+  id: number;
+  nombre: string;
+  guardias: GuardiaDelSitioRow[];
+}
+
 export interface GuardiaConFoto {
   id: number;
   nombre: string;
@@ -115,6 +137,10 @@ export abstract class SitiosRepository {
   abstract updateAsignacion(id: number, data: CambioAsignacion): Promise<void>;
   /** Sitios con asignación vigente hoy, directa o por grupo (sitio y cliente activos). */
   abstract misSitios(usuarioId: number, hoy: string): Promise<MiSitio[]>;
+  /** Sitios del cliente con sus guardias: asignados vigentes o próximos (directos o por grupo) y los que cubren (A-38). */
+  abstract guardiasDelCliente(clienteId: number, hoy: string): Promise<SitioDelClienteRow[]>;
+  /** Usuarios activos del portal de ese cliente (para avisarles de los cambios de sus guardias). */
+  abstract usuariosDelCliente(clienteId: number): Promise<number[]>;
   abstract findTurno(id: number): Promise<TurnoEstado | null>;
   /** Asignaciones vigentes o programadas de cada guardia, directas o por sus grupos. */
   abstract asignacionesDeGuardias(
@@ -322,6 +348,99 @@ export class PrismaSitiosRepository extends SitiosRepository {
         ...(hasta !== undefined && { hasta: hasta ? fechaADate(hasta) : null }),
         ...(vigenteHasta !== undefined && { vigenteHasta: vigenteHasta ? fechaADate(vigenteHasta) : null }),
       },
+    });
+  }
+
+  async usuariosDelCliente(clienteId: number) {
+    const rows = await getPrisma().usuario.findMany({
+      where: { clienteId, activo: true, deletedAt: null, rol: { clave: ROLES.CLIENTE } },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
+  }
+
+  async guardiasDelCliente(clienteId: number, hoy: string): Promise<SitioDelClienteRow[]> {
+    const fechaHoy = fechaADate(hoy);
+    const guardia = {
+      select: {
+        id: true,
+        nombre: true,
+        activo: true,
+        deletedAt: true,
+        rostros: {
+          where: { reemplazadoEn: null, estado: 'aprobado' as const },
+          orderBy: { id: 'desc' as const },
+          take: 1,
+          select: { fotoClave: true },
+        },
+      },
+    };
+    const sitios = await getPrisma().sitio.findMany({
+      where: { clienteId, deletedAt: null },
+      orderBy: { nombre: 'asc' },
+      select: {
+        id: true,
+        nombre: true,
+        asignaciones: {
+          where: { OR: [{ vigenteHasta: null }, { vigenteHasta: { gte: fechaHoy } }] },
+          orderBy: [{ desde: 'asc' }, { id: 'asc' }],
+          select: {
+            tipo: true,
+            turno: true,
+            horaInicio: true,
+            horaFin: true,
+            horas: true,
+            ...diasSelect,
+            desde: true,
+            hasta: true,
+            usuario: guardia,
+            grupo: { select: { nombre: true, integrantes: { select: { usuario: guardia } } } },
+          },
+        },
+        coberturas: {
+          where: { canceladaEn: null, hasta: { gte: fechaHoy } },
+          orderBy: { desde: 'asc' },
+          select: { desde: true, hasta: true, horaInicio: true, horas: true, usuario: guardia },
+        },
+      },
+    });
+    type U = { id: number; nombre: string; activo: boolean; deletedAt: Date | null; rostros: { fotoClave: string }[] };
+    return sitios.map((s) => {
+      const filas: GuardiaDelSitioRow[] = [];
+      const agregar = (u: U | null, f: Omit<GuardiaDelSitioRow, 'id' | 'nombre' | 'fotoClave'>) => {
+        if (!u || !u.activo || u.deletedAt) return;
+        filas.push({ id: u.id, nombre: u.nombre, fotoClave: u.rostros[0]?.fotoClave ?? null, ...f });
+      };
+      for (const a of s.asignaciones) {
+        const base = {
+          tipo: a.tipo,
+          turno: turnoDeDb(a.turno),
+          horaInicio: a.horaInicio,
+          horaFin: a.horaFin,
+          horas: a.horas,
+          dias: diasDeDb(a),
+          desde: dateAFecha(a.desde),
+          hasta: fecha(a.hasta),
+          cobertura: false,
+        };
+        agregar(a.usuario, { ...base, grupo: null });
+        for (const i of a.grupo?.integrantes ?? []) agregar(i.usuario, { ...base, grupo: a.grupo!.nombre });
+      }
+      for (const c of s.coberturas) {
+        agregar(c.usuario, {
+          tipo: 'temporal',
+          turno: null,
+          horaInicio: c.horaInicio,
+          horaFin: null,
+          horas: c.horas,
+          dias: null,
+          desde: dateAFecha(c.desde),
+          hasta: dateAFecha(c.hasta),
+          grupo: null,
+          cobertura: true,
+        });
+      }
+      return { id: s.id, nombre: s.nombre, guardias: filas };
     });
   }
 

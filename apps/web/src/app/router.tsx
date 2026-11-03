@@ -3,6 +3,7 @@ import { PERMISOS, ROLES } from '@platinum/shared';
 import { AppShell } from '../components/layout/AppShell';
 import { ProtectedRoute } from '../core/auth/ProtectedRoute';
 import { AccesoRapidoPage } from '../modules/auth/AccesoRapidoPage';
+import { MisGuardiasPage } from '../modules/guardias/MisGuardiasPage';
 import { CambiarPasswordPage } from '../modules/auth/CambiarPasswordPage';
 import { LoginPage } from '../modules/auth/LoginPage';
 import { InicioPage } from '../modules/inicio/InicioPage';
@@ -57,6 +58,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <AccesoRapidoPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'guardias',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.CLIENTE]}>
+            <MisGuardiasPage />
           </ProtectedRoute>
         ),
       },

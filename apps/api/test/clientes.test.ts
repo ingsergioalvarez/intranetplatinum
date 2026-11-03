@@ -26,6 +26,7 @@ import {
   type TurnoEstado,
   type GuardiaEstado,
   type RangoAsignacion,
+  type SitioDelClienteRow,
 } from '../src/modules/sitios/sitios.repository';
 import { calcularCambios, hoyISO, signAccessToken } from '../src/core';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
@@ -182,6 +183,14 @@ class MemoryClientesRepository extends ClientesRepository {
 }
 
 class MemorySitiosRepository extends SitiosRepository {
+  sitiosCliente: SitioDelClienteRow[] = [];
+  async guardiasDelCliente() {
+    return this.sitiosCliente;
+  }
+  clienteUsuarios: number[] = [];
+  async usuariosDelCliente() {
+    return this.clienteUsuarios;
+  }
   sitio = {
     id: 1,
     nombre: 'Torre Norte',
@@ -715,6 +724,92 @@ describe('horario del turno y avisos al guardia (DA-32, DA-34)', () => {
       'Tu asignación en Torre Norte: nuevo horario: Turno de 24 h · entrada 7:00 a.m.',
     );
     expect(sitios.asignaciones[0]).toMatchObject({ horaInicio: '07:00', horaFin: '07:00' });
+  });
+});
+
+describe('portal del cliente: sus guardias y avisos de cambios (A-38)', () => {
+  const CLIENTE = signAccessToken({
+    id: 20,
+    email: 'c@x.mx',
+    rol: ROLES.CLIENTE,
+    permisos: PERMISOS_POR_ROL[ROLES.CLIENTE],
+    clienteId: 1,
+  });
+  const asignarGuardia = (b: object) => como(SUPERVISOR).post('/sitios/1/guardias', { tipo: 'fija', ...b });
+  const fila = (o: Partial<SitioDelClienteRow['guardias'][number]>): SitioDelClienteRow['guardias'][number] => ({
+    id: 3,
+    nombre: 'Gabriel',
+    fotoClave: null,
+    tipo: 'fija',
+    turno: '24x24',
+    horaInicio: '08:00',
+    horaFin: '08:00',
+    horas: 24,
+    dias: UNO_Y_UNO,
+    desde: '2026-01-01',
+    hasta: null,
+    grupo: null,
+    cobertura: false,
+    ...o,
+  });
+
+  it('el cliente ve los guardias de sus sitios con datos básicos, foto firmada, próximos y coberturas', async () => {
+    sitios.sitiosCliente = [
+      {
+        id: 1,
+        nombre: 'Torre Norte',
+        guardias: [
+          fila({ id: 9, nombre: 'Zoe', fotoClave: 'rostros/a.jpg', desde: HOY, cobertura: false }),
+          fila({ id: 3, nombre: 'Gabriel' }),
+          fila({ id: 3, nombre: 'Gabriel' }),
+          fila({ id: 5, nombre: 'Lucía', desde: '2999-01-01' }),
+          fila({ id: 6, nombre: 'Rosa', cobertura: true, desde: HOY, hasta: HOY }),
+        ],
+      },
+    ];
+    const res = await como(CLIENTE).get('/sitios/del-cliente');
+    expect(res.status).toBe(200);
+    const [sitio] = res.body.data;
+    expect(sitio.nombre).toBe('Torre Norte');
+    // Sin repetir a Gabriel; los que ya están primero (por nombre) y los próximos al final.
+    expect(sitio.guardias.map((g: { nombre: string }) => g.nombre)).toEqual(['Gabriel', 'Rosa', 'Zoe', 'Lucía']);
+    const por = (n: string) => sitio.guardias.find((g: { nombre: string }) => g.nombre === n);
+    expect(por('Zoe')).toMatchObject({ nuevo: true, programada: false });
+    expect(por('Zoe').foto).toMatch(/^\/api\/archivos\/rostros\/a\.jpg\?exp=\d+&sig=/);
+    expect(por('Gabriel').foto).toBeNull();
+    expect(por('Lucía')).toMatchObject({ programada: true, nuevo: false });
+    expect(por('Rosa')).toMatchObject({ cobertura: true, nuevo: false });
+    // Nada de contacto ni de rostro: solo lo básico.
+    expect(Object.keys(por('Zoe')).sort()).not.toContain('email');
+    expect(JSON.stringify(res.body)).not.toMatch(/telefono|email|fotoClave/);
+  });
+
+  it('solo el rol cliente lo ve', async () => {
+    expect((await como(ADMIN).get('/sitios/del-cliente')).status).toBe(403);
+    expect((await como(SUPERVISOR).get('/sitios/del-cliente')).status).toBe(403);
+    expect((await request(app).get('/api/sitios/del-cliente')).status).toBe(401);
+  });
+
+  it('el cliente recibe aviso cuando asignan, cambian o quitan a un guardia de su sitio', async () => {
+    sitios.clienteUsuarios = [20, 21];
+    await asignarGuardia({ usuarioId: 3, turno: '24x24', horaInicio: '08:00', desde: HOY });
+    const alta = avisos.find((a) => a.usuarioIds.join() === '20,21');
+    expect(alta).toMatchObject({
+      tipo: 'asignacion',
+      mensaje: expect.stringContaining('G fue asignado a Torre Norte'),
+    });
+    await como(SUPERVISOR).patch('/sitios/1/guardias/1', { horaInicio: '07:00' });
+    expect(avisos.filter((a) => a.usuarioIds.join() === '20,21').at(-1)?.mensaje).toContain('G en Torre Norte');
+    expect((await como(ADMIN).delete('/sitios/1/guardias/1')).status).toBe(204);
+    expect(avisos.filter((a) => a.usuarioIds.join() === '20,21').at(-1)?.mensaje).toBe(
+      'G ya no está asignado a Torre Norte',
+    );
+  });
+
+  it('sin usuarios del portal no se manda ningún aviso al cliente', async () => {
+    sitios.clienteUsuarios = [];
+    await asignarGuardia({ usuarioId: 3, turno: '24x24', horaInicio: '08:00', desde: HOY });
+    expect(avisos.every((a) => a.mensaje.startsWith('Te asignaron'))).toBe(true);
   });
 });
 

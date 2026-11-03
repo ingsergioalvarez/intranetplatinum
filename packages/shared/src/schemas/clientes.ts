@@ -318,6 +318,40 @@ export interface Asignacion {
   vigente: boolean;
 }
 
+/**
+ * Un guardia de un sitio del cliente (A-38). Datos básicos para el portal del cliente: nombre, foto aprobada,
+ * horario y fechas; sin correo, teléfono, retardos ni alertas.
+ */
+export interface GuardiaDeMiSitio {
+  id: number;
+  nombre: string;
+  /** Foto del registro, solo si está aprobada. */
+  foto: string | null;
+  tipo: TipoAsignacion;
+  turno: Turno | null;
+  horaInicio: string | null;
+  horaFin: string | null;
+  horas: number | null;
+  dias: DiasTurno | null;
+  desde: string;
+  hasta: string | null;
+  /** Su grupo, si lo asignaron por grupo. */
+  grupo: string | null;
+  /** Viene de otro sitio a cubrir (cobertura). */
+  cobertura: boolean;
+  /** Empieza después de hoy. */
+  programada: boolean;
+  /** Se asignó en los últimos días. */
+  nuevo: boolean;
+}
+
+/** Un sitio del cliente con los guardias asignados (vigentes y próximos) y los que lo cubren (`GET /sitios/del-cliente`). */
+export interface SitioConMisGuardias {
+  id: number;
+  nombre: string;
+  guardias: GuardiaDeMiSitio[];
+}
+
 /** Sitio asignado hoy al guardia en sesión, directo o por grupo (`GET /sitios/mios`). */
 export interface MiSitio {
   asignacionId: number;
