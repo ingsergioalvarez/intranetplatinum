@@ -63,6 +63,8 @@ model Usuario {
   cartera              Usuario[]            @relation("Cartera")
   clientesPropios      Cliente[]            @relation("ClientesDe")
   gruposPropios        GrupoGuardias[]      @relation("GruposDe")
+  reportesClienteHechos ReporteCliente[]    @relation("ReporteClienteDe")
+  reportesClienteSobreMi ReporteCliente[]   @relation("ReporteClienteSobre")
   passwordHash         String               @map("password_hash") @db.VarChar(255)
   rolId                Int                  @map("rol_id")
   // Usuario de rol cliente: a qué cliente pertenece (portal F5-01).
@@ -220,6 +222,7 @@ model Cliente {
   sitios          Sitio[]
   usuarios        Usuario[]
   reportes        Reporte[]
+  reportesCliente ReporteCliente[]
   reglasAviso     ClienteReglaAviso[]
 
   @@index([deletedAt, estatus])
@@ -271,6 +274,7 @@ model Sitio {
   supervisor     Usuario?            @relation("SitiosSupervisados", fields: [supervisorId], references: [id], onDelete: SetNull)
   asignaciones   SitioGuardia[]
   reportes       Reporte[]
+  reportesCliente ReporteCliente[]
   marcaciones    Marcacion[]
   incidencias    IncidenciaRostro[]
   bitacora       EventoBitacora[]
@@ -491,6 +495,49 @@ model ReporteEvidencia {
   @@index([reporteId])
   @@index([seguimientoId])
   @@map("reporte_evidencias")
+}
+
+enum TipoReporteCliente {
+  servicio
+  guardia
+}
+
+enum EstatusReporteCliente {
+  abierto
+  en_revision
+  resuelto
+}
+
+/// Reporte que levanta el cliente sobre el servicio o sobre un guardia (A-59). Lo ven el supervisor del sitio, el
+/// admin dueño del cliente y el super admin; el guardia nunca se entera.
+model ReporteCliente {
+  id          Int                   @id @default(autoincrement())
+  clienteId   Int                   @map("cliente_id")
+  sitioId     Int                   @map("sitio_id")
+  /// Solo en los reportes sobre un guardia.
+  guardiaId   Int?                  @map("guardia_id")
+  creadoPorId Int                   @map("creado_por")
+  tipo        TipoReporteCliente
+  urgente     Boolean               @default(false)
+  asunto      String                @db.VarChar(150)
+  descripcion String                @db.Text
+  estatus     EstatusReporteCliente @default(abierto)
+  atendidoEn  DateTime?             @map("atendido_en")
+  atendidoPor String?               @map("atendido_por") @db.VarChar(120)
+  /// Lo que se le contesta al cliente.
+  respuesta   String?               @db.VarChar(500)
+  // Fecha del servidor (D-007).
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  cliente     Cliente               @relation(fields: [clienteId], references: [id])
+  sitio       Sitio                 @relation(fields: [sitioId], references: [id])
+  guardia     Usuario?              @relation("ReporteClienteSobre", fields: [guardiaId], references: [id], onDelete: SetNull)
+  creadoPor   Usuario               @relation("ReporteClienteDe", fields: [creadoPorId], references: [id])
+
+  @@index([clienteId, estatus, createdAt])
+  @@index([sitioId, estatus])
+  @@index([creadoPorId])
+  @@map("reportes_cliente")
 }
 
 enum CanalNotificacion {

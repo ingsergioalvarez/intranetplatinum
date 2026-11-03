@@ -6,6 +6,7 @@
 //
 // Cada usuario virtual inicia sesión una vez y repite lo que su pantalla consulta sin parar (acelerado: la app real
 // consulta cada 30-60 s, aquí cada 4-8 s, así que cada usuario virtual pesa como ~6 personas reales).
+/* global __VU, __ENV */
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
 import { Trend, Rate } from 'k6/metrics';

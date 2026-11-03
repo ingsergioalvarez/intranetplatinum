@@ -237,6 +237,9 @@ export class PrismaCarterasRepository extends CarterasRepository {
       ausencia: await mios('ausencia', (ids) =>
         idsDe(db.ausencia.findMany({ where: { id: { in: ids }, ...delGuardia('usuarioId') }, select: { id: true } })),
       ),
+      reporte_cliente: await mios('reporte_cliente', (ids) =>
+        idsDe(db.reporteCliente.findMany({ where: { id: { in: ids }, ...delSitio }, select: { id: true } })),
+      ),
     };
     const mover = candidatos.filter((c) => coinciden[c.entidad!]?.has(c.entidadId!)).map((c) => c.id);
     if (mover.length === 0) return 0;

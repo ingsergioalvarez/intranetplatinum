@@ -5,6 +5,25 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-05 #46 — Reportes del cliente (A-59)
+
+#### Añadido
+
+- **El cliente ya puede reportar**: en su menú, **Reportar**, levanta un reporte **sobre el servicio** o **sobre un guardia concreto** (elige el sitio y, si es sobre un guardia, a quién de los de ese sitio). Puede marcarlo **urgente**. Ve en su pantalla el estado (Abierto, En revisión, Resuelto) y la respuesta de quien lo resolvió.
+- **Quién lo recibe**: el supervisor del sitio; si el sitio no tiene supervisor, el administrador dueño del cliente. Si es **urgente**, ambos al momento y con alerta urgente en el celular. Si no hay nadie asignado, el super admin. **El guardia nunca se entera**: no tiene acceso a la pantalla ni recibe avisos, aunque el reporte sea sobre él.
+- **Quién los ve**: el cliente, los de su empresa; el supervisor, los de sus sitios; el admin, los de sus clientes (cartera, A-65); el super admin, todos. Los demás no existen para él.
+- **Atenderlos** (menú **Quejas** de supervisor y admin): **Tomar a revisión** o **Resolver**; resolver exige escribir qué se hizo, que es lo que lee el cliente y le llega como aviso. El aviso del equipo se pone verde con "Atendido por X" (A-54) y viaja con la cartera (A-65). Queda en la auditoría.
+- Tabla `reportes_cliente` (migración `20261105000000_reportes_cliente`); el borrado definitivo de un usuario, sitio o cliente también borra sus reportes del cliente.
+
+#### Corregido
+
+- `npm run lint` fallaba por variables propias de k6 en el script de la prueba de carga (A-62).
+
+#### Pendiente
+
+- Probar con un usuario cliente real en pantalla (celular y escritorio) y con supervisor y admin del mismo cliente; no se verificó visualmente.
+- Sin fotos en el reporte del cliente (v1 solo texto). Si hacen falta, se agregan igual que en los reportes de guardias.
+
 ### Sesión 2026-11-04 #45 — Super admin y carteras, fase 2 (A-66)
 
 #### Añadido

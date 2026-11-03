@@ -95,6 +95,7 @@ export class PrismaAdminRepository extends AdminRepository {
         where: { OR: [{ reporteId: { in: reportes } }, { usuarioId: id }] },
       });
       await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
+      await tx.reporteCliente.deleteMany({ where: { creadoPorId: id } });
 
       const marcas = await tx.marcacion.findMany({
         where: { usuarioId: id, fotoClave: { not: null } },
@@ -186,6 +187,7 @@ export class PrismaAdminRepository extends AdminRepository {
     await tx.aviso.deleteMany({ where: { reporteId: { in: reportes } } });
     await tx.reporteSeguimiento.deleteMany({ where: { reporteId: { in: reportes } } });
     await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
+    await tx.reporteCliente.deleteMany({ where: { sitioId: { in: sitioIds } } });
 
     const marcas = await tx.marcacion.findMany({
       where: { sitioId: { in: sitioIds }, fotoClave: { not: null } },
@@ -229,6 +231,7 @@ export class PrismaAdminRepository extends AdminRepository {
       await tx.aviso.deleteMany({ where: { reporteId: { in: reportes } } });
       await tx.reporteSeguimiento.deleteMany({ where: { reporteId: { in: reportes } } });
       await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
+      await tx.reporteCliente.deleteMany({ where: { clienteId: id } });
       await tx.clienteContacto.deleteMany({ where: { clienteId: id } });
       // Los usuarios del portal quedan sin cliente (onDelete SetNull); las reglas de aviso se borran en cascada.
       await tx.cliente.delete({ where: { id } });
