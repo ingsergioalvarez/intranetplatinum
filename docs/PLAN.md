@@ -12,8 +12,8 @@
 | ID | Alcance | Pedido por | Estado |
 |---|---|---|---|
 | C-01 | Estructura del proyecto: rama `gestion-comunicalo` separada de Platinum, documentos propios (Platinum archivado en `docs/platinum/`), reglas de despliegue ([RAMAS.md](RAMAS.md)) y archivos de despliegue propios (`deploy/`) | Usuario 2026-11-03 | [x] Terminada |
-| C-02 | Dominio `gestion.grupocomunicalo.mx`: túnel `gestion-comunicalo` (creado, id `14edb25a-d16d-4757-835c-2127225af245`) y registro DNS en Cloudflare | Usuario 2026-11-03 | [~] Falta el DNS |
-| C-03 | Primera instalación de Comunicalo en el servidor de la oficina (contenedores `comunicalo-*`, base propia, migraciones y primer administrador) | Usuario 2026-11-03 | [ ] Pendiente (depende de C-02) |
+| C-02 | Dominio `gestion.grupocomunicalo.mx`: túnel `gestion-comunicalo` (creado, id `14edb25a-d16d-4757-835c-2127225af245`) y registro DNS en Cloudflare | Usuario 2026-11-03 | [x] Terminada (2026-11-03): CNAME `gestion` creado y el sitio responde |
+| C-03 | Primera instalación de Comunicalo en el servidor de la oficina (contenedores `comunicalo-*`, base propia, migraciones y primer administrador) | Usuario 2026-11-03 | [x] Terminada (2026-11-03): corre como copia de Platinum en `https://gestion.grupocomunicalo.mx`; entró el administrador. Platinum sin cambios |
 | C-04 | Respaldos de la base y las fotos de Comunicalo, sumados a los respaldos que ya tiene Platinum | Usuario 2026-11-03 | [ ] Pendiente (antes de usar con personas reales) |
 
 ## Ideas por definir (sin ID hasta que el usuario las pida)

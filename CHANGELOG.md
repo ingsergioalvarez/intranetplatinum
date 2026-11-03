@@ -5,14 +5,15 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
-### Sesión 2026-11-03 — Arranque de Comunicalo (C-01, C-02)
+### Sesión 2026-11-03 — Arranque de Comunicalo (C-01, C-02, C-03)
 
 #### Añadido
 
 - Rama `gestion-comunicalo`, creada a partir de `main` (commit `9f572c0`) con todo el trabajo de Platinum hasta esa fecha.
 - [docs/RAMAS.md](docs/RAMAS.md): por qué existen dos ramas, cómo se separan las instalaciones y las reglas de despliegue.
 - Archivos de despliegue propios en `deploy/`: proyecto Docker `comunicalo`, base `gestion_comunicalo`, puerto local 5191, túnel `gestion-comunicalo` y dominio `gestion.grupocomunicalo.mx`.
-- Túnel de Cloudflare `gestion-comunicalo` creado en el servidor (falta el registro DNS).
+- Túnel de Cloudflare `gestion-comunicalo` creado en el servidor y registro DNS `gestion` apuntando a él.
+- Primera instalación de Comunicalo en el servidor (C-03): contenedores `comunicalo-*`, base `gestion_comunicalo` con las 45 migraciones, administrador inicial, claves de notificaciones push y acceso funcionando en `https://gestion.grupocomunicalo.mx`. Platinum siguió arriba y sin cambios.
 - Documentos propios de Comunicalo: `ESTADO`, `PLAN`, `DECISIONES` y este `CHANGELOG`.
 
 #### Cambiado
