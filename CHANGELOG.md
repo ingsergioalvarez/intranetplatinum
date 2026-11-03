@@ -12,9 +12,11 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **"Guardias"** en el menú del cliente: los guardias asignados a los sitios de su empresa (vigentes, próximos y los que cubren desde otro sitio), con foto aprobada, nombre, horario y cómo están hoy: En servicio, Por llegar, Aún sin entrada, Turno cumplido o Descansa hoy. Etiquetas "Nuevo" (asignado en los últimos 14 días) y "Cobertura". Sin correo, teléfono, retardos, faltas ni datos de rostro. Se actualiza cada minuto. `GET /api/sitios/del-cliente` (solo rol cliente).
 - **Avisos al cliente** cuando asignan un guardia o grupo a uno de sus sitios, cambia su horario o fecha de término, o lo quitan o cancelan la asignación; llevan a la pantalla de Guardias y suman en su burbuja del menú. Sin migración.
 
+- **Aviso al cliente cuando alguien cubre en su sitio** (A-38): "Ana cubrirá en POETAS el 23 oct. Si tienes dudas, consulta con tu supervisor." y, si se cancela, "Cambió quién cubre". En neutro: sin motivo ni a quién sustituye. No se avisa cuando el guardia asignado no llega y aún no hay quien cubra (solo cuando hay solución). Aplica también a los casos de cobertura resueltos con un plan, porque usan la misma cobertura.
+
 #### Pendiente
 
-- Probar con una cuenta de cliente. Las coberturas (un guardia que cubre otro sitio) aparecen en la lista pero todavía no generan aviso al cliente.
+- Probar con una cuenta de cliente.
 
 ### Sesión 2026-11-03 #37 — Decisión definitiva y fotos del guardia (A-52, A-53)
 
