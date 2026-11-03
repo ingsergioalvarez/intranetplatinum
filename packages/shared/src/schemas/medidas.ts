@@ -56,6 +56,15 @@ export const MOTIVO_FALTA_LABEL: Record<MotivoFalta, string> = {
   otro: 'Otro',
 };
 
+/** Motivos al revertir una decisión ya tomada (solo el admin, A-52). */
+export const MOTIVOS_REVERTIR = ['error_supervisor', 'nueva_informacion', 'otro'] as const;
+export type MotivoRevertir = (typeof MOTIVOS_REVERTIR)[number];
+export const MOTIVO_REVERTIR_LABEL: Record<MotivoRevertir, string> = {
+  error_supervisor: 'Se decidió por error',
+  nueva_informacion: 'Hay información nueva',
+  otro: 'Otro',
+};
+
 /** Motivos al cerrar la jornada de quien no marcó su salida. */
 export const MOTIVOS_SALIDA_SIN_MARCAR = ['olvido', 'falla_telefono', 'no_pudo_marcar', 'otro'] as const;
 export type MotivoSalidaSinMarcar = (typeof MOTIVOS_SALIDA_SIN_MARCAR)[number];

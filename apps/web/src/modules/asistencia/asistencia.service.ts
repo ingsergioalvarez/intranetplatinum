@@ -7,6 +7,7 @@ import type {
   CerrarJornadaBody,
   ConfirmarFaltaInput,
   JustificarBitacoraInput,
+  RevertirDecisionInput,
   MedidaDisciplinaria,
   ResultadoCerrarJornada,
   TableroAsistencia,
@@ -131,6 +132,9 @@ export const asistenciaService = {
     api.post<ResultadoDecisionRetardo>(`/asistencia/retardos/${id}/decidir`, data),
   justificarEvento: (id: number, data: JustificarBitacoraInput) =>
     api.post<EventoBitacora>(`/bitacora/eventos/${id}/justificar`, data),
+  /** Revertir una decisión ya tomada (A-52, solo admin). */
+  revertirDecision: (id: number, data: RevertirDecisionInput) =>
+    api.post<EventoBitacora>(`/bitacora/eventos/${id}/revertir`, data),
   /** Confirmar una falta, con motivo y medida opcional (A-48). */
   confirmarFalta: (id: number, data: ConfirmarFaltaInput) =>
     api.post<EventoBitacora>(`/bitacora/eventos/${id}/confirmar-falta`, data),

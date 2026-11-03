@@ -46,6 +46,17 @@ class MemoryBitacoraRepository extends BitacoraRepository {
       createdAt: new Date(),
     });
   }
+  async revertir(eventoId: number) {
+    Object.assign(this.eventosGuardados.find((x) => x.id === eventoId)!, {
+      justificacion: null,
+      justificadoPor: null,
+      justificadoEn: null,
+      decision: null,
+      decididoPor: null,
+      decididoEn: null,
+      decisionMotivo: null,
+    });
+  }
   async crearFaltaDesde(e: EventoBitacoraRow, en: Date) {
     const previa = this.eventosGuardados.find(
       (x) => x.tipo === 'falta' && x.usuarioId === e.usuarioId && x.sitio?.id === e.sitio?.id && x.datos !== null,
@@ -333,6 +344,43 @@ describe('bitácora del guardia (DA-41)', () => {
     expect(res.body.data).toMatchObject({ id: 31, tipo: 'falta', decision: { tipo: 'falta' } });
     expect(repo.eventosGuardados).toHaveLength(total);
     expect(repo.eventosGuardados.find((x) => x.id === 30)!.decision).toBe('superado');
+  });
+
+  it('una decisión ya tomada es definitiva: no se justifica ni se confirma otra vez (A-52)', async () => {
+    repo.eventosGuardados.push(evento(40, 'falta', '2026-10-18T16:00:00.000Z'));
+    expect((await sup().post('/eventos/40/confirmar-falta', { categoria: 'sin_aviso' })).status).toBe(200);
+    expect((await sup().post('/eventos/40/justificar', { categoria: 'permiso' })).status).toBe(409);
+    // Justificada: tampoco se confirma.
+    expect((await sup().post('/eventos/1/justificar', { categoria: 'permiso' })).status).toBe(200);
+    expect((await sup().post('/eventos/1/confirmar-falta', { categoria: 'sin_aviso' })).status).toBe(400);
+  });
+
+  it('solo el admin revierte una decisión, con motivo; el evento vuelve a quedar sin atender (A-52)', async () => {
+    repo.eventosGuardados.push(evento(41, 'falta', '2026-10-19T16:00:00.000Z'));
+    await sup().post('/eventos/41/confirmar-falta', { categoria: 'sin_aviso' });
+    const revertir = (cuerpo: object, rol: Rol = ROLES.ADMIN) => como(rol).post('/eventos/41/revertir', cuerpo);
+    expect((await revertir({ categoria: 'error_supervisor' }, ROLES.SUPERVISOR)).status).toBe(403);
+    expect((await revertir({})).status).toBe(400);
+    expect((await revertir({ categoria: 'otro' })).status).toBe(400);
+    const res = await revertir({ categoria: 'nueva_informacion', nota: 'Sí avisó por WhatsApp' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.decision).toBeNull();
+    expect(res.body.data.comentarios.at(-1).texto).toContain('Hay información nueva: Sí avisó por WhatsApp');
+    expect(audit.acciones()).toContain('bitacora.revertir_decision');
+    // Ya sin decisión: se puede decidir de nuevo (por ejemplo, justificarla) y no hay nada más que revertir.
+    expect((await revertir({ categoria: 'error_supervisor' })).status).toBe(409);
+    expect((await sup().post('/eventos/41/justificar', { categoria: 'permiso' })).status).toBe(200);
+    // Justificada: también se revierte.
+    expect((await revertir({ categoria: 'error_supervisor' })).status).toBe(200);
+  });
+
+  it('no se revierte lo que cerró el sistema ni mandar a casa (A-52)', async () => {
+    repo.eventosGuardados.push(
+      { ...evento(42, 'no_se_presento', '2026-10-20T14:15:00.000Z'), decision: 'superado', decididoEn: new Date('2026-10-20T16:00:00.000Z') },
+      { ...evento(43, 'retardo', '2026-10-20T14:20:00.000Z'), decision: 'enviado_a_casa', decididoEn: new Date('2026-10-20T14:30:00.000Z') },
+    );
+    expect((await como(ROLES.ADMIN).post('/eventos/42/revertir', { categoria: 'error_supervisor' })).status).toBe(400);
+    expect((await como(ROLES.ADMIN).post('/eventos/43/revertir', { categoria: 'error_supervisor' })).status).toBe(400);
   });
 
   it('sin medida (o "ninguna") no se guarda nada en el historial', async () => {

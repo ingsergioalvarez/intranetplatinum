@@ -2,6 +2,8 @@ import {
   MEDIDA_LABEL,
   MOTIVO_FALTA_LABEL,
   MOTIVO_JUSTIFICAR_LABEL,
+  MOTIVO_REVERTIR_LABEL,
+  decisionRevertible,
   TIPOS_INCIDENCIA,
   TIPOS_JUSTIFICABLES,
   TIPO_EVENTO_BITACORA_LABEL,
@@ -17,6 +19,7 @@ import {
   type JustificarBitacoraInput,
   type MedidaDisciplinaria,
   type Paginated,
+  type RevertirDecisionInput,
 } from '@platinum/shared';
 import { AuditLogger, BaseService, HttpError, firmarArchivo, inicioDelDia, type AccionCtx } from '../../core';
 import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
@@ -186,6 +189,8 @@ export class BitacoraService extends BaseService {
       throw HttpError.badRequest(`${TIPO_EVENTO_BITACORA_LABEL[e.tipo]} no se justifica`);
     }
     if (e.justificadoEn) throw HttpError.conflict('Ya está justificado');
+    // Una decisión ya tomada es definitiva (A-52): solo el admin la revierte.
+    if (e.decision) throw HttpError.conflict('Ya se decidió');
     await this.repo.justificar(id, ctx.actorId, motivo, this.ahora());
     await this.audit.registrarAccion(ctx, 'bitacora.justificar', 'bitacora_eventos', id, {
       guardiaId: e.usuarioId,
@@ -241,6 +246,39 @@ export class BitacoraService extends BaseService {
         medida: MEDIDA_LABEL[medida],
       });
     }
+    return aEvento((await this.repo.findById(id))!);
+  }
+
+  /**
+   * Revertir una decisión (A-52): solo el admin y con motivo. Quita la justificación o la decisión y el evento
+   * vuelve a quedar sin atender; queda una nota en el evento y en la auditoría. Una medida disciplinaria ya
+   * aplicada no se borra del historial.
+   */
+  async revertir(
+    id: number,
+    { categoria, nota }: RevertirDecisionInput,
+    ctx: AccionCtx,
+    alcance: Alcance | null = null,
+  ): Promise<EventoBitacora> {
+    const e = await this.evento(id, alcance);
+    const fila = aEvento(e);
+    if (!fila.justificacion && !fila.decision) throw HttpError.conflict('No hay ninguna decisión que revertir');
+    if (!decisionRevertible(fila)) {
+      throw HttpError.badRequest(
+        fila.decision?.tipo === 'superado'
+          ? 'Lo cerró el sistema: no hay nada que revertir'
+          : 'Mandó al guardia a casa y su jornada ya se cerró: no se puede revertir',
+      );
+    }
+    const antes = fila.justificacion ? `justificada: ${fila.justificacion.motivo}` : `decisión: ${fila.decision!.tipo}`;
+    const motivo = textoMotivoLista(MOTIVO_REVERTIR_LABEL[categoria], nota);
+    await this.repo.revertir(id);
+    await this.repo.comentar(id, ctx.actorId, `Decisión revertida (${antes}). Motivo: ${motivo}`.slice(0, 500));
+    await this.audit.registrarAccion(ctx, 'bitacora.revertir_decision', 'bitacora_eventos', id, {
+      guardiaId: e.usuarioId,
+      antes,
+      motivo,
+    });
     return aEvento((await this.repo.findById(id))!);
   }
 

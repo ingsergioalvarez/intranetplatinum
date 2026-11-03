@@ -79,6 +79,13 @@
 | A-48 | Falta y "No se presentó": además de Justificar, "Confirmar falta" (motivo en lista + otro con texto, medida opcional); la "Falta" cierra sola el aviso "No se presentó"; en Atendidas se ve Justificada o Falta confirmada; "No se presentó" también se puede confirmar sin esperar las 2 h (crea la falta); justificar también pide motivo de lista | Usuario 2026-10-30 | A-48 | Terminado (con migración 20261030020000) |
 | A-49 | Cerrar jornada por salida sin marcar: motivo en lista + otro, cuenta como "salida sin marcar" del guardia, medida opcional (ninguna, llamada de atención verbal, amonestación escrita) guardada en historial formal del guardia y en bitácora, aviso al guardia y sugerencia al llegar a 3 en el mes | Usuario 2026-10-30 | A-49 | Terminado (con migración 20261030020000) |
 | A-50 | Lentes menos estrictos: con lentes detectados el checador deja continuar (recomienda quitárselos), amplía un poco el margen de reconocimiento mientras ningún otro guardia quede igual o más cerca, y pide giros de cabeza en lugar de parpadear; el registro de rostro permite registrar con lentes. Sin marca visible para el supervisor | Usuario 2026-10-30 | A-50 | Terminado (falta probarlo con guardias que usan lentes) |
+| A-52 | Tras confirmar o justificar una falta (o retardo) ya no salen "Justificar" ni "Confirmar falta"; solo el admin puede "Revertir decisión", con motivo obligatorio y en auditoría | Usuario 2026-11-03 | A-52 (ver A-48) | En curso |
+| A-53 | Fotos del guardia en todos los roles: el cliente ve solo la foto aprobada de los guardias de sus sitios (sin datos biométricos); enlaces de foto que se renuevan al caducar (60 min); cuadro neutro en lugar de la imagen rota (avisos, listas) | Usuario 2026-11-03 | A-53 | Pendiente |
+| A-54 | Avisos que se actualizan al atenderse (rostro aprobado/rechazado, falta confirmada o justificada, incidencia revisada…): cambian a "… por Luis · fecha", se marcan leídos para todos y quedan con etiqueta "Atendido"; la miniatura se conserva | Usuario 2026-11-03 | A-54 | Pendiente |
+| A-55 | PDF del horario de guardias para supervisor y admin (uno, varios o un sitio) con rango de fechas elegible y atajos (esta semana, próxima, este mes); lleva fecha de generación y "Horario vigente al…"; el guardia no lo descarga | Usuario 2026-11-03 | A-55 | Pendiente |
+| A-56 | Notificaciones por cuenta guardada en el celular y avisos generales sin sesión | Usuario 2026-11-03 | A-56 | Descartado por ahora (ver DECISIONES D-020) |
+| A-57 | Burbuja roja con número sobre cada botón del menú (celular y escritorio) con los avisos sin leer de esa sección; "Más" suma lo escondido | Usuario 2026-11-03 | A-57 | Pendiente (después de A-54) |
+| A-58 | Burbuja roja con el total de avisos sin leer en cada tarjeta de acceso rápido de la pantalla de entrada, consultada con la clave del celular (solo devuelve el número) | Usuario 2026-11-03 | A-58 | Pendiente (después de A-54) |
 | A-51 | Faltas por revisar: una falta que el supervisor no ha atendido no cuenta (ni en el resumen ni en el reporte, donde sale "Por revisar"); solo cuenta al confirmarla. Recordatorio en la campanita a las 8:00 y a las 14:00 hasta que la atienda, y a las 24 h también al admin | Usuario 2026-10-30 | A-51 (ver A-48) | Terminado |
 
 ### Orden de ejecución (de lo rápido a lo tardado)
@@ -94,6 +101,11 @@
 | 3e | A-49 Salida sin marcar con medida disciplinaria | Mediano | Sí | A-48 (comparten medidas) |
 | 3f | A-51 Faltas por revisar y recordatorios | Mediano | No | A-48 |
 | 3g | A-50 Lentes menos estrictos | Mediano | No | A-36 |
+| 3h | A-52 Ocultar Justificar/Confirmar tras decidir; revertir solo admin | Chico | No | A-48 |
+| 3i | A-53 Fotos del guardia en todos los roles | Mediano | No | — |
+| 3j | A-54 Avisos que se actualizan al atenderse | Mediano | Sí | — |
+| 3k | A-57 y A-58 Burbujas en el menú y en las tarjetas | Mediano | No | A-54 |
+| 3l | A-55 PDF de horarios | Mediano | No | — |
 | 4  | A-36 Óvalo alto, fondo oscuro e instrucciones grandes | Chico | No | — |
 | 5  | A-37 Centrado, mantener y gesto de 15 s | Mediano | No | A-36 |
 | 6  | A-38 Portal del cliente con guardias | Mediano | No | — |

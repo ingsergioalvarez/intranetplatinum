@@ -9,6 +9,7 @@ import {
   idParamSchema,
   incidenciasMesQuerySchema,
   justificarBitacoraSchema,
+  revertirDecisionSchema,
   type BitacoraQuery,
   type IncidenciasMesQuery,
   type ComentarioBitacoraInput,
@@ -16,6 +17,7 @@ import {
   type DecidirFaltaInput,
   type IdParam,
   type JustificarBitacoraInput,
+  type RevertirDecisionInput,
 } from '@platinum/shared';
 import {
   AuditLogger,
@@ -111,6 +113,17 @@ class BitacoraController extends BaseController {
       ),
     );
 
+  revertir = async (req: Request, res: Response) =>
+    this.ok(
+      res,
+      await this.service.revertir(
+        this.params<IdParam>(req).id,
+        this.body<RevertirDecisionInput>(req),
+        this.accionCtx(req),
+        await this.alcance(req),
+      ),
+    );
+
   medidas = async (req: Request, res: Response) =>
     this.ok(res, await this.service.medidasDelGuardia(this.params<IdParam>(req).id, await this.alcance(req)));
 }
@@ -151,6 +164,13 @@ export function createBitacoraModule({
     '/eventos/:id/confirmar-falta',
     validate({ params: id, body: confirmarFaltaSchema }),
     c.confirmarFalta,
+  );
+  // Revertir una decisión ya tomada: solo el admin (A-52).
+  router.post(
+    '/eventos/:id/revertir',
+    requireRoles(ROLES.ADMIN),
+    validate({ params: id, body: revertirDecisionSchema }),
+    c.revertir,
   );
   router.post('/eventos/:id/decidir', validate({ params: id, body: decidirFaltaSchema }), c.decidir);
   router.post(

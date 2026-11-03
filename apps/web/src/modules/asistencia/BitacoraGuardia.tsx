@@ -5,6 +5,7 @@ import {
   CalendarX,
   CheckCircle2,
   Gavel,
+  Undo2,
   Clock,
   LogOut,
   MapPin,
@@ -35,6 +36,7 @@ import {
   TIPO_EVENTO_BITACORA_LABEL,
   categoriaDeEvento,
   comentarioBitacoraSchema,
+  decisionRevertible,
   MOTIVOS_JUSTIFICAR,
   MOTIVO_JUSTIFICAR_LABEL,
   justificarBitacoraSchema,
@@ -62,7 +64,9 @@ import { formatFechaHora } from '../../core/format/fechas';
 import { asistenciaService } from './asistencia.service';
 import { formatDia, formatHora } from './formato';
 import { DecisionRetardo, NotaDecisionRetardo } from './DecisionRetardo';
+import { useAuthStore } from '../../core/auth/authStore';
 import { ConfirmarFaltaModal } from './ConfirmarFaltaModal';
+import { RevertirModal } from './RevertirModal';
 import { IncidenciaModal } from './IncidenciaModal';
 import { MotivoLista } from './MotivoLista';
 
@@ -257,6 +261,7 @@ export function ListaEventos({
   const [comentando, setComentando] = useState<EventoBitacora | null>(null);
   const [justificando, setJustificando] = useState<EventoBitacora | null>(null);
   const [confirmando, setConfirmando] = useState<EventoBitacora | null>(null);
+  const [revirtiendo, setRevirtiendo] = useState<EventoBitacora | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
   const [incidencia, setIncidencia] = useState<number | null>(null);
 
@@ -297,6 +302,7 @@ export function ListaEventos({
                     onComentar={() => setComentando(e)}
                     onJustificar={() => setJustificando(e)}
                     onConfirmarFalta={() => setConfirmando(e)}
+                    onRevertir={() => setRevirtiendo(e)}
                     onIncidencia={setIncidencia}
                   />
                 ))}
@@ -309,6 +315,7 @@ export function ListaEventos({
       {comentando && <NotaModal evento={comentando} onClose={() => setComentando(null)} />}
       {justificando && <JustificarModal evento={justificando} onClose={() => setJustificando(null)} />}
       {confirmando && <ConfirmarFaltaModal evento={confirmando} onClose={() => setConfirmando(null)} />}
+      {revirtiendo && <RevertirModal evento={revirtiendo} onClose={() => setRevirtiendo(null)} />}
       <VisorFotos
         fotos={foto ? [{ url: foto }] : []}
         indice={foto ? 0 : null}
@@ -327,6 +334,7 @@ function Evento({
   onComentar,
   onJustificar,
   onConfirmarFalta,
+  onRevertir,
   onIncidencia,
 }: {
   evento: EventoBitacora;
@@ -335,15 +343,13 @@ function Evento({
   onComentar: () => void;
   onJustificar: () => void;
   onConfirmarFalta: () => void;
+  onRevertir: () => void;
   onIncidencia: (id: number) => void;
 }) {
+  const esAdmin = useAuthStore((s) => s.user?.rol === 'admin');
   const Icono = ICONO[e.tipo];
-  const justificable =
-    TIPOS_JUSTIFICABLES.includes(e.tipo) &&
-    !e.justificacion &&
-    e.decision?.tipo !== 'asistencia' &&
-    e.decision?.tipo !== 'enviado_a_casa' &&
-    e.decision?.tipo !== 'superado';
+  // Una decisión tomada es definitiva (A-52): ya no se ofrece justificar ni confirmar; solo el admin la revierte.
+  const justificable = TIPOS_JUSTIFICABLES.includes(e.tipo) && !e.justificacion && !e.decision;
   // Falta sin atender (A-48): además de justificarla se puede confirmar. Si el guardia llegó tarde, eso
   // lo ofrece el bloque "¿Aceptas la asistencia?".
   const confirmable =
@@ -491,6 +497,11 @@ function Evento({
           <Button variant="ghost" size="sm" icon={<MessageSquare className="size-4" />} onClick={onComentar}>
             Agregar nota
           </Button>
+          {esAdmin && TIPOS_JUSTIFICABLES.includes(e.tipo) && decisionRevertible(e) && (
+            <Button variant="ghost" size="sm" icon={<Undo2 className="size-4" />} onClick={onRevertir}>
+              Revertir decisión
+            </Button>
+          )}
           {confirmable && (
             <Button variant="ghost" size="sm" icon={<CalendarX className="size-4" />} onClick={onConfirmarFalta}>
               Confirmar falta

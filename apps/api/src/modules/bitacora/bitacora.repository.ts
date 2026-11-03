@@ -69,6 +69,8 @@ export abstract class BitacoraRepository {
    * el aviso y devuelve la existente. Devuelve el id de la falta.
    */
   abstract crearFaltaDesde(noSePresento: EventoBitacoraRow, en: Date): Promise<number>;
+  /** Quita la justificación y la decisión: el evento vuelve a quedar sin atender (A-52). */
+  abstract revertir(eventoId: number): Promise<void>;
   abstract decidir(
     eventoId: number,
     porId: number,
@@ -234,6 +236,21 @@ export class PrismaBitacoraRepository extends BitacoraRepository {
       });
       await tx.eventoBitacora.update({ where: { id: e.id }, data: { decision: 'superado', decididoEn: en } });
       return falta.id;
+    });
+  }
+
+  async revertir(eventoId: number) {
+    await getPrisma().eventoBitacora.update({
+      where: { id: eventoId },
+      data: {
+        justificacion: null,
+        justificadoPorId: null,
+        justificadoEn: null,
+        decision: null,
+        decididoPorId: null,
+        decididoEn: null,
+        decisionMotivo: null,
+      },
     });
   }
 

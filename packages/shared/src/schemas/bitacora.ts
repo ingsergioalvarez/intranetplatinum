@@ -1,7 +1,14 @@
 import { z } from 'zod';
 import type { ConclusionIncidencia, MotivoIncidencia } from './asistencia';
 import { paginationQuerySchema } from './pagination';
-import { MOTIVOS_FALTA, MOTIVOS_JUSTIFICAR, medidaSchema, notaSchema, pedirNotaSiOtro } from './medidas';
+import {
+  MOTIVOS_FALTA,
+  MOTIVOS_JUSTIFICAR,
+  MOTIVOS_REVERTIR,
+  medidaSchema,
+  notaSchema,
+  pedirNotaSiOtro,
+} from './medidas';
 
 /** Bitácora del guardia (DA-41): control interno de admin y supervisor; el guardia no la ve. */
 export const TIPOS_EVENTO_BITACORA = [
@@ -230,6 +237,22 @@ export const confirmarFaltaSchema = z
   })
   .superRefine(pedirNotaSiOtro);
 export type ConfirmarFaltaInput = z.infer<typeof confirmarFaltaSchema>;
+
+/**
+ * Revertir una decisión ya tomada (A-52): solo el admin, con motivo. El evento vuelve a quedar sin atender.
+ * No se revierte lo que cerró una jornada (mandar a casa) ni lo que decidió el sistema.
+ */
+export const revertirDecisionSchema = z
+  .object({
+    categoria: z.enum(MOTIVOS_REVERTIR, 'Elige el motivo'),
+    nota: notaSchema,
+  })
+  .superRefine(pedirNotaSiOtro);
+export type RevertirDecisionInput = z.infer<typeof revertirDecisionSchema>;
+
+/** ¿Se puede ofrecer "Revertir decisión" (al admin)? Hay decisión o justificación, y no es del sistema ni cerró la jornada. */
+export const decisionRevertible = (e: Pick<EventoBitacora, 'justificacion' | 'decision'>) =>
+  (!!e.justificacion || !!e.decision) && e.decision?.tipo !== 'superado' && e.decision?.tipo !== 'enviado_a_casa';
 
 export interface ComentarioBitacora {
   id: number;
