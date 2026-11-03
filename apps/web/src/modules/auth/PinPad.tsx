@@ -58,7 +58,7 @@ export function PinPad({
               error
                 ? 'border-red-500 bg-red-500'
                 : i < valor.length
-                  ? 'border-brand-700 bg-brand-700'
+                  ? 'border-brand-fondo bg-brand-fondo'
                   : 'border-slate-300 bg-transparent',
             )}
           />

@@ -15,6 +15,7 @@
 | C-02 | Dominio `gestion.grupocomunicalo.mx`: túnel `gestion-comunicalo` (creado, id `14edb25a-d16d-4757-835c-2127225af245`) y registro DNS en Cloudflare | Usuario 2026-11-03 | [x] Terminada (2026-11-03): CNAME `gestion` creado y el sitio responde |
 | C-03 | Primera instalación de Comunicalo en el servidor de la oficina (contenedores `comunicalo-*`, base propia, migraciones y primer administrador) | Usuario 2026-11-03 | [x] Terminada (2026-11-03): corre como copia de Platinum en `https://gestion.grupocomunicalo.mx`; entró el administrador. Platinum sin cambios |
 | C-04 | Respaldos de la base y las fotos de Comunicalo, sumados a los respaldos que ya tiene Platinum | Usuario 2026-11-03 | [ ] Pendiente (antes de usar con personas reales) |
+| C-05 | Imagen de marca de Comunicalo: paleta propia armada con los colores del ícono (azul marino, azul eléctrico, cian y degradado), login con el ícono y el nombre "Gestión Comunicalo" en dos tonos, título y color del navegador. Después: menú lateral, íconos de la app instalada (192/512, iPhone, notificaciones) y nombre de la app. Sin cambios de funcionamiento | Usuario 2026-11-03 | [~] En curso: paleta y login (en local para revisión del usuario) |
 
 ## Ideas por definir (sin ID hasta que el usuario las pida)
 

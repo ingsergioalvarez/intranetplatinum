@@ -6,10 +6,11 @@
 **Última actualización:** 2026-11-03
 **Fase actual:** Borrador funcionando. Comunicalo corre en `https://gestion.grupocomunicalo.mx` como copia de Platinum (todavía con su marca y conceptos de seguridad). Aún no hay funcionalidad propia.
 **Última tarea terminada:** C-03 (primera instalación en el servidor) y C-02 (dominio y túnel).
-**Tarea en progreso:** ninguna.
+**Tarea en progreso:** C-05 (imagen de marca). Hecho y aprobado en local: paleta y login. Sin desplegar al servidor.
 
 ## Siguiente paso
 
+0. Seguir con C-05: menú lateral (hoy dice "Platinum Intranet" con el escudo), íconos PNG de la app instalada (192, 512, maskable, iPhone y notificaciones, estos últimos de un solo color), nombre en el manifiesto y el modal de contraseña temporal. Revisar el azul eléctrico en botones del resto de la app. Confirmar el nombre de la línea de abajo ("Grupo Comunícalo" es provisional). Luego desplegar al servidor.
 1. El usuario define, poco a poco, lo primero que debe hacer Comunicalo; se agrega al [PLAN](PLAN.md) con su ID antes de implementarlo.
 2. C-04 (respaldos de la base y las fotos de Comunicalo) antes de usarlo con personas reales.
 

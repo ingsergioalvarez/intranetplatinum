@@ -16,6 +16,8 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 - Primera instalación de Comunicalo en el servidor (C-03): contenedores `comunicalo-*`, base `gestion_comunicalo` con las 45 migraciones, administrador inicial, claves de notificaciones push y acceso funcionando en `https://gestion.grupocomunicalo.mx`. Platinum siguió arriba y sin cambios.
 - Documentos propios de Comunicalo: `ESTADO`, `PLAN`, `DECISIONES` y este `CHANGELOG`.
 
+- Imagen de marca de Comunicalo, primera parte (C-05): paleta propia sacada del ícono (azul marino `#0B1528`, azul eléctrico `#0A2AF0`, azul cielo `#0A7CFC`, cian `#00CCFC` como acento solo sobre fondo oscuro y `brand-fondo` `#0B3263` para elementos discretos). Login con el ícono, "gestión comunícalo." en dos tonos y "Grupo Comunícalo" debajo, con un resplandor azul en el fondo. Favicon nuevo, título "Gestión Comunicalo" y color de la barra del navegador.
+
 #### Cambiado
 
 - `ESTADO`, `PLAN`, `DECISIONES` y `CHANGELOG` de Platinum se movieron a `docs/platinum/` como archivo de contexto.
