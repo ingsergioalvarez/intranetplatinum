@@ -5,6 +5,18 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-04 #44 — Prueba de carga preparada (A-62)
+
+#### Añadido
+
+- **Copia aparte para la prueba** (`deploy/carga/docker-compose.yml`, proyecto `platinum-carga`): su propio MySQL, red y volúmenes, con tope de 4 núcleos por contenedor; no toca producción y se borra con `down -v`.
+- **Datos ficticios** (`apps/api/prisma/carga.ts`): 5 admin, 30 supervisores, 240 guardias, 25 usuarios de cliente, 5 clientes y 30 sitios; se niega a correr si la base no se llama `platinum_carga`.
+- **Guion k6** (`deploy/carga/k6/escenario.js`): hasta 300 usuarios simultáneos por escalones (25 a 300), se detiene sola con más de 10 % de fallos, y mide inicio de sesión y las consultas principales por separado. Guía y límites de lo que no simula en [docs/PRUEBA_CARGA.md](docs/PRUEBA_CARGA.md).
+
+#### Pendiente
+
+- Correrla en el servidor y entregar el reporte (dónde se satura y qué lo limita).
+
 ### Sesión 2026-11-03 #43 — Teléfonos, marcador y sirena de la alerta (A-63, completa A-60)
 
 #### Añadido

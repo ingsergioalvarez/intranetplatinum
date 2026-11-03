@@ -1,0 +1,51 @@
+# Copia aparte de Platinum SOLO para la prueba de carga (A-62). Proyecto, red, base y volúmenes propios:
+# no toca la base ni los contenedores de producción. Tiene tope de procesador y memoria para no afectar a los
+# demás sistemas del servidor. Al terminar se borra todo con `docker compose -p platinum-carga down -v`.
+name: platinum-carga
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: carga-root-2026
+      MYSQL_DATABASE: platinum_carga
+      MYSQL_USER: carga
+      MYSQL_PASSWORD: carga-pass-2026
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    cpus: 4
+    mem_limit: 8g
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -pcarga-root-2026 --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    cpus: 4
+    mem_limit: 4g
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      TZ: America/Mexico_City
+      APP_TIMEZONE: America/Mexico_City
+      APP_URL: http://carga.local
+      DATABASE_URL: mysql://carga:carga-pass-2026@mysql:3306/platinum_carga?allowPublicKeyRetrieval=true
+      JWT_ACCESS_SECRET: carga-access-secret-carga-access-secret-0123456789
+      JWT_REFRESH_SECRET: carga-refresh-secret-carga-refresh-secret-0123456789
+      UPLOADS_DIR: /data/uploads
+      # La prueba entra miles de veces desde una sola IP: sin esto el límite de intentos la bloquearía.
+      LOGIN_RATE_LIMIT: "1000000"
+      SEED_ADMIN_EMAIL: admin@carga.local
+      SEED_ADMIN_PASSWORD: Carga2026xx
+    volumes:
+      - uploads:/data/uploads
+
+volumes:
+  uploads:
