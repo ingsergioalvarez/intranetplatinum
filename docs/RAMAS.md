@@ -74,6 +74,9 @@ Cada proyecto trabaja en **su propia carpeta de git** (`git worktree`), con su r
 - Respaldos de las bases locales: `C:\Users\DEVOPS\Videos\respaldos-bd-local\` (fuera del proyecto).
 - El chat de Platinum documenta en su propia rama cómo se creó su carpeta (`git worktree add`). Cuando la guarde, **alinear los textos compartidos** de este documento; esta sección describe la parte de Comunicalo.
 - El `.env` no se lee ni se imprime desde el chat (el sistema lo bloquea): los cambios a ese archivo los hace el usuario.
+- **Los dos chats comparten la ventana del IDE (Antigravity), abierta en `intranetplatinum`.** El chat de Comunicalo trabaja en esa carpeta. El de Platinum arranca ahí también, pero debe trabajar en `intranetplatinum-platinum` con rutas completas, `git -C` o un `cd`, y confirmar con `git branch --show-current` que dice `Alexis-Cambios` antes de commitear o desplegar; nunca ejecutar `git`, `npm` ni otro comando en `intranetplatinum`. El usuario le pasó esta indicación a ese chat (2026-11-04). El panel de Git y la terminal del IDE actúan sobre la carpeta abierta (`gestion-comunicalo`): no se usan para Platinum.
+- **La memoria de los chats también es compartida** (misma carpeta de proyecto en `~/.claude/projects/`): lo que guarda un chat lo leen los dos. Toda nota debe decir a qué chat o rama se refiere. `chat-solo-platinum` la escribió el chat de Platinum y es una regla de ese chat, no del de Comunicalo (ver `chats-por-rama`).
+- Quien opera las bases locales es Claude: el usuario no maneja sus datos de conexión. Platinum se trabaja directo hacia producción y casi no usa lo local; Comunicalo se trabaja solo en local y no se despliega hasta que el usuario lo pida.
 
 ## Pendientes por definir (poco a poco)
 

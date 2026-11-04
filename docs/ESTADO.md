@@ -34,6 +34,7 @@
 
 ## Notas de contexto
 
+- Hay dos chats (Platinum y Comunicalo) en la misma ventana del IDE, abierta en esta carpeta; el de Platinum trabaja en `intranetplatinum-platinum`. La memoria de los chats es compartida: toda nota debe decir a qué chat se refiere. Detalle en [RAMAS.md](RAMAS.md) y DC-013.
 - Rama de trabajo: `gestion-comunicalo` (sale de `main`, commit `9f572c0`). Reglas obligatorias en [RAMAS.md](RAMAS.md).
 - El seed trajo los datos de Platinum (26 categorías de reporte de seguridad, 20 permisos, 4 roles); se ajustarán a Comunicalo más adelante.
 - Producto: asistencia administrada por RH para áreas, técnicos y home office. Más adelante, horarios que suben los jefes y planeación de rutas de técnicos (ideas, sin ID todavía).
