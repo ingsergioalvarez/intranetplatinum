@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import {
   ESTADO_DIA_INFORME_LABEL,
+  MARCA,
   SALIDA_ANTICIPADA_MIN,
   type EstadoDiaInforme,
   type Informe,
@@ -508,7 +509,7 @@ function cabeceraYPie(doc: Doc, i: Informe, url: string, qr: Buffer, pagina: num
   doc.moveTo(MARGEN, H - 40).lineTo(W - MARGEN, H - 40).lineWidth(0.6).strokeColor(C.linea).stroke();
   doc.font('Helvetica-Bold').fontSize(7).fillColor(C.navy).text(`${i.folio}  ·  ${i.codigo}`, MARGEN, H - 34, { width: W / 2, lineBreak: false });
   doc.font('Helvetica').fontSize(6.8).fillColor(C.suave);
-  doc.text('Documento interno de Platinum Agency. Las horas las registra el servidor y no son editables.', MARGEN, H - 24, {
+  doc.text(`Documento interno de ${MARCA.nombre}. Las horas las registra el servidor y no son editables.`, MARGEN, H - 24, {
     width: W - MARGEN * 2,
     lineBreak: false,
   });
@@ -531,10 +532,10 @@ export async function generarPdf(i: Informe, url: string): Promise<Buffer> {
     bufferPages: true,
     info: {
       Title: `Reporte de asistencia ${i.folio}`,
-      Author: 'Platinum Agency',
+      Author: MARCA.nombre,
       Subject: `${i.datos.alcance} · ${periodo(i)}`,
       Keywords: `${i.folio}, ${i.codigo}`,
-      Creator: 'Intranet Platinum',
+      Creator: MARCA.nombre,
     },
   });
   const trozos: Buffer[] = [];
@@ -581,7 +582,7 @@ export async function generarPdf(i: Informe, url: string): Promise<Buffer> {
             ['Administración', 'Autorizó'],
           ]
         : [
-            ['Elaboró', 'Platinum Agency'],
+            ['Elaboró', MARCA.nombre],
             ['Supervisor', 'Revisó'],
             ['Administración', 'Autorizó'],
           ],

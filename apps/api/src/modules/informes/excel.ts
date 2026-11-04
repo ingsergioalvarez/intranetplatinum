@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import ExcelJS from 'exceljs';
 import {
   ESTADO_DIA_INFORME_LABEL,
+  MARCA,
   type Informe,
   type InformeResumen,
 } from '@platinum/shared';
@@ -95,7 +96,7 @@ const COLS_RESUMEN = [
 /** Excel de trabajo (no oficial) del reporte congelado: horas en número para poder sumarlas. */
 export async function generarExcel(i: Informe, url: string, hash: string): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Platinum Agency';
+  wb.creator = MARCA.nombre;
   wb.created = new Date(i.createdAt);
   wb.title = `Reporte de asistencia ${i.folio} (copia de trabajo)`;
   const d = i.datos;

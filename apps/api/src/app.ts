@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { MARCA } from '@platinum/shared';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler, type AppModule } from './core';
 import { modules as defaultModules } from './modules';
@@ -21,7 +22,7 @@ export function createApp(modules: AppModule[] = defaultModules) {
     res.json({
       ok: true,
       data: {
-        servicio: 'API Platinum Intranet',
+        servicio: `API ${MARCA.nombre}`,
         estado: 'en línea',
         salud: '/api/health',
         modulos: modules.map((m) => `/api/${m.basePath}`),

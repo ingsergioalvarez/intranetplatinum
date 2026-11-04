@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { MARCA } from '@platinum/shared';
 import { env } from '../../config/env';
 import {
   ALTO_CABECERA,
@@ -80,9 +81,9 @@ export async function generarHorarioPdf(d: DatosHorario): Promise<Buffer> {
     bufferPages: true,
     info: {
       Title: `Horario de guardias ${d.desde} a ${d.hasta}`,
-      Author: 'Platinum Agency',
+      Author: MARCA.nombre,
       Subject: d.alcance,
-      Creator: 'Intranet Platinum',
+      Creator: MARCA.nombre,
     },
   });
   const trozos: Buffer[] = [];

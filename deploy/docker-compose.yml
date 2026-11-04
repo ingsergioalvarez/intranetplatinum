@@ -47,7 +47,7 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      MAIL_FROM: ${MAIL_FROM:-Comunicalo <no-reply@grupocomunicalo.mx>}
+      MAIL_FROM: ${MAIL_FROM:-Gestión Comunicalo <no-reply@grupocomunicalo.mx>}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
     volumes:

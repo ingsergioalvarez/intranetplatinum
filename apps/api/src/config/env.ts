@@ -29,7 +29,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  MAIL_FROM: z.string().default('Platinum Agency <no-reply@platinum.example>'),
+  MAIL_FROM: z.string().default('Gestión Comunicalo <no-reply@grupocomunicalo.mx>'),
   // Notificaciones push (A-20). Sin las dos claves el push queda apagado y todo lo demás funciona igual.
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),

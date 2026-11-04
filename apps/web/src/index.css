@@ -1,26 +1,27 @@
 @import 'tailwindcss';
 
 /*
- * Tema Comunicalo: sale del ícono de la marca (favicon.svg).
+ * Tema Comunicalo: sale del ícono de la marca (favicon.svg), en tonos apagados para uso diario.
  * - 900/950: azul marino del fondo del ícono (menú, login).
- * - 700: azul eléctrico, color principal (botones, ítem activo, enlaces); 800: su versión profunda.
- * - 500/600: azul cielo del degradado; 50–400: tonos claros para fondos y avisos.
+ * - 700: azul del resplandor del login, color principal (botones, ítem activo, enlaces); 800: su versión profunda.
+ * - 500/600: azules intermedios (enfoque, indicadores); 50–400: tonos claros para fondos y avisos.
  * - acento: cian del ícono, solo sobre fondos oscuros (sobre blanco no tiene contraste).
+ * El azul eléctrico del ícono (#0a2af0) queda solo en el ícono y en detalles puntuales de marca.
  */
 @theme {
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #dcedff;
-  --color-brand-200: #b8dafe;
-  --color-brand-300: #7dbbff;
-  --color-brand-400: #3d9bff;
-  --color-brand-500: #0a7cfc;
-  --color-brand-600: #0a4bf6;
-  --color-brand-700: #0a2af0;
-  --color-brand-800: #0d1c6e;
+  --color-brand-50: #eef4fc;
+  --color-brand-100: #dbe8f9;
+  --color-brand-200: #b8d3f4;
+  --color-brand-300: #86b5ec;
+  --color-brand-400: #4d93e0;
+  --color-brand-500: #1f6fd0;
+  --color-brand-600: #14509f;
+  --color-brand-700: #0b3263;
+  --color-brand-800: #0a2750;
   --color-brand-900: #0b1528;
   --color-brand-950: #070e1d;
 
-  /* Azul del resplandor del login (marino mezclado con el azul cielo): para elementos de marca discretos. */
+  /* Mismo azul que brand-700 (resplandor del login); se conserva por los elementos del login que ya lo usan. */
   --color-brand-fondo: #0b3263;
 
   --color-acento-300: #00f0ff;

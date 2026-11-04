@@ -1,5 +1,5 @@
 import { Copy, MessageCircle, TriangleAlert } from 'lucide-react';
-import type { Usuario } from '@platinum/shared';
+import { MARCA, type Usuario } from '@platinum/shared';
 import { Button, Modal, toast } from '../../components/ui';
 
 async function copiar(texto: string, aviso: string) {
@@ -28,7 +28,7 @@ export function PasswordTemporalModal({
   const { usuario, passwordTemporal } = resultado;
   const url = window.location.origin;
   const mensaje =
-    `Hola ${usuario.nombre}, tu acceso a Platinum Intranet:\n` +
+    `Hola ${usuario.nombre}, tu acceso a ${MARCA.nombre}:\n` +
     `Página: ${url}\nCorreo: ${usuario.email}\nContraseña temporal: ${passwordTemporal}\n` +
     `Al entrar te pedirá crear una contraseña nueva.`;
 

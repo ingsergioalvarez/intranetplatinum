@@ -53,6 +53,9 @@ Cada instalación se actualiza **solo cuando el usuario lo indica**, desde **su*
 7. **Documentos separados.** `docs/ESTADO.md`, `docs/PLAN.md`, `docs/DECISIONES.md` y `CHANGELOG.md` de Platinum se quedan en `main` y no se llevan a Comunicalo. `gestion-comunicalo` tendrá los suyos con su propia historia. Este documento (`RAMAS.md`) es la excepción: aplica a las dos.
 8. **Despliegue de Platinum intacto.** Lo que se construya para Comunicalo no debe cambiar el comportamiento de Platinum. Las diferencias entre instalaciones no se resuelven editando código compartido para una sola de ellas.
 
+9. **No se borra nada.** Ni de Platinum ni de esta rama se elimina código, módulos o datos a menos que el usuario lo pida de forma explícita, y solo en `gestion-comunicalo`. Lo que no se use se apaga (módulos encendibles por empresa), no se elimina.
+10. **Esta rama es el producto para cualquier empresa** (DC-006). Comunicalo es su primera empresa; lo propio de una empresa se resuelve como configuración, no como código fijo.
+
 ## Pendientes por definir (poco a poco)
 
 - ~~Subdominio y despliegue~~: definidos (`gestion.grupocomunicalo.mx`, túnel `gestion-comunicalo`, proyecto Docker `comunicalo`, puerto 5191). Falta el DNS (C-02).

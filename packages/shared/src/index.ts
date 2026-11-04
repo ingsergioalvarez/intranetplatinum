@@ -1,3 +1,4 @@
+export * from './constants/marca';
 export * from './constants/roles';
 export * from './constants/permisos';
 export * from './constants/reportes';

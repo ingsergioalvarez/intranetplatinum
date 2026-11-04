@@ -11,7 +11,7 @@ self.addEventListener('push', (event) => {
     }
   })();
   event.waitUntil(
-    self.registration.showNotification(datos.titulo || 'Platinum', {
+    self.registration.showNotification(datos.titulo || 'Gestión Comunicalo', {
       body: datos.cuerpo || '',
       icon: '/icon-192.png',
       // Android pinta el badge en la barra de estado: solo usa su transparencia (escudo blanco).

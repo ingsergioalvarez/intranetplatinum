@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Ellipsis, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
+import { Ellipsis, KeyRound, LockKeyhole, LogOut } from 'lucide-react';
 import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
@@ -26,10 +26,10 @@ function useVisibleNav() {
 
 function Brand({ className }: { className?: string }) {
   return (
-    <div className={cn('flex items-center gap-2 font-semibold tracking-tight', className)}>
-      <ShieldCheck className="size-6 text-platinum-300" />
+    <div className={cn('flex items-center gap-2.5 font-semibold tracking-tight', className)}>
+      <img src="/favicon.svg" alt="" className="size-8" />
       <span>
-        Platinum <span className="font-normal text-platinum-300">Intranet</span>
+        <span className="text-platinum-300">gestión</span> <span className="text-acento-400">comunícalo.</span>
       </span>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BadgeCheck, ShieldAlert, ShieldX } from 'lucide-react';
-import { TIPO_INFORME_LABEL } from '@platinum/shared';
+import { MARCA, TIPO_INFORME_LABEL } from '@platinum/shared';
 import { Spinner, cn } from '../../components/ui';
 import { ApiError } from '../../core/api';
 import { formatFecha, formatFechaHora } from '../../core/format/fechas';
@@ -28,7 +28,7 @@ export function VerificarInformePage() {
   const estado = q.isPending
     ? null
     : noExiste || falso
-      ? { tono: 'rojo', icono: ShieldX, titulo: noExiste ? 'No existe un reporte con ese folio' : 'El código no coincide', texto: noExiste ? 'Revisa el folio o solicita el documento original a Platinum Agency.' : 'El folio existe, pero el código impreso no corresponde: el documento puede haber sido alterado.' }
+      ? { tono: 'rojo', icono: ShieldX, titulo: noExiste ? 'No existe un reporte con ese folio' : 'El código no coincide', texto: noExiste ? `Revisa el folio o solicita el documento original a ${MARCA.nombre}.` : 'El folio existe, pero el código impreso no corresponde: el documento puede haber sido alterado.' }
       : q.isError || !v
         ? { tono: 'rojo', icono: ShieldX, titulo: 'No se pudo verificar', texto: 'Intenta de nuevo en unos minutos.' }
         : reemplazado
@@ -88,7 +88,7 @@ export function VerificarInformePage() {
           </dl>
         )}
         <p className="text-xs text-slate-500">
-          Esta página solo confirma que el documento fue emitido por Platinum Agency y sus totales. El detalle es de uso interno.
+          Esta página solo confirma que el documento fue emitido por {MARCA.nombre} y sus totales. El detalle es de uso interno.
         </p>
       </main>
     </div>
