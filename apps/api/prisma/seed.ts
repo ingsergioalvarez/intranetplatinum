@@ -4,6 +4,7 @@
  */
 import bcrypt from 'bcryptjs';
 import {
+  CLAVES_OPCIONALES,
   PERMISO_DESCRIPCIONES,
   PERMISOS_POR_ROL,
   ROL_DESCRIPCIONES,
@@ -101,6 +102,8 @@ async function main() {
         email,
         passwordHash: await bcrypt.hash(password, 12),
         rolId: admin.id,
+        // Pertenece a Comunicalo, la empresa 1 (C-07).
+        empresaId: 1,
         // El primer administrador de una instalación nueva es el super admin (A-65).
         esSuperAdmin: !(await prisma.usuario.findFirst({ where: { esSuperAdmin: true }, select: { id: true } })),
       },
@@ -127,6 +130,19 @@ async function main() {
     }
   }
   console.log(`[seed] Categorías de reporte: ${nuevas} nuevas`);
+
+  // 5. Comunicalo (empresa 1, C-07): la primera vez lleva todos los módulos opcionales encendidos (DC-010).
+  // Si ya tiene filas no se toca: lo que el super admin haya apagado se respeta.
+  const comunicalo = await prisma.empresa.findUnique({
+    where: { id: 1 },
+    select: { _count: { select: { modulos: true } } },
+  });
+  if (comunicalo && comunicalo._count.modulos === 0) {
+    await prisma.empresaModulo.createMany({
+      data: CLAVES_OPCIONALES.map((modulo) => ({ empresaId: 1, modulo, encendido: true })),
+    });
+    console.log(`[seed] Comunicalo: ${CLAVES_OPCIONALES.length} módulos opcionales encendidos`);
+  }
 
   console.log(`[seed] OK — ${permisos.length} permisos, ${Object.values(ROLES).length} roles`);
 }

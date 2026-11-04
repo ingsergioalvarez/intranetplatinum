@@ -56,6 +56,25 @@ Cada instalación se actualiza **solo cuando el usuario lo indica**, desde **su*
 9. **No se borra nada.** Ni de Platinum ni de esta rama se elimina código, módulos o datos a menos que el usuario lo pida de forma explícita, y solo en `gestion-comunicalo`. Lo que no se use se apaga (módulos encendibles por empresa), no se elimina.
 10. **Esta rama es el producto para cualquier empresa** (DC-006). Comunicalo es su primera empresa; lo propio de una empresa se resuelve como configuración, no como código fijo.
 
+## Carpetas, puertos y bases de datos locales (desde 2026-11-04)
+
+Cada proyecto trabaja en **su propia carpeta de git** (`git worktree`), con su rama, sus puertos y su base local, para que los dos chats puedan trabajar a la vez sin estorbarse:
+
+| | **Platinum** | **Comunicalo** |
+|---|---|---|
+| Carpeta | `C:\Users\DEVOPS\Videos\intranetplatinum-platinum` | `C:\Users\DEVOPS\Videos\intranetplatinum` |
+| Rama | `Alexis-Cambios` (y `main`) | `gestion-comunicalo` |
+| API local | 4000 | **4100** (`PORT` en `apps/api/.env`) |
+| Web local | 5173 | **5273** (fijo en `apps/web/vite.config.ts`, con `strictPort`) |
+| Base local | `platinum_intranet` | `gestion_comunicalo` |
+
+- **No cambiar de rama dentro de una carpeta** y **no usar `git stash`** (se comparte entre carpetas). Cada chat se limita a la suya: no commitea ni modifica la otra; solo puede leerla y avisar al usuario.
+- Cada carpeta tiene su propio `apps/api/.env` (no se versiona). El de Comunicalo lleva `PORT=4100` y un `DATABASE_URL` hacia `gestion_comunicalo`. **Nunca apuntar las dos a la misma base**: las migraciones de Comunicalo (empresas, módulos, color de marca) no existen en Platinum y `prisma migrate dev` podría pedir reiniciarla.
+- Para rehacer la base local de Comunicalo: crearla vacía, `npm run db:deploy -w @platinum/api`, `db:seed` (con `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` en el entorno) y `db:superadmin` para el super admin.
+- Respaldos de las bases locales: `C:\Users\DEVOPS\Videos\respaldos-bd-local\` (fuera del proyecto).
+- El chat de Platinum documenta en su propia rama cómo se creó su carpeta (`git worktree add`). Cuando la guarde, **alinear los textos compartidos** de este documento; esta sección describe la parte de Comunicalo.
+- El `.env` no se lee ni se imprime desde el chat (el sistema lo bloquea): los cambios a ese archivo los hace el usuario.
+
 ## Pendientes por definir (poco a poco)
 
 - ~~Subdominio y despliegue~~: definidos (`gestion.grupocomunicalo.mx`, túnel `gestion-comunicalo`, proyecto Docker `comunicalo`, puerto 5191). Falta el DNS (C-02).

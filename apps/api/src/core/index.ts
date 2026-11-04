@@ -18,5 +18,6 @@ export * from './cartera';
 export * from './time/fechas';
 export * from './storage/StorageService';
 export * from './storage/imagenes';
+export * from './storage/svg';
 export * from './storage/urlFirmada';
 export type * from './types/auth';

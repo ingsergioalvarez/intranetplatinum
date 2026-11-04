@@ -28,6 +28,8 @@ import { CambiosTurnoPage } from '../modules/cambios/CambiosTurnoPage';
 import { CasosPage } from '../modules/casos/CasosPage';
 import { SolicitudesPage } from '../modules/solicitudes/SolicitudesPage';
 import { CarterasPage } from '../modules/carteras/CarterasPage';
+import { EmpresaDetallePage } from '../modules/plataforma/EmpresaDetallePage';
+import { EmpresasPage } from '../modules/plataforma/EmpresasPage';
 import { EmergenciasPage } from '../modules/emergencias/EmergenciasPage';
 import { AusenciasPage } from '../modules/ausencias/AusenciasPage';
 import { CalendarioPage } from '../modules/cobertura/CalendarioPage';
@@ -281,6 +283,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute superAdmin>
             <CarterasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'plataforma/empresas',
+        element: (
+          <ProtectedRoute superAdmin>
+            <EmpresasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'plataforma/empresas/:id',
+        element: (
+          <ProtectedRoute superAdmin>
+            <EmpresaDetallePage />
           </ProtectedRoute>
         ),
       },

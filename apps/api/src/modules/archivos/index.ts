@@ -13,6 +13,7 @@ const MIME_POR_EXTENSION: Record<string, string> = {
   png: 'image/png',
   webp: 'image/webp',
   heic: 'image/heic',
+  svg: 'image/svg+xml',
 };
 
 /**
@@ -40,6 +41,8 @@ export function createArchivosModule({
     // Privado: el enlace caduca; el navegador puede guardarlo mientras dure.
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Un SVG nunca ejecuta nada aunque alguien abra la dirección directamente.
+    if (ext === 'svg') res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
     archivo.stream.pipe(res);
   });
 

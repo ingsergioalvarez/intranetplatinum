@@ -15,5 +15,6 @@ export { PhotoUploader, type PhotoUploaderProps } from './PhotoUploader';
 export { PasswordInput } from './PasswordInput';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { Checkbox } from './Checkbox';
+export { Switch } from './Switch';
 export { FormModal } from './FormModal';
 export { VisorFotos, type FotoVisor } from './VisorFotos';

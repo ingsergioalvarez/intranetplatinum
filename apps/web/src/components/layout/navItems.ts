@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  Boxes,
   Briefcase,
   Building2,
   ClipboardCheck,
@@ -27,6 +28,8 @@ export interface NavItem {
   roles?: Rol[];
   /** Solo el super admin (A-65). */
   superAdmin?: boolean;
+  /** Encabezado de sección que se muestra encima de este elemento en la barra lateral de escritorio. */
+  seccion?: string;
 }
 
 /** Menú principal. El orden es el de la navegación inferior en celular (máx. 5). */
@@ -79,4 +82,6 @@ export const navItems: NavItem[] = [
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR],
   },
   { label: 'Catálogos', to: '/catalogos/categorias', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
+  // Plataforma (C-07): empresas, su marca y sus módulos. Solo el super admin.
+  { label: 'Empresas', to: '/plataforma/empresas', icon: Boxes, superAdmin: true, seccion: 'Plataforma' },
 ];

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Ellipsis, KeyRound, LockKeyhole, LogOut } from 'lucide-react';
 import { ROL_DESCRIPCIONES } from '@platinum/shared';
@@ -47,31 +47,35 @@ function Sidebar() {
         <Campanita />
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-        {items.map(({ to, label, icon: Icon }) => {
+        {items.map(({ to, label, icon: Icon, seccion }) => {
           const pendientes = badges.get(to) ?? 0;
           return (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  isActive ? 'bg-brand-700 text-white' : 'text-brand-100 hover:bg-brand-800 hover:text-white',
-                )
-              }
-            >
-              <Icon className="size-5 shrink-0" />
-              <span className="flex-1 truncate">{label}</span>
-              {pendientes > 0 && (
-                <span
-                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white leading-none shadow-xs"
-                  aria-label={`${pendientes} pendientes`}
-                >
-                  {pendientes > 99 ? '99+' : pendientes}
-                </span>
+            <Fragment key={to}>
+              {seccion && (
+                <p className="px-3 pb-1 pt-5 text-xs font-semibold uppercase tracking-wider text-brand-300">{seccion}</p>
               )}
-            </NavLink>
+              <NavLink
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    isActive ? 'bg-brand-700 text-white' : 'text-brand-100 hover:bg-brand-800 hover:text-white',
+                  )
+                }
+              >
+                <Icon className="size-5 shrink-0" />
+                <span className="flex-1 truncate">{label}</span>
+                {pendientes > 0 && (
+                  <span
+                    className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white leading-none shadow-xs"
+                    aria-label={`${pendientes} pendientes`}
+                  >
+                    {pendientes > 99 ? '99+' : pendientes}
+                  </span>
+                )}
+              </NavLink>
+            </Fragment>
           );
         })}
       </nav>

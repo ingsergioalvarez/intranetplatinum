@@ -17,3 +17,15 @@ export const uploadImages = multer({
     cb(new HttpError(400, 'UPLOAD_ERROR', `Tipo de archivo no permitido: ${file.mimetype}`));
   },
 });
+
+const LOGO_MIME_TYPES = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'];
+
+/** Ícono de una empresa (C-07): un solo archivo de hasta 300 KB, SVG o imagen. El servicio confirma el contenido. */
+export const uploadLogo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 300 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (LOGO_MIME_TYPES.includes(file.mimetype)) return cb(null, true);
+    cb(new HttpError(400, 'UPLOAD_ERROR', 'El ícono debe ser SVG, PNG, JPG o WebP'));
+  },
+});

@@ -5,6 +5,29 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-04 — Plataforma y empresas (C-07)
+
+#### Añadido
+
+- **Empresas** (C-07): migración `20261106000000_empresas` con las tablas `empresas` y `empresa_modulos` y la columna `usuarios.empresa_id`. Comunicalo queda como la empresa 1 y todos los usuarios existentes pasan a ella. El seed enciende sus 13 módulos opcionales la primera vez y asigna al primer administrador a la empresa 1.
+- **Catálogo de módulos** en `@platinum/shared` (`MODULOS`): 5 siempre incluidos y 13 opcionales, con dependencias (Horas extra y Cambios de turno necesitan Cobertura) y funciones para validar qué se puede encender o apagar.
+- **API de plataforma** (`/api/plataforma/*`, solo super admin): listar, crear, editar, desactivar y reactivar empresas; colores de marca; ícono; módulos con validación de dependencias (no guarda nada si el estado no es válido); administradores con contraseña temporal. Todo se audita.
+- **Ícono de la empresa** en SVG, PNG, JPG o WebP (hasta 300 KB). El SVG se valida (sin scripts, eventos ni recursos externos) y se sirve con `Content-Security-Policy: sandbox`.
+- **Generador de paleta** (`generarPaleta`): de uno o dos colores saca la escala `brand-50` a `brand-950`, ajusta el principal para que el texto blanco se lea (contraste 4.5:1) y mantiene el menú siempre oscuro.
+- **Pantalla Plataforma > Empresas** (solo super admin): lista con filtros y una pantalla por empresa con 4 pestañas (Datos, Marca con vista previa, Módulos con interruptores y sus reglas, Administradores). Nuevo componente `Switch` y encabezado de sección "Plataforma" en el menú lateral.
+- 43 pruebas nuevas (591 en total). El repositorio de Prisma se verificó contra una base temporal con las 46 migraciones.
+
+- **Marca de la empresa, segunda parte** (C-14): al subir un ícono o logo, sus colores dominantes pasan a ser el color principal y el de acento (`coloresDominantes` ignora lo transparente, el blanco, el negro y los grises; agrupa tonos parecidos). Por defecto se usa la paleta de Gestión Comunicalo; personalizar los colores es un botón opcional y lo personalizado no se pisa al subir otro ícono. Migración `20261106010000_empresas_color_modo`: la empresa guarda de dónde vienen sus colores (defecto, logo o personalizado); quitar un ícono cuyos colores venían de él restablece la paleta. Aviso si la imagen parece un logo horizontal.
+- **Tarjeta de empresa** bajo nuestra marca (ícono sobre cuadro claro y nombre con nuestro estilo en los colores de la empresa) y **vista previa con pestañas**: Pantalla principal, Celular y Reporte (PDF). 14 pruebas nuevas (605 en total).
+- Ajuste: el formulario de Datos de la empresa se reacomoda en 12 columnas para que quepa sin deslizar en escritorio.
+- **Separación de entornos locales:** la web de esta carpeta pasa a los puertos 5273 (web, con `strictPort`) y 4100 (API, por `PORT` en el `.env`) para no chocar con Platinum (4000 y 5173), y Comunicalo usa su propia base local `gestion_comunicalo`. `platinum_intranet` quedó sin las tablas, la columna y las migraciones de Comunicalo (respaldo previo en `C:\Users\DEVOPS\Videos\respaldos-bd-local\`). Se eliminaron las cuentas de prueba vacías `admin@platinum.local`, `supervisor@plati.com` y `alexis@platinum.com` de la base local. Documentado en `docs/RAMAS.md`.
+
+#### Notas
+
+- Al desplegar C-07 y C-14 hay dos migraciones nuevas (`20261106000000_empresas` y `20261106010000_empresas_color_modo`): `db:deploy` y luego `db:seed`.
+- Los interruptores de módulos y la marca solo se guardan: aplicarlos al menú, a las pantallas y a la API es C-09. El aislamiento de datos por empresa es C-08.
+- Al desplegar: `docker compose exec api npm run db:deploy` y luego `db:seed`.
+
 ### Sesión 2026-11-03 — Arranque de Comunicalo (C-01, C-02, C-03)
 
 #### Añadido

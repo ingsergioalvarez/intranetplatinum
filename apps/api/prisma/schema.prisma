@@ -65,6 +65,9 @@ model Usuario {
   gruposPropios        GrupoGuardias[]      @relation("GruposDe")
   reportesClienteHechos ReporteCliente[]    @relation("ReporteClienteDe")
   reportesClienteSobreMi ReporteCliente[]   @relation("ReporteClienteSobre")
+  /// Empresa a la que pertenece (C-07). null = de la plataforma (super admin sin empresa).
+  empresaId            Int?                 @map("empresa_id")
+  empresa              Empresa?             @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   passwordHash         String               @map("password_hash") @db.VarChar(255)
   rolId                Int                  @map("rol_id")
   // Usuario de rol cliente: a qué cliente pertenece (portal F5-01).
@@ -130,7 +133,58 @@ model Usuario {
   @@index([clienteId])
   @@index([activo, deletedAt])
   @@index([propietarioId])
+  @@index([empresaId])
   @@map("usuarios")
+}
+
+// ============================================================
+// Empresas de la plataforma (C-07). La empresa 1 es Comunicalo. Nunca se borran: se desactivan.
+// ============================================================
+
+model Empresa {
+  id             Int             @id @default(autoincrement())
+  nombre         String          @db.VarChar(120)
+  razonSocial    String?         @map("razon_social") @db.VarChar(160)
+  rfc            String?         @db.VarChar(13)
+  calle          String?         @db.VarChar(160)
+  calle2         String?         @db.VarChar(160)
+  codigoPostal   String?         @map("codigo_postal") @db.VarChar(10)
+  ciudad         String?         @db.VarChar(80)
+  estado         String?         @db.VarChar(80)
+  pais           String?         @db.VarChar(80)
+  telefono       String?         @db.VarChar(30)
+  email          String?         @db.VarChar(160)
+  sitioWeb       String?         @map("sitio_web") @db.VarChar(200)
+  /// Zona horaria IANA de la empresa (por ahora solo se guarda; el sistema usa la del servidor).
+  zonaHoraria    String          @default("America/Mexico_City") @map("zona_horaria") @db.VarChar(60)
+  moneda         String          @default("MXN") @db.Char(3)
+  /// De dónde vienen los colores: defecto (paleta de Gestión Comunicalo), logo (tomados de su ícono) o personalizado (C-14).
+  colorModo      String          @default("defecto") @map("color_modo") @db.VarChar(15)
+  /// Colores de la marca (#rrggbb); null = paleta de Gestión Comunicalo.
+  colorPrincipal String?         @map("color_principal") @db.Char(7)
+  colorAcento    String?         @map("color_acento") @db.Char(7)
+  /// Ícono de la empresa (clave en el almacenamiento, se sirve con URL firmada); null = iniciales.
+  logoClave      String?         @map("logo_clave") @db.VarChar(255)
+  activa         Boolean         @default(true)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  usuarios       Usuario[]
+  modulos        EmpresaModulo[]
+
+  @@index([activa])
+  @@map("empresas")
+}
+
+/// Módulos opcionales de cada empresa. Sin fila = apagado. El catálogo vive en el código (`@platinum/shared`).
+model EmpresaModulo {
+  empresaId Int      @map("empresa_id")
+  modulo    String   @db.VarChar(40)
+  encendido Boolean  @default(false)
+  updatedAt DateTime @updatedAt @map("updated_at")
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@id([empresaId, modulo])
+  @@map("empresa_modulos")
 }
 
 // ============================================================

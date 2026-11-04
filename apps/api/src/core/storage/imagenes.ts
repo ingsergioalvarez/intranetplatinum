@@ -2,14 +2,16 @@
 export const MIME_IMAGEN = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'] as const;
 export type MimeImagen = (typeof MIME_IMAGEN)[number];
 
-const EXTENSION: Record<MimeImagen, string> = {
+const EXTENSION: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
   'image/heic': 'heic',
+  // Solo para el ícono de la empresa (se valida aparte con `validarSvg`).
+  'image/svg+xml': 'svg',
 };
 
-export const extensionDe = (mime: string) => EXTENSION[mime as MimeImagen] ?? 'bin';
+export const extensionDe = (mime: string) => EXTENSION[mime] ?? 'bin';
 
 /**
  * Detecta el tipo real por la firma de los primeros bytes (no confía en el

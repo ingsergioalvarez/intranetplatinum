@@ -59,10 +59,12 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   server: {
-    port: 5173,
+    // Puertos propios de Comunicalo (rama gestion-comunicalo): Platinum usa 5173 y 4000 y pueden correr a la vez.
+    port: 5273,
+    strictPort: true,
     host: true,
     proxy: {
-      '/api': 'http://localhost:4000',
+      '/api': 'http://localhost:4100',
     },
   },
 }));
