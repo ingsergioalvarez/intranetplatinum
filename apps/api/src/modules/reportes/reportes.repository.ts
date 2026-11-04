@@ -12,6 +12,7 @@ import { fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
 import { asignadaA } from '../clientes/clientes.repository';
+import { empresaActual } from '../../core/empresa/contexto';
 
 /** Qué reportes puede ver el usuario. */
 export type Visibilidad =
@@ -240,20 +241,21 @@ export class PrismaReportesRepository extends ReportesRepository {
   ) {
     return getPrisma().$transaction(async (tx) => {
       // Consecutivo atómico: el UPDATE bloquea la fila del año hasta el commit.
-      await tx.$executeRaw`INSERT INTO folios_reporte (anio, ultimo) VALUES (${anio}, 1)
+      await tx.$executeRaw`INSERT INTO folios_reporte (empresa_id, anio, ultimo) VALUES (${empresaActual()}, ${anio}, 1)
         ON DUPLICATE KEY UPDATE ultimo = ultimo + 1`;
       const [{ ultimo }] = await tx.$queryRaw<
         { ultimo: number }[]
-      >`SELECT ultimo FROM folios_reporte WHERE anio = ${anio}`;
+      >`SELECT ultimo FROM folios_reporte WHERE anio = ${anio} AND empresa_id = ${empresaActual()}`;
       const folio = `PLT-${anio}-${String(ultimo).padStart(6, '0')}`;
 
       const reporte = await tx.reporte.create({
         data: {
+          empresaId: empresaActual(),
           ...data,
           folio,
           lat: lat ?? null,
           lng: lng ?? null,
-          evidencias: { create: fotos.map((f) => ({ ...f, subidaPorId: data.creadoPorId })) },
+          evidencias: { create: fotos.map((f) => ({ ...f, empresaId: empresaActual(), subidaPorId: data.creadoPorId })) },
         },
         select: { id: true, folio: true },
       });
@@ -322,9 +324,10 @@ export class PrismaReportesRepository extends ReportesRepository {
     return getPrisma().$transaction(async (tx) => {
       const seguimiento = await tx.reporteSeguimiento.create({
         data: {
+          empresaId: empresaActual(),
           reporteId,
           ...s,
-          evidencias: { create: fotos.map((f) => ({ ...f, reporteId, subidaPorId: s.usuarioId })) },
+          evidencias: { create: fotos.map((f) => ({ ...f, reporteId, empresaId: empresaActual(), subidaPorId: s.usuarioId })) },
         },
         select: { id: true },
       });

@@ -18,6 +18,7 @@ import { asignadaA, vigenteEn } from '../clientes/clientes.repository';
 import { turnoDeDb } from '../sitios/sitios.repository';
 import { diasDeDb, diasSelect } from '../turnos/dias';
 import { notificarPush } from '../push/enviar';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface MarcacionRow {
   id: number;
@@ -381,7 +382,7 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
   }
 
   async crear(data: NuevaMarcacion) {
-    const r = await getPrisma().marcacion.create({ data, select });
+    const r = await getPrisma().marcacion.create({ data: { ...data, empresaId: empresaActual() }, select });
     return toRow(r);
   }
 
@@ -558,7 +559,7 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
         where: { usuarioId: data.usuarioId, reemplazadoEn: null },
         data: { reemplazadoEn: new Date() },
       }),
-      getPrisma().rostroGuardia.create({ data, select: rostroSelect }),
+      getPrisma().rostroGuardia.create({ data: { ...data, empresaId: empresaActual() }, select: rostroSelect }),
     ]);
     return toRostro(r);
   }
@@ -609,6 +610,7 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
     const t = tituloDeAviso(tipo, titulo);
     await getPrisma().aviso.createMany({
       data: usuarioIds.map((usuarioId) => ({
+        empresaId: empresaActual(),
         usuarioId,
         tipo,
         titulo: t,
@@ -667,7 +669,7 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
   }
 
   async crearIncidencia(data: NuevaIncidencia) {
-    const { id } = await getPrisma().incidenciaRostro.create({ data, select: { id: true } });
+    const { id } = await getPrisma().incidenciaRostro.create({ data: { ...data, empresaId: empresaActual() }, select: { id: true } });
     return id;
   }
 

@@ -2,6 +2,7 @@ import type { DecisionCaso, EstadoHoraExtra, OrigenHoraExtra, SiguienteTurno } f
 import { fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { PrismaAsistenciaRepository } from '../asistencia/asistencia.repository';
+import { empresaActual } from '../../core/empresa/contexto';
 
 /** La jornada del guardia que sigue en el sitio. */
 export interface EntradaCaso {
@@ -244,7 +245,7 @@ export class PrismaCasosCoberturaRepository extends CasosCoberturaRepository {
   async guardarCaso(entrada: EntradaCaso, datos: DatosCaso) {
     return getPrisma().casoCobertura.upsert({
       where: { entradaId: entrada.id },
-      create: { entradaId: entrada.id, guardiaId: entrada.usuarioId, sitioId: entrada.sitio.id, ...datos },
+      create: { empresaId: empresaActual(), entradaId: entrada.id, guardiaId: entrada.usuarioId, sitioId: entrada.sitio.id, ...datos },
       update: datos,
       select: casoSelect,
     });
@@ -269,7 +270,7 @@ export class PrismaCasosCoberturaRepository extends CasosCoberturaRepository {
     for (const fecha of new Set(fechas)) {
       await getPrisma().pausaTurno.upsert({
         where: { usuarioId_fecha: { usuarioId, fecha: fechaADate(fecha) } },
-        create: { usuarioId, fecha: fechaADate(fecha), casoId },
+        create: { empresaId: empresaActual(), usuarioId, fecha: fechaADate(fecha), casoId },
         update: { casoId, cambioId: null },
       });
     }
@@ -298,7 +299,7 @@ export class PrismaCasosCoberturaRepository extends CasosCoberturaRepository {
 
   async marcarEnviado(clave: string) {
     try {
-      await getPrisma().avisoEnviado.create({ data: { clave } });
+      await getPrisma().avisoEnviado.create({ data: { empresaId: empresaActual(), clave } });
       return true;
     } catch {
       return false;

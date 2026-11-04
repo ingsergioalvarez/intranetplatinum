@@ -1,6 +1,7 @@
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '../../generated/prisma/client';
 import { env } from '../../config/env';
+import { extensionEmpresa } from '../empresa/aislamiento';
 
 let client: PrismaClient | undefined;
 
@@ -35,7 +36,9 @@ export function getPrisma(): PrismaClient {
     if (!env.DATABASE_URL) {
       throw new Error('DATABASE_URL no está configurada. Revisa apps/api/.env (ver D-008).');
     }
-    client = createPrismaClient(env.DATABASE_URL);
+    // Toda consulta de la aplicación pasa por el aislamiento por empresa (C-08). Los scripts (seed, superadmin, carga)
+    // usan `createPrismaClient` directo, sin filtro, a propósito.
+    client = createPrismaClient(env.DATABASE_URL).$extends(extensionEmpresa) as unknown as PrismaClient;
   }
   return client;
 }

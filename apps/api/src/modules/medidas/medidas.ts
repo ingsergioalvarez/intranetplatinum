@@ -9,6 +9,7 @@ import { hoyISO, inicioDelDia } from '../../core/time/fechas';
 import { getPrisma } from '../../core/data/prisma';
 import { avisarConPrisma } from '../avisos/avisar';
 import { bitacoraConPrisma } from '../bitacora/registrar';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface MedidaNueva {
   usuarioId: number;
@@ -40,6 +41,7 @@ export const medidasConPrisma: MedidasPuerto = {
     try {
       await getPrisma().medidaDisciplinaria.create({
         data: {
+          empresaId: empresaActual(),
           usuarioId: m.usuarioId,
           tipo: m.tipo,
           origen: m.origen,

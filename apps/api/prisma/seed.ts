@@ -5,6 +5,7 @@
 import bcrypt from 'bcryptjs';
 import {
   CLAVES_OPCIONALES,
+  MODULOS_INICIALES_COMUNICALO,
   PERMISO_DESCRIPCIONES,
   PERMISOS_POR_ROL,
   ROL_DESCRIPCIONES,
@@ -116,32 +117,32 @@ async function main() {
   // 4. Catálogo inicial de categorías de reporte (F3-01). Solo agrega las que falten.
   let nuevas = 0;
   for (const [orden, { nombre, icono, hijas }] of CATEGORIAS_INICIALES.entries()) {
-    let padre = await prisma.categoriaReporte.findFirst({ where: { nombre, padreId: null } });
+    let padre = await prisma.categoriaReporte.findFirst({ where: { empresaId: 1, nombre, padreId: null } });
     if (!padre) {
-      padre = await prisma.categoriaReporte.create({ data: { nombre, icono, orden: orden * 10 } });
+      padre = await prisma.categoriaReporte.create({ data: { empresaId: 1, nombre, icono, orden: orden * 10 } });
       nuevas++;
     }
     for (const [i, hija] of hijas.entries()) {
       const existe = await prisma.categoriaReporte.findFirst({ where: { nombre: hija, padreId: padre.id } });
       if (!existe) {
-        await prisma.categoriaReporte.create({ data: { nombre: hija, padreId: padre.id, orden: i * 10 } });
+        await prisma.categoriaReporte.create({ data: { empresaId: 1, nombre: hija, padreId: padre.id, orden: i * 10 } });
         nuevas++;
       }
     }
   }
   console.log(`[seed] Categorías de reporte: ${nuevas} nuevas`);
 
-  // 5. Comunicalo (empresa 1, C-07): la primera vez lleva todos los módulos opcionales encendidos (DC-010).
-  // Si ya tiene filas no se toca: lo que el super admin haya apagado se respeta.
+  // 5. Comunicalo (empresa 1, C-07): la primera vez arranca con los módulos iniciales (DC-015) y el resto apagado.
+  // Si ya tiene filas no se toca: lo que el super admin haya cambiado se respeta.
   const comunicalo = await prisma.empresa.findUnique({
     where: { id: 1 },
     select: { _count: { select: { modulos: true } } },
   });
   if (comunicalo && comunicalo._count.modulos === 0) {
     await prisma.empresaModulo.createMany({
-      data: CLAVES_OPCIONALES.map((modulo) => ({ empresaId: 1, modulo, encendido: true })),
+      data: CLAVES_OPCIONALES.map((modulo) => ({ empresaId: 1, modulo, encendido: MODULOS_INICIALES_COMUNICALO.includes(modulo) })),
     });
-    console.log(`[seed] Comunicalo: ${CLAVES_OPCIONALES.length} módulos opcionales encendidos`);
+    console.log(`[seed] Comunicalo: ${MODULOS_INICIALES_COMUNICALO.length} módulos opcionales encendidos`);
   }
 
   console.log(`[seed] OK — ${permisos.length} permisos, ${Object.values(ROLES).length} roles`);

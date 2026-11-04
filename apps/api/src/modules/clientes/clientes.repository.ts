@@ -16,6 +16,7 @@ import type {
 import { BaseRepository, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export type ClienteFiltroData = Omit<ClienteFiltro, 'page' | 'limit'> & {
   /** Admin cuya cartera se ve (A-65). Sin esto (super admin) se ven todos. */
@@ -211,7 +212,7 @@ export class PrismaClientesRepository extends ClientesRepository {
   }
 
   async findByRfc(rfc: string) {
-    const c = await getPrisma().cliente.findUnique({ where: { rfc }, select: clienteSelect });
+    const c = await getPrisma().cliente.findFirst({ where: { rfc }, select: clienteSelect });
     return c && toCliente(c);
   }
 
@@ -251,7 +252,11 @@ export class PrismaClientesRepository extends ClientesRepository {
   async create({ propietarioId, ...data }: ClienteNuevoData) {
     return toCliente(
       await getPrisma().cliente.create({
-        data: { ...data, ...(propietarioId && { propietario: { connect: { id: propietarioId } } }) },
+        data: {
+          ...data,
+          empresa: { connect: { id: empresaActual() } },
+          ...(propietarioId && { propietario: { connect: { id: propietarioId } } }),
+        },
         select: clienteSelect,
       }),
     );
@@ -284,7 +289,7 @@ export class PrismaClientesRepository extends ClientesRepository {
   }
 
   async createContacto(clienteId: number, data: ContactoData) {
-    return getPrisma().clienteContacto.create({ data: { ...data, clienteId }, select: contactoSelect });
+    return getPrisma().clienteContacto.create({ data: { ...data, clienteId, empresaId: empresaActual() }, select: contactoSelect });
   }
 
   async updateContacto(id: number, data: ContactoData) {
@@ -314,7 +319,7 @@ export class PrismaClientesRepository extends ClientesRepository {
   async createSitio(clienteId: number, data: SitioData) {
     // Recién creado no tiene asignaciones: la fecha del conteo es irrelevante.
     return toSitio(
-      await getPrisma().sitio.create({ data: { ...data, clienteId }, select: sitioSelect('1970-01-01') }),
+      await getPrisma().sitio.create({ data: { ...data, clienteId, empresaId: empresaActual() }, select: sitioSelect('1970-01-01') }),
     );
   }
 
@@ -389,6 +394,7 @@ export class PrismaClientesRepository extends ClientesRepository {
   ) {
     const u = await getPrisma().usuario.create({
       data: {
+        empresa: { connect: { id: empresaActual() } },
         nombre,
         email,
         passwordHash,
@@ -434,7 +440,7 @@ export class PrismaClientesRepository extends ClientesRepository {
       prisma.cliente.update({ where: { id: clienteId }, data: { avisoPorDefecto: porDefecto } }),
       prisma.clienteReglaAviso.deleteMany({ where: { clienteId } }),
       prisma.clienteReglaAviso.createMany({
-        data: excepciones.map(([prioridad, destino]) => ({ clienteId, prioridad, destino })),
+        data: excepciones.map(([prioridad, destino]) => ({ empresaId: empresaActual(), clienteId, prioridad, destino })),
       }),
     ]);
   }

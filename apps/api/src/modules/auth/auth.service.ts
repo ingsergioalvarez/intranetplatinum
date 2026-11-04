@@ -471,6 +471,7 @@ export class AuthService extends BaseService {
       clienteNombre: u.clienteNombre ?? null,
       esSuperAdmin: u.esSuperAdmin ?? false,
       propietarioId: u.propietarioId ?? null,
+      empresaId: u.empresaId ?? null,
     });
   }
 

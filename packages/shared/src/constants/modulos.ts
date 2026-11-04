@@ -169,6 +169,12 @@ export const MODULOS_NUCLEO: readonly ModuloDef[] = MODULOS.filter((m) => m.grup
 export const MODULOS_OPCIONALES: readonly ModuloDef[] = MODULOS.filter((m) => m.grupo !== 'nucleo');
 export const CLAVES_OPCIONALES = MODULOS_OPCIONALES.map((m) => m.clave) as ModuloOpcionalClave[];
 
+/**
+ * Módulos opcionales con los que arranca Comunicalo, la empresa 1 (DC-015): Bitácora y SOS por decisión del usuario, y
+ * Turnos y horarios y Reporte de asistencia como primeros agregados. Una empresa nueva arranca sin ninguno.
+ */
+export const MODULOS_INICIALES_COMUNICALO: readonly ModuloOpcionalClave[] = ['bitacora', 'emergencias', 'turnos', 'reporte_asistencia'];
+
 export const moduloDe = (clave: string): ModuloDef | undefined => MODULOS.find((m) => m.clave === clave);
 export const esModuloOpcional = (clave: string): clave is ModuloOpcionalClave => CLAVES_OPCIONALES.some((c) => c === clave);
 

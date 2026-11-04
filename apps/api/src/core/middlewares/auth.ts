@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import type { Rol } from '@platinum/shared';
 import { HttpError } from '../errors/HttpError';
+import { conEmpresa } from '../empresa/contexto';
 import { verifyAccessToken } from '../security/jwt';
 import type { AuthUser } from '../types/auth';
 
@@ -20,6 +21,9 @@ function createAuthenticate(permitirPasswordTemporal: boolean): RequestHandler {
         new HttpError(403, 'PASSWORD_CHANGE_REQUIRED', 'Debes cambiar tu contraseña temporal para continuar'),
       );
     }
+    // Lo que sigue (y lo asíncrono que lance) corre como parte de la empresa de la sesión (C-08).
+    const { empresaId } = req.user;
+    if (empresaId) return conEmpresa(empresaId, () => next());
     next();
   };
 }

@@ -6,6 +6,7 @@ import { PrismaAsistenciaRepository, type MarcacionRow } from '../asistencia/asi
 import type { TurnoProgramado } from '../asistencia/vigilancia';
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import { PrismaBitacoraRepository, type EventoBitacoraRow } from '../bitacora/bitacora.repository';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface InformeRow {
   id: number;
@@ -215,6 +216,7 @@ export class PrismaInformesRepository extends InformesRepository {
     const id = await db.$transaction(async (tx) => {
       const creado = await tx.informeAsistencia.create({
         data: {
+          empresaId: empresaActual(),
           tipo: data.tipo,
           usuarioId: data.usuarioId,
           sitioId: data.sitioId,

@@ -18,6 +18,7 @@ import {
   authenticateAllowingTemporaryPassword,
   requireRoles,
   rateLimit,
+  sinFiltroDeEmpresa,
   validate,
   type AppModule,
 } from '../../core';
@@ -43,6 +44,10 @@ export function createAuthModule({
   const controller = new AuthController(new AuthService(repo, audit, policy));
 
   const router = Router();
+  // Iniciar sesión, refrescar y los perfiles rápidos ocurren ANTES de saber la empresa: localizan al usuario sin
+  // filtro y de él sale la empresa del token (C-08). Las rutas que además pasan por `authenticate` quedan acotadas a
+  // la empresa de la sesión, porque el contexto más interno manda.
+  router.use((_req, _res, next) => sinFiltroDeEmpresa(() => next()));
   router.post(
     '/login',
     rateLimit({

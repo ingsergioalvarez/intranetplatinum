@@ -3,6 +3,7 @@ import { dateAFecha, fechaADate, hoyISO, inicioDelDia } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 import { asignadaA } from '../clientes/clientes.repository';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface NuevaAusencia {
   usuarioId: number;
@@ -118,7 +119,7 @@ const aRow = ({ usuario, solicitante, desde, hasta, estado, tipo, ...r }: Fila):
 export class PrismaAusenciasRepository extends AusenciasRepository {
   async crear(d: NuevaAusencia) {
     const r = await getPrisma().ausencia.create({
-      data: { ...d, desde: fechaADate(d.desde), hasta: fechaADate(d.hasta), motivo: d.motivo?.slice(0, 255) ?? null },
+      data: { empresaId: empresaActual(), ...d, desde: fechaADate(d.desde), hasta: fechaADate(d.hasta), motivo: d.motivo?.slice(0, 255) ?? null },
       select,
     });
     return aRow(r);

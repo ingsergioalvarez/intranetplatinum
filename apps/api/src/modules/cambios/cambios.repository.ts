@@ -3,6 +3,7 @@ import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 import type { Prisma } from '../../generated/prisma/client';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface Persona {
   id: number;
@@ -159,6 +160,7 @@ export class PrismaCambiosRepository extends CambiosRepository {
   async crear(d: NuevoCambio) {
     const r = await getPrisma().cambioTurno.create({
       data: {
+        empresaId: empresaActual(),
         tipo: d.tipo,
         estado: d.estado,
         usuarioId: d.usuarioId,
@@ -222,7 +224,7 @@ export class PrismaCambiosRepository extends CambiosRepository {
   async crearPausa(usuarioId: number, fecha: string, cambioId: number) {
     await getPrisma().pausaTurno.upsert({
       where: { usuarioId_fecha: { usuarioId, fecha: fechaADate(fecha) } },
-      create: { usuarioId, fecha: fechaADate(fecha), cambioId },
+      create: { empresaId: empresaActual(), usuarioId, fecha: fechaADate(fecha), cambioId },
       update: { cambioId },
     });
   }

@@ -5,6 +5,25 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-04 — Aislamiento por empresa (C-08) y módulos iniciales (DC-015)
+
+#### Añadido
+
+- **Aislamiento de datos por empresa** (C-08, DC-014): `empresa_id` obligatorio y sin valor por defecto en 37 tablas (migración `20261107000000_empresa_en_todo`; lo existente queda en la empresa 1). La empresa viaja en el token (`emp`) y en un contexto por petición; un filtro central en Prisma agrega la empresa a toda lectura y bloquea mover filas entre empresas; las escrituras pasan la empresa de forma explícita y, sin empresa en el contexto, se niega (falla cerrada). Las operaciones de plataforma y los inicios de sesión piden `sinFiltroDeEmpresa`. La tarea de cada minuto corre por empresa activa. Auditoría por empresa. Folios de reportes por empresa.
+- **Únicos por empresa:** nombre de turno (`20261108000000_turnos_nombre_por_empresa`), RFC de clientes, folios de reportes y nombre de grupos (`20261109000000_unicos_por_empresa`); ambas migraciones se probaron sobre una copia de los datos reales.
+- **Verificación de extremo a extremo** `npm run verificar:aislamiento -w @platinum/api`: levanta una base temporal con dos empresas y comprueba con la API real que una no ve nada de la otra (43 comprobaciones).
+- `MODULOS_INICIALES_COMUNICALO` en `@platinum/shared` y notas en Reportes y Clientes sobre lo que debe ser por empresa antes de encenderlos en otra empresa.
+
+#### Cambiado
+
+- **DC-015:** Comunicalo arranca con núcleo + Bitácora + SOS + Turnos y horarios + Reporte de asistencia (antes el seed encendía los 13 opcionales). El seed lo aplica solo la primera vez y acota las categorías a la empresa 1. La base local quedó así.
+- Las sesiones anteriores deben iniciar sesión de nuevo (el token ahora lleva la empresa).
+
+#### Notas
+
+- Se hicieron también por empresa (migración `20261109000000_unicos_por_empresa`, probada sobre una copia de los datos): folio anual de reportes, folio de cada reporte, RFC de clientes y nombre de grupos. El nombre de categorías nunca fue único. El correo de un usuario sigue único en todo el sistema (DC-014).
+- Sin desplegar. 641 pruebas, tipos y lint sin errores.
+
 ### Sesión 2026-11-04 — Plataforma y empresas (C-07)
 
 #### Añadido

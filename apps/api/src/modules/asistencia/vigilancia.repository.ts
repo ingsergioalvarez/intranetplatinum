@@ -13,6 +13,7 @@ import {
   type TurnoDiaRow,
   type TurnoProgramado,
 } from './vigilancia';
+import { empresaActual } from '../../core/empresa/contexto';
 
 const turnoDiaSelect = {
   id: true,
@@ -176,7 +177,7 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
     asignacionId: number | null;
     programadaEntrada: Date;
   }) {
-    return getPrisma().turnoDia.create({ data, select: turnoDiaSelect });
+    return getPrisma().turnoDia.create({ data: { ...data, empresaId: empresaActual() }, select: turnoDiaSelect });
   }
 
   async actualizarTurnoDia(id: number, data: Partial<Omit<TurnoDiaRow, 'id'>>) {
@@ -193,7 +194,7 @@ export class PrismaVigilanciaRepository extends VigilanciaRepository {
 
   async crearEvento({ usuarioId, tipo, detalle, sitioId, ocurrioEn, datos }: EventoVigilancia) {
     const e = await getPrisma().eventoBitacora.create({
-      data: { usuarioId, tipo, detalle, sitioId, ocurrioEn, datos },
+      data: { empresaId: empresaActual(), usuarioId, tipo, detalle, sitioId, ocurrioEn, datos },
       select: { id: true },
     });
     return e.id;
@@ -233,7 +234,7 @@ export class PrismaComidasRepository extends ComidasRepository {
 
   async marcarEnviado(clave: string) {
     try {
-      await getPrisma().avisoEnviado.create({ data: { clave } });
+      await getPrisma().avisoEnviado.create({ data: { empresaId: empresaActual(), clave } });
       return true;
     } catch {
       // Ya existía: el aviso se envió antes.
@@ -284,7 +285,7 @@ export class PrismaSitioSoloRepository extends SitioSoloRepository {
 
   async marcarEnviado(clave: string) {
     try {
-      await getPrisma().avisoEnviado.create({ data: { clave } });
+      await getPrisma().avisoEnviado.create({ data: { empresaId: empresaActual(), clave } });
       return true;
     } catch {
       // Ya existía: el aviso se envió antes.

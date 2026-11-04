@@ -10,6 +10,7 @@ import {
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 import { asignadaA } from '../clientes/clientes.repository';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface NuevaEmergencia {
   usuarioId: number;
@@ -141,7 +142,7 @@ const usuariosDeRol = async (rol: string) =>
 
 export class PrismaEmergenciasRepository extends EmergenciasRepository {
   async crear(d: NuevaEmergencia, destinatarios: number[]) {
-    const r = await getPrisma().emergencia.create({ data: { ...d, destinatarios }, select });
+    const r = await getPrisma().emergencia.create({ data: { empresaId: empresaActual(), ...d, destinatarios }, select });
     return aRow(r);
   }
 

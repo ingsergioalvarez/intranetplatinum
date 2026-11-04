@@ -2,6 +2,7 @@ import { tituloDeAviso, type TipoAviso } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import { notificarPush } from '../push/enviar';
 import type { EntidadAviso } from './atencion';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface AvisoUsuario {
   tipo: TipoAviso;
@@ -31,6 +32,7 @@ export const avisarConPrisma: AvisarUsuarios = async (
     const t = tituloDeAviso(tipo, titulo);
     await getPrisma().aviso.createMany({
       data: ids.map((usuarioId) => ({
+        empresaId: empresaActual(),
         usuarioId,
         tipo,
         titulo: t,

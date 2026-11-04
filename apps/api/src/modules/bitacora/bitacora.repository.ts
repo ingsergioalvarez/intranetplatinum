@@ -9,6 +9,7 @@ import type {
 import { getPrisma } from '../../core/data/prisma';
 import { MIN_NO_SE_PRESENTO } from '../asistencia/vigilancia';
 import type { Prisma } from '../../generated/prisma/client';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface EventoBitacoraRow {
   id: number;
@@ -205,7 +206,7 @@ export class PrismaBitacoraRepository extends BitacoraRepository {
   }
 
   async comentar(eventoId: number, autorId: number, texto: string) {
-    await getPrisma().comentarioBitacora.create({ data: { eventoId, autorId, texto } });
+    await getPrisma().comentarioBitacora.create({ data: { empresaId: empresaActual(), eventoId, autorId, texto } });
   }
 
   async crearFaltaDesde(e: EventoBitacoraRow, en: Date) {
@@ -221,6 +222,7 @@ export class PrismaBitacoraRepository extends BitacoraRepository {
       }
       const falta = await tx.eventoBitacora.create({
         data: {
+          empresaId: empresaActual(),
           usuarioId: e.usuarioId,
           tipo: 'falta',
           ocurrioEn: en,

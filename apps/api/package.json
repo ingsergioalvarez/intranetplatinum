@@ -18,7 +18,8 @@
     "db:superadmin": "tsx prisma/superadmin.ts",
     "db:setup": "tsx prisma/setup.ts",
     "db:status": "prisma migrate status",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "verificar:aislamiento": "tsx scripts/verificar-aislamiento.mts"
   },
   "dependencies": {
     "@platinum/shared": "*",

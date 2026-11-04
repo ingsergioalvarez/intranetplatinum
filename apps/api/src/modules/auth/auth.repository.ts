@@ -1,5 +1,6 @@
 import type { Permiso, Rol } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
+import { sinFiltroDeEmpresa } from '../../core/empresa/contexto';
 
 /** Usuario con lo necesario para autenticar (incluye hash y estado de bloqueo). */
 export interface UsuarioAuth {
@@ -18,6 +19,7 @@ export interface UsuarioAuth {
   clienteNombre?: string | null;
   esSuperAdmin?: boolean;
   propietarioId?: number | null;
+  empresaId?: number | null;
 }
 
 export interface RefreshTokenRecord {
@@ -155,7 +157,12 @@ export class PrismaAuthRepository extends AuthRepository {
   }
 
   async crearDispositivo(data: { usuarioId: number; tokenHash: string; etiqueta: string }) {
-    return getPrisma().dispositivoUsuario.create({ data: { ...data, ultimoUso: new Date() } });
+    // Al iniciar sesión todavía no hay empresa en el contexto: se toma la del usuario.
+    const prisma = getPrisma();
+    const u = await sinFiltroDeEmpresa(() =>
+      prisma.usuario.findUniqueOrThrow({ where: { id: data.usuarioId }, select: { empresaId: true } }),
+    );
+    return prisma.dispositivoUsuario.create({ data: { ...data, empresaId: u.empresaId, ultimoUso: new Date() } });
   }
 
   async findDispositivoPorToken(tokenHash: string) {
@@ -222,6 +229,7 @@ export class PrismaAuthRepository extends AuthRepository {
     cliente?: { id: number; nombreComercial: string } | null;
     esSuperAdmin?: boolean;
     propietarioId?: number | null;
+    empresaId?: number | null;
   }): UsuarioAuth {
     return {
       id: u.id,
@@ -239,6 +247,7 @@ export class PrismaAuthRepository extends AuthRepository {
       clienteNombre: u.cliente?.nombreComercial ?? null,
       esSuperAdmin: u.esSuperAdmin ?? false,
       propietarioId: u.propietarioId ?? null,
+      empresaId: u.empresaId ?? null,
     };
   }
 }

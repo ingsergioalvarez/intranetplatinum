@@ -2,6 +2,7 @@ import type { Paginated, PaginationQuery, Rol, Usuario, UsuarioFiltro } from '@p
 import { BaseRepository } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface UsuarioCreateData {
   nombre: string;
@@ -139,6 +140,7 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
     const u = await getPrisma().usuario.create({
       data: {
         ...data,
+        empresa: { connect: { id: empresaActual() } },
         rol: { connect: { clave: rol } },
         ...(propietarioId && { propietario: { connect: { id: propietarioId } } }),
       },

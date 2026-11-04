@@ -3,6 +3,7 @@ import { getPrisma } from '../../core/data/prisma';
 import { firmarArchivo } from '../../core';
 import { notificarPush } from '../push/enviar';
 import { adminsDe } from './duenos';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface NuevoAviso {
   tipo: TipoAviso;
@@ -36,7 +37,7 @@ export class PrismaAvisosRepository extends AvisosRepository {
     if (usuarioIds.length === 0) return;
     const t = tituloDeAviso(tipo, titulo);
     await getPrisma().aviso.createMany({
-      data: usuarioIds.map((usuarioId) => ({ usuarioId, tipo, titulo: t, mensaje: mensaje.slice(0, 255), reporteId })),
+      data: usuarioIds.map((usuarioId) => ({ empresaId: empresaActual(), usuarioId, tipo, titulo: t, mensaje: mensaje.slice(0, 255), reporteId })),
     });
     notificarPush(usuarioIds, { tipo, titulo: t, mensaje, reporteId });
   }
@@ -163,7 +164,7 @@ export class PrismaAvisosRepository extends AvisosRepository {
     });
     if (contactos.length === 0) return 0;
     await prisma.notificacion.createMany({
-      data: contactos.map((c) => ({ reporteId, contactoId: c.id, canal: 'email' as const })),
+      data: contactos.map((c) => ({ empresaId: empresaActual(), reporteId, contactoId: c.id, canal: 'email' as const })),
     });
     return contactos.length;
   }

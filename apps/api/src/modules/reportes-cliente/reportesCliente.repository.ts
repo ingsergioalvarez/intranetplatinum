@@ -8,6 +8,7 @@ import { fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 import { vigenteEn } from '../clientes/clientes.repository';
+import { empresaActual } from '../../core/empresa/contexto';
 
 /** Quién puede ver cuáles reportes del cliente (A-59). */
 export type VisibilidadReporteCliente =
@@ -107,7 +108,7 @@ const vigente = (p: Persona | null) => (p && p.activo && !p.deletedAt ? { id: p.
 
 export class PrismaReportesClienteRepository extends ReportesClienteRepository {
   async crear(d: NuevoReporteCliente) {
-    return getPrisma().reporteCliente.create({ data: d, select });
+    return getPrisma().reporteCliente.create({ data: { ...d, empresaId: empresaActual() }, select });
   }
 
   findById(id: number, v: VisibilidadReporteCliente) {

@@ -38,7 +38,7 @@ async function main() {
   ]);
   const usuario = (nombre: string, email: string, rolId: number, extra: object = {}) =>
     prisma.usuario.create({
-      data: { nombre, email, passwordHash, rolId, telefono: '5550000000', debeCambiarPassword: false, ...extra },
+      data: { empresaId: 1, nombre, email, passwordHash, rolId, telefono: '5550000000', debeCambiarPassword: false, ...extra },
     });
 
   for (let i = 1; i <= N.admin; i++) await usuario(`Carga Admin ${i}`, `carga_admin${i}@carga.local`, rAdmin);
@@ -49,7 +49,7 @@ async function main() {
   }
 
   const turno = await prisma.turno.create({
-    data: { nombre: 'Carga 12h', horas: 12, horaEntrada: '07:00', diasTipo: 'diario' },
+    data: { empresaId: 1, nombre: 'Carga 12h', horas: 12, horaEntrada: '07:00', diasTipo: 'diario' },
   });
   const hoy = new Date();
   hoy.setUTCHours(0, 0, 0, 0);
@@ -57,7 +57,7 @@ async function main() {
   const clientes: number[] = [];
   for (let i = 1; i <= N.clientes; i++) {
     const c = await prisma.cliente.create({
-      data: { razonSocial: `Carga Cliente ${i} SA`, nombreComercial: `Carga Cliente ${i}` },
+      data: { empresaId: 1, razonSocial: `Carga Cliente ${i} SA`, nombreComercial: `Carga Cliente ${i}` },
     });
     clientes.push(c.id);
     for (let k = 1; k <= N.cliente / N.clientes; k++) {
@@ -69,6 +69,7 @@ async function main() {
   for (let i = 0; i < N.sitios; i++) {
     const s = await prisma.sitio.create({
       data: {
+        empresaId: 1,
         clienteId: clientes[i % clientes.length],
         nombre: `Carga Sitio ${i + 1}`,
         lat: 19.4326,
@@ -84,6 +85,7 @@ async function main() {
     const g = await usuario(`Carga Guardia ${i}`, `carga_g${i}@carga.local`, rGuardia);
     await prisma.sitioGuardia.create({
       data: {
+        empresaId: 1,
         sitioId: sitios[(i - 1) % sitios.length],
         usuarioId: g.id,
         turnoId: turno.id,

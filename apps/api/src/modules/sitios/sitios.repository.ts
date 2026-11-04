@@ -14,6 +14,7 @@ import { getPrisma } from '../../core/data/prisma';
 import type { Prisma, TurnoGuardia } from '../../generated/prisma/client';
 import { asignadaA } from '../clientes/clientes.repository';
 import { diasADb, diasDeDb, diasSelect } from '../turnos/dias';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface SitioEstado {
   id: number;
@@ -326,6 +327,7 @@ export class PrismaSitiosRepository extends SitiosRepository {
   async createAsignacion({ turno, desde, hasta, vigenteHasta, dias, ...data }: AsignacionData, hoy: string) {
     const a = await getPrisma().sitioGuardia.create({
       data: {
+        empresaId: empresaActual(),
         ...data,
         ...(dias && diasADb(dias)),
         usuarioId: data.usuarioId ?? null,

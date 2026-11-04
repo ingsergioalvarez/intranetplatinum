@@ -23,6 +23,7 @@ import {
   StorageService,
   authenticate,
   esSuperAdmin,
+  sinFiltroDeEmpresa,
   uploadLogo,
   validate,
   type AppModule,
@@ -99,6 +100,8 @@ export function createPlataformaModule({
   router.use(authenticate, (req, _res, next) =>
     esSuperAdmin(req.user ?? {}) ? next() : next(HttpError.forbidden('Solo el super admin puede usar la plataforma')),
   );
+  // La plataforma opera sobre todas las empresas: sin filtro (C-08). Cada alta indica su empresa de forma explícita.
+  router.use((_req, _res, next) => sinFiltroDeEmpresa(() => next()));
 
   router.get('/empresas', validate({ query: empresaFiltroSchema }), c.list);
   router.post('/empresas', validate({ body: empresaCreateSchema }), c.create);

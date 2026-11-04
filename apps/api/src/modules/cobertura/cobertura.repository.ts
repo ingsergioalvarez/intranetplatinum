@@ -3,6 +3,7 @@ import { dateAFecha, fechaADate, inicioDelDia } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { PrismaAsistenciaRepository } from '../asistencia/asistencia.repository';
 import type { RealesCobertura } from './cobertura.calculo';
+import { empresaActual } from '../../core/empresa/contexto';
 
 /** Datos que el cálculo de cobertura necesita además de los turnos programados. */
 export abstract class CoberturaRepository {
@@ -63,7 +64,7 @@ export class PrismaCoberturaRepository extends CoberturaRepository {
 
   async marcarEnviado(clave: string) {
     try {
-      await getPrisma().avisoEnviado.create({ data: { clave } });
+      await getPrisma().avisoEnviado.create({ data: { empresaId: empresaActual(), clave } });
       return true;
     } catch {
       // Ya existía: el aviso se envió antes.

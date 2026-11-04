@@ -2,6 +2,7 @@ import { horaSalida, type DiasTurno, type TurnoCatalogo, type TurnoData } from '
 import { fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { diasADb, diasDeDb, diasSelect, type DiasDb } from './dias';
+import { empresaActual } from '../../core/empresa/contexto';
 
 /** Asignación que usa un turno (para copiarle el horario nuevo y avisar a sus guardias). */
 export interface UsoDelTurno {
@@ -114,7 +115,7 @@ export class PrismaTurnosRepository extends TurnosRepository {
 
   async crear({ dias, ...data }: TurnoData) {
     const { id } = await getPrisma().turno.create({
-      data: { ...data, ...diasADb(dias), diasTipo: diasADb(dias).diasTipo! },
+      data: { empresaId: empresaActual(), ...data, ...diasADb(dias), diasTipo: diasADb(dias).diasTipo! },
       select: { id: true },
     });
     return id;

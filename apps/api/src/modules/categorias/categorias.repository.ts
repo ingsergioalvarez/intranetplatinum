@@ -1,5 +1,6 @@
 import type { Categoria } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface CategoriaCreateData {
   nombre: string;
@@ -46,7 +47,7 @@ export class PrismaCategoriasRepository extends CategoriasRepository {
 
   crear({ nombre, icono, orden, padreId }: CategoriaCreateData) {
     return getPrisma().categoriaReporte.create({
-      data: { nombre, orden, icono: icono ?? null, padreId: padreId ?? null },
+      data: { empresaId: empresaActual(), nombre, orden, icono: icono ?? null, padreId: padreId ?? null },
       select,
     });
   }

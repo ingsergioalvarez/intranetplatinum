@@ -96,7 +96,21 @@ La columna "Decisión" la completa el usuario.
 - El alcance exacto del módulo `admin` (borrado definitivo).
 - Qué parte del código de `asistencia` es núcleo y cuál es opcional; se define al empezar C-12.
 
-## 6. Decisiones pendientes del usuario
+## 6. Decisiones del usuario (DC-015, 2026-11-04)
 
-Pasar por cada fila de las tablas: **núcleo**, **opcional encendido**, **opcional apagado por defecto** o **dejar para después**.
-Nada se borra (DC-009): lo que no se use se apaga.
+Regla: se parte de lo mínimo y se agrega lo que el usuario pida; lo que diga que no, no entra. Nada se borra (DC-009): lo que no se use se apaga.
+
+| Módulo | Estado en Comunicalo |
+|---|---|
+| Núcleo (plataforma y acceso, avisos, biometría y marcación, estructura mínima, administración) | Siempre |
+| Bitácora, Emergencias (SOS) | Encendidos (decisión del usuario) |
+| Turnos y horarios, Reporte de asistencia | Encendidos (primeros agregados) |
+| Ausencias, Horas extra, Cambios de turno, Grupos, Carteras | Apagados, se agregan cuando se pidan |
+| Clientes y portal, Quejas del cliente, Cobertura de relevos | Apagados, se agregan cuando se pidan |
+| Reportes de incidentes (con sus categorías) | Apagado: no se usará |
+
+Una empresa nueva arranca solo con el núcleo.
+
+Los únicos que eran de todo el sistema (nombre de turno, folio de reportes, RFC de clientes, nombre de grupos) ya son por empresa (C-08), así que los módulos de seguridad pueden encenderse en otra empresa sin choques.
+
+**"Apagado"** significa oculto y bloqueado para los usuarios, sin quitar lo que el núcleo necesita por dentro: Clientes (los lugares de trabajo cuelgan de un cliente) y Turnos/Cobertura siguen funcionando por dentro hasta que C-10 y C-12 los desatan. Se define al llegar a C-09.

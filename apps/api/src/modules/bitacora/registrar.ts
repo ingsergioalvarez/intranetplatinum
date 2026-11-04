@@ -1,5 +1,6 @@
 import type { TipoEventoBitacora } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface EventoNuevo {
   /** Guardia (o integrantes de un grupo) a cuya bitácora va el evento. */
@@ -25,6 +26,7 @@ export const bitacoraConPrisma: RegistrarBitacora = async ({ usuarioIds, detalle
   try {
     await getPrisma().eventoBitacora.createMany({
       data: ids.map((usuarioId) => ({
+        empresaId: empresaActual(),
         usuarioId,
         tipo: e.tipo,
         ocurrioEn: e.ocurrioEn ?? new Date(),

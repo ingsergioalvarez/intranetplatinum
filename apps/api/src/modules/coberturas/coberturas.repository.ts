@@ -3,6 +3,7 @@ import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
 import { asignadaA } from '../clientes/clientes.repository';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface SitioCobertura {
   id: number;
@@ -164,7 +165,7 @@ export class PrismaCoberturasRepository extends CoberturasRepository {
 
   async crear({ desde, hasta, ...data }: NuevaCobertura) {
     const r = await getPrisma().cobertura.create({
-      data: { ...data, desde: fechaADate(desde), hasta: fechaADate(hasta) },
+      data: { empresaId: empresaActual(), ...data, desde: fechaADate(desde), hasta: fechaADate(hasta) },
       select,
     });
     return aCobertura(r);

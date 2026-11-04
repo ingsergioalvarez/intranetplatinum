@@ -3,6 +3,7 @@ import { fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
 import { vigenteEn } from '../clientes/clientes.repository';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface GrupoFiltro {
   q?: string;
@@ -80,7 +81,11 @@ export class PrismaGruposRepository extends GruposRepository {
   async crear(data: GrupoData, propietarioId: number | null) {
     return (
       await getPrisma().grupoGuardias.create({
-        data: { ...data, ...(propietarioId && { propietario: { connect: { id: propietarioId } } }) },
+        data: {
+          ...data,
+          empresa: { connect: { id: empresaActual() } },
+          ...(propietarioId && { propietario: { connect: { id: propietarioId } } }),
+        },
         select: { id: true },
       })
     ).id;
@@ -110,7 +115,7 @@ export class PrismaGruposRepository extends GruposRepository {
     await prisma.$transaction([
       prisma.grupoIntegrante.deleteMany({ where: { grupoId: id, usuarioId: { notIn: usuarioIds } } }),
       prisma.grupoIntegrante.createMany({
-        data: usuarioIds.map((usuarioId) => ({ grupoId: id, usuarioId })),
+        data: usuarioIds.map((usuarioId) => ({ empresaId: empresaActual(), grupoId: id, usuarioId })),
         skipDuplicates: true,
       }),
     ]);

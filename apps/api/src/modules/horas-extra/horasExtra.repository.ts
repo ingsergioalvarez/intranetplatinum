@@ -3,6 +3,7 @@ import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';
 import type { Prisma } from '../../generated/prisma/client';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface Persona {
   id: number;
@@ -224,6 +225,7 @@ export class PrismaHorasExtraRepository extends HorasExtraRepository {
   async crear(d: NuevaHoraExtra) {
     const r = await getPrisma().horaExtra.create({
       data: {
+        empresaId: empresaActual(),
         usuarioId: d.usuarioId,
         sitioId: d.sitioId,
         entradaId: d.entradaId,

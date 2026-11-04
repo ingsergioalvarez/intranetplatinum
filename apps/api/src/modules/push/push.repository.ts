@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { getPrisma } from '../../core/data/prisma';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface SuscripcionRow {
   id: number;
@@ -38,7 +39,7 @@ export class PrismaPushRepository extends PushRepository {
     };
     await getPrisma().suscripcionPush.upsert({
       where: { endpointHash: hashEndpoint(s.endpoint) },
-      create: { endpointHash: hashEndpoint(s.endpoint), ...datos },
+      create: { empresaId: empresaActual(), endpointHash: hashEndpoint(s.endpoint), ...datos },
       update: datos,
     });
   }

@@ -13,6 +13,8 @@ export interface AuthUser {
   esSuperAdmin?: boolean;
   /** Admin dueño de este usuario (A-65); para un supervisor, el admin cuya cartera ve. */
   propietarioId?: number | null;
+  /** Empresa a la que pertenece (C-08). Todo lo que haga se limita a ella. */
+  empresaId?: number | null;
 }
 
 export interface ValidatedRequestData {

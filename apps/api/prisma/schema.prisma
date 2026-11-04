@@ -66,8 +66,8 @@ model Usuario {
   reportesClienteHechos ReporteCliente[]    @relation("ReporteClienteDe")
   reportesClienteSobreMi ReporteCliente[]   @relation("ReporteClienteSobre")
   /// Empresa a la que pertenece (C-07). null = de la plataforma (super admin sin empresa).
-  empresaId            Int?                 @map("empresa_id")
-  empresa              Empresa?             @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  empresaId            Int                  @map("empresa_id")
+  empresa              Empresa              @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   passwordHash         String               @map("password_hash") @db.VarChar(255)
   rolId                Int                  @map("rol_id")
   // Usuario de rol cliente: a qué cliente pertenece (portal F5-01).
@@ -171,6 +171,42 @@ model Empresa {
   usuarios       Usuario[]
   modulos        EmpresaModulo[]
 
+  auditorias            Auditoria[]
+  clientes              Cliente[]
+  clienteContactos      ClienteContacto[]
+  sitios                Sitio[]
+  sitioGuardias         SitioGuardia[]
+  grupoGuardiass        GrupoGuardias[]
+  grupoIntegrantes      GrupoIntegrante[]
+  categoriaReportes     CategoriaReporte[]
+  folioReportes         FolioReporte[]
+  reportes              Reporte[]
+  reporteSeguimientos   ReporteSeguimiento[]
+  reporteEvidencias     ReporteEvidencia[]
+  reporteClientes       ReporteCliente[]
+  notificacions         Notificacion[]
+  clienteReglaAvisos    ClienteReglaAviso[]
+  avisos                Aviso[]
+  suscripcionPushs      SuscripcionPush[]
+  marcacions            Marcacion[]
+  rostroGuardias        RostroGuardia[]
+  incidenciaRostros     IncidenciaRostro[]
+  turnos                Turno[]
+  eventoBitacoras       EventoBitacora[]
+  comentarioBitacoras   ComentarioBitacora[]
+  turnoDias             TurnoDia[]
+  coberturas            Cobertura[]
+  avisoEnviados         AvisoEnviado[]
+  informeAsistencias    InformeAsistencia[]
+  cambioTurnos          CambioTurno[]
+  pausaTurnos           PausaTurno[]
+  casoCoberturas        CasoCobertura[]
+  horaExtras            HoraExtra[]
+  medidaDisciplinarias  MedidaDisciplinaria[]
+  dispositivoUsuarios   DispositivoUsuario[]
+  solicitudCoberturas   SolicitudCobertura[]
+  ausencias             Ausencia[]
+  emergencias           Emergencia[]
   @@index([activa])
   @@map("empresas")
 }
@@ -235,10 +271,13 @@ model Auditoria {
   fecha     DateTime @default(now())
   usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
+  empresaId         Int?    @map("empresa_id")
+  empresa           Empresa? @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, fecha])
   @@index([entidad, entidadId])
   @@index([accion, fecha])
   @@index([fecha])
+  @@index([empresaId])
   @@map("auditoria")
 }
 
@@ -255,7 +294,7 @@ model Cliente {
   id              Int                 @id @default(autoincrement())
   razonSocial     String              @map("razon_social") @db.VarChar(200)
   nombreComercial String              @map("nombre_comercial") @db.VarChar(150)
-  rfc             String?             @unique @db.VarChar(13)
+  rfc             String?             @db.VarChar(13)
   giro            String?             @db.VarChar(100)
   direccionFiscal String?             @map("direccion_fiscal") @db.VarChar(300)
   telefono        String?             @db.VarChar(30)
@@ -279,9 +318,13 @@ model Cliente {
   reportesCliente ReporteCliente[]
   reglasAviso     ClienteReglaAviso[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([deletedAt, estatus])
   @@index([nombreComercial])
   @@index([propietarioId])
+  @@unique([empresaId, rfc])
+  @@index([empresaId])
   @@map("clientes")
 }
 
@@ -304,7 +347,10 @@ model ClienteContacto {
   cliente              Cliente        @relation(fields: [clienteId], references: [id])
   notificaciones       Notificacion[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([clienteId, deletedAt])
+  @@index([empresaId])
   @@map("cliente_contactos")
 }
 
@@ -341,8 +387,11 @@ model Sitio {
   horasExtra     HoraExtra[]
   casosCobertura CasoCobertura[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([clienteId, deletedAt])
   @@index([supervisorId])
+  @@index([empresaId])
   @@map("sitios")
 }
 
@@ -394,17 +443,20 @@ model SitioGuardia {
   grupo         GrupoGuardias? @relation(fields: [grupoId], references: [id])
   turnoCatalogo Turno?         @relation(fields: [turnoId], references: [id])
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([sitioId, vigenteHasta])
   @@index([usuarioId, vigenteHasta])
   @@index([grupoId, vigenteHasta])
   @@index([turnoId])
+  @@index([empresaId])
   @@map("sitio_guardia")
 }
 
 /// Grupo de guardias (cuadrilla, turno, eventos…). Un guardia puede estar en varios.
 model GrupoGuardias {
   id           Int               @id @default(autoincrement())
-  nombre       String            @unique @db.VarChar(80)
+  nombre       String            @db.VarChar(80)
   descripcion  String?           @db.VarChar(255)
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
@@ -415,7 +467,11 @@ model GrupoGuardias {
   integrantes  GrupoIntegrante[]
   asignaciones SitioGuardia[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([propietarioId])
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
   @@map("grupos_guardias")
 }
 
@@ -426,8 +482,11 @@ model GrupoIntegrante {
   grupo     GrupoGuardias @relation(fields: [grupoId], references: [id], onDelete: Cascade)
   usuario   Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@id([grupoId, usuarioId])
   @@index([usuarioId])
+  @@index([empresaId])
   @@map("grupo_integrantes")
 }
 
@@ -450,7 +509,10 @@ model CategoriaReporte {
   hijas     CategoriaReporte[] @relation("CategoriaHijas")
   reportes  Reporte[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([padreId, activo])
+  @@index([empresaId])
   @@map("categorias_reporte")
 }
 
@@ -471,15 +533,19 @@ enum EstatusReporte {
 
 /// Consecutivo de folios por año: PLT-AAAA-NNNNNN.
 model FolioReporte {
-  anio   Int @id
+  anio   Int
   ultimo Int @default(0)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  @@id([empresaId, anio])
+  @@index([empresaId])
   @@map("folios_reporte")
 }
 
 model Reporte {
   id               Int                  @id @default(autoincrement())
-  folio            String               @unique @db.VarChar(20)
+  folio            String               @db.VarChar(20)
   sitioId          Int                  @map("sitio_id")
   // Copia del cliente del sitio al crear (filtros y notificaciones sin join).
   clienteId        Int                  @map("cliente_id")
@@ -506,11 +572,15 @@ model Reporte {
   notificaciones   Notificacion[]
   avisos           Aviso[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([estatus, createdAt])
   @@index([clienteId, createdAt])
   @@index([sitioId, createdAt])
   @@index([categoriaId])
   @@index([creadoPorId, createdAt])
+  @@unique([empresaId, folio])
+  @@index([empresaId])
   @@map("reportes")
 }
 
@@ -526,7 +596,10 @@ model ReporteSeguimiento {
   usuario         Usuario            @relation(fields: [usuarioId], references: [id])
   evidencias      ReporteEvidencia[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([reporteId, createdAt])
+  @@index([empresaId])
   @@map("reporte_seguimientos")
 }
 
@@ -546,8 +619,11 @@ model ReporteEvidencia {
   seguimiento   ReporteSeguimiento? @relation(fields: [seguimientoId], references: [id])
   subidaPor     Usuario             @relation(fields: [subidaPorId], references: [id])
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([reporteId])
   @@index([seguimientoId])
+  @@index([empresaId])
   @@map("reporte_evidencias")
 }
 
@@ -588,9 +664,12 @@ model ReporteCliente {
   guardia     Usuario?              @relation("ReporteClienteSobre", fields: [guardiaId], references: [id], onDelete: SetNull)
   creadoPor   Usuario               @relation("ReporteClienteDe", fields: [creadoPorId], references: [id])
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([clienteId, estatus, createdAt])
   @@index([sitioId, estatus])
   @@index([creadoPorId])
+  @@index([empresaId])
   @@map("reportes_cliente")
 }
 
@@ -618,8 +697,11 @@ model Notificacion {
   reporte    Reporte            @relation(fields: [reporteId], references: [id])
   contacto   ClienteContacto    @relation(fields: [contactoId], references: [id])
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([reporteId])
   @@index([estado, createdAt])
+  @@index([empresaId])
   @@map("notificaciones")
 }
 
@@ -640,7 +722,10 @@ model ClienteReglaAviso {
   destino   DestinoAviso
   cliente   Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@id([clienteId, prioridad])
+  @@index([empresaId])
   @@map("cliente_reglas_aviso")
 }
 
@@ -694,8 +779,11 @@ model Aviso {
   usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   reporte   Reporte?  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, leidoEn, createdAt])
   @@index([entidad, entidadId])
+  @@index([empresaId])
   @@map("avisos")
 }
 
@@ -712,7 +800,10 @@ model SuscripcionPush {
   createdAt    DateTime @default(now()) @map("created_at")
   usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId])
+  @@index([empresaId])
   @@map("suscripciones_push")
 }
 
@@ -774,9 +865,12 @@ model Marcacion {
   horaExtra         HoraExtra?
   casoCobertura     CasoCobertura?
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, registradaEn])
   @@index([entradaId])
   @@index([sitioId, registradaEn])
+  @@index([empresaId])
   @@map("marcaciones")
 }
 
@@ -814,10 +908,13 @@ model RostroGuardia {
   revisadoPor     Usuario?     @relation("RostroRevisadoPor", fields: [revisadoPorId], references: [id], onDelete: SetNull)
   marcaciones     Marcacion[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, reemplazadoEn])
   @@index([estado, reemplazadoEn])
   @@index([registradoPorId])
   @@index([revisadoPorId])
+  @@index([empresaId])
   @@map("rostros_guardia")
 }
 
@@ -853,11 +950,14 @@ model IncidenciaRostro {
   sitio         Sitio?                @relation(fields: [sitioId], references: [id], onDelete: SetNull)
   bitacora      EventoBitacora[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([revisadaEn, createdAt])
   @@index([usuarioId, createdAt])
   @@index([rostroDeId])
   @@index([revisadaPorId])
   @@index([sitioId])
+  @@index([empresaId])
   @@map("incidencias_rostro")
 }
 
@@ -870,7 +970,7 @@ enum ConclusionIncidencia {
 /// desde la hora de entrada. Se asigna a guardias o grupos en cada sitio.
 model Turno {
   id           Int            @id @default(autoincrement())
-  nombre       String         @unique @db.VarChar(80)
+  nombre       String         @db.VarChar(80)
   /// Horas de trabajo (1 a 24) desde la hora de entrada.
   horas        Int
   horaEntrada  String         @map("hora_entrada") @db.Char(5)
@@ -885,6 +985,10 @@ model Turno {
   updatedAt    DateTime       @updatedAt @map("updated_at")
   asignaciones SitioGuardia[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
   @@map("turnos")
 }
 
@@ -955,6 +1059,8 @@ model EventoBitacora {
   sitio            Sitio?               @relation(fields: [sitioId], references: [id], onDelete: SetNull)
   comentarios      ComentarioBitacora[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, ocurrioEn])
   @@index([actorId])
   @@index([justificadoPorId])
@@ -962,6 +1068,7 @@ model EventoBitacora {
   @@index([marcacionId])
   @@index([incidenciaId])
   @@index([sitioId])
+  @@index([empresaId])
   @@map("bitacora_eventos")
 }
 
@@ -974,8 +1081,11 @@ model ComentarioBitacora {
   evento    EventoBitacora @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   autor     Usuario?       @relation(fields: [autorId], references: [id], onDelete: SetNull)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([eventoId])
   @@index([autorId])
+  @@index([empresaId])
   @@map("bitacora_comentarios")
 }
 
@@ -999,9 +1109,12 @@ model TurnoDia {
   sitio             Sitio      @relation(fields: [sitioId], references: [id], onDelete: Cascade)
   entrada           Marcacion? @relation(fields: [entradaId], references: [id], onDelete: SetNull)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@unique([usuarioId, programadaEntrada])
   @@index([sitioId])
   @@index([entradaId])
+  @@index([empresaId])
   @@map("turnos_dia")
 }
 
@@ -1029,10 +1142,13 @@ model Cobertura {
   sitio         Sitio         @relation(fields: [sitioId], references: [id], onDelete: Cascade)
   cambios       CambioTurno[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, desde])
   @@index([sitioId, desde])
   @@index([cubreAId])
   @@index([creadaPorId])
+  @@index([empresaId])
   @@map("coberturas")
 }
 
@@ -1042,6 +1158,9 @@ model AvisoEnviado {
   clave     String   @id @db.VarChar(100)
   createdAt DateTime @default(now()) @map("created_at")
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  @@index([empresaId])
   @@map("avisos_enviados")
 }
 
@@ -1082,12 +1201,15 @@ model InformeAsistencia {
   reemplaza      InformeAsistencia?    @relation("InformeReemplaza", fields: [reemplazaId], references: [id], onDelete: SetNull)
   reemplazadoPor InformeAsistencia[]   @relation("InformeReemplaza")
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([tipo, usuarioId, desde, hasta])
   @@index([huella])
   @@index([createdAt])
   @@index([sitioId])
   @@index([generadoPorId])
   @@index([reemplazaId])
+  @@index([empresaId])
   @@map("informes_asistencia")
 }
 
@@ -1137,6 +1259,8 @@ model CambioTurno {
   cobertura      Cobertura?        @relation(fields: [coberturaId], references: [id], onDelete: SetNull)
   pausas         PausaTurno[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, fecha])
   @@index([estado, fecha])
   @@index([sitioId])
@@ -1144,6 +1268,7 @@ model CambioTurno {
   @@index([cubreId])
   @@index([resueltoPorId])
   @@index([coberturaId])
+  @@index([empresaId])
   @@map("cambios_turno")
 }
 
@@ -1159,9 +1284,12 @@ model PausaTurno {
   cambio    CambioTurno?   @relation(fields: [cambioId], references: [id], onDelete: Cascade)
   caso      CasoCobertura? @relation(fields: [casoId], references: [id], onDelete: Cascade)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@unique([usuarioId, fecha])
   @@index([cambioId])
   @@index([casoId])
+  @@index([empresaId])
   @@map("pausas_turno")
 }
 
@@ -1221,9 +1349,12 @@ model CasoCobertura {
   entrada            Marcacion             @relation(fields: [entradaId], references: [id], onDelete: Cascade)
   pausas             PausaTurno[]
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([guardiaId])
   @@index([sitioId])
   @@index([estado])
+  @@index([empresaId])
   @@map("casos_cobertura")
 }
 
@@ -1276,10 +1407,13 @@ model HoraExtra {
   sitio          Sitio           @relation(fields: [sitioId], references: [id], onDelete: Cascade)
   entrada        Marcacion?      @relation(fields: [entradaId], references: [id], onDelete: SetNull)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, fecha])
   @@index([sitioId, fecha])
   @@index([estado])
   @@index([resueltoPorId])
+  @@index([empresaId])
   @@map("horas_extra")
 }
 
@@ -1302,8 +1436,11 @@ model MedidaDisciplinaria {
   usuario     Usuario  @relation("MedidaDe", fields: [usuarioId], references: [id], onDelete: Cascade)
   aplicadaPor Usuario? @relation("MedidaAplico", fields: [aplicadaPorId], references: [id], onDelete: SetNull)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, createdAt])
   @@index([aplicadaPorId])
+  @@index([empresaId])
   @@map("medidas_disciplinarias")
 }
 
@@ -1322,7 +1459,10 @@ model DispositivoUsuario {
   createdAt       DateTime  @default(now()) @map("created_at")
   usuario         Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, revocadoEn])
+  @@index([empresaId])
   @@map("dispositivos_usuario")
 }
 
@@ -1351,10 +1491,13 @@ model SolicitudCobertura {
   solicitante   Usuario   @relation("SolicitudDe", fields: [solicitanteId], references: [id], onDelete: Cascade)
   guardia       Usuario?  @relation("SolicitudGuardia", fields: [guardiaId], references: [id], onDelete: SetNull)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([estado, createdAt])
   @@index([solicitanteId])
   @@index([sitioId, estado])
   @@index([guardiaId])
+  @@index([empresaId])
   @@map("solicitudes_cobertura")
 }
 
@@ -1384,9 +1527,12 @@ model Ausencia {
   usuario            Usuario   @relation("AusenciaDe", fields: [usuarioId], references: [id], onDelete: Cascade)
   solicitante        Usuario   @relation("AusenciaPidio", fields: [solicitanteId], references: [id], onDelete: Cascade)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([usuarioId, estado, desde])
   @@index([estado, createdAt])
   @@index([solicitanteId])
+  @@index([empresaId])
   @@map("ausencias")
 }
 
@@ -1420,7 +1566,10 @@ model Emergencia {
   usuario      Usuario   @relation("EmergenciaDe", fields: [usuarioId], references: [id], onDelete: Cascade)
   sitio        Sitio?    @relation(fields: [sitioId], references: [id], onDelete: SetNull)
 
+  empresaId         Int     @map("empresa_id")
+  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   @@index([estado, createdAt])
   @@index([usuarioId, createdAt])
+  @@index([empresaId])
   @@map("emergencias")
 }

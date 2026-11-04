@@ -2,6 +2,7 @@ import type { EstadoSolicitud, SolicitudCobertura } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { adminsDe, type ContextoDueno } from '../avisos/duenos';
+import { empresaActual } from '../../core/empresa/contexto';
 
 export interface NuevaSolicitud {
   sitioId: number;
@@ -88,7 +89,7 @@ const aRow = ({ sitio, ...r }: Fila): SolicitudRow => ({
 export class PrismaSolicitudesRepository extends SolicitudesRepository {
   async crear(d: NuevaSolicitud) {
     const r = await getPrisma().solicitudCobertura.create({
-      data: { ...d, fecha: fechaADate(d.fecha), motivo: d.motivo.slice(0, 255) },
+      data: { empresaId: empresaActual(), ...d, fecha: fechaADate(d.fecha), motivo: d.motivo.slice(0, 255) },
       select,
     });
     return aRow(r);

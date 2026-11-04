@@ -22,12 +22,14 @@ import {
   PrismaAuditLogger,
   StorageService,
   authenticate,
+  paraCadaEmpresa,
   requirePermission,
   requireRoles,
   uploadImages,
   validate,
   type AppModule,
 } from '../../core';
+import { getPrisma } from '../../core/data/prisma';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { avisarConPrisma } from '../avisos/avisar';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
@@ -196,7 +198,8 @@ export const asistenciaModule = createAsistenciaModule({ extras: crearServicioHo
 /**
  * Revisa cada minuto los turnos que empezaron sin entrada (DA-45): avisos y faltas; y las comidas
  * (DA-47). Una revisión no
- * empieza si la anterior sigue corriendo.
+ * empieza si la anterior sigue corriendo. Sin petición no hay empresa de la sesión: se recorre cada empresa activa
+ * por separado y, si una falla, las demás siguen (C-08).
  */
 export function iniciarVigilanciaTurnos() {
   const vigilancia = new VigilanciaTurnos(new PrismaVigilanciaRepository(), avisarConPrisma);
@@ -209,19 +212,29 @@ export function iniciarVigilanciaTurnos() {
   const solicitudes = crearServicioSolicitudes();
   const emergencias = crearServicioEmergencias();
   let corriendo = false;
+  const revisarEmpresa = async () => {
+    await vigilancia.revisar();
+    await comidas.revisar();
+    await horasExtra.revisar();
+    await huecos.revisar();
+    await casos.revisar();
+    await sitioSolo.revisar();
+    await incidencias.revisar();
+    await solicitudes.recordar();
+    await emergencias.escalar();
+  };
   const revisar = async () => {
     if (corriendo) return;
     corriendo = true;
     try {
-      await vigilancia.revisar();
-      await comidas.revisar();
-      await horasExtra.revisar();
-      await huecos.revisar();
-      await casos.revisar();
-      await sitioSolo.revisar();
-      await incidencias.revisar();
-      await solicitudes.recordar();
-      await emergencias.escalar();
+      const empresas = await getPrisma().empresa.findMany({ where: { activa: true }, select: { id: true } });
+      const errores = await paraCadaEmpresa(
+        empresas.map((e) => e.id),
+        revisarEmpresa,
+      );
+      for (const { empresaId, error } of errores) {
+        console.error(`[vigilancia] Falló la revisión de turnos (empresa ${empresaId})`, error);
+      }
     } catch (err) {
       console.error('[vigilancia] Falló la revisión de turnos', err);
     } finally {

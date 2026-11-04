@@ -15,6 +15,8 @@ interface AccessTokenPayload {
   sup?: true;
   /** Admin dueño del usuario (A-65). */
   pid?: number;
+  /** Empresa del usuario (C-08). */
+  emp?: number;
 }
 
 export function signAccessToken(user: AuthUser): string {
@@ -28,6 +30,7 @@ export function signAccessToken(user: AuthUser): string {
     ...(user.clienteNombre ? { cnom: user.clienteNombre } : {}),
     ...(user.esSuperAdmin ? { sup: true as const } : {}),
     ...(user.propietarioId ? { pid: user.propietarioId } : {}),
+    ...(user.empresaId ? { emp: user.empresaId } : {}),
   };
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.JWT_ACCESS_EXPIRES as SignOptions['expiresIn'],
@@ -47,5 +50,6 @@ export function verifyAccessToken(token: string): AuthUser {
     clienteNombre: payload.cnom ?? null,
     esSuperAdmin: payload.sup === true,
     propietarioId: payload.pid ?? null,
+    empresaId: payload.emp ?? null,
   };
 }

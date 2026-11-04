@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import { getPrisma } from '../data/prisma';
+import { empresaOpcional, sinFiltroDeEmpresa } from '../empresa/contexto';
 import type { AuthUser } from '../types/auth';
 
 export interface RequestContext {
@@ -17,6 +18,8 @@ export interface AccionCtx extends RequestContext {
 export interface AuditEvent extends RequestContext {
   /** null/undefined = acción del sistema o intento anónimo. */
   usuarioId?: number | null;
+  /** Empresa a la que pertenece el evento; si no se indica se toma la del contexto o la del usuario (C-08). */
+  empresaId?: number | null;
   /** `<modulo>.<accion>`, p. ej. `auth.login`, `usuarios.baja`. */
   accion: string;
   entidad?: string;
@@ -56,10 +59,29 @@ export abstract class AuditLogger {
   protected abstract guardar(evento: AuditEvent): Promise<void>;
 }
 
+/**
+ * Empresa de un evento: la indicada, o la del contexto, o (en eventos de acceso, que ocurren antes de tener
+ * contexto) la de su usuario. Los eventos de plataforma (`plataforma.*`) y los anónimos quedan sin empresa:
+ * solo los ve el super admin.
+ */
+async function empresaDelEvento({ empresaId, usuarioId, accion }: AuditEvent): Promise<number | null> {
+  if (empresaId !== undefined) return empresaId;
+  if (accion.startsWith('plataforma.')) return null;
+  const delContexto = empresaOpcional();
+  if (delContexto !== null || !usuarioId) return delContexto;
+  const prisma = getPrisma();
+  const u = await sinFiltroDeEmpresa(() =>
+    prisma.usuario.findUnique({ where: { id: usuarioId }, select: { empresaId: true } }),
+  );
+  return u?.empresaId ?? null;
+}
+
 export class PrismaAuditLogger extends AuditLogger {
-  protected async guardar({ usuarioId, accion, entidad, entidadId, datos, ip, userAgent }: AuditEvent) {
+  protected async guardar(evento: AuditEvent) {
+    const { usuarioId, accion, entidad, entidadId, datos, ip, userAgent } = evento;
     await getPrisma().auditoria.create({
       data: {
+        empresaId: await empresaDelEvento(evento),
         usuarioId: usuarioId ?? null,
         accion,
         entidad,

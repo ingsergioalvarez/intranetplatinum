@@ -15,6 +15,8 @@ export * from './security/passwords';
 export * from './audit/AuditLogger';
 export * from './audit/cambios';
 export * from './cartera';
+export * from './empresa/contexto';
+export * from './empresa/aislamiento';
 export * from './time/fechas';
 export * from './storage/StorageService';
 export * from './storage/imagenes';
