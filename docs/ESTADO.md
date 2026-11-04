@@ -6,11 +6,11 @@
 **Última actualización:** 2026-11-03
 **Fase actual:** Borrador funcionando. Comunicalo corre en `https://gestion.grupocomunicalo.mx` como copia de Platinum (todavía con su marca y conceptos de seguridad). Aún no hay funcionalidad propia.
 **Última tarea terminada:** C-03 (primera instalación en el servidor) y C-02 (dominio y túnel).
-**Tarea en progreso:** ninguna. C-05 (imagen de marca) terminada en local, a la espera de la revisión visual del usuario; sin desplegar al servidor.
+**Tarea en progreso:** ninguna. C-05 (marca) subida a GitHub pero sin desplegar al servidor. C-06 (mapa de módulos) escrito en [MODULOS.md](MODULOS.md), a la espera de que el usuario decida cada módulo.
 
 ## Siguiente paso
 
-0. Seguir el plan de [PLAN.md](PLAN.md), en orden: revisar C-05 (el nombre "Grupo Comunícalo" del login es provisional), luego C-06 (mapa de módulos), C-07 (plataforma y empresas), C-08 (aislamiento por empresa), C-09 (admin de empresa), C-10 (estructura), C-11 (roles y permisos), C-12 (checador flexible y rostro obligatorio), C-13 (planeador de horarios). Decisiones en DC-006 a DC-009.
+0. Seguir el plan de [PLAN.md](PLAN.md), en orden: decidir módulo por módulo con [MODULOS.md](MODULOS.md) (C-06; el nombre "Grupo Comunícalo" del login es provisional), luego C-07 (plataforma y empresas), C-08 (aislamiento por empresa), C-09 (admin de empresa), C-10 (estructura), C-11 (roles y permisos), C-12 (checador flexible y rostro obligatorio), C-13 (planeador de horarios). Decisiones en DC-006 a DC-009.
 1. El usuario define, poco a poco, lo primero que debe hacer Comunicalo; se agrega al [PLAN](PLAN.md) con su ID antes de implementarlo.
 2. C-04 (respaldos de la base y las fotos de Comunicalo) antes de usarlo con personas reales.
 

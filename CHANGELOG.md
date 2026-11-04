@@ -20,6 +20,8 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 - Imagen de marca, segunda parte (C-05): menú lateral con el ícono y "gestión comunícalo."; íconos PNG de la app instalada generados desde el SVG (192, 512, Android maskable, iPhone y el de notificaciones en blanco); nombre de la app instalada "Gestión Comunicalo" y color de barra `#0b1528`; título por defecto de las notificaciones. Constante `MARCA` en `@platinum/shared` con el nombre del producto para textos planos.
 
+- [docs/MODULOS.md](docs/MODULOS.md) (C-06): mapa de módulos y dependencias del backend (27) y del frontend (21), hallazgos que condicionan el diseño, catálogo propuesto (núcleo, generales y de seguridad), cadena de dependencias y propuesta de mecanismo para C-07. Solo lectura, sin cambios de código.
+
 #### Cambiado
 
 - Paleta de toda la app apagada: el color principal (botones, ítem activo del menú, enlaces) pasa del azul eléctrico al azul del resplandor del login (`#0b3263`), con tonos intermedios y claros armonizados. El azul eléctrico queda solo en el ícono.
