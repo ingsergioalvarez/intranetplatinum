@@ -136,7 +136,7 @@ export function createCambiosModule({
   router.post('/', validate({ body: nuevoCambioTurnoSchema }), c.crear);
   router.post('/:id/resolver', validate({ params: idParamSchema, body: resolverCambioTurnoSchema }), c.resolver);
   router.post('/:id/cancelar', validate({ params: idParamSchema }), c.cancelar);
-  return { name: 'cambios-turno', basePath: 'cambios-turno', router };
+  return { name: 'cambios-turno', basePath: 'cambios-turno', router, modulo: 'cambios_turno' };
 }
 
 export const cambiosModule = createCambiosModule();

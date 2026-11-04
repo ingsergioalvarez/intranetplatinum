@@ -5,6 +5,24 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-04 (2) — Módulos y marca aplicados a la app (C-09)
+
+#### Añadido
+
+- **Guardia de módulo** en la API: si la empresa tiene apagado Ausencias, Horas extra, Cambios de turno, Reporte de asistencia, Emergencias, Quejas, Carteras o Bitácora, sus rutas responden 403 `MODULO_APAGADO` (`AppModule.modulo`, `guardiaDeModulo`; el estado se recuerda 10 s y se olvida al cambiar los interruptores).
+- **`GET /api/mi-empresa`**: marca (colores, ícono, nombre) y módulos de la empresa en la que trabaja la sesión.
+- **Super admin elige empresa:** cabecera `X-Empresa-Id` (solo la respeta si la sesión es de super admin) y `POST /api/plataforma/empresas/:id/entrar`, que queda en la auditoría (`plataforma.entrar_empresa`). Selector "Trabajando en" en el menú.
+- **Web:** la marca de la empresa se aplica a toda la app (colores) y su tarjeta aparece bajo nuestra marca; el menú, las rutas (`ProtectedRoute modulo`), los botones del portal de Asistencia, el tablero de Inicio, la ficha del guardia, Mis sitios, el Checador (horas extra) y el botón SOS aparecen solo si el módulo está encendido.
+- Verificación de extremo a extremo ampliada a 53 comprobaciones (módulos y empresa elegida). 643 pruebas.
+
+- **Restablecer de fábrica** (C-16) en Plataforma > Empresas > Módulos: deja los interruptores como arrancan (la empresa 1, con Bitácora, SOS, Turnos y Reporte de asistencia; cualquier otra, solo el núcleo). Se revisa y se guarda con "Guardar cambios". El texto de la pestaña ya no dice que los interruptores solo se registran.
+
+#### Notas
+
+- Por DC-015, **Turnos, Grupos, Cobertura, Reportes y Clientes** quedan solo ocultos en pantalla; su API sigue abierta porque asignar horarios y lugares los usa por dentro (se desatan en C-10 y C-12).
+- El rol "administrador de empresa" ya era el rol `admin`: ve solo los datos de su empresa y no tiene Plataforma.
+- Sin desplegar.
+
 ### Sesión 2026-11-04 — Aislamiento por empresa (C-08) y módulos iniciales (DC-015)
 
 #### Añadido

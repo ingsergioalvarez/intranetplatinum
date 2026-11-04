@@ -190,3 +190,10 @@ export interface EmpresaAdministrador {
 export function mensajesProblemasModulos(estado: Partial<EstadoModulos> & Record<string, boolean | undefined>): string[] {
   return problemasDeModulos(estado).map((p) => `"${p.modulo}" necesita: ${p.requiere.join(', ')}`);
 }
+
+/** La empresa en la que está trabajando la sesión: su marca y qué módulos tiene encendidos (C-09). */
+export interface ContextoEmpresa {
+  empresa: Pick<Empresa, 'id' | 'nombre' | 'zonaHoraria' | 'colorModo' | 'colorPrincipal' | 'colorAcento' | 'logoUrl'>;
+  /** Módulos opcionales: clave → encendido. Los siempre incluidos no aparecen porque nunca se apagan. */
+  modulos: EstadoModulos;
+}

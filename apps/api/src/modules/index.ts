@@ -20,6 +20,7 @@ import { solicitudesCoberturaModule } from './solicitudes-cobertura';
 import { ausenciasModule } from './ausencias';
 import { carterasModule } from './carteras';
 import { emergenciasModule } from './emergencias';
+import { miEmpresaModule } from './mi-empresa';
 import { plataformaModule } from './plataforma';
 import { pushModule } from './push';
 import { reportesModule } from './reportes';
@@ -57,5 +58,6 @@ export const modules: AppModule[] = [
   carterasModule,
   horasExtraModule,
   adminModule,
+  miEmpresaModule,
   plataformaModule,
 ];

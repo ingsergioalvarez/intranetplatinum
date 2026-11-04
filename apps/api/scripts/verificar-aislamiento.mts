@@ -229,6 +229,28 @@ async function main() {
     const ve1 = await conEmpresa(E1, () => prisma.aviso.findMany({ where: { mensaje: { startsWith: 'desde la tarea' } } }));
     check('la empresa 1 solo ve su aviso', ve1.length === 1 && ve1[0].empresaId === E1, ve1.length);
 
+    console.log('\n9. Módulos encendidos y empresa elegida por el super admin (C-09)');
+    const { lectorModulos } = await imp('core/modulos/guardia.ts');
+    // La empresa 1 tiene solo Ausencias encendido; la 2 (Acme) no tiene ninguno.
+    await sinFiltroDeEmpresa(() => prisma.empresaModulo.deleteMany({}));
+    await sinFiltroDeEmpresa(() => prisma.empresaModulo.create({ data: { empresaId: E1, modulo: 'ausencias', encendido: true } }));
+    lectorModulos.invalidar();
+    check('módulo encendido: la empresa 1 entra a /ausencias', (await como(T1).get('/ausencias')).status !== 403);
+    const apagado = await como(T2).get('/ausencias');
+    check('módulo apagado: la empresa 2 recibe 403 MODULO_APAGADO', apagado.status === 403 && apagado.body?.error?.code === 'MODULO_APAGADO', apagado.body);
+    check('lo que es núcleo no se bloquea (usuarios de la empresa 2)', (await como(T2).get('/usuarios')).status === 200);
+    const ctx1 = await como(T1).get('/mi-empresa');
+    const ctx2 = await como(T2).get('/mi-empresa');
+    check('/mi-empresa trae la empresa y sus módulos', ctx1.body?.data?.empresa?.id === E1 && ctx1.body?.data?.modulos?.ausencias === true && ctx2.body?.data?.empresa?.id === E2 && ctx2.body?.data?.modulos?.ausencias === false, JSON.stringify({ e1: ctx1.body?.data?.empresa?.id, a1: ctx1.body?.data?.modulos?.ausencias, n2: ctx2.body?.data?.empresa?.nombre, a2: ctx2.body?.data?.modulos?.ausencias, st: ctx2.status }));
+    const conCabecera = (t: string, id: number) => api.get('/api/mi-empresa').set('Authorization', `Bearer ${t}`).set('X-Empresa-Id', String(id));
+    check('el super admin sin elegir trabaja en su empresa', (await como(TS).get('/mi-empresa')).body?.data?.empresa?.id === E1);
+    check('el super admin elige la empresa 2 con la cabecera', (await conCabecera(TS, E2)).body?.data?.empresa?.id === E2);
+    check('el super admin en la empresa 2 ve los usuarios de la 2, no los de la 1', (await api.get('/api/usuarios').set('Authorization', `Bearer ${TS}`).set('X-Empresa-Id', String(E2))).body?.data?.items?.map((u: any) => u.email).filter((e: string) => ['admin1@x.mx', 'super@x.mx', 'sup1@x.mx'].includes(e)).length === 0, 'usuarios');
+    check('un admin común no puede elegir otra empresa: la cabecera se ignora', (await conCabecera(T1, E2)).body?.data?.empresa?.id === E1);
+    const entrar = await como(TS).post(`/plataforma/empresas/${E2}/entrar`);
+    check('entrar a una empresa queda en la auditoría', entrar.status === 200 && (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: 'plataforma.entrar_empresa', entidadId: String(E2) } }))) === 1, entrar.body);
+    check('un admin de empresa no puede usar /entrar (403)', (await como(T1).post(`/plataforma/empresas/${E2}/entrar`)).status === 403);
+
     await disconnectPrisma();
     console.log(`\n${fallos === 0 ? 'TODO BIEN' : 'HAY FALLOS'}: ${total - fallos} de ${total} comprobaciones correctas.`);
   } finally {

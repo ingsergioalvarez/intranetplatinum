@@ -58,7 +58,7 @@ export function createCarterasModule({
   router.get('/', c.resumen);
   router.get('/:propietario', validate({ params: propietarioParam }), c.arbol);
   router.post('/transferir', validate({ body: transferirCarteraSchema }), c.transferir);
-  return { name: 'carteras', basePath: 'carteras', router };
+  return { name: 'carteras', basePath: 'carteras', router, modulo: 'carteras' };
 }
 
 export const carterasModule = createCarterasModule();

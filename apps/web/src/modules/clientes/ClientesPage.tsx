@@ -22,6 +22,7 @@ import {
   Select,
   type Column,
 } from '../../components/ui';
+import { useModulo } from '../../core/empresa/useContextoEmpresa';
 import { carterasService } from '../carteras/carteras.service';
 import { ClienteModal } from './ClienteModal';
 import { EstatusClienteBadge } from './EstatusClienteBadge';
@@ -77,7 +78,8 @@ export function ClientesPage() {
   /** Solo el super admin: los clientes de un admin o los sin asignar (A-65). */
   const [dueno, setDueno] = useState('');
   const esSuper = !!useAuthStore((s) => s.user?.esSuperAdmin);
-  const carteras = useQuery({ queryKey: carterasService.keys.resumen, queryFn: carterasService.resumen, enabled: esSuper });
+  const conCarteras = useModulo('carteras');
+  const carteras = useQuery({ queryKey: carterasService.keys.resumen, queryFn: carterasService.resumen, enabled: esSuper && conCarteras });
   const [page, setPage] = useState(1);
   const [creando, setCreando] = useState(false);
 

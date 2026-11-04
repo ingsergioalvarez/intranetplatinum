@@ -9,6 +9,7 @@ import { asistenciaService } from '../asistencia/asistencia.service';
 import { EstadoJornada } from '../asistencia/EstadoJornada';
 import { formatDiaLargo } from '../asistencia/formato';
 import { Avatar } from '../clientes/AsignarTurnoModal';
+import { useModulo } from '../../core/empresa/useContextoEmpresa';
 import { reportesService } from '../reportes/reportes.service';
 import { TableroPage } from './TableroPage';
 
@@ -26,10 +27,12 @@ export function InicioPage() {
 /** Resumen del portal de clientes: reportes abiertos y asistencia de hoy de sus guardias. */
 function ResumenCliente() {
   const user = useAuthStore((s) => s.user);
+  const conReportes = useModulo('reportes');
   const filtro = { estatus: 'abierto', page: 1, limit: 4 };
   const reportes = useQuery({
     queryKey: reportesService.keys.list(filtro),
     queryFn: () => reportesService.list(filtro),
+    enabled: conReportes,
   });
   const params = { fecha: hoyLocal(), page: 1, limit: 8 };
   const dia = useQuery({
@@ -44,36 +47,38 @@ function ResumenCliente() {
         subtitle={`${user?.clienteNombre ? `Portal de Cliente · ${user.clienteNombre} · ` : ''}${formatDiaLargo(new Date())}`}
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader
-            title={`Reportes abiertos${reportes.data ? ` (${reportes.data.total})` : ''}`}
-            actions={
-              <Link to="/reportes" className="text-sm font-medium text-brand-700">
-                Ver todos
-              </Link>
-            }
-          />
-          {reportes.isPending ? (
-            <div className="flex justify-center py-8 text-brand-600">
-              <Spinner className="size-6" />
-            </div>
-          ) : !reportes.data?.items.length ? (
-            <EmptyState title="Sin reportes abiertos" />
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {reportes.data.items.map((r) => (
-                <li key={r.id}>
-                  <Link to={`/reportes/${r.id}`} className="block px-4 py-3 hover:bg-slate-50">
-                    <p className="truncate font-medium text-slate-900">{r.titulo}</p>
-                    <p className="truncate text-xs text-slate-500">
-                      {r.folio} · {r.sitio.nombre} · {formatFechaHora(r.createdAt)}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        {conReportes && (
+          <Card>
+            <CardHeader
+              title={`Reportes abiertos${reportes.data ? ` (${reportes.data.total})` : ''}`}
+              actions={
+                <Link to="/reportes" className="text-sm font-medium text-brand-700">
+                  Ver todos
+                </Link>
+              }
+            />
+            {reportes.isPending ? (
+              <div className="flex justify-center py-8 text-brand-600">
+                <Spinner className="size-6" />
+              </div>
+            ) : !reportes.data?.items.length ? (
+              <EmptyState title="Sin reportes abiertos" />
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {reportes.data.items.map((r) => (
+                  <li key={r.id}>
+                    <Link to={`/reportes/${r.id}`} className="block px-4 py-3 hover:bg-slate-50">
+                      <p className="truncate font-medium text-slate-900">{r.titulo}</p>
+                      <p className="truncate text-xs text-slate-500">
+                        {r.folio} · {r.sitio.nombre} · {formatFechaHora(r.createdAt)}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
 
         <Card>
           <CardHeader

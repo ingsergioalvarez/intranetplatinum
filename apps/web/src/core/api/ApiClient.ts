@@ -15,6 +15,8 @@ interface RequestOptions {
 export interface ApiClientConfig {
   baseUrl: string;
   getAccessToken: () => string | null;
+  /** Empresa a la que el super admin eligió entrar (C-09); viaja en la cabecera `X-Empresa-Id`. */
+  getEmpresaId?: () => number | null;
   /** Intenta renovar la sesión; devuelve true si lo logró. */
   refreshSession?: () => Promise<boolean>;
   onUnauthorized?: () => void;
@@ -79,6 +81,8 @@ export class ApiClient {
     const headers: Record<string, string> = { Accept: 'application/json' };
     const token = this.config.getAccessToken();
     if (token) headers.Authorization = `Bearer ${token}`;
+    const empresaId = this.config.getEmpresaId?.();
+    if (empresaId) headers['X-Empresa-Id'] = String(empresaId);
 
     let body: BodyInit | undefined;
     if (opts.body instanceof FormData) {

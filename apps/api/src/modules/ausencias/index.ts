@@ -120,7 +120,7 @@ export function createAusenciasModule({
   router.post('/', uploadImages.single('foto'), validate({ body: ausenciaCreateSchema }), c.crear);
   router.post('/:id/resolver', requireRoles(ROLES.ADMIN), validate({ params: idParamSchema, body: resolverAusenciaSchema }), c.resolver);
   router.post('/:id/cancelar', validate({ params: idParamSchema, body: cancelarAusenciaSchema }), c.cancelar);
-  return { name: 'ausencias', basePath: 'ausencias', router };
+  return { name: 'ausencias', basePath: 'ausencias', router, modulo: 'ausencias' };
 }
 
 export const ausenciasModule = createAusenciasModule();

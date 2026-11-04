@@ -1,9 +1,15 @@
 import { Fragment, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Ellipsis, KeyRound, LockKeyhole, LogOut } from 'lucide-react';
-import { ROL_DESCRIPCIONES } from '@platinum/shared';
+import { ROL_DESCRIPCIONES, generarPaleta } from '@platinum/shared';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
+import { useContextoEmpresa, useMarcaEmpresa, useModulos } from '../../core/empresa/useContextoEmpresa';
+import {
+  COLOR_ACENTO_DEFECTO,
+  COLOR_PRINCIPAL_DEFECTO,
+  TarjetaEmpresa,
+} from '../../modules/plataforma/EmpresaAvatar';
 import { Modal, cn } from '../ui';
 import { useSincronizacion } from '../../core/offline/sincronizar';
 import { AvisoPin } from '../../modules/auth/AvisoPin';
@@ -16,11 +22,35 @@ import { Campanita } from './Campanita';
 import { ExigirPush } from './ExigirPush';
 import { useBadgesMenu } from './badgesMenu';
 import { navItems } from './navItems';
+import { SelectorEmpresa } from './SelectorEmpresa';
 
 function useVisibleNav() {
   const user = useAuthStore((s) => s.user);
+  const moduloEncendido = useModulos();
   return navItems.filter(
-    (i) => hasPermission(user, i.permiso) && hasRole(user, i.roles) && (!i.superAdmin || !!user?.esSuperAdmin),
+    (i) =>
+      hasPermission(user, i.permiso) &&
+      hasRole(user, i.roles) &&
+      (!i.superAdmin || !!user?.esSuperAdmin) &&
+      moduloEncendido(i.modulo),
+  );
+}
+
+/** La empresa en la que se trabaja, bajo nuestra marca (siempre fija arriba). */
+function TarjetaDeEmpresa({ compacta }: { compacta?: boolean }) {
+  const { data } = useContextoEmpresa();
+  const e = data?.empresa;
+  if (!e) return null;
+  const propia =
+    e.colorModo !== 'defecto' && e.colorPrincipal ? generarPaleta(e.colorPrincipal, e.colorAcento) : null;
+  return (
+    <TarjetaEmpresa
+      nombre={e.nombre}
+      logoUrl={e.logoUrl}
+      colorPrincipal={propia?.brand['700'] ?? COLOR_PRINCIPAL_DEFECTO}
+      acento={propia?.acento['400'] ?? COLOR_ACENTO_DEFECTO}
+      compacta={compacta}
+    />
   );
 }
 
@@ -29,7 +59,8 @@ function Brand({ className }: { className?: string }) {
     <div className={cn('flex items-center gap-2.5 font-semibold tracking-tight', className)}>
       <img src="/favicon.svg" alt="" className="size-8" />
       <span>
-        <span className="text-platinum-300">gestión</span> <span className="text-acento-400">comunícalo.</span>
+        <span className="text-platinum-300">gestión</span>{' '}
+        <span className="text-acento-400">comunícalo.</span>
       </span>
     </div>
   );
@@ -46,13 +77,19 @@ function Sidebar() {
         <Brand />
         <Campanita />
       </div>
+      <div className="space-y-3 px-3 pb-2">
+        <TarjetaDeEmpresa />
+        <SelectorEmpresa />
+      </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
         {items.map(({ to, label, icon: Icon, seccion }) => {
           const pendientes = badges.get(to) ?? 0;
           return (
             <Fragment key={to}>
               {seccion && (
-                <p className="px-3 pb-1 pt-5 text-xs font-semibold uppercase tracking-wider text-brand-300">{seccion}</p>
+                <p className="px-3 pb-1 pt-5 text-xs font-semibold uppercase tracking-wider text-brand-300">
+                  {seccion}
+                </p>
               )}
               <NavLink
                 to={to}
@@ -60,7 +97,9 @@ function Sidebar() {
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                    isActive ? 'bg-brand-700 text-white' : 'text-brand-100 hover:bg-brand-800 hover:text-white',
+                    isActive
+                      ? 'bg-brand-700 text-white'
+                      : 'text-brand-100 hover:bg-brand-800 hover:text-white',
                   )
                 }
               >
@@ -83,7 +122,10 @@ function Sidebar() {
         <div className="border-t border-brand-800 p-4">
           <p className="truncate text-sm font-medium">{user.nombre}</p>
           <p className="truncate text-xs text-brand-200">{ROL_DESCRIPCIONES[user.rol]}</p>
-          <Link to="/acceso-rapido" className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white">
+          <Link
+            to="/acceso-rapido"
+            className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white"
+          >
             <LockKeyhole className="size-4" /> Acceso rápido (PIN)
           </Link>
           <Link
@@ -109,7 +151,9 @@ function Topbar() {
   return (
     <header className="pt-safe sticky top-0 z-30 bg-brand-900 text-white md:hidden">
       <div className="flex h-14 items-center justify-between px-4">
-        <Brand className="text-base" />
+        <div className="flex min-w-0 items-center gap-2">
+          <Brand className="text-base" />
+        </div>
         {user && (
           <div className="flex items-center gap-1">
             <Campanita />
@@ -136,6 +180,10 @@ function Topbar() {
             </button>
           </div>
         )}
+      </div>
+      <div className="space-y-2 px-4 pb-2.5">
+        <TarjetaDeEmpresa compacta />
+        <SelectorEmpresa />
       </div>
     </header>
   );
@@ -254,6 +302,8 @@ function BottomNav() {
 
 /** Estructura principal: sidebar en escritorio; topbar + navegación inferior en celular. */
 export function AppShell() {
+  useMarcaEmpresa();
+  const conSOS = useModulos()('emergencias');
   // Envía las checadas guardadas sin conexión al abrir la app y al volver la señal (AS2-02).
   const user = useAuthStore((s) => s.user);
   useSincronizacion(user?.rol === 'guardia' ? user.id : undefined);
@@ -275,8 +325,8 @@ export function AppShell() {
       <VentanaTurno />
       <VentanaComida />
       <OfertaPerfil />
-      {user && user.rol !== 'cliente' && <BotonSOS />}
-      {(user?.rol === 'admin' || user?.rol === 'supervisor') && <AlertaEmergencia />}
+      {conSOS && user && user.rol !== 'cliente' && <BotonSOS />}
+      {conSOS && (user?.rol === 'admin' || user?.rol === 'supervisor') && <AlertaEmergencia />}
     </div>
   );
 }

@@ -1,7 +1,24 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRightLeft, CalendarDays, CalendarOff, CalendarRange, HandHelping, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle, Siren } from 'lucide-react';
+import {
+  ArrowRightLeft,
+  CalendarDays,
+  CalendarOff,
+  CalendarRange,
+  HandHelping,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Route,
+  Timer,
+  LogOut,
+  ScanFace,
+  Search,
+  ShieldAlert,
+  Shuffle,
+  Siren,
+} from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -17,6 +34,7 @@ import {
   type Column,
 } from '../../components/ui';
 import { hasPermission, useAuthStore } from '../../core/auth/authStore';
+import { useModulos } from '../../core/empresa/useContextoEmpresa';
 import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { cambiosService } from '../cambios/cambios.service';
@@ -160,6 +178,7 @@ const columns: Column<FilaAsistencia>[] = [
 /** Asistencia del día: una fila por guardia (con jornada o asignado sin marcas). Solo lectura (AS1-07). */
 export function AsistenciaPage() {
   const navigate = useNavigate();
+  const moduloEncendido = useModulos();
   const puedeRevisar = hasPermission(
     useAuthStore((s) => s.user),
     PERMISOS.ASISTENCIA_ROSTROS,
@@ -199,22 +218,24 @@ export function AsistenciaPage() {
         actions={
           puedeRevisar && (
             <div className="flex flex-wrap gap-2">
-              <BotonIncidencias />
+              {moduloEncendido('bitacora') && <BotonIncidencias />}
               <BotonRostrosPendientes />
-              <BotonCambios />
-              <BotonHorasExtra />
-              <BotonCasos />
-              <BotonEmergencias />
-              <BotonSolicitudes />
-              <BotonAusencias />
-              <BotonCalendario />
-              <BotonHorario />
-              <Link
-                to="/asistencia/reportes"
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset hover:bg-slate-50"
-              >
-                <FileText className="size-4" /> Reportes
-              </Link>
+              {moduloEncendido('cambios_turno') && <BotonCambios />}
+              {moduloEncendido('horas_extra') && <BotonHorasExtra />}
+              {moduloEncendido('cobertura') && <BotonCasos />}
+              {moduloEncendido('emergencias') && <BotonEmergencias />}
+              {moduloEncendido('cobertura') && <BotonSolicitudes />}
+              {moduloEncendido('ausencias') && <BotonAusencias />}
+              {moduloEncendido('cobertura') && <BotonCalendario />}
+              {moduloEncendido('turnos') && <BotonHorario />}
+              {moduloEncendido('reporte_asistencia') && (
+                <Link
+                  to="/asistencia/reportes"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset hover:bg-slate-50"
+                >
+                  <FileText className="size-4" /> Reportes
+                </Link>
+              )}
             </div>
           )
         }
@@ -389,7 +410,9 @@ function BotonCasos() {
       )}
     >
       <Route className="size-4" /> Casos de cobertura
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+      {n > 0 && (
+        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
     </Link>
   );
 }
@@ -411,7 +434,9 @@ function BotonEmergencias() {
       )}
     >
       <Siren className="size-4" /> Emergencias
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+      {n > 0 && (
+        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
     </Link>
   );
 }
@@ -434,7 +459,9 @@ function BotonSolicitudes() {
       )}
     >
       <HandHelping className="size-4" /> Solicitudes de cobertura
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+      {n > 0 && (
+        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
     </Link>
   );
 }
@@ -456,7 +483,9 @@ function BotonAusencias() {
       )}
     >
       <CalendarOff className="size-4" /> Ausencias
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+      {n > 0 && (
+        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
     </Link>
   );
 }
@@ -496,7 +525,9 @@ function BotonCalendario() {
       )}
     >
       <CalendarDays className="size-4" /> Calendario
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+      {n > 0 && (
+        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
     </Link>
   );
 }
@@ -518,7 +549,9 @@ function BotonHorasExtra() {
       )}
     >
       <Timer className="size-4" /> Horas extra
-      {n > 0 && <span className="rounded-full bg-amber-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+      {n > 0 && (
+        <span className="rounded-full bg-amber-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
     </Link>
   );
 }
@@ -540,7 +573,9 @@ function BotonCambios() {
       )}
     >
       <ArrowRightLeft className="size-4" /> Cambios de turno
-      {n > 0 && <span className="rounded-full bg-amber-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
+      {n > 0 && (
+        <span className="rounded-full bg-amber-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
+      )}
     </Link>
   );
 }

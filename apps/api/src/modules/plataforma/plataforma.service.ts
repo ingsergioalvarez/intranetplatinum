@@ -26,6 +26,7 @@ import {
   firmarArchivo,
   generateTemporaryPassword,
   hashPassword,
+  lectorModulos,
   validarSvg,
   type AccionCtx,
   type AuthUser,
@@ -163,9 +164,18 @@ export class PlataformaService extends BaseService {
     if (Object.keys(cambios).length === 0) return { modulos: actual };
 
     await this.repo.guardarModulos(id, cambios);
+    lectorModulos.invalidar(id);
     const antes = Object.fromEntries(Object.keys(cambios).map((c) => [c, actual[c as keyof EstadoModulos]]));
     await this.audit.registrarAccion(ctx, 'plataforma.modulos_cambiar', 'empresas', id, { antes, despues: cambios });
     return { modulos: siguiente };
+  }
+
+  /** El super admin entra a trabajar en una empresa: queda en la auditoría (C-09). */
+  async entrar(id: number, ctx: AccionCtx): Promise<Empresa> {
+    const fila = await this.fila(id);
+    if (!fila.activa) throw HttpError.conflict('Esa empresa está dada de baja');
+    await this.audit.registrarAccion(ctx, 'plataforma.entrar_empresa', 'empresas', id, { empresa: fila.nombre });
+    return this.aEmpresa(fila);
   }
 
   // ---------- Administradores ----------

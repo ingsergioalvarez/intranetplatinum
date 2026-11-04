@@ -4,7 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { MARCA } from '@platinum/shared';
 import { env } from './config/env';
-import { errorHandler, notFoundHandler, type AppModule } from './core';
+import { errorHandler, guardiaDeModulo, notFoundHandler, type AppModule } from './core';
 import { modules as defaultModules } from './modules';
 
 export function createApp(modules: AppModule[] = defaultModules) {
@@ -32,6 +32,7 @@ export function createApp(modules: AppModule[] = defaultModules) {
   });
 
   for (const mod of modules) {
+    if (mod.modulo) app.use(`/api/${mod.basePath}`, guardiaDeModulo(mod.modulo));
     app.use(`/api/${mod.basePath}`, mod.router);
   }
 

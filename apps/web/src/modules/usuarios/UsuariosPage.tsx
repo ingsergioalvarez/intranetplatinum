@@ -26,6 +26,7 @@ import {
   type Column,
 } from '../../components/ui';
 import { RegistrarRostroModal } from '../asistencia/RegistrarRostroModal';
+import { useModulo } from '../../core/empresa/useContextoEmpresa';
 import { carterasService } from '../carteras/carteras.service';
 import { DispositivosModal } from './DispositivosModal';
 import { estadoUsuario } from './estadoUsuario';
@@ -64,10 +65,11 @@ export function UsuariosPage() {
   const [dispositivosDe, setDispositivosDe] = useState<Usuario | null>(null);
   const esAdmin = yo?.rol === ROLES.ADMIN;
   const esSuper = !!yo?.esSuperAdmin;
+  const conCarteras = useModulo('carteras');
   const carteras = useQuery({
     queryKey: carterasService.keys.resumen,
     queryFn: carterasService.resumen,
-    enabled: esSuper,
+    enabled: esSuper && conCarteras,
   });
 
   const q = useDebounced(busqueda.trim());

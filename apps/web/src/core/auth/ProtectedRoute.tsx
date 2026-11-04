@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import type { Permiso, Rol } from '@platinum/shared';
+import type { ModuloOpcionalClave, Permiso, Rol } from '@platinum/shared';
 import { EmptyState, Spinner } from '../../components/ui';
+import { useContextoEmpresa } from '../empresa/useContextoEmpresa';
 import { hasPermission, hasRole, useAuthStore } from './authStore';
 
 interface ProtectedRouteProps {
@@ -12,13 +13,16 @@ interface ProtectedRouteProps {
   roles?: Rol[];
   /** Solo el super admin (A-65). */
   superAdmin?: boolean;
+  /** Módulo de producto requerido: si la empresa lo tiene apagado, no se puede entrar (C-09). */
+  modulo?: ModuloOpcionalClave;
   /** Admite usuarios con contraseña temporal (solo la pantalla para cambiarla, D-012). */
   allowTemporaryPassword?: boolean;
 }
 
 /** Exige sesión (y opcionalmente permiso/rol). Sin sesión redirige a /login conservando el destino. */
-export function ProtectedRoute({ children, permiso, roles, superAdmin, allowTemporaryPassword }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, permiso, roles, superAdmin, modulo, allowTemporaryPassword }: ProtectedRouteProps) {
   const { user, restoring, loggedOut } = useAuthStore();
+  const contexto = useContextoEmpresa();
   const location = useLocation();
 
   if (restoring) return <FullScreenSpinner />;
@@ -39,6 +43,13 @@ export function ProtectedRoute({ children, permiso, roles, superAdmin, allowTemp
 
   if (!hasRole(user, roles) || !hasPermission(user, permiso) || (superAdmin && !user.esSuperAdmin)) {
     return <EmptyState title="Sin acceso" description="No tienes permiso para ver esta sección." />;
+  }
+
+  if (modulo) {
+    if (contexto.isPending) return <FullScreenSpinner />;
+    if (contexto.data?.modulos[modulo] !== true) {
+      return <EmptyState title="No disponible" description="Tu empresa no tiene activado este módulo." />;
+    }
   }
 
   return <>{children}</>;

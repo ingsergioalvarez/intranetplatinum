@@ -187,7 +187,7 @@ export function createBitacoraModule({
     c.justificar,
   );
 
-  return { name: 'bitacora', basePath: 'bitacora', router };
+  return { name: 'bitacora', basePath: 'bitacora', router, modulo: 'bitacora' };
 }
 
 export const bitacoraModule = createBitacoraModule();

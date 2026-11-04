@@ -121,7 +121,7 @@ export function createInformesModule({
   router.get('/:id/pdf', validate({ params: id }), c.archivo('pdf'));
   router.get('/:id/excel', validate({ params: id }), c.archivo('excel'));
 
-  return { name: 'informes', basePath: 'informes', router };
+  return { name: 'informes', basePath: 'informes', router, modulo: 'reporte_asistencia' };
 }
 
 export const informesModule = createInformesModule();

@@ -16,7 +16,7 @@ import {
   Users,
   UsersRound,
 } from 'lucide-react';
-import { PERMISOS, ROLES, type Permiso, type Rol } from '@platinum/shared';
+import { PERMISOS, ROLES, type ModuloOpcionalClave, type Permiso, type Rol } from '@platinum/shared';
 
 export interface NavItem {
   label: string;
@@ -28,6 +28,8 @@ export interface NavItem {
   roles?: Rol[];
   /** Solo el super admin (A-65). */
   superAdmin?: boolean;
+  /** Módulo de producto al que pertenece: si la empresa lo tiene apagado, no aparece (C-09). */
+  modulo?: ModuloOpcionalClave;
   /** Encabezado de sección que se muestra encima de este elemento en la barra lateral de escritorio. */
   seccion?: string;
 }
@@ -54,6 +56,7 @@ export const navItems: NavItem[] = [
   {
     label: 'Guardias',
     to: '/guardias',
+    modulo: 'clientes',
     icon: ShieldCheck,
     permiso: PERMISOS.ASISTENCIA_VER,
     roles: [ROLES.CLIENTE],
@@ -61,27 +64,29 @@ export const navItems: NavItem[] = [
   {
     label: 'Ausencias',
     to: '/mis-ausencias',
+    modulo: 'ausencias',
     icon: CalendarOff,
     permiso: PERMISOS.ASISTENCIA_MARCAR,
     roles: [ROLES.GUARDIA],
   },
-  { label: 'Reportes', to: '/reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_VER_PROPIOS },
+  { label: 'Reportes', to: '/reportes', modulo: 'reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_VER_PROPIOS },
   // Lo que el cliente reporta del servicio o de un guardia (A-59).
-  { label: 'Reportar', to: '/reportes-cliente', icon: MessageSquareWarning, roles: [ROLES.CLIENTE] },
-  { label: 'Quejas', to: '/reportes-cliente', icon: MessageSquareWarning, roles: [ROLES.ADMIN, ROLES.SUPERVISOR] },
+  { label: 'Reportar', to: '/reportes-cliente', modulo: 'quejas', icon: MessageSquareWarning, roles: [ROLES.CLIENTE] },
+  { label: 'Quejas', to: '/reportes-cliente', modulo: 'quejas', icon: MessageSquareWarning, roles: [ROLES.ADMIN, ROLES.SUPERVISOR] },
   { label: 'Asistencia', to: '/asistencia', icon: ClipboardCheck, permiso: PERMISOS.ASISTENCIA_VER },
-  { label: 'Clientes', to: '/clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
-  { label: 'Grupos', to: '/grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
+  { label: 'Clientes', to: '/clientes', modulo: 'clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
+  { label: 'Grupos', to: '/grupos', modulo: 'grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
   { label: 'Usuarios', to: '/usuarios', icon: Users, permiso: PERMISOS.USUARIOS_VER },
-  { label: 'Carteras', to: '/carteras', icon: Briefcase, superAdmin: true },
+  { label: 'Carteras', to: '/carteras', modulo: 'carteras', icon: Briefcase, superAdmin: true },
   {
     label: 'Turnos',
     to: '/catalogos/turnos',
+    modulo: 'turnos',
     icon: Clock,
     permiso: PERMISOS.CATALOGOS_ADMINISTRAR,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR],
   },
-  { label: 'Catálogos', to: '/catalogos/categorias', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
+  { label: 'Catálogos', to: '/catalogos/categorias', modulo: 'reportes', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
   // Plataforma (C-07): empresas, su marca y sus módulos. Solo el super admin.
   { label: 'Empresas', to: '/plataforma/empresas', icon: Boxes, superAdmin: true, seccion: 'Plataforma' },
 ];

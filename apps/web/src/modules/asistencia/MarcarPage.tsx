@@ -54,6 +54,7 @@ import { TurnoGuardiaCard } from './TurnoGuardia';
 import { useAuthStore } from '../../core/auth/authStore';
 import { formatDiaLargo, formatHora } from './formato';
 import { precargarMotor } from './rostro/motor';
+import { useModulo } from '../../core/empresa/useContextoEmpresa';
 import { HorasExtraGuardia } from './HorasExtraGuardia';
 import { PlanDelDia } from './PlanDelDia';
 import { RelevoTurnoModal } from './RelevoTurnoModal';
@@ -162,6 +163,7 @@ function bloqueoGps(referencia: ReturnType<typeof sitioDeReferencia>, ubicacion:
 /** Pantalla del guardia para marcar entrada, comida y salida (A-17, AS1-03). */
 export function MarcarPage() {
   const queryClient = useQueryClient();
+  const conHorasExtra = useModulo('horas_extra');
   const user = useAuthStore((s) => s.user);
   const estado = useQuery({
     queryKey: asistenciaService.keys.estado,
@@ -333,7 +335,7 @@ export function MarcarPage() {
         />
 
         {data.plan && <PlanDelDia plan={data.plan} />}
-        {data.horaExtra && (
+        {data.horaExtra && conHorasExtra && (
           <HorasExtraGuardia
             extra={data.horaExtra}
             conPlan={data.plan?.estado === 'resuelto'}

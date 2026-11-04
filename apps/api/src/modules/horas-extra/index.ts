@@ -142,7 +142,7 @@ export function createHorasExtraModule({ alcance = alcanceConPrisma, ...deps }: 
   router.post('/', ...revision, validate({ body: capturaHoraExtraSchema }), c.capturar);
   router.post('/:id/resolver', ...revision, validate({ params: idParamSchema, body: resolverHoraExtraSchema }), c.resolver);
   router.post('/:id/cortar', ...revision, validate({ params: idParamSchema, body: cortarHoraExtraSchema }), c.cortar);
-  return { name: 'horas-extra', basePath: 'horas-extra', router };
+  return { name: 'horas-extra', basePath: 'horas-extra', router, modulo: 'horas_extra' };
 }
 
 export const horasExtraModule = createHorasExtraModule();

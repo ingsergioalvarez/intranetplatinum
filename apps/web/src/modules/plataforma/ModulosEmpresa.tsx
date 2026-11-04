@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Info, Lock } from 'lucide-react';
+import { Info, Lock, RotateCcw } from 'lucide-react';
 import {
   CLAVES_OPCIONALES,
   GRUPO_MODULO_LABEL,
   MODULOS,
+  MODULOS_INICIALES_COMUNICALO,
   MODULOS_NUCLEO,
   alApagar,
   alEncender,
+  estadoDesde,
   moduloDe,
   type Empresa,
   type EstadoModulos,
@@ -59,6 +61,14 @@ export function ModulosEmpresa({ empresa }: { empresa: Empresa }) {
   );
   const hayCambios = Object.keys(cambios).length > 0;
 
+  // De fábrica: Comunicalo (la empresa 1) con sus módulos iniciales (DC-015); cualquier otra, solo lo siempre incluido.
+  const deFabrica = estadoDesde(empresa.id === 1 ? MODULOS_INICIALES_COMUNICALO : []);
+  const yaDeFabrica = CLAVES_OPCIONALES.every((c) => estado[c] === deFabrica[c]);
+  const restablecer = () => {
+    setLocal(deFabrica);
+    toast.info('Interruptores de fábrica. Revisa y pulsa "Guardar cambios" para aplicarlos.');
+  };
+
   const poner = (valores: Record<string, boolean>) => setLocal({ ...estado, ...valores });
 
   const alternar = (clave: string, encender: boolean) => {
@@ -79,8 +89,8 @@ export function ModulosEmpresa({ empresa }: { empresa: Empresa }) {
     <div className="space-y-6">
       <p className="flex items-start gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600">
         <Info className="mt-0.5 size-4 shrink-0" />
-        Aquí se decide qué módulos tiene {empresa.nombre}. Por ahora solo se registran: el menú y las pantallas todavía no cambian
-        según estos interruptores.
+        Aquí se decide qué módulos tiene {empresa.nombre}. Lo apagado desaparece del menú y de las pantallas de esa empresa, y
+        las personas dejan de poder usarlo.
       </p>
 
       <section>
@@ -128,7 +138,10 @@ export function ModulosEmpresa({ empresa }: { empresa: Empresa }) {
         </section>
       ))}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="ghost" icon={<RotateCcw className="size-4" />} disabled={yaDeFabrica} onClick={restablecer}>
+          Restablecer de fábrica
+        </Button>
         <Button variant="secondary" disabled={!hayCambios} onClick={() => setLocal(null)}>
           Descartar cambios
         </Button>

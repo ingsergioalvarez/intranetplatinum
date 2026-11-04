@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../auth/authStore';
+import { useEmpresaStore } from '../empresa/empresaStore';
 import { ApiClient } from './ApiClient';
 import { ApiError } from './ApiError';
 
@@ -11,6 +12,7 @@ export { CrudService, type ListParams } from './CrudService';
 export const api = new ApiClient({
   baseUrl: import.meta.env.VITE_API_URL ?? '/api',
   getAccessToken: () => useAuthStore.getState().accessToken,
+  getEmpresaId: () => (useAuthStore.getState().user?.esSuperAdmin ? useEmpresaStore.getState().empresaElegidaId : null),
   onUnauthorized: () => useAuthStore.getState().clear(),
 });
 

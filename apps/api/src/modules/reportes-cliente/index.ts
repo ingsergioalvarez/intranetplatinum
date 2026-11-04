@@ -79,7 +79,7 @@ export function createReportesClienteModule({
     validate({ params: idParamSchema, body: atenderReporteClienteSchema }),
     c.atender,
   );
-  return { name: 'reportes-cliente', basePath: 'reportes-cliente', router };
+  return { name: 'reportes-cliente', basePath: 'reportes-cliente', router, modulo: 'quejas' };
 }
 
 export const reportesClienteModule = createReportesClienteModule();

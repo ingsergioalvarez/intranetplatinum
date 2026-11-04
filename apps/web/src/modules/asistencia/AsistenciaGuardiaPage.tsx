@@ -49,6 +49,7 @@ import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { formatFecha, hoyLocal } from '../../core/format/fechas';
 import { describirAsignacion } from '../clientes/asignaciones';
 import { asistenciaService } from './asistencia.service';
+import { useModulos } from '../../core/empresa/useContextoEmpresa';
 import { DescargarHorarioModal } from '../horarios/DescargarHorarioModal';
 import { CerrarJornadaModal } from './CerrarJornadaModal';
 import { MedidasGuardia } from './MedidasGuardia';
@@ -227,16 +228,15 @@ const columnasAsistencia = (
  */
 export function AsistenciaGuardiaPage() {
   const user = useAuthStore((s) => s.user);
+  const moduloEncendido = useModulos();
+  const conBitacora = moduloEncendido('bitacora');
   const esCliente = user?.rol === ROLES.CLIENTE;
   const id = Number(useParams().id);
   const [params, setParams] = useSearchParams();
   const mesActual = hoyLocal().slice(0, 7);
   const mes = /^\d{4}-\d{2}$/.test(params.get('mes') ?? '') ? params.get('mes')! : mesActual;
-  const vista: Vista = esCliente
-    ? 'asistencia'
-    : params.get('vista') === 'bitacora'
-      ? 'bitacora'
-      : 'asistencia';
+  const vista: Vista =
+    esCliente || !conBitacora ? 'asistencia' : params.get('vista') === 'bitacora' ? 'bitacora' : 'asistencia';
   const filtro: FiltroBitacora = {
     categoria: CATEGORIAS_BITACORA.find((c) => c === params.get('cat')) ?? null,
     clase: CLASES_INCIDENCIA.find((c) => c === params.get('clase')) ?? null,
@@ -262,7 +262,7 @@ export function AsistenciaGuardiaPage() {
     queryKey: asistenciaService.keys.bitacora(id, mes),
     queryFn: () => asistenciaService.bitacora(id, mes),
     placeholderData: keepPreviousData,
-    enabled: !esCliente,
+    enabled: !esCliente && conBitacora,
   });
 
   /** Cambia parámetros de la URL conservando los demás (null los quita). */
@@ -321,7 +321,7 @@ export function AsistenciaGuardiaPage() {
         actions={
           <>
             {selectorMes}
-            {puedeCerrar && (
+            {puedeCerrar && moduloEncendido('turnos') && (
               <Button
                 variant="secondary"
                 icon={<CalendarRange className="size-4" />}
@@ -331,7 +331,7 @@ export function AsistenciaGuardiaPage() {
                 <span className="hidden sm:inline">Horario</span>
               </Button>
             )}
-            {puedeCerrar && (
+            {puedeCerrar && moduloEncendido('reporte_asistencia') && (
               <Button
                 variant="secondary"
                 icon={<FileText className="size-4" />}
@@ -366,7 +366,7 @@ export function AsistenciaGuardiaPage() {
           </aside>
 
           <section className="min-w-0 space-y-3">
-            {!esCliente && (
+            {!esCliente && conBitacora && (
               <div role="tablist" aria-label="Vista" className="flex gap-1 rounded-xl bg-slate-200/60 p-1">
                 {(
                   [
@@ -461,7 +461,7 @@ export function AsistenciaGuardiaPage() {
               />
             )}
 
-            {puedeCerrar && (
+            {puedeCerrar && moduloEncendido('reporte_asistencia') && (
               <Card>
                 <CardHeader
                   title="Reportes emitidos"
@@ -470,7 +470,7 @@ export function AsistenciaGuardiaPage() {
                 <TablaInformes guardiaId={id} filtros={false} />
               </Card>
             )}
-            {puedeCerrar && <MedidasGuardia guardiaId={id} />}
+            {puedeCerrar && conBitacora && <MedidasGuardia guardiaId={id} />}
           </section>
         </div>
       )}

@@ -109,7 +109,7 @@ export function createEmergenciasModule(deps: EmergenciasDeps = {}): AppModule {
   router.get('/', mando, validate({ query: listaQuerySchema }), c.listar);
   router.post('/:id/acusar', mando, validate({ params: idParamSchema }), c.acusar);
   router.post('/:id/cerrar', mando, validate({ params: idParamSchema, body: emergenciaCerrarSchema }), c.cerrar);
-  return { name: 'emergencias', basePath: 'emergencias', router };
+  return { name: 'emergencias', basePath: 'emergencias', router, modulo: 'emergencias' };
 }
 
 export const emergenciasModule = createEmergenciasModule();

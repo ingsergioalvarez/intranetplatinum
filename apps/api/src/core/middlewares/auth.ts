@@ -1,9 +1,34 @@
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import type { Rol } from '@platinum/shared';
 import { HttpError } from '../errors/HttpError';
 import { conEmpresa } from '../empresa/contexto';
 import { verifyAccessToken } from '../security/jwt';
 import type { AuthUser } from '../types/auth';
+
+/** Cabecera con la empresa a la que el super admin eligió entrar (C-09). */
+export const CABECERA_EMPRESA = 'x-empresa-id';
+
+/**
+ * Usuario del token, con la empresa efectiva: la suya, o la elegida si es super admin (C-09). Lanza si el token es inválido.
+ * Solo el super admin puede actuar en otra empresa; para cualquiera más la cabecera se ignora.
+ */
+function usuarioDeSolicitud(req: Request, token: string): AuthUser {
+  const user = verifyAccessToken(token);
+  const elegida = Number(req.headers[CABECERA_EMPRESA]);
+  if (user.esSuperAdmin && Number.isInteger(elegida) && elegida > 0) user.empresaId = elegida;
+  return user;
+}
+
+/** Usuario de la sesión si el token es válido; null si falta o no sirve. No responde errores: lo decide quien la use. */
+export function sesionOpcional(req: Request): AuthUser | null {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+  try {
+    return usuarioDeSolicitud(req, header.slice(7));
+  } catch {
+    return null;
+  }
+}
 
 function createAuthenticate(permitirPasswordTemporal: boolean): RequestHandler {
   return (req, _res, next) => {
@@ -12,7 +37,7 @@ function createAuthenticate(permitirPasswordTemporal: boolean): RequestHandler {
       return next(HttpError.unauthorized());
     }
     try {
-      req.user = verifyAccessToken(header.slice(7));
+      req.user = usuarioDeSolicitud(req, header.slice(7));
     } catch {
       return next(new HttpError(401, 'TOKEN_INVALID', 'Sesión inválida o expirada'));
     }

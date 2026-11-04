@@ -52,6 +52,9 @@ class PlataformaController extends BaseController {
   marca = async (req: Request, res: Response) =>
     this.ok(res, await this.service.marca(this.id(req), this.body<EmpresaMarca>(req), this.accionCtx(req)));
 
+  entrar = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.entrar(this.id(req), this.accionCtx(req)));
+
   desactivar = async (req: Request, res: Response) =>
     this.ok(res, await this.service.desactivar(this.id(req), this.accionCtx(req)));
 
@@ -110,6 +113,7 @@ export function createPlataformaModule({
   router.patch('/empresas/:id/marca', validate({ params: idParamSchema, body: empresaMarcaSchema }), c.marca);
   router.post('/empresas/:id/logo', id, uploadLogo.single('logo'), c.subirLogo);
   router.delete('/empresas/:id/logo', id, c.quitarLogo);
+  router.post('/empresas/:id/entrar', id, c.entrar);
   router.patch('/empresas/:id/baja', id, c.desactivar);
   router.patch('/empresas/:id/reactivar', id, c.reactivar);
   router.get('/empresas/:id/modulos', id, c.modulos);

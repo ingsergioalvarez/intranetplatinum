@@ -5,6 +5,7 @@ import { ArrowRightLeft, ClipboardList, MapPin, Navigation, Shuffle, UsersRound 
 import { TIPO_ASIGNACION_LABEL } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import { Badge, Button, Card, CardHeader, EmptyState, Spinner } from '../../components/ui';
+import { useModulo } from '../../core/empresa/useContextoEmpresa';
 import { cambiosService } from '../cambios/cambios.service';
 import { ListaCambios } from '../cambios/ListaCambios';
 import { SolicitarCambioModal } from '../cambios/SolicitarCambioModal';
@@ -22,12 +23,14 @@ const accion =
 export function MisSitiosPage() {
   const mios = useQuery({ queryKey: sitiosService.keys.mios, queryFn: sitiosService.mios });
   const [pidiendo, setPidiendo] = useState(false);
+  const conCambios = useModulo('cambios_turno');
   // Cambios de turno (TC-22): lo que pidió, lo que le aprobaron y lo que lo involucra.
   const params = { page: 1, limit: 8 };
   const cambios = useQuery({
     queryKey: cambiosService.keys.list(params),
     queryFn: () => cambiosService.list(params),
     refetchInterval: 60_000,
+    enabled: conCambios,
   });
 
   return (
@@ -96,24 +99,30 @@ export function MisSitiosPage() {
           ))
         )}
 
-        <Card>
-          <CardHeader
-            title="Cambios de turno"
-            subtitle="Pide que te cubran o mueve tu descanso"
-            actions={
-              <Button size="sm" icon={<ArrowRightLeft className="size-4" />} onClick={() => setPidiendo(true)}>
-                Solicitar
-              </Button>
-            }
-          />
-          {cambios.isPending ? (
-            <div className="flex justify-center py-6 text-brand-600">
-              <Spinner className="size-5" />
-            </div>
-          ) : (
-            <ListaCambios cambios={cambios.data?.items ?? []} esGuardia />
-          )}
-        </Card>
+        {conCambios && (
+          <Card>
+            <CardHeader
+              title="Cambios de turno"
+              subtitle="Pide que te cubran o mueve tu descanso"
+              actions={
+                <Button
+                  size="sm"
+                  icon={<ArrowRightLeft className="size-4" />}
+                  onClick={() => setPidiendo(true)}
+                >
+                  Solicitar
+                </Button>
+              }
+            />
+            {cambios.isPending ? (
+              <div className="flex justify-center py-6 text-brand-600">
+                <Spinner className="size-5" />
+              </div>
+            ) : (
+              <ListaCambios cambios={cambios.data?.items ?? []} esGuardia />
+            )}
+          </Card>
+        )}
       </div>
       {pidiendo && <SolicitarCambioModal comoGuardia onClose={() => setPidiendo(false)} />}
     </>

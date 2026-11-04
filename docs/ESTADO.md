@@ -5,12 +5,12 @@
 
 **Última actualización:** 2026-11-04
 **Fase actual:** En el servidor, `https://gestion.grupocomunicalo.mx` sigue como borrador (copia de Platinum, con el login nuevo de C-05 solo si se despliega). Lo nuevo (C-05 a C-14: marca, plataforma, empresas y módulos guardados) se trabaja **solo en local**; el usuario no ha desplegado nada de esto.
-**Última tarea terminada:** C-08 (aislamiento de datos por empresa) y DC-015 (módulos iniciales), después de C-14, C-07 y C-05.
-**Tarea en progreso:** ninguna. C-05, C-07 y C-14 están en GitHub; C-08 está terminada en local pero **sin commit** (pendiente de que el usuario lo pida). Nada está desplegado. C-06: falta que el usuario y RH decidan cada módulo ([MODULOS.md](MODULOS.md)).
+**Última tarea terminada:** C-09 (módulos y marca aplicados a la app), después de C-08 y DC-015, C-14, C-07 y C-05.
+**Tarea en progreso:** ninguna. C-05, C-07 y C-14 están en GitHub; C-08 está guardada en GitHub; C-09 está terminada en local pero **sin commit**. Nada está desplegado. C-06: falta que el usuario y RH decidan cada módulo ([MODULOS.md](MODULOS.md)).
 
 ## Siguiente paso
 
-0. Seguir el plan de [PLAN.md](PLAN.md), en orden. El usuario sigue revisando en local (`http://localhost:5273`); cuando pida desplegar, C-05, C-07 y C-14 van juntos (5 migraciones nuevas: `db:deploy` y luego `db:seed`; todos deben iniciar sesión de nuevo; en el servidor `almartinez` probablemente ya es super admin porque el seed marca al primer admin). Después C-09 (admin de empresa), C-10 (estructura), C-11 (roles y permisos), C-12 (checador flexible y rostro obligatorio), C-13 (planeador de horarios). Decisiones en DC-006 a DC-009.
+0. Seguir el plan de [PLAN.md](PLAN.md), en orden. El usuario sigue revisando en local (`http://localhost:5273`); cuando pida desplegar, C-05, C-07 y C-14 van juntos (5 migraciones nuevas: `db:deploy` y luego `db:seed`; todos deben iniciar sesión de nuevo; en el servidor `almartinez` probablemente ya es super admin porque el seed marca al primer admin). Después C-10 (estructura), C-11 (roles y permisos), C-12 (checador flexible y rostro obligatorio), C-13 (planeador de horarios). Decisiones en DC-006 a DC-009.
 1. El usuario define, poco a poco, lo primero que debe hacer Comunicalo; se agrega al [PLAN](PLAN.md) con su ID antes de implementarlo.
 2. C-04 (respaldos de la base y las fotos de Comunicalo) antes de usarlo con personas reales.
 

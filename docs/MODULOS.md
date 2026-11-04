@@ -113,4 +113,4 @@ Una empresa nueva arranca solo con el núcleo.
 
 Los únicos que eran de todo el sistema (nombre de turno, folio de reportes, RFC de clientes, nombre de grupos) ya son por empresa (C-08), así que los módulos de seguridad pueden encenderse en otra empresa sin choques.
 
-**"Apagado"** significa oculto y bloqueado para los usuarios, sin quitar lo que el núcleo necesita por dentro: Clientes (los lugares de trabajo cuelgan de un cliente) y Turnos/Cobertura siguen funcionando por dentro hasta que C-10 y C-12 los desatan. Se define al llegar a C-09.
+**"Apagado"** (C-09): oculto en pantalla y, en los módulos que se pueden separar, bloqueado en la API (403). Ausencias, Horas extra, Cambios de turno, Reporte de asistencia, Emergencias, Quejas, Carteras y Bitácora se bloquean. **Clientes, Turnos, Grupos, Cobertura y Reportes** solo se ocultan: su API sigue abierta porque asignar horarios y lugares los usa por dentro; se desatan en C-10 y C-12.
