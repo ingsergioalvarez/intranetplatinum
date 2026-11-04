@@ -17,3 +17,6 @@ dev-dist/
 
 # Paquete para subir al servidor (git archive)
 *.tar.gz
+
+# Archivos temporales de Office (se crean mientras un archivo esta abierto)
+~$*
