@@ -5,6 +5,25 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-05 (4) — Estructura de la empresa, paso 4: quitar Carteras (C-10, DC-017)
+
+#### Quitado
+
+- **Módulo Carteras** completo: pantalla y menú, API (`/api/carteras`), traspaso de cartera al dar de baja a un admin, su entrada en el catálogo de módulos (y los interruptores que había guardados) y sus pruebas.
+- **Los dueños**: las columnas `propietario_id` de `usuarios`, `clientes` y `grupos_guardias` (con sus llaves e índices) mediante la migración `20261112000000_quitar_carteras`, probada antes en una copia de la base local, con respaldo previo. No se perdió ningún dato.
+- El campo `pid` del token, la bandera `sinCarteras` (y la consulta extra de módulos en cada petición), el filtro/columna **"Administrador"** de Usuarios y Clientes, y los permisos de "solo lo de mi cartera" en sitios, clientes, grupos, reportes, solicitudes de cobertura y borrado definitivo.
+
+#### Cambiado
+
+- Sin dueños, **toda la empresa ve** lo que antes era de una cartera, según su permiso: clientes, sitios, grupos, reportes y solicitudes de cobertura. Las personas siguen limitadas por área (admin: todas; jefe: su área y subáreas; supervisor: su área).
+- **Avisos (provisional hasta el paso 5):** lo que llegaba al admin dueño de un guardia o cliente llega ahora a los admin de la empresa; las emergencias, al supervisor del sitio y a los admin. Pasan a la cadena de jefes y a RH en el paso 5 (DC-017).
+- `esSuperAdmin` pasó a `core/superadmin.ts`. `npm run db:superadmin` solo marca al super admin (ya no le pasa lo "sin dueño").
+
+#### Notas
+
+- En el servidor, esta migración se aplica con `db:deploy` junto con las demás (7 nuevas desde las 45 que tiene): borra las columnas de dueño, que en Comunicalo no tienen uso.
+- Sin desplegar. 621 pruebas (se quitaron las de carteras), tipos y lint sin errores, 95 de 95 comprobaciones de extremo a extremo.
+
 ### Sesión 2026-11-05 (3) — Estructura de la empresa, paso 3: rol Jefe (C-10, DC-016, DC-017)
 
 #### Añadido

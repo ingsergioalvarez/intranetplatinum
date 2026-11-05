@@ -18,7 +18,6 @@ export interface UsuarioAuth {
   clienteId?: number | null;
   clienteNombre?: string | null;
   esSuperAdmin?: boolean;
-  propietarioId?: number | null;
   empresaId?: number | null;
 }
 
@@ -228,7 +227,6 @@ export class PrismaAuthRepository extends AuthRepository {
     clienteId?: number | null;
     cliente?: { id: number; nombreComercial: string } | null;
     esSuperAdmin?: boolean;
-    propietarioId?: number | null;
     empresaId?: number | null;
   }): UsuarioAuth {
     return {
@@ -246,7 +244,6 @@ export class PrismaAuthRepository extends AuthRepository {
       clienteId: u.clienteId ?? u.cliente?.id ?? null,
       clienteNombre: u.cliente?.nombreComercial ?? null,
       esSuperAdmin: u.esSuperAdmin ?? false,
-      propietarioId: u.propietarioId ?? null,
       empresaId: u.empresaId ?? null,
     };
   }

@@ -11,7 +11,7 @@ export interface RequestContext {
 /** Contexto de una acción administrativa: quién la hace y desde dónde. */
 export interface AccionCtx extends RequestContext {
   actorId: number;
-  /** Quien hace la acción completo (rol y cartera); lo usan los módulos que acotan por cartera (A-65). */
+  /** Quien hace la acción completo (rol y permisos). */
   actor?: AuthUser;
 }
 

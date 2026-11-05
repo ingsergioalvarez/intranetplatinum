@@ -19,14 +19,11 @@ import {
   type UsuarioUpdateData,
 } from '../src/modules/usuarios/usuarios.repository';
 import { generateTemporaryPassword, signAccessToken } from '../src/core';
+import { todasLasPersonas } from '../src/modules/areas/alcance';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
 
 // ---------- Doble en memoria ----------
 type Fila = Usuario & { passwordHash: string; sesionesActivas: number };
-
-/** Nombre de cada usuario de la cartera de prueba (para `propietario`). */
-const NOMBRE_DE = (filas: Fila[], id: number | null | undefined) =>
-  id ? { id, nombre: filas.find((f) => f.id === id)?.nombre ?? `Usuario ${id}` } : null;
 
 class MemoryUsuariosRepository extends UsuariosRepository {
   filas: Fila[] = [];
@@ -42,14 +39,8 @@ class MemoryUsuariosRepository extends UsuariosRepository {
     const f = this.filas.find((x) => x.email === email);
     return f ? this.pub(f) : null;
   }
-  async findPaged(
-    { q, rol, estado, propietarioId, sinAsignar, cartera }: UsuarioFiltroData,
-    { page, limit }: PaginationQuery,
-  ) {
+  async findPaged({ q, rol, estado }: UsuarioFiltroData, { page, limit }: PaginationQuery) {
     const items = this.filas
-      .filter((f) => !cartera || f.propietario?.id === cartera.adminId || [cartera.adminId, ...cartera.tambien].includes(f.id))
-      .filter((f) => !cartera && sinAsignar ? !f.propietario && !f.esSuperAdmin : true)
-      .filter((f) => !cartera && !sinAsignar && propietarioId ? f.propietario?.id === propietarioId : true)
       .filter((f) => (estado === 'activos' ? !f.deletedAt : estado === 'baja' ? !!f.deletedAt : true))
       .filter((f) => !rol || f.rol === rol)
       .filter((f) => !q || f.nombre.includes(q) || f.email.includes(q))
@@ -62,11 +53,10 @@ class MemoryUsuariosRepository extends UsuariosRepository {
     };
     return page_;
   }
-  async create({ propietarioId, ...data }: UsuarioCreateData) {
+  async create(data: UsuarioCreateData) {
     const f: Fila = {
       id: this.filas.length + 1,
       esSuperAdmin: false,
-      propietario: NOMBRE_DE(this.filas, propietarioId),
       areaId: null,
       activo: true,
       bloqueadoHasta: null,
@@ -100,11 +90,6 @@ class MemoryUsuariosRepository extends UsuariosRepository {
   async revocarSesiones(id: number) {
     this.fila(id).sesionesActivas = 0;
   }
-  async soltarCartera(adminId: number) {
-    const suyos = this.filas.filter((f) => f.propietario?.id === adminId);
-    suyos.forEach((f) => (f.propietario = null));
-    return { usuarios: suyos.length, clientes: 0, grupos: 0 };
-  }
 }
 
 // ---------- Utilidades ----------
@@ -121,7 +106,6 @@ function semilla(id: number, rol: Rol, over: Partial<Fila> = {}): Fila {
     telefonoPersonal: null,
     rol,
     esSuperAdmin: false,
-    propietario: null,
     areaId: null,
     activo: true,
     debeCambiarPassword: false,
@@ -135,7 +119,7 @@ function semilla(id: number, rol: Rol, over: Partial<Fila> = {}): Fila {
   };
 }
 
-const tokenDe = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean; propietarioId?: number } = {}) =>
+const tokenDe = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean } = {}) =>
   signAccessToken({ id, email: `u${id}@platinum.local`, rol, permisos: PERMISOS_POR_ROL[rol], ...extra });
 
 /** Admin 1 = super admin: las pruebas de antes siguen igual. */
@@ -160,7 +144,7 @@ beforeEach(() => {
     semilla(3, ROLES.GUARDIA, { nombre: 'Gabriel Guardia' }),
     semilla(4, ROLES.GUARDIA, { nombre: 'Baja Antigua', deletedAt: new Date().toISOString(), activo: false }),
   );
-  app = createApp([createUsuariosModule({ repo, audit })]);
+  app = createApp([createUsuariosModule({ repo, audit, personasVisibles: todasLasPersonas })]);
 });
 
 // ---------- Pruebas ----------
@@ -387,97 +371,59 @@ describe('generateTemporaryPassword', () => {
   });
 });
 
-// ---------- Carteras de los admin y super admin (A-65) ----------
-describe('carteras de admin (A-65)', () => {
-  // Super admin = 1. Admin A = 10 y admin B = 11 (los creó el super admin). Cada uno tiene supervisor y guardia.
+// ---------- Admin y super admin ----------
+describe('usuarios de la empresa', () => {
+  // Super admin = 1. Admin A = 10 y admin B = 11. Cada uno tiene supervisor y guardia.
   const A = tokenDe(10, ROLES.ADMIN);
   const B = tokenDe(11, ROLES.ADMIN);
-  const dueno = (id: number) => ({ id, nombre: `Usuario ${id}` });
 
   beforeEach(() => {
     repo.filas.push(
-      semilla(10, ROLES.ADMIN, { nombre: 'Admin A', propietario: dueno(1) }),
-      semilla(11, ROLES.ADMIN, { nombre: 'Admin B', propietario: dueno(1) }),
-      semilla(20, ROLES.SUPERVISOR, { nombre: 'Sup de A', propietario: dueno(10) }),
-      semilla(21, ROLES.GUARDIA, { nombre: 'Guardia de A', propietario: dueno(10) }),
-      semilla(30, ROLES.SUPERVISOR, { nombre: 'Sup de B', propietario: dueno(11) }),
-      semilla(31, ROLES.GUARDIA, { nombre: 'Guardia de B', propietario: dueno(11) }),
-      semilla(40, ROLES.GUARDIA, { nombre: 'Guardia sin dueño' }),
+      semilla(10, ROLES.ADMIN, { nombre: 'Admin A' }),
+      semilla(11, ROLES.ADMIN, { nombre: 'Admin B' }),
+      semilla(20, ROLES.SUPERVISOR, { nombre: 'Sup de A' }),
+      semilla(21, ROLES.GUARDIA, { nombre: 'Guardia de A' }),
+      semilla(30, ROLES.SUPERVISOR, { nombre: 'Sup de B' }),
+      semilla(31, ROLES.GUARDIA, { nombre: 'Guardia de B' }),
     );
   });
 
   const nombres = (res: request.Response) => res.body.data.items.map((u: { nombre: string }) => u.nombre).sort();
 
-  it('un admin ve solo a los suyos y a sí mismo: no ve a otros admin ni lo sin asignar', async () => {
-    expect(nombres(await como(A).get('/'))).toEqual(['Admin A', 'Guardia de A', 'Sup de A']);
-    expect(nombres(await como(B).get('/'))).toEqual(['Admin B', 'Guardia de B', 'Sup de B']);
+  it('un admin ve a todos los de su empresa', async () => {
+    expect((await como(A).get('/')).body.data.total).toBe(9);
+    expect(nombres(await como(B).get('/'))).toEqual(nombres(await como(A).get('/')));
+    expect((await como(A).get('/31')).status).toBe(200);
   });
 
-  it('el super admin ve todos y puede filtrar por dueño o por sin asignar', async () => {
-    expect((await como(ADMIN).get('/')).body.data.total).toBe(10);
-    expect(nombres(await como(ADMIN).get('/?propietarioId=10'))).toEqual(['Guardia de A', 'Sup de A']);
-    expect(nombres(await como(ADMIN).get('/?sinAsignar=true'))).toEqual(['Gabriel Guardia', 'Guardia sin dueño', 'Sofía Supervisora']);
+  it('un admin edita y da de baja a cualquier persona que no sea admin', async () => {
+    expect((await como(A).patch('/31', { nombre: 'Guardia B2' })).status).toBe(200);
+    expect((await como(A).post('/31/reset-password')).status).toBe(200);
+    expect((await como(A).patch('/31/baja')).status).toBe(204);
   });
 
-  it('un admin no puede filtrar para ver lo de otro', async () => {
-    expect(nombres(await como(A).get('/?propietarioId=11'))).toEqual(['Admin A', 'Guardia de A', 'Sup de A']);
-    expect(nombres(await como(A).get('/?sinAsignar=true'))).toEqual(['Admin A', 'Guardia de A', 'Sup de A']);
-  });
-
-  it('lo de otro admin o sin dueño se responde como si no existiera', async () => {
-    for (const id of [31, 30, 11, 40, 1]) {
-      expect((await como(A).get(`/${id}`)).status).toBe(404);
-      expect((await como(A).patch(`/${id}`, { nombre: 'Hackeado' })).status).toBe(404);
-      expect((await como(A).patch(`/${id}/baja`)).status).toBe(404);
-      expect((await como(A).post(`/${id}/reset-password`)).status).toBe(404);
-    }
-    expect((await como(A).get('/21')).status).toBe(200);
-  });
-
-  it('lo que crea un admin queda a su nombre; el otro admin no lo ve', async () => {
+  it('lo que crea un admin lo ven todos', async () => {
     const res = await como(A).post('/', { nombre: 'Nuevo Guardia A', email: 'nga@x.mx', telefono: '5551112222', rol: 'guardia' });
     expect(res.status).toBe(201);
-    expect(res.body.data.usuario.propietario).toEqual({ id: 10, nombre: 'Admin A' });
-    expect(nombres(await como(A).get('/'))).toContain('Nuevo Guardia A');
-    expect(nombres(await como(B).get('/'))).not.toContain('Nuevo Guardia A');
+    expect(nombres(await como(B).get('/'))).toContain('Nuevo Guardia A');
   });
 
   it('solo el super admin crea o cambia administradores', async () => {
     const nuevo = { nombre: 'Otro Admin', email: 'oa@x.mx', rol: 'admin' };
     expect((await como(A).post('/', nuevo)).status).toBe(403);
     expect((await como(ADMIN).post('/', nuevo)).status).toBe(201);
-    // Subir a alguien de su cartera a admin tampoco.
     expect((await como(A).patch('/21', { rol: 'admin' })).status).toBe(403);
     expect((await como(ADMIN).patch('/21', { rol: 'admin' })).status).toBe(200);
+    expect((await como(A).patch('/11', { nombre: 'Admin B2' })).status).toBe(403);
   });
 
   it('nadie más puede tocar la cuenta del super admin; ella misma sí puede editar sus datos', async () => {
-    repo.filas.push(semilla(12, ROLES.ADMIN, { nombre: 'Admin C', propietario: dueno(1) }));
+    repo.filas.push(semilla(12, ROLES.ADMIN, { nombre: 'Admin C' }));
     const C = tokenDe(12, ROLES.ADMIN);
-    for (const t of [A, B, C]) expect((await como(t).patch('/1', { nombre: 'Hackeado' })).status).toBe(404);
+    for (const t of [A, B, C]) expect((await como(t).patch('/1', { nombre: 'Hackeado' })).status).toBe(403);
     // El super admin no se da de baja a sí mismo ni se quita su rol.
     expect((await como(ADMIN).patch('/1/baja')).status).toBe(400);
     expect((await como(ADMIN).patch('/1', { rol: 'guardia' })).status).toBe(400);
     expect((await como(ADMIN).patch('/1', { nombre: 'Super Admin' })).status).toBe(200);
-  });
-
-  it('un supervisor ve a los de su admin, no a los de otro', async () => {
-    const supA = tokenDe(20, ROLES.SUPERVISOR, { propietarioId: 10 });
-    expect(nombres(await como(supA).get('/'))).toEqual(['Admin A', 'Guardia de A', 'Sup de A']);
-    const sinAdmin = tokenDe(20, ROLES.SUPERVISOR);
-    expect(nombres(await como(sinAdmin).get('/'))).toEqual(['Sup de A']);
-  });
-
-  it('al dar de baja a un admin, su cartera queda sin asignar y solo la ve el super admin', async () => {
-    expect((await como(ADMIN).patch('/10/baja')).status).toBe(204);
-    expect(nombres(await como(ADMIN).get('/?sinAsignar=true'))).toEqual([
-      'Gabriel Guardia',
-      'Guardia de A',
-      'Guardia sin dueño',
-      'Sofía Supervisora',
-      'Sup de A',
-    ]);
-    const evento = audit.eventos.find((e) => e.accion === 'usuarios.baja')!;
-    expect(evento.datos).toMatchObject({ sinAsignar: { usuarios: 2 } });
   });
 });

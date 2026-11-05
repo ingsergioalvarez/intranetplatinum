@@ -1,7 +1,6 @@
 /**
  * Asigna el super admin (A-65). Es la ÚNICA forma de dar ese rol: no existe en la app ni en la API.
- * Marca a esa cuenta y le pasa todo lo que todavía no tiene dueño (usuarios, clientes y grupos), que es lo que
- * había antes de las carteras. Se puede repetir sin problema.
+ * Marca a esa cuenta como super admin. Se puede repetir sin problema.
  * Uso: `npm run db:superadmin -w @platinum/api -- correo@dominio.mx`
  * En el servidor: `docker compose exec api npx tsx prisma/superadmin.ts correo@dominio.mx`
  */
@@ -28,17 +27,8 @@ async function main() {
   if (u.rol.clave !== 'admin') throw new Error(`${email} no es administrador: el super admin debe ser admin`);
   if (u.deletedAt || !u.activo) throw new Error(`${email} está dado de baja`);
 
-  await prisma.usuario.update({ where: { id: u.id }, data: { esSuperAdmin: true, propietarioId: null } });
-  // Lo que no tenía dueño pasa al super admin (excepto él mismo).
-  const usuarios = await prisma.usuario.updateMany({
-    where: { propietarioId: null, id: { not: u.id } },
-    data: { propietarioId: u.id },
-  });
-  const clientes = await prisma.cliente.updateMany({ where: { propietarioId: null }, data: { propietarioId: u.id } });
-  const grupos = await prisma.grupoGuardias.updateMany({ where: { propietarioId: null }, data: { propietarioId: u.id } });
-  console.log(
-    `[superadmin] ${u.nombre} (${email}) es super admin. Le pasaron ${usuarios.count} usuarios, ${clientes.count} clientes y ${grupos.count} grupos sin dueño.`,
-  );
+  await prisma.usuario.update({ where: { id: u.id }, data: { esSuperAdmin: true } });
+  console.log(`[superadmin] ${u.nombre} (${email}) es super admin.`);
 }
 
 main()

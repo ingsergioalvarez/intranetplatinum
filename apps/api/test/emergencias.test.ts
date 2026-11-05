@@ -13,9 +13,9 @@ import {
 import { MemoryAuditLogger } from './helpers/memoryAudit';
 
 /*
- * Carteras de la prueba (A-65): super admin 1; admin A = 10 y admin B = 11.
- *   Supervisores: 5 (de A) y 6 (de B). Guardias: 21 (de A, en POETAS con el supervisor 5), 22 (de A, sin sitio),
- *   31 (de B, en PLAZA con el supervisor 6) y 40 (sin dueño ni sitio).
+ * Personas de la prueba: super admin 1; admin A = 10 y admin B = 11 (reciben todas las alertas de la empresa).
+ *   Supervisores: 5 y 6. Guardias: 21 (en POETAS con el supervisor 5), 22 (sin sitio),
+ *   31 (en PLAZA con el supervisor 6) y 40 (sin sitio).
  */
 const NOMBRES: Record<number, string> = {
   1: 'Super Ada',
@@ -39,7 +39,6 @@ const ROL_DE: Record<number, string> = {
   31: 'guardia',
   40: 'guardia',
 };
-const DUENO: Record<number, number | null> = { 5: 10, 6: 11, 21: 10, 22: 10, 31: 11, 40: null };
 
 class Memoria extends EmergenciasRepository {
   filas: EmergenciaRow[] = [];
@@ -114,17 +113,8 @@ class Memoria extends EmergenciasRepository {
   async sitioDe(usuarioId: number) {
     return this.sitios[usuarioId] ?? null;
   }
-  async adminsDe({ guardiaId }: { guardiaId?: number | null; sitioId?: number | null }) {
-    const d = guardiaId ? DUENO[guardiaId] : null;
-    return d ? [d] : [];
-  }
-  async propietarioDe(id: number) {
-    return DUENO[id] ?? null;
-  }
-  async supervisoresDe(adminId: number) {
-    return Object.entries(DUENO)
-      .filter(([id, d]) => d === adminId && ROL_DE[Number(id)] === 'supervisor')
-      .map(([id]) => Number(id));
+  async adminsDe() {
+    return [1, 10, 11];
   }
   async superAdmins() {
     return [1];
@@ -188,13 +178,13 @@ beforeEach(() => {
 });
 
 describe('botón de pánico (A-60)', () => {
-  it('el guardia la lanza sin preguntar nada: avisa a su supervisor y a su admin con alerta urgente', async () => {
+  it('el guardia la lanza sin preguntar nada: avisa a su supervisor y a los admin con alerta urgente', async () => {
     const r = await juan().post('', { lat: 19.43, lng: -99.13, bateria: 40 });
     expect(r.status).toBe(201);
     expect(r.body.data).toMatchObject({ estado: 'activa', tipo: null, lat: 19.43, bateria: 40, sitio: { nombre: 'POETAS' } });
     expect(avisos).toHaveLength(1);
-    // Supervisor 5 y su admin (10). No se entera el admin B ni el super admin.
-    expect(avisos[0].usuarioIds).toEqual([5, 10]);
+    // El supervisor del sitio (5) y los admin de la empresa (1, 10 y 11).
+    expect(avisos[0].usuarioIds).toEqual([1, 5, 10, 11]);
     expect(avisos[0]).toMatchObject({ titulo: 'EMERGENCIA', urgente: true });
     expect(avisos[0].mensaje).toBe('Juan Pérez pidió ayuda en POETAS');
     expect(audit.acciones()).toContain('emergencias.crear');
@@ -207,13 +197,13 @@ describe('botón de pánico (A-60)', () => {
     expect(r.status).toBe(201);
     expect(r.body.data.lat).toBeNull();
     expect(r.body.data.supervisor).toBeNull();
-    // Ana no tiene sitio ni supervisor: le llega a su admin dueño.
-    expect(avisos[0].usuarioIds).toEqual([10]);
+    // Ana no tiene sitio ni supervisor: les llega a los admin.
+    expect(avisos[0].usuarioIds).toEqual([1, 10, 11]);
   });
 
-  it('un guardia sin dueño ni sitio: no se pierde, le llega al super admin', async () => {
+  it('un guardia sin sitio: no se pierde, les llega a los admin', async () => {
     await nadia().post('');
-    expect(avisos[0].usuarioIds).toEqual([1]);
+    expect(avisos[0].usuarioIds).toEqual([1, 10, 11]);
   });
 
   it('un doble toque no duplica la alerta', async () => {
@@ -224,13 +214,11 @@ describe('botón de pánico (A-60)', () => {
     expect(avisos).toHaveLength(1);
   });
 
-  it('supervisor → su admin; admin → sus supervisores y el super admin; super admin → los demás admin', async () => {
+  it('supervisor → los admin; admin → los demás admin y el super admin; super admin → los demás admin', async () => {
     await supA().post('');
-    expect(avisos.at(-1)!.usuarioIds).toEqual([10]);
-    await supB().post('');
-    expect(avisos.at(-1)!.usuarioIds).toEqual([11]);
+    expect(avisos.at(-1)!.usuarioIds).toEqual([1, 10, 11]);
     await adminA().post('');
-    expect(avisos.at(-1)!.usuarioIds).toEqual([1, 5]);
+    expect(avisos.at(-1)!.usuarioIds).toEqual([1, 11]);
     await superAdmin().post('');
     expect(avisos.at(-1)!.usuarioIds).toEqual([10, 11]);
   });
@@ -252,7 +240,7 @@ describe('botón de pánico (A-60)', () => {
     avisos.length = 0;
     const r = await juan().post(`/${id}/cancelar`);
     expect(r.body.data).toMatchObject({ estado: 'cerrada', resultado: 'falsa_alarma' });
-    expect(avisos[0]).toMatchObject({ usuarioIds: [5, 10], titulo: 'Falsa alarma', mensaje: 'Juan Pérez avisó que fue sin querer' });
+    expect(avisos[0]).toMatchObject({ usuarioIds: [1, 5, 10, 11], titulo: 'Falsa alarma', mensaje: 'Juan Pérez avisó que fue sin querer' });
     expect(atendidos[0]).toEqual({ entidad: `emergencia:${id}`, resultado: 'Falsa alarma (sin querer)' });
     expect((await juan().post(`/${id}/cancelar`)).status).toBe(409);
     expect((await juan().post('')).body.data.id).not.toBe(id);
@@ -269,16 +257,14 @@ describe('botón de pánico (A-60)', () => {
     expect((await juan().get()).status).toBe(403);
   });
 
-  it('una emergencia solo la ven y atienden quienes la recibieron (el super admin la ve, pero no le salta)', async () => {
-    const id = (await juan().post('')).body.data.id; // la reciben 5 y 10
-    for (const otro of [adminB(), supB()]) {
-      expect((await otro.get()).body.data.items).toEqual([]);
-      expect((await otro.post(`/${id}/acusar`)).status).toBe(404);
-      expect((await otro.post(`/${id}/cerrar`, { resultado: 'atendida' })).status).toBe(404);
-    }
-    const delSuper = (await superAdmin().get()).body.data.items;
-    expect(delSuper).toHaveLength(1);
-    expect(delSuper[0].paraMi).toBe(false);
+  it('una emergencia solo la ven y atienden quienes la recibieron (el super admin la ve siempre)', async () => {
+    const id = (await juan().post('')).body.data.id; // la reciben 1, 5, 10 y 11
+    expect((await supB().get()).body.data.items).toEqual([]);
+    expect((await supB().post(`/${id}/acusar`)).status).toBe(404);
+    expect((await supB().post(`/${id}/cerrar`, { resultado: 'atendida' })).status).toBe(404);
+    const delAdmin = (await adminB().get()).body.data.items;
+    expect(delAdmin).toHaveLength(1);
+    expect(delAdmin[0].paraMi).toBe(true);
     expect((await superAdmin().post(`/${id}/acusar`)).status).toBe(200);
   });
 
@@ -314,10 +300,9 @@ describe('botón de pánico (A-60)', () => {
     ahora = new Date(ahora.getTime() + 61_000);
     await servicio.escalar();
     expect(avisos).toHaveLength(1);
-    expect(avisos[0].usuarioIds).toEqual([1, 5, 10]);
+    expect(avisos[0].usuarioIds).toEqual([1, 5, 10, 11]);
     expect(avisos[0]).toMatchObject({ titulo: 'SIN RESPUESTA', urgente: true });
     expect(repo.filas[0].escaladas).toBe(1);
-    // Desde ahora el super admin también la recibe: le salta la alerta y puede atenderla.
     expect((await superAdmin().get()).body.data.items[0].paraMi).toBe(true);
 
     await servicio.escalar(); // el mismo minuto no repite
@@ -326,7 +311,7 @@ describe('botón de pánico (A-60)', () => {
     await servicio.escalar();
     expect(avisos).toHaveLength(2);
     expect(audit.acciones().filter((a) => a === 'emergencias.escalar')).toHaveLength(2);
-    expect((await adminB().post(`/${id}/acusar`)).status).toBe(404);
+    expect((await supB().post(`/${id}/acusar`)).status).toBe(404);
   });
 
   it('una acusada o cerrada ya no se escala', async () => {
@@ -338,9 +323,9 @@ describe('botón de pánico (A-60)', () => {
     expect(avisos).toHaveLength(0);
   });
 
-  it('la de un guardia de otro admin no le llega al admin A', async () => {
+  it('la de un guardia de otro sitio le llega a su supervisor y no al de otro sitio', async () => {
     await luis().post('');
-    expect(avisos[0].usuarioIds).toEqual([6, 11]);
-    expect((await adminA().get()).body.data.items).toEqual([]);
+    expect(avisos[0].usuarioIds).toEqual([1, 6, 10, 11]);
+    expect((await supA().get()).body.data.items).toEqual([]);
   });
 });

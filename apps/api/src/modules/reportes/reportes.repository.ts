@@ -17,15 +17,12 @@ import { empresaActual } from '../../core/empresa/contexto';
 /** Qué reportes puede ver el usuario. */
 export type Visibilidad =
   | { tipo: 'todos' }
-  /** Reportes de los clientes de este admin (A-66). */
-  | { tipo: 'cartera'; propietarioId: number }
   /** Reportes de sus sitios con asignación vigente hoy + los que él creó. */
   | { tipo: 'guardia'; usuarioId: number; hoy: string }
   | { tipo: 'cliente'; clienteId: number }
   | { tipo: 'ninguno' };
 
 export type RestriccionSitio =
-  | { tipo: 'cartera'; propietarioId: number }
   | { tipo: 'guardia'; usuarioId: number; hoy: string }
   | { tipo: 'cliente'; clienteId: number }
   | null;
@@ -148,8 +145,6 @@ function whereVisibilidad(v: Visibilidad): Prisma.ReporteWhereInput {
   switch (v.tipo) {
     case 'todos':
       return {};
-    case 'cartera':
-      return { cliente: { propietarioId: v.propietarioId } };
     case 'ninguno':
       return { id: -1 };
     case 'cliente':
@@ -213,7 +208,6 @@ const sitioReportableWhere = (
   ...(filtro?.tipo === 'cliente' && {
     clienteId: filtro.clienteId,
   }),
-  ...(filtro?.tipo === 'cartera' && { cliente: { deletedAt: null, estatus: 'activo' as const, propietarioId: filtro.propietarioId } }),
   ...(filtro?.tipo === 'guardia' && {
     OR: [
       { asignaciones: { some: asignadaA(filtro.usuarioId, filtro.hoy) } },

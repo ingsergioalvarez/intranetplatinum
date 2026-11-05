@@ -45,31 +45,23 @@ export class EmergenciasService extends BaseService {
   }
 
   /**
-   * A quién le llega la alerta (A-65): de un guardia, su supervisor del sitio, el admin de ese supervisor y los
-   * admin dueños del guardia y del cliente; de un supervisor, su admin; de un admin, sus supervisores y el super
-   * admin; del super admin, todos los admin. Si no resulta nadie (sin asignar), el super admin.
+   * A quién le llega la alerta: del super admin, a todos los admin; de un admin, a los demás admin y al super admin;
+   * de cualquier otra persona, a su supervisor del sitio (si es guardia) y a los admin. Si no resulta nadie, al
+   * super admin. Pasa a la cadena de jefes y a RH en C-10 paso 5 (DC-017).
    */
   private async destinatarios(
     e: { usuario: { id: number; rol: string }; lanzadaPorSuper: boolean },
     sitio: { id: number; supervisorId: number | null } | null,
   ) {
     const ids = new Set<number>();
-    const rol = e.usuario.rol;
-    if (rol === ROLES.GUARDIA) {
-      if (sitio?.supervisorId) {
-        ids.add(sitio.supervisorId);
-        const adminDelSup = await this.repo.propietarioDe(sitio.supervisorId);
-        if (adminDelSup) ids.add(adminDelSup);
-      }
-      for (const a of await this.repo.adminsDe({ guardiaId: e.usuario.id, sitioId: sitio?.id ?? null })) ids.add(a);
-    } else if (rol === ROLES.SUPERVISOR) {
-      const admin = await this.repo.propietarioDe(e.usuario.id);
-      if (admin) ids.add(admin);
-    } else if (e.lanzadaPorSuper) {
+    if (e.lanzadaPorSuper) {
       for (const a of await this.repo.todosAdmins()) ids.add(a);
-    } else {
-      for (const s of await this.repo.supervisoresDe(e.usuario.id)) ids.add(s);
+    } else if (e.usuario.rol === ROLES.ADMIN) {
+      for (const a of await this.repo.todosAdmins()) ids.add(a);
       for (const a of await this.repo.superAdmins()) ids.add(a);
+    } else {
+      if (e.usuario.rol === ROLES.GUARDIA && sitio?.supervisorId) ids.add(sitio.supervisorId);
+      for (const a of await this.repo.adminsDe({ guardiaId: e.usuario.id, sitioId: sitio?.id ?? null })) ids.add(a);
     }
     ids.delete(e.usuario.id);
     // Sin nadie asignado, que no se pierda: le llega al super admin.

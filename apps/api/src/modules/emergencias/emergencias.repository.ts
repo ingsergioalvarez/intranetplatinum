@@ -56,12 +56,8 @@ export abstract class EmergenciasRepository {
   abstract marcarEscalada(id: number, en: Date): Promise<void>;
   /** Sitio donde está asignado hoy el guardia (y su supervisor). */
   abstract sitioDe(usuarioId: number, hoy: string): Promise<SitioDeGuardia | null>;
-  /** Admin dueño del guardia o del cliente del sitio (A-65). */
+  /** Admin a los que les toca enterarse (hoy, todos los de la empresa). */
   abstract adminsDe(contexto: ContextoDueno): Promise<number[]>;
-  /** Admin activo que es dueño de este usuario, o null (A-65). */
-  abstract propietarioDe(usuarioId: number): Promise<number | null>;
-  /** Supervisores que son de la cartera de este admin. */
-  abstract supervisoresDe(adminId: number): Promise<number[]>;
   abstract superAdmins(): Promise<number[]>;
   abstract todosAdmins(): Promise<number[]>;
   abstract nombreDe(usuarioId: number): Promise<string | null>;
@@ -217,22 +213,6 @@ export class PrismaEmergenciasRepository extends EmergenciasRepository {
 
   adminsDe(contexto: ContextoDueno) {
     return adminsDe(contexto);
-  }
-
-  async propietarioDe(usuarioId: number) {
-    const u = await getPrisma().usuario.findUnique({
-      where: { id: usuarioId },
-      select: { propietario: { select: { id: true, activo: true, deletedAt: true } } },
-    });
-    return u?.propietario && u.propietario.activo && !u.propietario.deletedAt ? u.propietario.id : null;
-  }
-
-  async supervisoresDe(adminId: number) {
-    const rows = await getPrisma().usuario.findMany({
-      where: { propietarioId: adminId, activo: true, deletedAt: null, rol: { clave: ROLES.SUPERVISOR } },
-      select: { id: true },
-    });
-    return rows.map((r) => r.id);
   }
 
   async superAdmins() {

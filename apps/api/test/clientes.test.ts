@@ -19,7 +19,6 @@ import { createClientesModule } from '../src/modules/clientes';
 import {
   ClientesRepository,
   type ClienteFiltroData,
-  type ClienteNuevoData,
 } from '../src/modules/clientes/clientes.repository';
 import { createSitiosModule } from '../src/modules/sitios';
 import {
@@ -52,14 +51,11 @@ class MemoryClientesRepository extends ClientesRepository {
   async findByRfc(rfc: string) {
     return this.clientes.find((c) => c.rfc === rfc) ?? null;
   }
-  async findPaged({ cartera, propietarioId, sinAsignar }: ClienteFiltroData = { estado: 'activos' }) {
-    const items = this.clientes
-      .filter((c) => cartera === undefined || c.propietario?.id === cartera)
-      .filter((c) => (cartera === undefined && sinAsignar ? !c.propietario : true))
-      .filter((c) => (cartera === undefined && !sinAsignar && propietarioId ? c.propietario?.id === propietarioId : true));
+  async findPaged(_filtro: ClienteFiltroData = { estado: 'activos' }) {
+    const items = [...this.clientes];
     return { items, total: items.length, page: 1, limit: 20 };
   }
-  async create({ propietarioId, ...data }: ClienteNuevoData) {
+  async create(data: ClienteCreateData) {
     const c: ClienteResumen = {
       id: this.clientes.length + 1,
       rfc: null,
@@ -75,7 +71,6 @@ class MemoryClientesRepository extends ClientesRepository {
       totalSitios: 0,
       totalContactos: 0,
       responsable: null,
-      propietario: propietarioId ? { id: propietarioId, nombre: `Admin ${propietarioId}` } : null,
     };
     this.clientes.push(c);
     return c;
@@ -167,15 +162,14 @@ class MemoryClientesRepository extends ClientesRepository {
   async findUsuarioPorId(id: number) {
     return this.usuarios.find((u) => u.id === id) ?? null;
   }
-  async listClientesDisponibles(cartera?: number) {
+  async listClientesDisponibles() {
     return this.usuarios
       .filter((u) => u.rol === ROLES.CLIENTE && !u.clienteId && !u.deletedAt)
-      .filter((u) => cartera === undefined || (u as { propietarioId?: number }).propietarioId === cartera)
       .map(({ id, nombre, email }) => ({ id, nombre, email }));
   }
   async crearAcceso(
     clienteId: number,
-    data: { nombre: string; email: string; passwordHash: string; propietarioId?: number | null },
+    data: { nombre: string; email: string; passwordHash: string },
   ) {
     const u = {
       id: 100 + this.usuarios.length,
@@ -184,7 +178,6 @@ class MemoryClientesRepository extends ClientesRepository {
       rol: ROLES.CLIENTE,
       clienteId,
       deletedAt: null,
-      propietarioId: data.propietarioId ?? null,
     };
     this.usuarios.push(u);
     return this.acceso(u);
@@ -221,16 +214,11 @@ class MemorySitiosRepository extends SitiosRepository {
     supervisorId: null as number | null,
   };
   guardias: GuardiaEstado[] = [
-    { id: 3, nombre: 'Gabriel', rol: ROLES.GUARDIA, deletedAt: null, propietarioId: 7 },
-    { id: 4, nombre: 'Lucía', rol: ROLES.GUARDIA, deletedAt: null, propietarioId: 7 },
-    { id: 2, nombre: 'Sofía', rol: ROLES.SUPERVISOR, deletedAt: null, propietarioId: 7 },
-    { id: 5, nombre: 'Guardia de otro admin', rol: ROLES.GUARDIA, deletedAt: null, propietarioId: 11 },
+    { id: 3, nombre: 'Gabriel', rol: ROLES.GUARDIA, deletedAt: null },
+    { id: 4, nombre: 'Lucía', rol: ROLES.GUARDIA, deletedAt: null },
+    { id: 2, nombre: 'Sofía', rol: ROLES.SUPERVISOR, deletedAt: null },
+    { id: 5, nombre: 'Otro guardia', rol: ROLES.GUARDIA, deletedAt: null },
   ];
-  /** Dueño del cliente del sitio de prueba (A-65). */
-  duenoDelCliente: number | null = 7;
-  async duenoDeSitio(id: number) {
-    return id === 1 ? { propietarioId: this.duenoDelCliente, supervisorId: this.sitio.supervisorId } : null;
-  }
   turnos = new Map<number, TurnoEstado>([
     [1, { id: 1, nombre: '24 h · 8:00', horas: 24, horaEntrada: '08:00', dias: UNO_Y_UNO, activo: true }],
     [2, { id: 2, nombre: '12 h noche', horas: 12, horaEntrada: '20:00', dias: DIARIO, activo: true }],
@@ -246,10 +234,9 @@ class MemorySitiosRepository extends SitiosRepository {
   async findSitio(id: number) {
     return id === 1 ? this.sitio : null;
   }
-  async supervisores(cartera?: number) {
+  async supervisores() {
     return this.guardias
       .filter((g) => g.rol === ROLES.SUPERVISOR)
-      .filter((g) => cartera === undefined || g.propietarioId === cartera)
       .map((g) => ({ id: g.id, nombre: g.nombre, email: `${g.id}@x.mx`, sitios: 0 }));
   }
   async setSupervisor(_sitioId: number, supervisorId: number | null) {
@@ -345,10 +332,9 @@ class MemorySitiosRepository extends SitiosRepository {
     }
     return mapa;
   }
-  async guardiasActivos(cartera?: number) {
+  async guardiasActivos() {
     return this.guardias
       .filter((g) => g.rol === ROLES.GUARDIA)
-      .filter((g) => cartera === undefined || g.propietarioId === cartera)
       .map((g) => ({ id: g.id, nombre: g.nombre, email: `u${g.id}@x.mx`, fotoClave: null }));
   }
   async eliminarAsignacion(id: number) {
@@ -364,10 +350,10 @@ let avisos: { usuarioIds: number[]; tipo: string; mensaje: string }[];
 let bitacora: EventoNuevo[];
 let app: ReturnType<typeof createApp>;
 
-const tokenDe = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean; propietarioId?: number } = {}) =>
+const tokenDe = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean } = {}) =>
   signAccessToken({ id, email: `u${id}@x.mx`, rol, permisos: PERMISOS_POR_ROL[rol], ...extra });
-/** Los clientes de prueba son del admin 7: el supervisor de las pruebas viejas es de ese admin y el admin 1 es super admin. */
-const SUPERVISOR = tokenDe(2, ROLES.SUPERVISOR, { propietarioId: 7 });
+/** El admin 1 es super admin. */
+const SUPERVISOR = tokenDe(2, ROLES.SUPERVISOR);
 const GUARDIA = tokenDe(3, ROLES.GUARDIA);
 const ADMIN = tokenDe(1, ROLES.ADMIN, { esSuperAdmin: true });
 
@@ -401,13 +387,11 @@ beforeEach(async () => {
     razonSocial: 'Plaza Uno SA',
     rfc: 'PUN010101AB1',
     estatus: 'activo',
-    propietarioId: 7,
   });
   await clientes.create({
     nombreComercial: 'Torre Dos',
     razonSocial: 'Torre Dos SA',
     estatus: 'activo',
-    propietarioId: 7,
   });
 });
 
@@ -1051,7 +1035,7 @@ describe('turnos del catálogo en el sitio: asignar en lote (DA-37)', () => {
   it('guardias disponibles: con lo que ya tienen asignado; el guardia no puede verlos', async () => {
     await asignarTurno({ turnoId: 1, guardias: [{ usuarioId: 3, desde: HOY }] });
     const res = await como(SUPERVISOR).get('/sitios/guardias-disponibles');
-    expect(res.body.data.map((g: { nombre: string }) => g.nombre)).toEqual(['Gabriel', 'Lucía']);
+    expect(res.body.data.map((g: { nombre: string }) => g.nombre)).toEqual(['Gabriel', 'Lucía', 'Otro guardia']);
     expect(res.body.data[0].asignaciones[0]).toMatchObject({
       sitio: { nombre: 'Torre Norte' },
       turnoNombre: '24 h · 8:00',
@@ -1062,111 +1046,54 @@ describe('turnos del catálogo en el sitio: asignar en lote (DA-37)', () => {
   });
 });
 
-// ---------- Carteras de los admin (A-65) ----------
-describe('clientes: carteras de admin (A-65)', () => {
-  // Los dos de siempre son del admin 7. Admin A = 10 y admin B = 11 tienen uno cada uno; hay uno sin dueño.
+// ---------- Clientes y sitios de la empresa ----------
+describe('clientes de la empresa', () => {
   const A = tokenDe(10, ROLES.ADMIN);
   const B = tokenDe(11, ROLES.ADMIN);
-
-  beforeEach(async () => {
-    await clientes.create({ nombreComercial: 'Cliente de A', razonSocial: 'A SA', estatus: 'activo', propietarioId: 10 });
-    await clientes.create({ nombreComercial: 'Cliente de B', razonSocial: 'B SA', estatus: 'activo', propietarioId: 11 });
-    await clientes.create({ nombreComercial: 'Sin dueño', razonSocial: 'S SA', estatus: 'activo' });
-  });
-
   const nombres = (res: request.Response) => res.body.data.items.map((c: { nombreComercial: string }) => c.nombreComercial).sort();
 
-  it('un admin ve solo sus clientes; el super admin ve todos y puede filtrar por dueño o sin asignar', async () => {
-    expect(nombres(await como(A).get('/clientes'))).toEqual(['Cliente de A']);
-    expect(nombres(await como(B).get('/clientes'))).toEqual(['Cliente de B']);
-    expect((await como(ADMIN).get('/clientes')).body.data.total).toBe(5);
-    expect(nombres(await como(ADMIN).get('/clientes?propietarioId=10'))).toEqual(['Cliente de A']);
-    expect(nombres(await como(ADMIN).get('/clientes?sinAsignar=true'))).toEqual(['Sin dueño']);
-    // Un admin no puede usar el filtro para asomarse a otro.
-    expect(nombres(await como(A).get('/clientes?propietarioId=11'))).toEqual(['Cliente de A']);
+  it('un admin, un supervisor y el super admin ven todos los clientes', async () => {
+    const todos = ['Plaza Uno', 'Torre Dos'];
+    expect(nombres(await como(A).get('/clientes'))).toEqual(todos);
+    expect(nombres(await como(B).get('/clientes'))).toEqual(todos);
+    expect(nombres(await como(SUPERVISOR).get('/clientes'))).toEqual(todos);
+    expect((await como(ADMIN).get('/clientes')).body.data.total).toBe(2);
   });
 
-  it('un supervisor ve los clientes del admin de su cartera', async () => {
-    const supDeA = tokenDe(2, ROLES.SUPERVISOR, { propietarioId: 10 });
-    expect(nombres(await como(supDeA).get('/clientes'))).toEqual(['Cliente de A']);
-    const sinAdmin = tokenDe(2, ROLES.SUPERVISOR);
-    expect(nombres(await como(sinAdmin).get('/clientes'))).toEqual([]);
-  });
-
-  it('el cliente (y todo lo que cuelga de él) de otro admin o sin dueño no existe para un admin', async () => {
-    // 3 = de A, 4 = de B, 5 = sin dueño.
-    for (const id of [4, 5]) {
-      expect((await como(A).get(`/clientes/${id}`)).status).toBe(404);
-      expect((await como(A).put(`/clientes/${id}`, { nombreComercial: 'X', razonSocial: 'X SA' })).status).toBe(404);
-      expect((await como(A).patch(`/clientes/${id}/baja`)).status).toBe(404);
-      expect((await como(A).post(`/clientes/${id}/sitios`, { nombre: 'Sitio' })).status).toBe(404);
-      expect((await como(A).post(`/clientes/${id}/contactos`, { nombre: 'Persona' })).status).toBe(404);
-      expect((await como(A).post(`/clientes/${id}/accesos`, { nombre: 'Ana', email: 'a@x.mx' })).status).toBe(404);
-      expect((await como(A).put(`/clientes/${id}/avisos`, { porDefecto: 'supervisor' })).status).toBe(404);
-    }
-    expect((await como(A).get('/clientes/3')).status).toBe(200);
-    expect((await como(ADMIN).get('/clientes/4')).status).toBe(200);
-  });
-
-  it('lo que crea un admin es suyo; un supervisor crea para el admin de su cartera', async () => {
-    const nuevo = { nombreComercial: 'Nuevo de A', razonSocial: 'Nuevo SA' };
-    const res = await como(A).post('/clientes', nuevo);
+  it('cualquier admin ve y edita el cliente que creó otro', async () => {
+    const res = await como(A).post('/clientes', { nombreComercial: 'Nuevo de A', razonSocial: 'Nuevo SA' });
     expect(res.status).toBe(201);
-    expect(res.body.data.propietario).toEqual({ id: 10, nombre: 'Admin 10' });
-    expect(nombres(await como(B).get('/clientes'))).not.toContain('Nuevo de A');
-
-    const supDeB = tokenDe(2, ROLES.SUPERVISOR, { propietarioId: 11 });
-    const delSup = await como(supDeB).post('/clientes', { nombreComercial: 'Del sup', razonSocial: 'Sup SA' });
-    expect(delSup.body.data.propietario).toEqual({ id: 11, nombre: 'Admin 11' });
-    expect(nombres(await como(B).get('/clientes'))).toContain('Del sup');
-    expect(nombres(await como(A).get('/clientes'))).not.toContain('Del sup');
+    expect(nombres(await como(B).get('/clientes'))).toContain('Nuevo de A');
+    const id = res.body.data.id;
+    expect((await como(B).get(`/clientes/${id}`)).status).toBe(200);
+    expect((await como(B).patch(`/clientes/${id}`, { nombreComercial: 'Renombrado' })).status).toBe(200);
   });
 
-  it('el acceso nuevo de un cliente queda del mismo dueño que el cliente', async () => {
-    const res = await como(A).post('/clientes/3/accesos', { nombre: 'Ana', email: 'ana@cliente.mx' });
+  it('el acceso nuevo de un cliente se crea sin dueño', async () => {
+    const res = await como(A).post('/clientes/1/accesos', { nombre: 'Ana', email: 'ana@cliente.mx' });
     expect(res.status).toBe(201);
-    const creado = clientes.usuarios.find((u) => u.email === 'ana@cliente.mx') as { propietarioId?: number | null };
-    expect(creado.propietarioId).toBe(10);
+    expect(clientes.usuarios.some((u) => u.email === 'ana@cliente.mx')).toBe(true);
   });
 });
 
-describe('sitios: carteras de admin (A-65)', () => {
-  // El cliente del sitio 1 es del admin 7; el guardia 5 es del admin 11.
+describe('sitios de la empresa', () => {
   const A7 = tokenDe(7, ROLES.ADMIN);
   const A10 = tokenDe(10, ROLES.ADMIN);
 
-  it('un admin solo ve y toca los sitios de sus clientes', async () => {
+  it('cualquier admin ve y toca los sitios', async () => {
     expect((await como(A7).get('/sitios/1/guardias')).status).toBe(200);
-    expect((await como(A10).get('/sitios/1/guardias')).status).toBe(404);
-    expect((await como(A10).post('/sitios/1/guardias', { tipo: 'fija', usuarioId: 3, turno: '24x24', horaInicio: '08:00', desde: HOY })).status).toBe(404);
-    expect((await como(A10).put('/sitios/1/supervisor', { supervisorId: 2 })).status).toBe(404);
-    expect((await como(ADMIN).get('/sitios/1/guardias')).status).toBe(200);
+    expect((await como(A10).get('/sitios/1/guardias')).status).toBe(200);
+    expect((await como(A10).put('/sitios/1/supervisor', { supervisorId: 2 })).status).toBe(204);
   });
 
-  it('el supervisor del sitio sigue viéndolo aunque el cliente sea de otro admin', async () => {
-    sitios.duenoDelCliente = 99;
-    sitios.sitio.supervisorId = 2;
-    expect((await como(SUPERVISOR).get('/sitios/1/guardias')).status).toBe(200);
-    sitios.sitio.supervisorId = null;
-    expect((await como(SUPERVISOR).get('/sitios/1/guardias')).status).toBe(404);
-  });
-
-  it('las listas para elegir solo traen a los guardias y supervisores del admin', async () => {
+  it('las listas para elegir traen a todos los guardias y supervisores activos', async () => {
     const guardias = (await como(A7).get('/sitios/guardias-disponibles')).body.data.map((g: { id: number }) => g.id).sort();
-    expect(guardias).toEqual([3, 4]);
-    expect((await como(A10).get('/sitios/guardias-disponibles')).body.data).toEqual([]);
-    const todos = (await como(ADMIN).get('/sitios/guardias-disponibles')).body.data.map((g: { id: number }) => g.id).sort();
-    expect(todos).toEqual([3, 4, 5]);
-    expect((await como(A7).get('/sitios/supervisores')).body.data.map((s: { id: number }) => s.id)).toEqual([2]);
-    expect((await como(A10).get('/sitios/supervisores')).body.data).toEqual([]);
+    expect(guardias).toEqual([3, 4, 5]);
+    expect((await como(A10).get('/sitios/supervisores')).body.data.map((s: { id: number }) => s.id)).toEqual([2]);
   });
 
-  it('no deja asignar a un guardia o supervisor que es de otro admin', async () => {
-    const otroGuardia = await como(A7).post('/sitios/1/guardias', { tipo: 'fija', usuarioId: 5, turno: '24x24', horaInicio: '08:00', desde: HOY });
-    expect(otroGuardia.status).toBe(400);
-    expect((await como(ADMIN).post('/sitios/1/guardias', { tipo: 'fija', usuarioId: 5, turno: '24x24', horaInicio: '08:00', desde: HOY })).status).toBe(201);
-    sitios.guardias.push({ id: 6, nombre: 'Sup ajeno', rol: ROLES.SUPERVISOR, deletedAt: null, propietarioId: 11 });
-    expect((await como(A7).put('/sitios/1/supervisor', { supervisorId: 6 })).status).toBe(400);
+  it('se asigna a cualquier guardia y supervisor activo de la empresa', async () => {
+    expect((await como(A7).post('/sitios/1/guardias', { tipo: 'fija', usuarioId: 5, turno: '24x24', horaInicio: '08:00', desde: HOY })).status).toBe(201);
     expect((await como(A7).put('/sitios/1/supervisor', { supervisorId: 2 })).status).toBe(204);
   });
 });

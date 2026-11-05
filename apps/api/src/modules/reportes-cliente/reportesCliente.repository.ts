@@ -13,8 +13,6 @@ import { empresaActual } from '../../core/empresa/contexto';
 /** Quién puede ver cuáles reportes del cliente (A-59). */
 export type VisibilidadReporteCliente =
   | { tipo: 'todos' }
-  /** Admin: los de los clientes de los que es dueño. */
-  | { tipo: 'cartera'; propietarioId: number }
   /** Supervisor: los de sus sitios. */
   | { tipo: 'supervisor'; usuarioId: number }
   /** Cliente: los de su empresa. */
@@ -92,8 +90,6 @@ const dondeVisible = (v: VisibilidadReporteCliente) => {
   switch (v.tipo) {
     case 'todos':
       return {};
-    case 'cartera':
-      return { cliente: { propietarioId: v.propietarioId } };
     case 'supervisor':
       return { sitio: { supervisorId: v.usuarioId } };
     case 'cliente':

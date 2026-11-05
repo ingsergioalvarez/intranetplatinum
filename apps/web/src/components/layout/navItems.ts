@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Boxes,
-  Briefcase,
   Building2,
   ClipboardCheck,
   ClipboardList,
@@ -80,7 +79,6 @@ export const navItems: NavItem[] = [
   { label: 'Usuarios', to: '/usuarios', icon: Users, permiso: PERMISOS.USUARIOS_VER },
   // Estructura de la empresa (C-10): áreas con subáreas, sus personas y su jefe. Parte de lo siempre incluido.
   { label: 'Áreas', to: '/areas', icon: Network, roles: [ROLES.ADMIN] },
-  { label: 'Carteras', to: '/carteras', modulo: 'carteras', icon: Briefcase, superAdmin: true },
   {
     label: 'Turnos',
     to: '/catalogos/turnos',

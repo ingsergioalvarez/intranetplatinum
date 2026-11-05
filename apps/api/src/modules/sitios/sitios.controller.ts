@@ -57,7 +57,7 @@ export class SitiosController extends BaseController {
   };
 
   guardiasDisponibles = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.guardiasDisponibles(this.currentUser(req)));
+    this.ok(res, await this.service.guardiasDisponibles());
 
   asignarTurno = async (req: Request, res: Response) =>
     this.created(
@@ -70,10 +70,7 @@ export class SitiosController extends BaseController {
     );
 
   supervisores = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.supervisores(this.currentUser(req)));
-
-  /** Para las rutas con `:id` de sitio (A-65). */
-  exigirSitio = async (req: Request, sitioId: number) => this.service.exigirSitioEnCartera(sitioId, this.currentUser(req));
+    this.ok(res, await this.service.supervisores());
 
   asignarSupervisor = async (req: Request, res: Response) => {
     await this.service.asignarSupervisor(

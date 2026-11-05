@@ -1,35 +1,20 @@
 import { ROLES } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 
-/** De qué cosa hay que saber quién es el admin dueño (A-65). */
+/** De qué cosa trata el aviso (guardia y sitio). Hoy no cambia a quién le toca; lo usará la cadena de jefes (C-10 paso 5). */
 export interface ContextoDueno {
   guardiaId?: number | null;
   sitioId?: number | null;
 }
 
 /**
- * Admins a los que les toca enterarse de algo de este guardia o sitio (A-65): el dueño del guardia y el dueño del
- * cliente del sitio. Solo activos. Si lo que importa no tiene dueño (sin asignar) no hay a quién avisar: el aviso
- * queda pendiente en la pantalla y llega al admin que lo reciba cuando se asigne. Sin contexto, todos los admin.
+ * Admins activos de la empresa. Sin Carteras ya no hay un dueño de cada guardia o sitio, así que de momento todos
+ * los admin reciben lo que antes le llegaba al dueño. Los avisos pasan a la cadena de jefes en C-10 paso 5 (DC-017).
  */
-export async function adminsDe(contexto?: ContextoDueno): Promise<number[]> {
-  const db = getPrisma();
-  const activos = { activo: true, deletedAt: null, rol: { clave: ROLES.ADMIN } };
-  if (!contexto) return (await db.usuario.findMany({ where: activos, select: { id: true } })).map((u) => u.id);
-
-  const duenos = new Set<number>();
-  if (contexto.guardiaId) {
-    const g = await db.usuario.findUnique({ where: { id: contexto.guardiaId }, select: { propietarioId: true } });
-    if (g?.propietarioId) duenos.add(g.propietarioId);
-  }
-  if (contexto.sitioId) {
-    const s = await db.sitio.findUnique({
-      where: { id: contexto.sitioId },
-      select: { cliente: { select: { propietarioId: true } } },
-    });
-    if (s?.cliente.propietarioId) duenos.add(s.cliente.propietarioId);
-  }
-  if (duenos.size === 0) return [];
-  const admins = await db.usuario.findMany({ where: { ...activos, id: { in: [...duenos] } }, select: { id: true } });
+export async function adminsDe(_contexto?: ContextoDueno): Promise<number[]> {
+  const admins = await getPrisma().usuario.findMany({
+    where: { activo: true, deletedAt: null, rol: { clave: ROLES.ADMIN } },
+    select: { id: true },
+  });
   return admins.map((a) => a.id);
 }

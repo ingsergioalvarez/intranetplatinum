@@ -36,10 +36,10 @@ class GruposController extends BaseController {
   }
 
   list = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.listar(this.query<GrupoFiltro>(req), this.currentUser(req)));
+    this.ok(res, await this.service.listar(this.query<GrupoFiltro>(req)));
 
   get = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.getById(this.params<IdParam>(req).id, this.currentUser(req)));
+    this.ok(res, await this.service.getById(this.params<IdParam>(req).id));
 
   create = async (req: Request, res: Response) => {
     const { usuarioIds, ...data } = this.body<GrupoData & { usuarioIds: number[] }>(req);

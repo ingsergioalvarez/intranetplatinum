@@ -21,14 +21,10 @@ import {
   BaseService,
   HttpError,
   calcularCambios,
-  carteraDe,
-  enCartera,
   generateTemporaryPassword,
   hashPassword,
   hoyISO,
-  propietarioParaCrear,
   type AccionCtx,
-  type AuthUser,
 } from '../../core';
 import type { ClienteUpdateData, ClientesRepository } from './clientes.repository';
 
@@ -49,26 +45,19 @@ export class ClientesService extends BaseService {
 
   // ---------- Clientes ----------
 
-  /** Cada admin ve sus clientes (y un supervisor los de su admin); el super admin ve todos y puede filtrar por dueño. */
-  list({ page, limit, ...filtro }: ClienteFiltro, actor: AuthUser): Promise<Paginated<ClienteResumen>> {
-    const cartera = carteraDe(actor);
-    return this.repo.findPaged(
-      cartera === undefined ? filtro : { ...filtro, propietarioId: undefined, sinAsignar: undefined, cartera },
-      { page, limit },
-    );
+  list({ page, limit, ...filtro }: ClienteFiltro): Promise<Paginated<ClienteResumen>> {
+    return this.repo.findPaged(filtro, { page, limit });
   }
 
-  /** Con `actor`, un cliente fuera de su cartera se responde como si no existiera (A-65). */
-  async getById(id: number, actor?: AuthUser): Promise<ClienteResumen> {
+  async getById(id: number): Promise<ClienteResumen> {
     const cliente = await this.repo.findById(id);
     if (!cliente) throw HttpError.notFound('Cliente no encontrado');
-    if (actor && !enCartera(actor, cliente.propietario?.id ?? null)) throw HttpError.notFound('Cliente no encontrado');
     return cliente;
   }
 
   /** Ficha completa: datos, contactos y sitios (incluye sitios de baja para el historial). */
-  async getDetalle(id: number, actor: AuthUser): Promise<ClienteDetalle> {
-    const { totalSitios: _s, totalContactos: _c, responsable: _r, ...cliente } = await this.getById(id, actor);
+  async getDetalle(id: number): Promise<ClienteDetalle> {
+    const { totalSitios: _s, totalContactos: _c, responsable: _r, ...cliente } = await this.getById(id);
     const [contactos, sitios, reglasAviso, accesos] = await Promise.all([
       this.repo.listContactos(id),
       this.repo.listSitios(id, this.hoy(), true),
@@ -80,8 +69,7 @@ export class ClientesService extends BaseService {
 
   async crear(data: ClienteCreateData, ctx: AccionCtx): Promise<ClienteResumen> {
     if (data.rfc && (await this.repo.findByRfc(data.rfc))) throw rfcDuplicado();
-    // Quien lo crea es su dueño (un supervisor, el de su admin): lo ve y lo administra (A-65).
-    const cliente = await this.repo.create({ ...data, propietarioId: ctx.actor ? propietarioParaCrear(ctx.actor) : null });
+    const cliente = await this.repo.create(data);
     await this.auditar(ctx, 'clientes.crear', 'clientes', cliente.id, {
       nombreComercial: cliente.nombreComercial,
     });
@@ -89,7 +77,7 @@ export class ClientesService extends BaseService {
   }
 
   async actualizar(id: number, data: ClienteUpdateData, ctx: AccionCtx): Promise<ClienteResumen> {
-    const actual = await this.getById(id, ctx.actor);
+    const actual = await this.getById(id);
     if (actual.deletedAt) throw HttpError.conflict('El cliente está dado de baja; reactívalo primero');
     if (data.rfc && data.rfc !== actual.rfc) {
       const otro = await this.repo.findByRfc(data.rfc);
@@ -105,14 +93,14 @@ export class ClientesService extends BaseService {
 
   /** Baja lógica (D-006): sus sitios dejan de aparecer a los guardias. */
   async darDeBaja(id: number, ctx: AccionCtx): Promise<void> {
-    const cliente = await this.getById(id, ctx.actor);
+    const cliente = await this.getById(id);
     if (cliente.deletedAt) return;
     await this.repo.softDelete(id);
     await this.auditar(ctx, 'clientes.baja', 'clientes', id, { nombreComercial: cliente.nombreComercial });
   }
 
   async reactivar(id: number, ctx: AccionCtx): Promise<void> {
-    const cliente = await this.getById(id, ctx.actor);
+    const cliente = await this.getById(id);
     if (!cliente.deletedAt) return;
     await this.repo.restore(id);
     await this.auditar(ctx, 'clientes.reactivar', 'clientes', id, {
@@ -123,7 +111,7 @@ export class ClientesService extends BaseService {
   // ---------- Reglas de aviso (F3-09) ----------
 
   async actualizarReglasAviso(id: number, reglas: ReglasAviso, ctx: AccionCtx): Promise<ReglasAviso> {
-    await this.clienteEditable(id, ctx.actor);
+    await this.clienteEditable(id);
     const antes = await this.repo.getReglasAviso(id);
     // Una excepción igual a la regla por defecto no aporta nada: se descarta.
     const limpias: ReglasAviso = {
@@ -140,8 +128,8 @@ export class ClientesService extends BaseService {
   // ---------- Acceso del cliente (A-29) ----------
 
   /** Usuarios cliente que se pueden ligar (activos y sin cliente asignado). */
-  listarClientesDisponibles(actor: AuthUser): Promise<UsuarioClienteDisponible[]> {
-    return this.repo.listClientesDisponibles(carteraDe(actor));
+  listarClientesDisponibles(): Promise<UsuarioClienteDisponible[]> {
+    return this.repo.listClientesDisponibles();
   }
 
   /**
@@ -151,7 +139,7 @@ export class ClientesService extends BaseService {
    * como contacto que recibe los avisos de reportes.
    */
   async crearAcceso(clienteId: number, data: AccesoClienteData, ctx: AccionCtx): Promise<AccesoClienteCreado> {
-    const cliente = await this.clienteEditable(clienteId, ctx.actor);
+    await this.clienteEditable(clienteId);
     const accesos = await this.repo.listAccesos(clienteId);
     if (accesos.filter((a) => a.activo).length >= MAX_ACCESOS_CLIENTE) {
       throw HttpError.conflict(`Un cliente puede tener máximo ${MAX_ACCESOS_CLIENTE} usuarios con acceso`);
@@ -180,8 +168,6 @@ export class ClientesService extends BaseService {
         nombre: data.nombre,
         email: data.email,
         passwordHash: await hashPassword(passwordTemporal),
-        // El acceso del cliente es del mismo dueño que el cliente.
-        propietarioId: cliente.propietario?.id ?? null,
       });
     }
 
@@ -211,7 +197,7 @@ export class ClientesService extends BaseService {
   // ---------- Contactos (F2-03) ----------
 
   async crearContacto(clienteId: number, data: ContactoData, ctx: AccionCtx): Promise<Contacto> {
-    await this.clienteEditable(clienteId, ctx.actor);
+    await this.clienteEditable(clienteId);
     const contacto = await this.repo.createContacto(clienteId, data);
     await this.auditar(ctx, 'clientes.contacto_crear', 'cliente_contactos', contacto.id, {
       clienteId,
@@ -226,7 +212,7 @@ export class ClientesService extends BaseService {
     data: ContactoData,
     ctx: AccionCtx,
   ): Promise<Contacto> {
-    await this.clienteEditable(clienteId, ctx.actor);
+    await this.clienteEditable(clienteId);
     const actual = await this.contactoDe(clienteId, contactoId);
     const { antes, despues, hayCambios } = calcularCambios<ContactoData>(actual, data);
     if (!hayCambios) return actual;
@@ -240,7 +226,7 @@ export class ClientesService extends BaseService {
   }
 
   async eliminarContacto(clienteId: number, contactoId: number, ctx: AccionCtx): Promise<void> {
-    await this.clienteEditable(clienteId, ctx.actor);
+    await this.clienteEditable(clienteId);
     const contacto = await this.contactoDe(clienteId, contactoId);
     await this.repo.softDeleteContacto(contactoId);
     await this.auditar(ctx, 'clientes.contacto_eliminar', 'cliente_contactos', contactoId, {
@@ -252,14 +238,14 @@ export class ClientesService extends BaseService {
   // ---------- Sitios (F2-04) ----------
 
   async crearSitio(clienteId: number, data: SitioData, ctx: AccionCtx): Promise<Sitio> {
-    await this.clienteEditable(clienteId, ctx.actor);
+    await this.clienteEditable(clienteId);
     const sitio = await this.repo.createSitio(clienteId, data);
     await this.auditar(ctx, 'clientes.sitio_crear', 'sitios', sitio.id, { clienteId, nombre: sitio.nombre });
     return sitio;
   }
 
   async actualizarSitio(clienteId: number, sitioId: number, data: SitioData, ctx: AccionCtx): Promise<Sitio> {
-    await this.clienteEditable(clienteId, ctx.actor);
+    await this.clienteEditable(clienteId);
     const actual = await this.sitioDe(clienteId, sitioId);
     if (actual.deletedAt) throw HttpError.conflict('El sitio está dado de baja; reactívalo primero');
     const { antes, despues, hayCambios } = calcularCambios<SitioData>(actual, data);
@@ -271,7 +257,7 @@ export class ClientesService extends BaseService {
 
   /** Baja del sitio: termina hoy las asignaciones vigentes de guardias. */
   async darDeBajaSitio(clienteId: number, sitioId: number, ctx: AccionCtx): Promise<void> {
-    await this.clienteEditable(clienteId, ctx.actor);
+    await this.clienteEditable(clienteId);
     const sitio = await this.sitioDe(clienteId, sitioId);
     if (sitio.deletedAt) return;
     await this.repo.softDeleteSitio(sitioId, this.hoy());
@@ -283,7 +269,7 @@ export class ClientesService extends BaseService {
   }
 
   async reactivarSitio(clienteId: number, sitioId: number, ctx: AccionCtx): Promise<void> {
-    await this.clienteEditable(clienteId, ctx.actor);
+    await this.clienteEditable(clienteId);
     const sitio = await this.sitioDe(clienteId, sitioId);
     if (!sitio.deletedAt) return;
     await this.repo.restoreSitio(sitioId);
@@ -295,8 +281,8 @@ export class ClientesService extends BaseService {
 
   // ---------- Apoyo ----------
 
-  private async clienteEditable(id: number, actor?: AuthUser) {
-    const cliente = await this.getById(id, actor);
+  private async clienteEditable(id: number) {
+    const cliente = await this.getById(id);
     if (cliente.deletedAt) throw HttpError.conflict('El cliente está dado de baja; reactívalo primero');
     return cliente;
   }

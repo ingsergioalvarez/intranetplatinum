@@ -122,7 +122,6 @@ class MemoryReportesRepository extends ReportesRepository {
   seguimientos: NuevoSeguimiento[] = [];
   visibleParaGuardia = true;
   /** Admin dueño del cliente del reporte (A-66). */
-  duenoDelCliente = 7;
 
   async crear(_d: unknown, fotos: FotoNueva[]) {
     if (this.falla) throw new Error('BD caída');
@@ -169,10 +168,7 @@ class MemoryReportesRepository extends ReportesRepository {
   }
   async puedeVer(_id: number, v: Visibilidad) {
     return (
-      v.tipo === 'todos' ||
-      (v.tipo === 'guardia' && this.visibleParaGuardia) ||
-      (v.tipo === 'cliente' && v.clienteId === 1) ||
-      (v.tipo === 'cartera' && v.propietarioId === this.duenoDelCliente)
+      v.tipo === 'todos' || (v.tipo === 'guardia' && this.visibleParaGuardia) || (v.tipo === 'cliente' && v.clienteId === 1)
     );
   }
   async agregarSeguimiento(_id: number, s: NuevoSeguimiento) {
@@ -199,8 +195,7 @@ const usuario = (id: number, rol: Rol, extra: Partial<AuthUser> = {}): AuthUser 
   ...extra,
 });
 const GUARDIA = usuario(3, ROLES.GUARDIA);
-/** El supervisor de estas pruebas es del admin 7, dueño del cliente de los reportes. */
-const SUPERVISOR = usuario(2, ROLES.SUPERVISOR, { propietarioId: 7 });
+const SUPERVISOR = usuario(2, ROLES.SUPERVISOR);
 const SUPER_ADMIN = usuario(1, ROLES.ADMIN, { esSuperAdmin: true });
 const CLIENTE: AuthUser = { ...usuario(5, ROLES.CLIENTE), clienteId: 1 };
 const datos = {
@@ -325,18 +320,17 @@ describe('visibilidad y seguimiento', () => {
   });
 });
 
-describe('reportes: cada admin ve los de su cartera (A-66)', () => {
+describe('reportes: quién ve todos los de la empresa', () => {
   const adminDe = (id: number) => usuario(id, ROLES.ADMIN);
 
-  it('el admin dueño del cliente y su supervisor ven el reporte; otro admin, no; el super admin sí', async () => {
+  it('el admin y el supervisor ven el reporte de cualquier cliente de la empresa', async () => {
     expect(await codigo(service.detalle(adminDe(7), 1))).toBe('OK');
+    expect(await codigo(service.detalle(adminDe(8), 1))).toBe('OK');
     expect(await codigo(service.detalle(SUPERVISOR, 1))).toBe('OK');
-    expect(await codigo(service.detalle(adminDe(8), 1))).toBe('404');
-    expect(await codigo(service.detalle(usuario(3, ROLES.SUPERVISOR, { propietarioId: 8 }), 1))).toBe('404');
     expect(await codigo(service.detalle(SUPER_ADMIN, 1))).toBe('OK');
   });
 
-  it('la lista se acota al dueño del cliente; el super admin no tiene límite', async () => {
+  it('la lista no se acota a un dueño', async () => {
     const visibilidades: unknown[] = [];
     repo.findPaged = async (_f: ReporteFiltroData, v: Visibilidad) => {
       visibilidades.push(v);
@@ -345,14 +339,10 @@ describe('reportes: cada admin ve los de su cartera (A-66)', () => {
     await service.list(adminDe(7), { page: 1, limit: 20 });
     await service.list(SUPERVISOR, { page: 1, limit: 20 });
     await service.list(SUPER_ADMIN, { page: 1, limit: 20 });
-    expect(visibilidades).toEqual([
-      { tipo: 'cartera', propietarioId: 7 },
-      { tipo: 'cartera', propietarioId: 7 },
-      { tipo: 'todos' },
-    ]);
+    expect(visibilidades).toEqual([{ tipo: 'todos' }, { tipo: 'todos' }, { tipo: 'todos' }]);
   });
 
-  it('un admin solo puede reportar en sitios de sus clientes', async () => {
+  it('un admin puede reportar en cualquier sitio de la empresa', async () => {
     const restricciones: unknown[] = [];
     repo.sitioParaReportar = async (_id: number, f: RestriccionSitio) => {
       restricciones.push(f);
@@ -360,6 +350,6 @@ describe('reportes: cada admin ve los de su cartera (A-66)', () => {
     };
     await service.crear(adminDe(7), datos, [foto()]);
     await service.crear(SUPER_ADMIN, datos, [foto()]);
-    expect(restricciones).toEqual([{ tipo: 'cartera', propietarioId: 7 }, null]);
+    expect(restricciones).toEqual([null, null]);
   });
 });

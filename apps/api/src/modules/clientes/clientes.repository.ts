@@ -18,18 +18,13 @@ import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
 import { empresaActual } from '../../core/empresa/contexto';
 
-export type ClienteFiltroData = Omit<ClienteFiltro, 'page' | 'limit'> & {
-  /** Admin cuya cartera se ve (A-65). Sin esto (super admin) se ven todos. */
-  cartera?: number;
-};
+export type ClienteFiltroData = Omit<ClienteFiltro, 'page' | 'limit'>;
 export type ClienteUpdateData = Partial<ClienteCreateData>;
-/** Alta de cliente: el dueño es quien lo crea (A-65). */
-export type ClienteNuevoData = ClienteCreateData & { propietarioId?: number | null };
 
 /** Clientes y lo que cuelga de ellos (contactos y sitios). */
 export abstract class ClientesRepository extends BaseRepository<
   ClienteResumen,
-  ClienteNuevoData,
+  ClienteCreateData,
   ClienteUpdateData,
   ClienteFiltroData
 > {
@@ -54,8 +49,7 @@ export abstract class ClientesRepository extends BaseRepository<
   /** Usuarios con rol cliente ligados al cliente (activos primero). */
   abstract listAccesos(clienteId: number): Promise<AccesoCliente[]>;
   /** Usuarios con rol cliente, activos y sin cliente asignado. */
-  /** Usuarios cliente sin cliente asignado; con `cartera`, solo los de ese admin (A-65). */
-  abstract listClientesDisponibles(cartera?: number): Promise<UsuarioClienteDisponible[]>;
+  abstract listClientesDisponibles(): Promise<UsuarioClienteDisponible[]>;
   /** Usuario por id, con su rol y cliente. */
   abstract findUsuarioPorId(
     id: number,
@@ -67,7 +61,7 @@ export abstract class ClientesRepository extends BaseRepository<
   /** Crea un usuario con rol cliente ligado al cliente y contraseña temporal. */
   abstract crearAcceso(
     clienteId: number,
-    data: { nombre: string; email: string; passwordHash: string; propietarioId?: number | null },
+    data: { nombre: string; email: string; passwordHash: string },
   ): Promise<AccesoCliente>;
   /** Liga un usuario cliente que ya existía. */
   abstract ligarAcceso(usuarioId: number, clienteId: number): Promise<AccesoCliente>;
@@ -99,7 +93,6 @@ const clienteSelect = {
       contactos: { where: { deletedAt: null } },
     },
   },
-  propietario: { select: { id: true, nombre: true } },
   contactos: {
     where: { deletedAt: null, esResponsable: true },
     orderBy: [{ prioridad: 'asc' }, { id: 'asc' }],
@@ -217,16 +210,13 @@ export class PrismaClientesRepository extends ClientesRepository {
   }
 
   async findPaged(
-    { q, estatus, estado, cartera, propietarioId, sinAsignar }: ClienteFiltroData,
+    { q, estatus, estado }: ClienteFiltroData,
     { page, limit }: PaginationQuery,
   ): Promise<Paginated<ClienteResumen>> {
     const where: Prisma.ClienteWhereInput = {
       ...(estado === 'activos' && { deletedAt: null }),
       ...(estado === 'baja' && { deletedAt: { not: null } }),
       ...(estatus && { estatus }),
-      ...(cartera !== undefined && { propietarioId: cartera }),
-      ...(cartera === undefined && sinAsignar && { propietarioId: null }),
-      ...(cartera === undefined && !sinAsignar && propietarioId && { propietarioId }),
       ...(q && {
         OR: [
           { nombreComercial: { contains: q } },
@@ -249,13 +239,12 @@ export class PrismaClientesRepository extends ClientesRepository {
     return { items: rows.map(toCliente), total, page, limit };
   }
 
-  async create({ propietarioId, ...data }: ClienteNuevoData) {
+  async create(data: ClienteCreateData) {
     return toCliente(
       await getPrisma().cliente.create({
         data: {
           ...data,
           empresa: { connect: { id: empresaActual() } },
-          ...(propietarioId && { propietario: { connect: { id: propietarioId } } }),
         },
         select: clienteSelect,
       }),
@@ -358,14 +347,13 @@ export class PrismaClientesRepository extends ClientesRepository {
     return rows.map(toAcceso);
   }
 
-  async listClientesDisponibles(cartera?: number) {
+  async listClientesDisponibles() {
     return getPrisma().usuario.findMany({
       where: {
         clienteId: null,
         deletedAt: null,
         activo: true,
         rol: { clave: 'cliente' },
-        ...(cartera !== undefined && { propietarioId: cartera }),
       },
       select: { id: true, nombre: true, email: true },
       orderBy: { nombre: 'asc' },
@@ -390,7 +378,7 @@ export class PrismaClientesRepository extends ClientesRepository {
 
   async crearAcceso(
     clienteId: number,
-    { nombre, email, passwordHash, propietarioId }: { nombre: string; email: string; passwordHash: string; propietarioId?: number | null },
+    { nombre, email, passwordHash }: { nombre: string; email: string; passwordHash: string },
   ) {
     const u = await getPrisma().usuario.create({
       data: {
@@ -401,7 +389,6 @@ export class PrismaClientesRepository extends ClientesRepository {
         debeCambiarPassword: true,
         cliente: { connect: { id: clienteId } },
         rol: { connect: { clave: 'cliente' } },
-        ...(propietarioId && { propietario: { connect: { id: propietarioId } } }),
       },
       select: accesoSelect,
     });

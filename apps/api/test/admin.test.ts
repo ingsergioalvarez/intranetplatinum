@@ -93,7 +93,7 @@ let repo: MemoryAdminRepository;
 let storage: MemoryStorage;
 let audit: MemoryAuditLogger;
 
-/** Los admin de estas pruebas son super admin (sin límite de cartera), salvo que se pida otra cosa. */
+/** Los admin de estas pruebas son super admin, salvo que se pida otra cosa. */
 const token = (id: number, rol: Rol, esSuperAdmin = rol === 'admin') =>
   `Bearer ${signAccessToken({ id, email: `u${id}@x.mx`, rol, permisos: PERMISOS_POR_ROL[rol], esSuperAdmin })}`;
 const eliminar = (id: number, rol: Rol = 'admin', actor = 1) =>
@@ -197,35 +197,19 @@ describe('admin: eliminar sitios y clientes definitivamente (DA-50)', () => {
   });
 });
 
-describe('admin: eliminar definitivamente solo lo de su cartera (A-65)', () => {
-  // Admin A = 10, admin B = 11 (no son super admin). El guardia 20 es de A; el cliente 3 y su sitio 7 también.
+describe('admin: la cuenta del super admin', () => {
   const normal = (id: number) => `Bearer ${signAccessToken({ id, email: `u${id}@x.mx`, rol: 'admin', permisos: PERMISOS_POR_ROL.admin })}`;
   const del = (u: string, t: string) => request(app).delete(`/api/admin${u}`).set('Authorization', t);
-  const get = (u: string, t: string) => request(app).get(`/api/admin${u}`).set('Authorization', t);
 
   beforeEach(() => {
     const base = { activo: true, deletedAt: null, archivos: [], historial: { ...sinHistorial } };
-    repo.usuarios.set(20, { ...base, id: 20, nombre: 'Guardia de A', email: 'g@x.mx', rol: 'guardia', propietarioId: 10 });
-    repo.usuarios.set(11, { ...base, id: 11, nombre: 'Admin B', email: 'b@x.mx', rol: 'admin', propietarioId: 1 });
+    repo.usuarios.set(20, { ...base, id: 20, nombre: 'Guardia', email: 'g@x.mx', rol: 'guardia' });
+    repo.usuarios.set(11, { ...base, id: 11, nombre: 'Admin B', email: 'b@x.mx', rol: 'admin' });
     repo.usuarios.set(1, { ...repo.usuarios.get(1)!, esSuperAdmin: true });
-    repo.sitios.set(7, { id: 7, nombre: 'POETAS', clienteId: 3, propietarioId: 10 } as never);
-    repo.clientes.set(3, { id: 3, nombre: 'CMC NETWORK', propietarioId: 10 } as never);
   });
 
-  it('un admin elimina lo suyo, no lo de otro admin', async () => {
-    expect((await get('/usuarios/20/historial', normal(11))).status).toBe(404);
-    expect((await del('/usuarios/20', normal(11))).status).toBe(404);
-    expect((await del('/sitios/7', normal(11))).status).toBe(404);
-    expect((await del('/clientes/3', normal(11))).status).toBe(404);
-    expect(repo.usuarios.has(20)).toBe(true);
-    expect((await del('/usuarios/20', normal(10))).status).toBe(204);
-    expect((await del('/sitios/7', normal(10))).status).toBe(204);
-    expect((await del('/clientes/3', normal(10))).status).toBe(204);
-  });
-
-  it('un admin normal no toca a otro admin ni al super admin; el super admin sí a todo menos a sí mismo', async () => {
-    expect((await del('/usuarios/11', normal(10))).status).toBe(404);
-    expect((await del('/usuarios/1', normal(10))).status).toBe(404);
+  it('un admin normal no toca al super admin; el super admin sí a todo menos a sí mismo', async () => {
+    expect((await del('/usuarios/1', normal(10))).status).toBe(403);
     const superToken = token(1, 'admin', true);
     expect((await del('/usuarios/1', superToken)).status).toBe(400);
     expect((await del('/usuarios/11', superToken)).status).toBe(204);

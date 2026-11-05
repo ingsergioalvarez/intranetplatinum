@@ -13,8 +13,6 @@ export interface NuevaSolicitud {
 }
 
 export type SolicitudRow = Omit<SolicitudCobertura, 'createdAt' | 'cerradaEn'> & {
-  /** Admin dueño del cliente del sitio (A-66). */
-  sitioDueno: number | null;
   createdAt: Date;
   cerradaEn: Date | null;
   recordadaEn: Date | null;
@@ -33,10 +31,9 @@ export abstract class SolicitudesRepository {
   abstract crear(d: NuevaSolicitud): Promise<SolicitudRow>;
   abstract findById(id: number): Promise<SolicitudRow | null>;
   /**
-   * Todas (super admin), solo las de ese solicitante o, con `cartera`, las de los clientes de ese admin (A-66); las
-   * pendientes primero y lo más nuevo arriba.
+   * Todas o solo las de ese solicitante; las pendientes primero y lo más nuevo arriba.
    */
-  abstract listar(solicitanteId: number | null, limite: number, cartera?: number): Promise<SolicitudRow[]>;
+  abstract listar(solicitanteId: number | null, limite: number): Promise<SolicitudRow[]>;
   /** Pendientes de un sitio. */
   abstract pendientesDelSitio(sitioId: number): Promise<SolicitudRow[]>;
   abstract cerrar(id: number, c: CierreSolicitud): Promise<void>;
@@ -58,7 +55,7 @@ const select = {
   cerradaPor: true,
   resolucion: true,
   recordadaEn: true,
-  sitio: { select: { id: true, nombre: true, cliente: { select: { propietarioId: true } } } },
+  sitio: { select: { id: true, nombre: true } },
   solicitante: { select: { id: true, nombre: true } },
   guardia: { select: { id: true, nombre: true } },
 } as const;
@@ -73,7 +70,7 @@ type Fila = {
   cerradaPor: string | null;
   resolucion: string | null;
   recordadaEn: Date | null;
-  sitio: { id: number; nombre: string; cliente: { propietarioId: number | null } };
+  sitio: { id: number; nombre: string };
   solicitante: { id: number; nombre: string };
   guardia: { id: number; nombre: string } | null;
 };
@@ -81,7 +78,6 @@ type Fila = {
 const aRow = ({ sitio, ...r }: Fila): SolicitudRow => ({
   ...r,
   sitio: { id: sitio.id, nombre: sitio.nombre },
-  sitioDueno: sitio.cliente.propietarioId,
   estado: r.estado as EstadoSolicitud,
   fecha: dateAFecha(r.fecha),
 });
@@ -100,12 +96,9 @@ export class PrismaSolicitudesRepository extends SolicitudesRepository {
     return r && aRow(r);
   }
 
-  async listar(solicitanteId: number | null, limite: number, cartera?: number) {
+  async listar(solicitanteId: number | null, limite: number) {
     const rows = await getPrisma().solicitudCobertura.findMany({
-      where: {
-        ...(solicitanteId ? { solicitanteId } : {}),
-        ...(cartera !== undefined && { sitio: { cliente: { propietarioId: cartera } } }),
-      },
+      where: solicitanteId ? { solicitanteId } : {},
       orderBy: { createdAt: 'desc' },
       take: limite,
       select,

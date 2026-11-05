@@ -110,7 +110,6 @@ export class RecordatorioIncidencias {
     }
 
     // Más de 24 h sin atender: también los admin (una vez al día).
-    // Cada admin se entera solo de las de su cartera (A-65).
     const viejasPorAdmin = new Map<number, number>();
     for (const p of pendientes.filter((p) => ahora.getTime() - p.ocurrioEn.getTime() >= ATRASO_ESCALA_MS)) {
       for (const admin of await this.repo.admins({ guardiaId: p.usuarioId, sitioId: p.sitioId })) {

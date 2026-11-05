@@ -30,8 +30,6 @@ export interface GuardiaEstado {
   nombre: string;
   rol: Rol;
   deletedAt: Date | null;
-  /** Admin dueño (A-65). */
-  propietarioId?: number | null;
 }
 
 export interface GrupoEstado {
@@ -123,7 +121,7 @@ export interface RangoAsignacion {
 export abstract class SitiosRepository {
   abstract findSitio(id: number): Promise<SitioEstado | null>;
   /** Supervisores activos con cuántos sitios tienen (DA-45). */
-  abstract supervisores(cartera?: number): Promise<SupervisorOpcion[]>;
+  abstract supervisores(): Promise<SupervisorOpcion[]>;
   abstract setSupervisor(sitioId: number, supervisorId: number | null): Promise<void>;
   abstract findGuardia(usuarioId: number): Promise<GuardiaEstado | null>;
   abstract findGrupo(grupoId: number): Promise<GrupoEstado | null>;
@@ -150,10 +148,8 @@ export abstract class SitiosRepository {
     usuarioIds: number[],
     hoy: string,
   ): Promise<Map<number, AsignacionDeGuardia[]>>;
-  /** Guardias activos con la foto de su rostro (para elegir a quién asignar); con `cartera`, solo los de ese admin (A-65). */
-  abstract guardiasActivos(cartera?: number): Promise<GuardiaConFoto[]>;
-  /** Dueño del cliente del sitio y su supervisor, para acotar por cartera (A-65). `null` = el sitio no existe. */
-  abstract duenoDeSitio(sitioId: number): Promise<{ propietarioId: number | null; supervisorId: number | null } | null>;
+  /** Guardias activos con la foto de su rostro (para elegir a quién asignar). */
+  abstract guardiasActivos(): Promise<GuardiaConFoto[]>;
   /** Solo para asignaciones que aún no empiezan. */
   abstract eliminarAsignacion(id: number): Promise<void>;
 }
@@ -240,13 +236,12 @@ export class PrismaSitiosRepository extends SitiosRepository {
     );
   }
 
-  async supervisores(cartera?: number) {
+  async supervisores() {
     const rows = await getPrisma().usuario.findMany({
       where: {
         activo: true,
         deletedAt: null,
         rol: { clave: ROLES.SUPERVISOR },
-        ...(cartera !== undefined && { propietarioId: cartera }),
       },
       orderBy: { nombre: 'asc' },
       select: {
@@ -274,11 +269,9 @@ export class PrismaSitiosRepository extends SitiosRepository {
   async findGuardia(usuarioId: number) {
     const u = await getPrisma().usuario.findUnique({
       where: { id: usuarioId },
-      select: { id: true, nombre: true, deletedAt: true, propietarioId: true, rol: { select: { clave: true } } },
+      select: { id: true, nombre: true, deletedAt: true, rol: { select: { clave: true } } },
     });
-    return (
-      u && { id: u.id, nombre: u.nombre, deletedAt: u.deletedAt, propietarioId: u.propietarioId, rol: u.rol.clave as Rol }
-    );
+    return u && { id: u.id, nombre: u.nombre, deletedAt: u.deletedAt, rol: u.rol.clave as Rol };
   }
 
   findGrupo(grupoId: number) {
@@ -673,21 +666,12 @@ export class PrismaSitiosRepository extends SitiosRepository {
     return mapa;
   }
 
-  async duenoDeSitio(sitioId: number) {
-    const s = await getPrisma().sitio.findUnique({
-      where: { id: sitioId },
-      select: { supervisorId: true, cliente: { select: { propietarioId: true } } },
-    });
-    return s && { propietarioId: s.cliente.propietarioId, supervisorId: s.supervisorId };
-  }
-
-  async guardiasActivos(cartera?: number) {
+  async guardiasActivos() {
     const rows = await getPrisma().usuario.findMany({
       where: {
         activo: true,
         deletedAt: null,
         rol: { clave: 'guardia' },
-        ...(cartera !== undefined && { propietarioId: cartera }),
       },
       orderBy: { nombre: 'asc' },
       select: {

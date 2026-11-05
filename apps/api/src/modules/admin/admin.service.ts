@@ -4,7 +4,6 @@ import {
   BaseService,
   HttpError,
   StorageService,
-  carteraDe,
   type AccionCtx,
   type AuthUser,
 } from '../../core';
@@ -58,27 +57,19 @@ export class AdminService extends BaseService {
   private async usuario(id: number, actor: AuthUser) {
     const u = await this.repo.findUsuario(id);
     if (!u) throw HttpError.notFound('Usuario no encontrado');
-    const cartera = carteraDe(actor);
-    if (cartera !== undefined && u.propietarioId !== cartera) throw HttpError.notFound('Usuario no encontrado');
     if (u.esSuperAdmin && u.id !== actor.id) throw HttpError.forbidden('Nadie más puede modificar la cuenta del super admin');
     return u;
   }
 
-  /** Un admin solo toca lo de sus clientes (A-65). */
-  private exigirDueno(propietarioId: number | null | undefined, actor: AuthUser, que: string) {
-    const cartera = carteraDe(actor);
-    if (cartera !== undefined && (propietarioId ?? null) !== cartera) throw HttpError.notFound(`${que} no encontrado`);
-  }
-
   // ---------- Sitios y clientes (DA-50) ----------
 
-  async historialSitio(id: number, actor: AuthUser): Promise<HistorialSitio> {
-    await this.sitio(id, actor);
+  async historialSitio(id: number): Promise<HistorialSitio> {
+    await this.sitio(id);
     return this.repo.historialSitio(id);
   }
 
-  async historialCliente(id: number, actor: AuthUser): Promise<HistorialCliente> {
-    await this.cliente(id, actor);
+  async historialCliente(id: number): Promise<HistorialCliente> {
+    await this.cliente(id);
     return this.repo.historialCliente(id);
   }
 
@@ -87,7 +78,7 @@ export class AdminService extends BaseService {
    * para limpiar pruebas o errores de captura; para un sitio que dejó de atenderse se usa "Dar de baja".
    */
   async eliminarSitio(id: number, ctx: AccionCtx): Promise<void> {
-    const sitio = await this.sitio(id, ctx.actor!);
+    const sitio = await this.sitio(id);
     const historial = await this.repo.historialSitio(id);
     const archivos = await this.repo.eliminarSitio(id);
     await this.borrarArchivos(archivos);
@@ -102,7 +93,7 @@ export class AdminService extends BaseService {
 
   /** Elimina definitivamente al cliente con todos sus sitios, reportes y contactos. */
   async eliminarCliente(id: number, ctx: AccionCtx): Promise<void> {
-    const cliente = await this.cliente(id, ctx.actor!);
+    const cliente = await this.cliente(id);
     const historial = await this.repo.historialCliente(id);
     const archivos = await this.repo.eliminarCliente(id);
     await this.borrarArchivos(archivos);
@@ -118,17 +109,15 @@ export class AdminService extends BaseService {
     return Promise.all(archivos.map((a) => this.storage.eliminar(a).catch(() => undefined)));
   }
 
-  private async sitio(id: number, actor: AuthUser) {
+  private async sitio(id: number) {
     const s = await this.repo.findSitio(id);
     if (!s) throw HttpError.notFound('Sitio no encontrado');
-    this.exigirDueno(s.propietarioId, actor, 'Sitio');
     return s;
   }
 
-  private async cliente(id: number, actor: AuthUser) {
+  private async cliente(id: number) {
     const c = await this.repo.findCliente(id);
     if (!c) throw HttpError.notFound('Cliente no encontrado');
-    this.exigirDueno(c.propietarioId, actor, 'Cliente');
     return c;
   }
 }

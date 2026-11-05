@@ -24,11 +24,9 @@ import {
   AuditLogger,
   BaseService,
   HttpError,
-  carteraDe,
   firmarArchivo,
   hoyISO,
   type AccionCtx,
-  type AuthUser,
 } from '../../core';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
@@ -128,7 +126,7 @@ export class SitiosService extends BaseService {
     let destinatario: string;
     if (data.usuarioId) {
       const guardia = await this.repo.findGuardia(data.usuarioId);
-      if (!guardia || guardia.deletedAt || guardia.rol !== ROLES.GUARDIA || !this.esDeMiCartera(guardia, ctx)) {
+      if (!guardia || guardia.deletedAt || guardia.rol !== ROLES.GUARDIA) {
         throw invalido('usuarioId', 'Selecciona un guardia activo');
       }
       destinatario = guardia.nombre;
@@ -310,8 +308,8 @@ export class SitiosService extends BaseService {
   }
 
   /** Guardias activos con su foto y lo que ya tienen asignado (para elegir a quién asignar). */
-  async guardiasDisponibles(actor: AuthUser): Promise<GuardiaDisponible[]> {
-    const guardias = await this.repo.guardiasActivos(carteraDe(actor));
+  async guardiasDisponibles(): Promise<GuardiaDisponible[]> {
+    const guardias = await this.repo.guardiasActivos();
     const asignaciones = await this.repo.asignacionesDeGuardias(
       guardias.map((g) => g.id),
       this.hoy(),
@@ -364,7 +362,7 @@ export class SitiosService extends BaseService {
     }[] = [];
     for (const [i, g] of data.guardias.entries()) {
       const guardia = await this.repo.findGuardia(g.usuarioId);
-      if (!guardia || guardia.deletedAt || guardia.rol !== ROLES.GUARDIA || !this.esDeMiCartera(guardia, ctx)) {
+      if (!guardia || guardia.deletedAt || guardia.rol !== ROLES.GUARDIA) {
         throw invalido(`guardias.${i}.usuarioId`, 'Selecciona guardias activos');
       }
       nuevas.push({
@@ -602,28 +600,8 @@ export class SitiosService extends BaseService {
   }
 
   /** Supervisores que se pueden asignar a un sitio (DA-45). */
-  supervisores(actor: AuthUser) {
-    return this.repo.supervisores(carteraDe(actor));
-  }
-
-  /** Un admin solo asigna a sus guardias y supervisores (A-65); el super admin, a cualquiera. */
-  private esDeMiCartera(persona: { propietarioId?: number | null }, ctx: AccionCtx) {
-    const cartera = ctx.actor ? carteraDe(ctx.actor) : undefined;
-    return cartera === undefined || persona.propietarioId === cartera;
-  }
-
-  /**
-   * Un admin solo maneja los sitios de sus clientes (A-65); un supervisor, además, los suyos. Lo demás se responde
-   * como si no existiera. El super admin no tiene límite.
-   */
-  async exigirSitioEnCartera(sitioId: number, actor: AuthUser) {
-    const cartera = carteraDe(actor);
-    if (cartera === undefined) return;
-    const dueno = await this.repo.duenoDeSitio(sitioId);
-    // Si no existe, que responda el 404 normal de cada ruta.
-    if (!dueno) return;
-    const suyo = dueno.propietarioId === cartera || (actor.rol === ROLES.SUPERVISOR && dueno.supervisorId === actor.id);
-    if (!suyo) throw HttpError.notFound('Sitio no encontrado');
+  supervisores() {
+    return this.repo.supervisores();
   }
 
   /**
@@ -637,7 +615,7 @@ export class SitiosService extends BaseService {
     let nombre: string | null = null;
     if (supervisorId !== null) {
       const sup = await this.repo.findGuardia(supervisorId);
-      if (!sup || sup.deletedAt || sup.rol !== ROLES.SUPERVISOR || !this.esDeMiCartera(sup, ctx)) {
+      if (!sup || sup.deletedAt || sup.rol !== ROLES.SUPERVISOR) {
         throw invalido('supervisorId', 'Elige un supervisor activo');
       }
       nombre = sup.nombre;

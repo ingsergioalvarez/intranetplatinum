@@ -20,7 +20,7 @@
    reportes-cliente, sitios). Mientras el lugar de trabajo dependa de un cliente, Clientes es estructural y no se puede apagar. Es C-10.
 5. **Los permisos son demasiado gruesos para apagar módulos.** Solo hay 20 permisos en 7 familias (usuarios, clientes, reportes, catálogos,
    grupos, auditoría, asistencia). 11 de los 27 módulos registrados no usan ningún permiso (admin, archivos, auth, avisos, ausencias,
-   carteras, coberturas, emergencias, health, push, reportes-cliente): se protegen por rol (`requireRoles`) o solo por sesión. Otros reutilizan
+   coberturas, emergencias, health, push, reportes-cliente): se protegen por rol (`requireRoles`) o solo por sesión. Otros reutilizan
    `asistencia.*` y `clientes.*`. Por eso "apagar módulo = quitar sus permisos" no alcanza; hace falta un **guardia de módulo** aparte.
    Ventaja: el backend registra cada módulo en un solo lugar (`modules/index.ts`), así que el guardia puede ir ahí.
 6. **Una sola tarea automática corre cada minuto** (`iniciarVigilanciaTurnos`, en `asistencia/index.ts`) y revisa 9 cosas de 9 módulos:
@@ -56,7 +56,7 @@ La columna "Decisión" la completa el usuario.
 | **Cambios de turno** | cambios | cambios | asistencia, coberturas, solicitudes, bitácora | nadie | Media: depende de Cobertura | — |
 | **Reporte de asistencia** | informes | informes | asistencia, bitácora, sitios | horarios | Media | — |
 | **Grupos (equipos)** | grupos | grupos | clientes, bitácora, avisos | sitios (asignación por grupo) | Media | — |
-| **Carteras** | carteras | carteras | avisos | nada por código, pero el filtro de alcance por cartera está en varios módulos | Media: el alcance pasaría a ser por empresa y área | — |
+| ~~Carteras~~ | — | — | — | **Eliminado en C-10 paso 4** (2026-11-05): ya no existe en el código ni en el catálogo; el alcance sale de las áreas. | — | Quitado |
 | **Bitácora** | bitacora, medidas | asistencia (Bitácora, Medidas) | asistencia, sitios, avisos | 11 módulos | Difícil (se queda por decisión del usuario) | Se queda |
 | **Emergencias (SOS)** | emergencias | emergencias, botón SOS | avisos, clientes | asistencia (el escalado corre en la tarea de cada minuto) | Media | Se queda por ahora, para todos |
 
@@ -64,7 +64,7 @@ La columna "Decisión" la completa el usuario.
 
 | Módulo | Backend | Frontend | Depende de | Lo usan | Apagarlo | Decisión |
 |---|---|---|---|---|---|---|
-| **Clientes y portal del cliente** | clientes | clientes, guardias | usuarios, grupos, carteras (front) | 8 módulos | Difícil: estructural hasta C-10 | — |
+| **Clientes y portal del cliente** | clientes | clientes, guardias | usuarios, grupos | 8 módulos | Difícil: estructural hasta C-10 | — |
 | **Reportes de incidentes** | reportes, categorias | reportes, catalogos (Categorías) | clientes, avisos | tablero de Inicio | Fácil | — |
 | **Quejas del cliente** | reportes-cliente | reportes-cliente | clientes, avisos | nadie | Fácil | — |
 | **Cobertura de relevos** | coberturas, cobertura, casos-cobertura, solicitudes-cobertura | cobertura (Calendario), casos, solicitudes | asistencia, sitios, bitácora, avisos | cambios, horas-extra, asistencia | Difícil: Cambios de turno y Horas extra dependen de ella | — |
@@ -105,7 +105,7 @@ Regla: se parte de lo mínimo y se agrega lo que el usuario pida; lo que diga qu
 | Núcleo (plataforma y acceso, avisos, biometría y marcación, estructura mínima, administración) | Siempre |
 | Bitácora, Emergencias (SOS) | Encendidos (decisión del usuario) |
 | Turnos y horarios, Reporte de asistencia | Encendidos (primeros agregados) |
-| Ausencias, Horas extra, Cambios de turno, Grupos, Carteras | Apagados, se agregan cuando se pidan |
+| Ausencias, Horas extra, Cambios de turno, Grupos | Apagados, se agregan cuando se pidan |
 | Clientes y portal, Quejas del cliente, Cobertura de relevos | Apagados, se agregan cuando se pidan |
 | Reportes de incidentes (con sus categorías) | Apagado: no se usará |
 
@@ -113,4 +113,4 @@ Una empresa nueva arranca solo con el núcleo.
 
 Los únicos que eran de todo el sistema (nombre de turno, folio de reportes, RFC de clientes, nombre de grupos) ya son por empresa (C-08), así que los módulos de seguridad pueden encenderse en otra empresa sin choques.
 
-**"Apagado"** (C-09): oculto en pantalla y, en los módulos que se pueden separar, bloqueado en la API (403). Ausencias, Horas extra, Cambios de turno, Reporte de asistencia, Emergencias, Quejas, Carteras y Bitácora se bloquean. **Clientes, Turnos, Grupos, Cobertura y Reportes** solo se ocultan: su API sigue abierta porque asignar horarios y lugares los usa por dentro; se desatan en C-10 y C-12.
+**"Apagado"** (C-09): oculto en pantalla y, en los módulos que se pueden separar, bloqueado en la API (403). Ausencias, Horas extra, Cambios de turno, Reporte de asistencia, Emergencias, Quejas y Bitácora se bloquean. **Clientes, Turnos, Grupos, Cobertura y Reportes** solo se ocultan: su API sigue abierta porque asignar horarios y lugares los usa por dentro; se desatan en C-10 y C-12.

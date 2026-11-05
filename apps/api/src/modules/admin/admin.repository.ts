@@ -9,8 +9,6 @@ export interface UsuarioEliminable {
   rol: string;
   activo: boolean;
   deletedAt: Date | null;
-  /** Admin dueño (A-65). */
-  propietarioId?: number | null;
   esSuperAdmin?: boolean;
 }
 
@@ -27,11 +25,8 @@ export abstract class AdminRepository {
   abstract eliminarUsuario(id: number): Promise<string[]>;
 
   // ---- Sitios y clientes (DA-50) ----
-  /** `propietarioId` es el del cliente del sitio (A-65). */
-  abstract findSitio(
-    id: number,
-  ): Promise<{ id: number; nombre: string; clienteId: number; propietarioId?: number | null } | null>;
-  abstract findCliente(id: number): Promise<{ id: number; nombre: string; propietarioId?: number | null } | null>;
+  abstract findSitio(id: number): Promise<{ id: number; nombre: string; clienteId: number } | null>;
+  abstract findCliente(id: number): Promise<{ id: number; nombre: string } | null>;
   abstract historialSitio(id: number): Promise<HistorialSitio>;
   abstract historialCliente(id: number): Promise<HistorialCliente>;
   /**
@@ -53,7 +48,6 @@ export class PrismaAdminRepository extends AdminRepository {
         email: true,
         activo: true,
         deletedAt: true,
-        propietarioId: true,
         esSuperAdmin: true,
         rol: { select: { clave: true } },
       },
@@ -132,17 +126,17 @@ export class PrismaAdminRepository extends AdminRepository {
   async findSitio(id: number) {
     const s = await getPrisma().sitio.findUnique({
       where: { id },
-      select: { id: true, nombre: true, clienteId: true, cliente: { select: { propietarioId: true } } },
+      select: { id: true, nombre: true, clienteId: true },
     });
-    return s && { id: s.id, nombre: s.nombre, clienteId: s.clienteId, propietarioId: s.cliente.propietarioId };
+    return s && { id: s.id, nombre: s.nombre, clienteId: s.clienteId };
   }
 
   async findCliente(id: number) {
     const c = await getPrisma().cliente.findUnique({
       where: { id },
-      select: { id: true, nombreComercial: true, propietarioId: true },
+      select: { id: true, nombreComercial: true },
     });
-    return c && { id: c.id, nombre: c.nombreComercial, propietarioId: c.propietarioId };
+    return c && { id: c.id, nombre: c.nombreComercial };
   }
 
   private async contarSitios(sitioIds: number[]): Promise<HistorialSitio> {

@@ -625,25 +625,4 @@ describe('perfiles rápidos de guardias (A-40)', { timeout: 30_000 }, () => {
     expect(todos.body.data).toEqual({ quitados: 2 });
     expect(audit.acciones()).toContain('auth.dispositivos_quitados_admin');
   });
-
-  it('un admin solo ve y quita los celulares de su cartera, no los de otro admin ni los sin dueño (A-65)', async () => {
-    const r = await entrar();
-    const { id } = r.body.data.dispositivo;
-    repo.usuarios.push(
-      usuario({ id: 5, email: 'a@platinum.local', rol: ROLES.ADMIN, permisos: PERMISOS_POR_ROL[ROLES.ADMIN] }),
-      usuario({ id: 6, email: 'b@platinum.local', rol: ROLES.ADMIN, permisos: PERMISOS_POR_ROL[ROLES.ADMIN] }),
-    );
-    const A = await entrar({}, 'a@platinum.local');
-    const B = await entrar({}, 'b@platinum.local');
-    const url = '/api/auth/usuarios/1/dispositivos';
-    // Sin dueño: ningún admin normal lo ve.
-    expect((await request(app).get(url).set(conToken(A))).status).toBe(404);
-    repo.usuarios.find((u) => u.id === 1)!.propietarioId = 5;
-    expect((await request(app).get(url).set(conToken(A))).body.data).toHaveLength(1);
-    expect((await request(app).get(url).set(conToken(B))).status).toBe(404);
-    expect((await request(app).delete(`${url}/${id}`).set(conToken(B))).status).toBe(404);
-    expect((await request(app).delete(url).set(conToken(B))).status).toBe(404);
-    expect(repo.dispositivos[0].revocadoEn).toBeNull();
-    expect((await request(app).delete(`${url}/${id}`).set(conToken(A))).status).toBe(204);
-  });
 });

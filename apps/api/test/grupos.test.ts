@@ -7,15 +7,14 @@ import { createGruposModule } from '../src/modules/grupos';
 import { GruposRepository, type GrupoFiltro } from '../src/modules/grupos/grupos.repository';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
 
-// Guardias: 21 y 22 son del admin 10; 31 es del admin 11.
-const DUENO_GUARDIA: Record<number, number> = { 21: 10, 22: 10, 31: 11 };
+// Guardias activos de la prueba.
+const GUARDIAS = [21, 22, 31];
 
 class Memoria extends GruposRepository {
   grupos: Grupo[] = [];
   integrantes = new Map<number, number[]>();
-  async listar({ estado }: GrupoFiltro, _hoy: string, cartera?: number) {
+  async listar({ estado }: GrupoFiltro) {
     return this.grupos
-      .filter((g) => cartera === undefined || g.propietario?.id === cartera)
       .filter((g) => (estado === 'activos' ? !g.deletedAt : estado === 'baja' ? !!g.deletedAt : true));
   }
   async findById(id: number) {
@@ -24,14 +23,13 @@ class Memoria extends GruposRepository {
   async nombreOcupado(nombre: string, excluirId?: number) {
     return this.grupos.some((g) => g.nombre === nombre && g.id !== excluirId);
   }
-  async crear(data: GrupoData, propietarioId: number | null) {
+  async crear(data: GrupoData) {
     const id = this.grupos.length + 1;
     this.grupos.push({
       id,
       nombre: data.nombre,
       descripcion: data.descripcion ?? null,
       deletedAt: null,
-      propietario: propietarioId ? { id: propietarioId, nombre: `Admin ${propietarioId}` } : null,
       integrantes: [],
       asignacionesVigentes: 0,
     });
@@ -40,8 +38,8 @@ class Memoria extends GruposRepository {
   async actualizar(id: number, data: Partial<GrupoData>) {
     Object.assign(this.grupos[id - 1], data);
   }
-  async guardiasActivos(ids: number[], cartera?: number) {
-    return ids.filter((id) => id in DUENO_GUARDIA && (cartera === undefined || DUENO_GUARDIA[id] === cartera));
+  async guardiasActivos(ids: number[]) {
+    return ids.filter((id) => GUARDIAS.includes(id));
   }
   async setIntegrantes(id: number, usuarioIds: number[]) {
     this.integrantes.set(id, usuarioIds);
@@ -58,7 +56,7 @@ class Memoria extends GruposRepository {
 let repo: Memoria;
 let app: ReturnType<typeof createApp>;
 
-const tokenDe = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean; propietarioId?: number } = {}) =>
+const tokenDe = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean } = {}) =>
   signAccessToken({ id, email: `u${id}@x.mx`, rol, permisos: PERMISOS_POR_ROL[rol], ...extra });
 const SUPER = tokenDe(1, ROLES.ADMIN, { esSuperAdmin: true });
 const A = tokenDe(10, ROLES.ADMIN);
@@ -80,40 +78,29 @@ beforeEach(() => {
 
 const nombres = (res: request.Response) => res.body.data.map((g: { nombre: string }) => g.nombre).sort();
 
-describe('grupos: carteras de admin (A-65)', () => {
-  it('lo que crea un admin es suyo; el otro admin no lo ve y el super admin ve todo', async () => {
+describe('grupos de la empresa', () => {
+  it('lo que crea un admin lo ven todos los admin y el supervisor', async () => {
     const a = await como(A).post('', { nombre: 'Grupo de A', usuarioIds: [21] });
     expect(a.status).toBe(201);
-    expect(a.body.data.propietario).toEqual({ id: 10, nombre: 'Admin 10' });
     await como(B).post('', { nombre: 'Grupo de B', usuarioIds: [31] });
-    expect(nombres(await como(A).get())).toEqual(['Grupo de A']);
-    expect(nombres(await como(B).get())).toEqual(['Grupo de B']);
-    expect(nombres(await como(SUPER).get())).toEqual(['Grupo de A', 'Grupo de B']);
+    const todos = ['Grupo de A', 'Grupo de B'];
+    expect(nombres(await como(A).get())).toEqual(todos);
+    expect(nombres(await como(B).get())).toEqual(todos);
+    expect(nombres(await como(SUPER).get())).toEqual(todos);
+    expect(nombres(await como(tokenDe(5, ROLES.SUPERVISOR)).get())).toEqual(todos);
   });
 
-  it('un grupo de otro admin no existe para el admin: ni verlo ni editarlo ni darlo de baja', async () => {
+  it('cualquier admin edita y da de baja los grupos de la empresa', async () => {
     await como(B).post('', { nombre: 'Grupo de B', usuarioIds: [31] });
-    expect((await como(A).get('/1')).status).toBe(404);
-    expect((await como(A).patch('/1', { nombre: 'Robado' })).status).toBe(404);
-    expect((await como(A).put('/1/integrantes', { usuarioIds: [21] })).status).toBe(404);
-    expect((await como(A).patch('/1/baja')).status).toBe(404);
-    expect((await como(B).get('/1')).status).toBe(200);
-    expect((await como(SUPER).get('/1')).status).toBe(200);
+    expect((await como(A).get('/1')).status).toBe(200);
+    expect((await como(A).patch('/1', { nombre: 'Renombrado' })).status).toBe(200);
+    expect((await como(A).put('/1/integrantes', { usuarioIds: [21] })).status).toBe(200);
+    expect((await como(A).patch('/1/baja')).status).toBe(204);
   });
 
-  it('un admin solo agrega a sus guardias; el super admin, a cualquiera', async () => {
-    const ajeno = await como(A).post('', { nombre: 'Mezcla', usuarioIds: [21, 31] });
-    expect(ajeno.status).toBe(400);
-    expect(ajeno.body.error.details[0]).toMatchObject({ path: 'usuarioIds' });
-    expect((await como(SUPER).post('', { nombre: 'De todos', usuarioIds: [21, 31] })).status).toBe(201);
-    expect((await como(A).put('/1/integrantes', { usuarioIds: [21, 22] })).status).toBe(404);
-  });
-
-  it('un supervisor ve los grupos de su admin', async () => {
-    await como(A).post('', { nombre: 'Grupo de A', usuarioIds: [21] });
-    await como(B).post('', { nombre: 'Grupo de B', usuarioIds: [31] });
-    const supDeA = tokenDe(5, ROLES.SUPERVISOR, { propietarioId: 10 });
-    expect(nombres(await como(supDeA).get())).toEqual(['Grupo de A']);
-    expect(nombres(await como(tokenDe(5, ROLES.SUPERVISOR)).get())).toEqual([]);
+  it('solo se agregan guardias activos', async () => {
+    const r = await como(A).post('', { nombre: 'Mezcla', usuarioIds: [21, 99] });
+    expect(r.status).toBe(400);
+    expect(r.body.error.details[0]).toMatchObject({ path: 'usuarioIds' });
   });
 });

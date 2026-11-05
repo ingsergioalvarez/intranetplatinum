@@ -1,13 +1,12 @@
 import { ROLES } from '@platinum/shared';
-import { HttpError, esSuperAdmin, fechaADate, hoyISO, type AuthUser } from '../../core';
+import { HttpError, fechaADate, hoyISO, type AuthUser } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import { personasVisiblesConPrisma } from '../areas/alcance';
 
 /**
- * Lo que un supervisor puede ver (DA-45): sus sitios y los guardias asignados a ellos (directo o
- * por grupo) en el último mes, para que pueda revisar lo reciente aunque ya los hayan movido.
- * Un admin que no es super admin ve los sitios de sus clientes y sus guardias (A-66), más quienes están asignados
- * a esos sitios. `null` = sin límite (super admin y otros roles).
+ * Lo que cada quien puede ver (C-10): admin y super admin, todo; jefe y supervisor, las personas de su área
+ * (el jefe también las de sus subáreas); un cliente, los guardias de sus sitios (directo o por grupo) del último
+ * mes, para revisar lo reciente aunque ya los hayan movido. `null` = sin límite.
  */
 export interface Alcance {
   sitioIds: Set<number>;
@@ -22,32 +21,17 @@ export type AlcanceFn = (user: AuthUser) => Promise<Alcance | null>;
 const DIAS_RECIENTES = 31;
 
 export const alcanceConPrisma: AlcanceFn = async (user) => {
-  // Sin el módulo Carteras (C-10): admin ve toda la empresa, el jefe su área y subáreas, el supervisor su área.
-  if (user.sinCarteras && (user.rol === ROLES.ADMIN || user.rol === ROLES.JEFE || user.rol === ROLES.SUPERVISOR)) {
+  // Admin ve toda la empresa, el jefe su área y subáreas, el supervisor su área (C-10).
+  if (user.rol === ROLES.ADMIN || user.rol === ROLES.JEFE || user.rol === ROLES.SUPERVISOR) {
     const personas = await personasVisiblesConPrisma(user);
     return personas ? { sitioIds: new Set(), guardiaIds: personas, porPersonas: true } : null;
   }
-  const esAdminDeCartera = user.rol === ROLES.ADMIN && !esSuperAdmin(user);
-  if (user.rol !== ROLES.SUPERVISOR && user.rol !== ROLES.CLIENTE && !esAdminDeCartera) return null;
+  if (user.rol !== ROLES.CLIENTE) return null;
   const db = getPrisma();
-  let sitios: { id: number }[] = [];
-  /** Guardias que son suyos aunque aún no tengan sitio (A-66). */
-  const propios: number[] = [];
-  if (esAdminDeCartera) {
-    sitios = await db.sitio.findMany({ where: { cliente: { propietarioId: user.id } }, select: { id: true } });
-    const guardias = await db.usuario.findMany({
-      where: { propietarioId: user.id, rol: { clave: ROLES.GUARDIA } },
-      select: { id: true },
-    });
-    propios.push(...guardias.map((g) => g.id));
-  } else if (user.rol === ROLES.SUPERVISOR) {
-    sitios = await db.sitio.findMany({ where: { supervisorId: user.id }, select: { id: true } });
-  } else if (user.rol === ROLES.CLIENTE) {
-    if (!user.clienteId) return { sitioIds: new Set(), guardiaIds: new Set() };
-    sitios = await db.sitio.findMany({ where: { clienteId: user.clienteId }, select: { id: true } });
-  }
+  if (!user.clienteId) return { sitioIds: new Set(), guardiaIds: new Set() };
+  const sitios = await db.sitio.findMany({ where: { clienteId: user.clienteId }, select: { id: true } });
   const sitioIds = sitios.map((s) => s.id);
-  if (sitioIds.length === 0) return { sitioIds: new Set(), guardiaIds: new Set(propios) };
+  if (sitioIds.length === 0) return { sitioIds: new Set(), guardiaIds: new Set() };
   const hoy = fechaADate(hoyISO());
   const desde = new Date(hoy.getTime() - DIAS_RECIENTES * 86_400_000);
   const asignaciones = await db.sitioGuardia.findMany({
@@ -58,7 +42,7 @@ export const alcanceConPrisma: AlcanceFn = async (user) => {
     },
     select: { usuarioId: true, grupo: { select: { integrantes: { select: { usuarioId: true } } } } },
   });
-  const guardiaIds = new Set<number>(propios);
+  const guardiaIds = new Set<number>();
   for (const a of asignaciones) {
     if (a.usuarioId) guardiaIds.add(a.usuarioId);
     a.grupo?.integrantes.forEach((i) => guardiaIds.add(i.usuarioId));

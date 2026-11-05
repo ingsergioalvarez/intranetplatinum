@@ -4,12 +4,8 @@ import {
   BaseService,
   HttpError,
   calcularCambios,
-  carteraDe,
-  enCartera,
   hoyISO,
-  propietarioParaCrear,
   type AccionCtx,
-  type AuthUser,
 } from '../../core';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
@@ -60,23 +56,20 @@ export class GruposService extends BaseService {
     });
   }
 
-  /** Cada admin ve sus grupos (y un supervisor, los de su admin); el super admin, todos (A-65). */
-  listar(filtro: GrupoFiltro, actor: AuthUser) {
-    return this.repo.listar(filtro, this.hoy(), carteraDe(actor));
+  listar(filtro: GrupoFiltro) {
+    return this.repo.listar(filtro, this.hoy());
   }
 
-  /** Con `actor`, un grupo de otra cartera se responde como si no existiera. */
-  async getById(id: number, actor?: AuthUser): Promise<Grupo> {
+  async getById(id: number): Promise<Grupo> {
     const grupo = await this.repo.findById(id, this.hoy());
     if (!grupo) throw HttpError.notFound('Grupo no encontrado');
-    if (actor && !enCartera(actor, grupo.propietario?.id ?? null)) throw HttpError.notFound('Grupo no encontrado');
     return grupo;
   }
 
   async crear(data: GrupoData, usuarioIds: number[], ctx: AccionCtx): Promise<Grupo> {
     if (await this.repo.nombreOcupado(data.nombre)) throw nombreRepetido();
-    const integrantes = await this.validarIntegrantes(usuarioIds, ctx);
-    const id = await this.repo.crear(data, ctx.actor ? propietarioParaCrear(ctx.actor) : null);
+    const integrantes = await this.validarIntegrantes(usuarioIds);
+    const id = await this.repo.crear(data);
     await this.repo.setIntegrantes(id, integrantes);
     await this.audit.registrarAccion(ctx, 'grupos.crear', 'grupos_guardias', id, {
       nombre: data.nombre,
@@ -87,7 +80,7 @@ export class GruposService extends BaseService {
   }
 
   async actualizar(id: number, data: Partial<GrupoData>, ctx: AccionCtx): Promise<Grupo> {
-    const actual = await this.editable(id, ctx);
+    const actual = await this.editable(id);
     if (data.nombre && data.nombre !== actual.nombre && (await this.repo.nombreOcupado(data.nombre, id))) {
       throw nombreRepetido();
     }
@@ -100,8 +93,8 @@ export class GruposService extends BaseService {
 
   /** Reemplaza la lista de integrantes (solo guardias activos). */
   async setIntegrantes(id: number, usuarioIds: number[], ctx: AccionCtx): Promise<Grupo> {
-    const actual = await this.editable(id, ctx);
-    const integrantes = await this.validarIntegrantes(usuarioIds, ctx);
+    const actual = await this.editable(id);
+    const integrantes = await this.validarIntegrantes(usuarioIds);
     const antes = actual.integrantes.map((i) => i.id);
     await this.repo.setIntegrantes(id, integrantes);
     const agregados = integrantes.filter((u) => !antes.includes(u));
@@ -116,7 +109,7 @@ export class GruposService extends BaseService {
 
   /** Baja: los guardias dejan de ver los sitios del grupo; sus asignaciones terminan hoy. */
   async darDeBaja(id: number, ctx: AccionCtx) {
-    const grupo = await this.getById(id, ctx.actor);
+    const grupo = await this.getById(id);
     if (grupo.deletedAt) return;
     await this.repo.softDelete(id, this.hoy());
     await this.audit.registrarAccion(ctx, 'grupos.baja', 'grupos_guardias', id, {
@@ -134,7 +127,7 @@ export class GruposService extends BaseService {
   }
 
   async reactivar(id: number, ctx: AccionCtx) {
-    const grupo = await this.getById(id, ctx.actor);
+    const grupo = await this.getById(id);
     if (!grupo.deletedAt) return;
     await this.repo.restore(id);
     await this.audit.registrarAccion(ctx, 'grupos.reactivar', 'grupos_guardias', id, {
@@ -142,16 +135,15 @@ export class GruposService extends BaseService {
     });
   }
 
-  private async editable(id: number, ctx: AccionCtx) {
-    const grupo = await this.getById(id, ctx.actor);
+  private async editable(id: number) {
+    const grupo = await this.getById(id);
     if (grupo.deletedAt) throw HttpError.conflict('El grupo está dado de baja; reactívalo primero');
     return grupo;
   }
 
-  private async validarIntegrantes(usuarioIds: number[], ctx: AccionCtx) {
+  private async validarIntegrantes(usuarioIds: number[]) {
     const unicos = [...new Set(usuarioIds)];
-    // Un admin solo agrega a sus guardias (A-65).
-    const validos = await this.repo.guardiasActivos(unicos, ctx.actor ? carteraDe(ctx.actor) : undefined);
+    const validos = await this.repo.guardiasActivos(unicos);
     if (validos.length !== unicos.length) {
       throw HttpError.badRequest('Datos inválidos', [
         { path: 'usuarioIds', message: 'Solo se pueden agregar guardias activos' },

@@ -75,9 +75,9 @@ async function main() {
     const admin1 = await mkUser('Admin Uno', 'admin1@x.mx', E1);
     const admin2 = await mkUser('Admin Dos', 'admin2@x.mx', E2);
     await mkUser('Super', 'super@x.mx', E1, { esSuperAdmin: true });
-    await raw.usuario.create({ data: { nombre: 'Sup Uno', email: 'sup1@x.mx', passwordHash: hash, rolId: rolSup.id, empresaId: E1, telefono: '5550000001', propietarioId: admin1.id } });
-    const c1 = await raw.cliente.create({ data: { empresaId: E1, razonSocial: 'Uno SA', nombreComercial: 'Cliente Uno', propietarioId: admin1.id } });
-    const c2 = await raw.cliente.create({ data: { empresaId: E2, razonSocial: 'Dos SA', nombreComercial: 'Cliente Dos', propietarioId: admin2.id } });
+    await raw.usuario.create({ data: { nombre: 'Sup Uno', email: 'sup1@x.mx', passwordHash: hash, rolId: rolSup.id, empresaId: E1, telefono: '5550000001' } });
+    const c1 = await raw.cliente.create({ data: { empresaId: E1, razonSocial: 'Uno SA', nombreComercial: 'Cliente Uno' } });
+    const c2 = await raw.cliente.create({ data: { empresaId: E2, razonSocial: 'Dos SA', nombreComercial: 'Cliente Dos' } });
     await raw.turno.create({ data: { empresaId: E1, nombre: 'Turno Uno', horas: 8, horaEntrada: '09:00', diasTipo: 'diario' } });
     await raw.turno.create({ data: { empresaId: E2, nombre: 'Turno Dos', horas: 8, horaEntrada: '09:00', diasTipo: 'diario' } });
     // El nombre de un turno es único por empresa: el mismo nombre en dos empresas debe poder existir.
@@ -295,7 +295,7 @@ async function main() {
     console.log('\n11. Alcance por área (C-10): jefe, supervisor y permiso de empresa');
     const { PERMISOS_POR_ROL } = await import('@platinum/shared');
     const rolGuardia = (await prisma.rol.findFirst({ where: { clave: 'guardia' } })) ?? (await prisma.rol.create({ data: { clave: 'guardia', nombre: 'Guardia' } }));
-    (await prisma.rol.findFirst({ where: { clave: 'jefe' } })) ?? (await prisma.rol.create({ data: { clave: 'jefe', nombre: 'Jefe' } }));
+    if (!(await prisma.rol.findFirst({ where: { clave: 'jefe' } }))) await prisma.rol.create({ data: { clave: 'jefe', nombre: 'Jefe' } });
     const rolSupervisor = await prisma.rol.findFirst({ where: { clave: 'supervisor' } });
     const area = async (nombre: string, padreId?: number) => (await como(T1).post('/areas', { nombre, padreId })).body.data.id as number;
     const sistemas = await area('Sistemas');
@@ -324,7 +324,7 @@ async function main() {
     const verSup = await correosDe(TSup);
     check('el supervisor ve solo su propia área', verSup.includes('g.soporte@x.mx') && verSup.includes('sup.soporte@x.mx') && !verSup.includes('g.sis@x.mx') && !verSup.includes('g.rh@x.mx'), verSup);
     const adminVe = await correosDe(T1);
-    check('el admin de la empresa ve a todos (Carteras apagado)', ['g.sis@x.mx', 'g.rh@x.mx', 'jefe.sis@x.mx'].every((e) => adminVe.includes(e)));
+    check('el admin de la empresa ve a todos', ['g.sis@x.mx', 'g.rh@x.mx', 'jefe.sis@x.mx'].every((e) => adminVe.includes(e)));
     check('un usuario fuera del alcance responde 404', (await como(TJefe).get(`/usuarios/${gRh.id}`)).status === 404 && (await como(TSup).get(`/usuarios/${gSis.id}`)).status === 404);
     check('un usuario dentro del alcance se puede ver', (await como(TJefe).get(`/usuarios/${gSoporte.id}`)).status === 200);
     check('la ficha de asistencia de alguien fuera del alcance responde 404', (await como(TJefe).get(`/asistencia/guardias/${gRh.id}?mes=2026-11`)).status === 404);

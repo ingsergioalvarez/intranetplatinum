@@ -107,13 +107,6 @@ export const MODULOS = [
     dependeDe: [],
   },
   {
-    clave: 'carteras',
-    nombre: 'Carteras',
-    descripcion: 'Repartir personas entre varios administradores; cada uno ve solo las suyas.',
-    grupo: 'general',
-    dependeDe: [],
-  },
-  {
     clave: 'bitacora',
     nombre: 'Bitácora',
     descripcion: 'Diario de la jornada de cada persona, con eventos y comentarios.',

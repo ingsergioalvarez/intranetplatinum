@@ -7,7 +7,7 @@ import {
   type ReporteClienteCreateData,
   type ReportesClienteLista,
 } from '@platinum/shared';
-import { BaseService, AuditLogger, HttpError, carteraDe, hoyISO, type AccionCtx, type AuthUser } from '../../core';
+import { BaseService, AuditLogger, HttpError, hoyISO, type AccionCtx, type AuthUser } from '../../core';
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type {
@@ -51,10 +51,7 @@ export class ReportesClienteService extends BaseService {
       return { tipo: 'cliente', clienteId: user.clienteId };
     }
     if (user.rol === ROLES.SUPERVISOR || user.rol === ROLES.JEFE) return { tipo: 'supervisor', usuarioId: user.id };
-    if (user.rol === ROLES.ADMIN) {
-      const cartera = carteraDe(user);
-      return cartera === undefined ? { tipo: 'todos' } : { tipo: 'cartera', propietarioId: cartera };
-    }
+    if (user.rol === ROLES.ADMIN) return { tipo: 'todos' };
     throw HttpError.forbidden();
   }
 

@@ -49,13 +49,6 @@ export function createSitiosModule({
   const router = Router();
   router.use(authenticate);
 
-  // Un admin solo toca los sitios de sus clientes (A-65).
-  router.param('id', (req, _res, next, valor) => {
-    const id = Number(valor);
-    if (!Number.isInteger(id)) return next();
-    c.exigirSitio(req, id).then(() => next(), next);
-  });
-
   router.get('/mios', c.mios);
   // Portal del cliente (A-38): sus guardias asignados y quién cubre; solo el rol cliente.
   router.get('/del-cliente', requireRoles(ROLES.CLIENTE), c.delCliente);

@@ -9,7 +9,7 @@ import {
   type SolicitudCobertura,
   type SolicitudesLista,
 } from '@platinum/shared';
-import { AuditLogger, BaseService, HttpError, carteraDe, enCartera, type AccionCtx, type AuthUser } from '../../core';
+import { AuditLogger, BaseService, HttpError, type AccionCtx, type AuthUser } from '../../core';
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type { SolicitudRow, SolicitudesRepository } from './solicitudes.repository';
@@ -46,7 +46,7 @@ export const sinSolicitudes: SolicitudesPuerto = {
   cerrarPorCobertura: async () => undefined,
 };
 
-const aSolicitud = ({ recordadaEn: _r, sitioDueno: _d, createdAt, cerradaEn, ...s }: SolicitudRow): SolicitudCobertura => ({
+const aSolicitud = ({ recordadaEn: _r, createdAt, cerradaEn, ...s }: SolicitudRow): SolicitudCobertura => ({
   ...s,
   createdAt: createdAt.toISOString(),
   cerradaEn: cerradaEn?.toISOString() ?? null,
@@ -99,17 +99,14 @@ export class SolicitudesCoberturaService extends BaseService implements Solicitu
 
   /** Admin: todas; supervisor: solo las que él pidió. Las pendientes primero. */
   async listar(user: AuthUser): Promise<SolicitudesLista> {
-    // El super admin ve todas; un admin, las de los clientes de su cartera; un supervisor, las suyas (A-66).
-    const cartera = user.rol === ROLES.ADMIN ? carteraDe(user) : undefined;
-    const filas = await this.repo.listar(user.rol === ROLES.ADMIN ? null : user.id, 100, cartera);
+    const filas = await this.repo.listar(user.rol === ROLES.ADMIN ? null : user.id, 100);
     return { items: filas.map(aSolicitud), pendientes: filas.filter((f) => f.estado === 'pendiente').length };
   }
 
   /** Cancelar una pendiente: quien la pidió o el admin, con motivo. */
   async cancelar(id: number, { categoria, nota }: CancelarSolicitudInput, user: AuthUser, ctx: AccionCtx) {
     const s = await this.repo.findById(id);
-    const delAdmin = user.rol === ROLES.ADMIN && enCartera(user, s?.sitioDueno ?? null);
-    if (!s || (!delAdmin && s.solicitante.id !== user.id)) {
+    if (!s || (user.rol !== ROLES.ADMIN && s.solicitante.id !== user.id)) {
       throw HttpError.notFound('Solicitud no encontrada');
     }
     if (s.estado !== 'pendiente') throw HttpError.conflict('Esta solicitud ya se cerró');

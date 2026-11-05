@@ -19,7 +19,6 @@ import { informesModule } from './informes';
 import { horariosModule } from './horarios';
 import { solicitudesCoberturaModule } from './solicitudes-cobertura';
 import { ausenciasModule } from './ausencias';
-import { carterasModule } from './carteras';
 import { emergenciasModule } from './emergencias';
 import { miEmpresaModule } from './mi-empresa';
 import { plataformaModule } from './plataforma';
@@ -57,7 +56,6 @@ export const modules: AppModule[] = [
   solicitudesCoberturaModule,
   ausenciasModule,
   emergenciasModule,
-  carterasModule,
   horasExtraModule,
   adminModule,
   miEmpresaModule,

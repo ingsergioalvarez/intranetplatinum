@@ -14,9 +14,7 @@ import {
   BaseService,
   HttpError,
   calcularCambios,
-  carteraDe,
   esSuperAdmin,
-  propietarioParaCrear,
   generateTemporaryPassword,
   hashPassword,
   type AccionCtx,
@@ -36,47 +34,25 @@ export class UsuariosService extends BaseService {
   constructor(
     private readonly repo: UsuariosRepository,
     private readonly audit: AuditLogger,
-    /** A quién puede ver cada quien según las áreas (C-10); solo rige cuando la empresa no usa Carteras. */
+    /** A quién puede ver cada quien según las áreas (C-10). */
     private readonly personasVisibles: PersonasVisibles = todasLasPersonas,
   ) {
     super();
   }
 
-  /** Un admin ve a sus usuarios y a sí mismo; el super admin ve todos (y puede filtrar por dueño o sin asignar). */
+  /** Cada quien ve a las personas de su alcance por áreas (C-10); el admin y el super admin ven a todas. */
   async list({ page, limit, ...filtro }: UsuarioFiltro, actor: AuthUser): Promise<Paginated<Usuario>> {
-    const cartera = carteraDe(actor);
-    const visibles = actor.sinCarteras ? await this.personasVisibles(actor) : null;
-    return this.repo.findPaged(
-      cartera === undefined
-        ? { ...filtro, ...(visibles && { soloIds: [...visibles] }) }
-        : {
-            ...filtro,
-            propietarioId: undefined,
-            sinAsignar: undefined,
-            cartera: { adminId: cartera, tambien: [actor.id] },
-          },
-      { page, limit },
-    );
+    const visibles = await this.personasVisibles(actor);
+    return this.repo.findPaged({ ...filtro, ...(visibles && { soloIds: [...visibles] }) }, { page, limit });
   }
 
-  /** Con `actor`, lo que está fuera de su cartera se responde como si no existiera. */
+  /** Con `actor`, quien está fuera de su alcance se responde como si no existiera. */
   async getById(id: number, actor?: AuthUser): Promise<Usuario> {
     const usuario = await this.repo.findById(id);
     if (!usuario) throw HttpError.notFound('Usuario no encontrado');
-    if (actor?.sinCarteras) {
+    if (actor) {
       const visibles = await this.personasVisibles(actor);
       if (visibles && !visibles.has(id)) throw HttpError.notFound('Usuario no encontrado');
-    }
-    if (actor) {
-      const cartera = carteraDe(actor);
-      if (
-        cartera !== undefined &&
-        usuario.id !== cartera &&
-        usuario.id !== actor.id &&
-        usuario.propietario?.id !== cartera
-      ) {
-        throw HttpError.notFound('Usuario no encontrado');
-      }
     }
     return usuario;
   }
@@ -103,8 +79,6 @@ export class UsuariosService extends BaseService {
     const passwordTemporal = generateTemporaryPassword();
     const usuario = await this.repo.create({
       ...data,
-      // Quien lo crea es su dueño (A-65): lo ve y lo administra.
-      propietarioId: propietarioParaCrear(actor),
       passwordHash: await hashPassword(passwordTemporal),
       debeCambiarPassword: true,
     });
@@ -164,9 +138,7 @@ export class UsuariosService extends BaseService {
 
     await this.repo.softDelete(id);
     await this.repo.revocarSesiones(id);
-    // Lo que no se transfirió antes queda sin asignar (solo lo ve el super admin) hasta que se reparta (A-65).
-    const soltado = usuario.rol === ROLES.ADMIN ? await this.repo.soltarCartera(id) : null;
-    await this.auditar(ctx, 'usuarios.baja', id, { email: usuario.email, ...(soltado && { sinAsignar: soltado }) });
+    await this.auditar(ctx, 'usuarios.baja', id, { email: usuario.email });
   }
 
   async reactivar(id: number, ctx: AccionCtx, actor: AuthUser): Promise<void> {

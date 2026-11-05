@@ -1810,7 +1810,7 @@ describe('asistencia: avisos con lógica, por umbral o por patrón (DA-33)', () 
     expect(avisos('retardo')).toEqual([
       'Juan Pérez · Plaza Norte: lleva 3 turnos seguidos llegando tarde (+12 min, +13 min, +20 min)',
     ]);
-    // El aviso de racha va ligado a su checada (A-64): se actualiza al atenderse y viaja con la cartera.
+    // El aviso de racha va ligado a su checada (A-64): se actualiza al atenderse y viaja con ella.
     expect(repo.avisos.find((x) => x.titulo === 'Retardos seguidos')).toMatchObject({
       entidad: { tipo: 'marca', id: repo.marcas.filter((m) => m.tipo === 'entrada').at(-1)!.id },
     });
