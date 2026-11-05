@@ -123,8 +123,8 @@ export const MODULOS = [
   // De seguridad privada
   {
     clave: 'clientes',
-    nombre: 'Clientes y portal del cliente',
-    descripcion: 'Empresas clientes con sus sitios y su acceso para ver la asistencia.',
+    nombre: 'Clientes',
+    descripcion: 'Empresas clientes con sus contactos y sus sitios.',
     grupo: 'seguridad',
     dependeDe: [],
     nota: 'Hoy los lugares de trabajo dependen de un cliente; apagarlo tendrá efecto cuando se separen (C-10).',
@@ -133,13 +133,6 @@ export const MODULOS = [
     clave: 'reportes',
     nombre: 'Reportes de incidentes',
     descripcion: 'Reportes con fotos y seguimiento, con sus categorías.',
-    grupo: 'seguridad',
-    dependeDe: [],
-  },
-  {
-    clave: 'quejas',
-    nombre: 'Quejas del cliente',
-    descripcion: 'Quejas del cliente sobre el servicio o sobre una persona.',
     grupo: 'seguridad',
     dependeDe: [],
   },

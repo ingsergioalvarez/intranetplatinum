@@ -80,10 +80,6 @@ class MemoryCoberturasRepository extends CoberturasRepository {
   async supervisoresDeGuardia() {
     return [6];
   }
-  clienteUsuarios: number[] = [];
-  async usuariosDelClienteDeSitio() {
-    return this.clienteUsuarios;
-  }
 }
 
 const patron = (horaInicio: string, horas: number): PatronTurno => ({
@@ -203,26 +199,6 @@ describe('cubrir otro sitio (DA-39, DA-46)', () => {
     expect(bitacora[0].detalle).toContain('Descansaba solo 0 h');
     expect(audit.acciones()).toEqual(['coberturas.crear']);
     expect((await sup().post({ ...nueva, usuarioId: 11 })).status).toBe(409);
-  });
-
-  it('el cliente se entera de quién cubre en su sitio, en neutro y sin motivo (A-38)', async () => {
-    repo.clienteUsuarios = [20];
-    await sup().post({ ...nueva, usuarioId: 11 });
-    const aviso = avisos.find((a) => a.usuarioIds.join() === '20');
-    expect(aviso?.mensaje).toBe('Ana cubrirá en POETAS el 23 oct. Si tienes dudas, consulta con tu supervisor.');
-    // Nada de motivo, ni a quién sustituye.
-    expect(aviso?.mensaje).not.toMatch(/Falta|Motivo/);
-    avisos = [];
-    expect((await sup().delete('/1')).status).toBe(204);
-    expect(avisos.find((a) => a.usuarioIds.join() === '20')?.mensaje).toBe(
-      'Se canceló la cobertura de Ana en POETAS el 23 oct. Si tienes dudas, consulta con tu supervisor.',
-    );
-  });
-
-  it('sin usuarios del portal no se avisa al cliente', async () => {
-    repo.clienteUsuarios = [];
-    await sup().post({ ...nueva, usuarioId: 11 });
-    expect(avisos.map((a) => a.usuarioIds.join())).toEqual(['11', '6']);
   });
 
   it('al asignar la cobertura se cierran las solicitudes del sitio con quién cubre y cuándo (A-39)', async () => {

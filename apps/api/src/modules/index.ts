@@ -24,7 +24,6 @@ import { miEmpresaModule } from './mi-empresa';
 import { plataformaModule } from './plataforma';
 import { pushModule } from './push';
 import { reportesModule } from './reportes';
-import { reportesClienteModule } from './reportes-cliente';
 import { sitiosModule } from './sitios';
 import { turnosModule } from './turnos';
 import { usuariosModule } from './usuarios';
@@ -45,7 +44,6 @@ export const modules: AppModule[] = [
   gruposModule,
   categoriasModule,
   reportesModule,
-  reportesClienteModule,
   archivosModule,
   avisosModule,
   pushModule,

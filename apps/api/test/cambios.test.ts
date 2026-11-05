@@ -311,6 +311,5 @@ describe('cambios de turno (TC-22)', () => {
     expect(propio.body.data.items).toHaveLength(1);
     expect((await sup().get('')).body.data.pendientes).toBe(1);
     expect((await request(app).get('/api/cambios-turno')).status).toBe(401);
-    expect((await como(20, ROLES.CLIENTE).get('')).status).toBe(403);
   });
 });

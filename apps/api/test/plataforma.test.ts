@@ -209,7 +209,7 @@ describe('empresas', () => {
     const comunicalo = r.body.data.find((e: { nombre: string }) => e.nombre === 'Comunicalo');
     const otra = r.body.data.find((e: { nombre: string }) => e.nombre === 'Acme');
     expect(comunicalo).toMatchObject({ esMiEmpresa: true, administradores: 1 });
-    expect(otra).toMatchObject({ esMiEmpresa: false, modulosActivos: 1, modulosOpcionales: 12, administradores: 0 });
+    expect(otra).toMatchObject({ esMiEmpresa: false, modulosActivos: 1, modulosOpcionales: 11, administradores: 0 });
   });
 
   it('filtra por estado y por nombre', async () => {
@@ -313,7 +313,7 @@ describe('módulos', () => {
     const { id } = await nuevaEmpresa();
     const r = await api().get(`/empresas/${id}/modulos`);
     expect(r.status).toBe(200);
-    expect(Object.keys(r.body.data.modulos)).toHaveLength(12);
+    expect(Object.keys(r.body.data.modulos)).toHaveLength(11);
     expect(Object.values(r.body.data.modulos).every((v) => v === false)).toBe(true);
   });
 

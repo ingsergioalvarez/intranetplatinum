@@ -1,12 +1,10 @@
 import { ROLES } from '@platinum/shared';
-import { HttpError, fechaADate, hoyISO, type AuthUser } from '../../core';
-import { getPrisma } from '../../core/data/prisma';
+import { HttpError, type AuthUser } from '../../core';
 import { personasVisiblesConPrisma } from '../areas/alcance';
 
 /**
  * Lo que cada quien puede ver (C-10): admin y super admin, todo; jefe y supervisor, las personas de su área
- * (el jefe también las de sus subáreas); un cliente, los guardias de sus sitios (directo o por grupo) del último
- * mes, para revisar lo reciente aunque ya los hayan movido. `null` = sin límite.
+ * (el jefe también las de sus subáreas). `null` = sin límite.
  */
 export interface Alcance {
   sitioIds: Set<number>;
@@ -17,43 +15,13 @@ export interface Alcance {
 
 export type AlcanceFn = (user: AuthUser) => Promise<Alcance | null>;
 
-/** Días hacia atrás en que un guardia sigue siendo "de" un sitio después de que lo quitan. */
-const DIAS_RECIENTES = 31;
-
 export const alcanceConPrisma: AlcanceFn = async (user) => {
   // Admin ve toda la empresa, el jefe su área y subáreas, el supervisor su área (C-10).
   if (user.rol === ROLES.ADMIN || user.rol === ROLES.JEFE || user.rol === ROLES.SUPERVISOR) {
     const personas = await personasVisiblesConPrisma(user);
     return personas ? { sitioIds: new Set(), guardiaIds: personas, porPersonas: true } : null;
   }
-  if (user.rol !== ROLES.CLIENTE) return null;
-  const db = getPrisma();
-  if (!user.clienteId) return { sitioIds: new Set(), guardiaIds: new Set() };
-  const sitios = await db.sitio.findMany({ where: { clienteId: user.clienteId }, select: { id: true } });
-  const sitioIds = sitios.map((s) => s.id);
-  if (sitioIds.length === 0) return { sitioIds: new Set(), guardiaIds: new Set() };
-  const hoy = fechaADate(hoyISO());
-  const desde = new Date(hoy.getTime() - DIAS_RECIENTES * 86_400_000);
-  const asignaciones = await db.sitioGuardia.findMany({
-    where: {
-      sitioId: { in: sitioIds },
-      desde: { lte: hoy },
-      OR: [{ vigenteHasta: null }, { vigenteHasta: { gte: desde } }],
-    },
-    select: { usuarioId: true, grupo: { select: { integrantes: { select: { usuarioId: true } } } } },
-  });
-  const guardiaIds = new Set<number>();
-  for (const a of asignaciones) {
-    if (a.usuarioId) guardiaIds.add(a.usuarioId);
-    a.grupo?.integrantes.forEach((i) => guardiaIds.add(i.usuarioId));
-  }
-  // Quien cubre uno de sus sitios (DA-39) también es "suyo" mientras tanto.
-  const coberturas = await db.cobertura.findMany({
-    where: { sitioId: { in: sitioIds }, canceladaEn: null, hasta: { gte: desde } },
-    select: { usuarioId: true },
-  });
-  coberturas.forEach((c) => guardiaIds.add(c.usuarioId));
-  return { sitioIds: new Set(sitioIds), guardiaIds };
+  return null;
 };
 
 /** Para pruebas y módulos sin límite: todos ven todo. */

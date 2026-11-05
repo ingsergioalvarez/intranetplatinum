@@ -579,7 +579,6 @@ export interface HistorialCliente extends HistorialSitio {
   sitios: number;
   contactos: number;
   /** Usuarios del portal de este cliente: no se borran, quedan sin cliente. */
-  usuariosPortal: number;
 }
 
 /** Lo que se borraría al eliminar definitivamente a un usuario (solo admin). */

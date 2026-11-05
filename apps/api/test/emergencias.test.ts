@@ -223,10 +223,6 @@ describe('botón de pánico (A-60)', () => {
     expect(avisos.at(-1)!.usuarioIds).toEqual([10, 11]);
   });
 
-  it('el cliente no tiene botón', async () => {
-    expect((await como(20, ROLES.CLIENTE).post('')).status).toBe(403);
-  });
-
   it('el guardia elige el tipo después de enviar, solo en la suya', async () => {
     const { body } = await juan().post('');
     const id = body.data.id;

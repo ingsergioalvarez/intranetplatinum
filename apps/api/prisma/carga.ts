@@ -19,7 +19,7 @@ if (!url.includes('platinum_carga')) {
 }
 
 const PASSWORD = 'Carga2026xx';
-const N = { admin: 5, supervisor: 30, guardia: 240, cliente: 25, clientes: 5, sitios: 30 };
+const N = { admin: 5, supervisor: 30, guardia: 240, clientes: 5, sitios: 30 };
 
 const prisma = createPrismaClient(url);
 
@@ -30,11 +30,10 @@ async function main() {
   }
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
   const rol = async (clave: string) => (await prisma.rol.findUniqueOrThrow({ where: { clave } })).id;
-  const [rAdmin, rSup, rGuardia, rCliente] = await Promise.all([
+  const [rAdmin, rSup, rGuardia] = await Promise.all([
     rol(ROLES.ADMIN),
     rol(ROLES.SUPERVISOR),
     rol(ROLES.GUARDIA),
-    rol(ROLES.CLIENTE),
   ]);
   const usuario = (nombre: string, email: string, rolId: number, extra: object = {}) =>
     prisma.usuario.create({
@@ -60,9 +59,6 @@ async function main() {
       data: { empresaId: 1, razonSocial: `Carga Cliente ${i} SA`, nombreComercial: `Carga Cliente ${i}` },
     });
     clientes.push(c.id);
-    for (let k = 1; k <= N.cliente / N.clientes; k++) {
-      await usuario(`Carga Cliente ${i}-${k}`, `carga_cli${i}_${k}@carga.local`, rCliente, { clienteId: c.id });
-    }
   }
 
   const sitios: number[] = [];
@@ -98,7 +94,7 @@ async function main() {
     });
   }
   console.log(
-    `[carga] Listo: ${N.admin} admin, ${N.supervisor} supervisores, ${N.guardia} guardias, ${N.cliente} usuarios de cliente, ${N.sitios} sitios.`,
+    `[carga] Listo: ${N.admin} admin, ${N.supervisor} supervisores, ${N.guardia} guardias, ${N.sitios} sitios.`,
   );
 }
 

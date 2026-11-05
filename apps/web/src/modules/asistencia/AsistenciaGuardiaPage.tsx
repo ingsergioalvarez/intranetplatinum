@@ -133,7 +133,6 @@ function EstadoConIncidencias({
 const columnasAsistencia = (
   eventos: EventoBitacora[] | undefined,
   onIncidencias: (j: Jornada) => void,
-  esCliente = false,
 ): Column<Jornada>[] => [
   {
     key: 'dia',
@@ -208,16 +207,13 @@ const columnasAsistencia = (
   {
     key: 'estado',
     header: 'Estado',
-    render: (j) =>
-      esCliente ? (
-        <EstadoJornada jornada={j} />
-      ) : (
-        <EstadoConIncidencias
-          jornada={j}
-          incidencias={incidenciasDeJornada(j, eventos)}
-          onAbrir={() => onIncidencias(j)}
-        />
-      ),
+    render: (j) => (
+      <EstadoConIncidencias
+        jornada={j}
+        incidencias={incidenciasDeJornada(j, eventos)}
+        onAbrir={() => onIncidencias(j)}
+      />
+    ),
   },
 ];
 
@@ -230,13 +226,12 @@ export function AsistenciaGuardiaPage() {
   const user = useAuthStore((s) => s.user);
   const moduloEncendido = useModulos();
   const conBitacora = moduloEncendido('bitacora');
-  const esCliente = user?.rol === ROLES.CLIENTE;
   const id = Number(useParams().id);
   const [params, setParams] = useSearchParams();
   const mesActual = hoyLocal().slice(0, 7);
   const mes = /^\d{4}-\d{2}$/.test(params.get('mes') ?? '') ? params.get('mes')! : mesActual;
   const vista: Vista =
-    esCliente || !conBitacora ? 'asistencia' : params.get('vista') === 'bitacora' ? 'bitacora' : 'asistencia';
+    !conBitacora ? 'asistencia' : params.get('vista') === 'bitacora' ? 'bitacora' : 'asistencia';
   const filtro: FiltroBitacora = {
     categoria: CATEGORIAS_BITACORA.find((c) => c === params.get('cat')) ?? null,
     clase: CLASES_INCIDENCIA.find((c) => c === params.get('clase')) ?? null,
@@ -262,7 +257,7 @@ export function AsistenciaGuardiaPage() {
     queryKey: asistenciaService.keys.bitacora(id, mes),
     queryFn: () => asistenciaService.bitacora(id, mes),
     placeholderData: keepPreviousData,
-    enabled: !esCliente && conBitacora,
+    enabled: conBitacora,
   });
 
   /** Cambia parámetros de la URL conservando los demás (null los quita). */
@@ -366,7 +361,7 @@ export function AsistenciaGuardiaPage() {
           </aside>
 
           <section className="min-w-0 space-y-3">
-            {!esCliente && conBitacora && (
+            {conBitacora && (
               <div role="tablist" aria-label="Vista" className="flex gap-1 rounded-xl bg-slate-200/60 p-1">
                 {(
                   [
@@ -403,14 +398,14 @@ export function AsistenciaGuardiaPage() {
                 <>
                   <div className="space-y-3 md:hidden">
                     {ficha.data.jornadas.map((j) => {
-                      const incidencias = esCliente ? [] : incidenciasDeJornada(j, bitacora.data);
+                      const incidencias = incidenciasDeJornada(j, bitacora.data);
                       return (
                         <div key={j.entrada.id} className="space-y-1.5">
                           <JornadaCard
                             jornada={j}
                             detalle
                             miniaturas
-                            rostro={esCliente ? null : ficha.data.rostro}
+                            rostro={ficha.data.rostro}
                           />
                           {incidencias.length > 0 && (
                             <BotonIncidencias
@@ -424,7 +419,7 @@ export function AsistenciaGuardiaPage() {
                   </div>
                   <Card className="hidden md:block">
                     <DataTable
-                      columns={columnasAsistencia(bitacora.data, setConIncidencias, esCliente)}
+                      columns={columnasAsistencia(bitacora.data, setConIncidencias)}
                       rows={ficha.data.jornadas}
                       rowKey={(j) => j.entrada.id}
                       onRowClick={setAbierta}
@@ -620,65 +615,12 @@ function ResumenMes({
   onAsistencia: () => void;
   onBitacora: (f: Partial<FiltroBitacora>) => void;
 }) {
-  const user = useAuthStore((s) => s.user);
-  const esCliente = user?.rol === ROLES.CLIENTE;
   const dias = new Set(jornadas.map((j) => new Date(j.entrada.registradaEn).toDateString())).size;
   const minutos = jornadas.reduce(
     (t, j) =>
       j.salida ? t + (Date.parse(j.salida.registradaEn) - Date.parse(j.entrada.registradaEn)) / 60_000 : t,
     0,
   );
-
-  if (esCliente) {
-    const retardos = jornadas.filter((j) => (j.retardoMin ?? 0) > 10).length;
-    const comidasTomadas = jornadas.reduce((acc, j) => acc + j.comidas.length, 0);
-    const datosCliente: {
-      label: string;
-      valor: number | string | undefined;
-      alerta?: boolean;
-      onClick: () => void;
-    }[] = [
-      { label: 'Días trabajados', valor: dias, onClick: onAsistencia },
-      { label: 'Horas', valor: `${Math.floor(minutos / 60)} h`, onClick: onAsistencia },
-      { label: 'Retardos', valor: retardos, alerta: retardos > 0, onClick: onAsistencia },
-      { label: 'Comidas registradas', valor: comidasTomadas, onClick: onAsistencia },
-    ];
-    return (
-      <Card className="p-3">
-        <p className="mb-2 text-xs font-medium tracking-wide text-slate-500 uppercase">
-          Resumen de {formatMes(mes).toLowerCase()}
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {datosCliente.map((d) => {
-            const marcado = d.alerta && typeof d.valor === 'number' && d.valor > 0;
-            return (
-              <button
-                key={d.label}
-                type="button"
-                onClick={d.onClick}
-                className={cn(
-                  'rounded-lg px-3 py-2 text-left ring-1 ring-inset',
-                  marcado
-                    ? 'bg-amber-50 ring-amber-200 hover:bg-amber-100'
-                    : 'ring-slate-200 hover:bg-slate-50',
-                )}
-              >
-                <span
-                  className={cn(
-                    'block text-xl font-bold tabular-nums',
-                    marcado ? 'text-amber-800' : 'text-slate-900',
-                  )}
-                >
-                  {d.valor ?? '…'}
-                </span>
-                <span className="text-xs text-slate-600">{d.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
-    );
-  }
 
   const cuenta = (tipo: TipoEventoBitacora) =>
     eventos?.filter((e) => e.tipo === tipo && incidenciaCuenta(e)).length;
@@ -777,7 +719,6 @@ function ResumenMes({
 function Referencia({ guardia, rostro }: { guardia: GuardiaResumen; rostro: RostroRegistro | null }) {
   const [viendo, setViendo] = useState(false);
   const user = useAuthStore((s) => s.user);
-  const esCliente = user?.rol === ROLES.CLIENTE;
   const puedeRevisar = hasPermission(user, PERMISOS.ASISTENCIA_ROSTROS);
   const foto = rostro?.fotoUrl || guardia.foto;
 
@@ -785,41 +726,26 @@ function Referencia({ guardia, rostro }: { guardia: GuardiaResumen; rostro: Rost
     <>
       <Card className="flex items-center gap-3 p-3">
         {foto ? (
-          esCliente ? (
+          <button
+            type="button"
+            onClick={() => setViendo(true)}
+            aria-label="Ver las fotos del registro"
+            className="shrink-0"
+          >
             <img
               src={foto}
-              alt="Guardia asignado"
-              className="size-20 shrink-0 rounded-xl object-cover ring-1 ring-slate-200"
+              alt="Rostro registrado"
+              className="size-20 -scale-x-100 rounded-xl object-cover ring-1 ring-slate-200"
             />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setViendo(true)}
-              aria-label="Ver las fotos del registro"
-              className="shrink-0"
-            >
-              <img
-                src={foto}
-                alt="Rostro registrado"
-                className="size-20 -scale-x-100 rounded-xl object-cover ring-1 ring-slate-200"
-              />
-            </button>
-          )
+          </button>
         ) : (
           <span className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
             <UserRound className="size-9" />
           </span>
         )}
         <div className="min-w-0 space-y-1">
-          <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
-            {esCliente ? 'Guardia asignado' : 'Rostro de referencia'}
-          </p>
-          {esCliente ? (
-            <>
-              <p className="font-semibold text-slate-900 truncate">{guardia.nombre}</p>
-              <p className="text-xs text-slate-500 truncate">{guardia.email}</p>
-            </>
-          ) : rostro ? (
+          <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Rostro de referencia</p>
+          {rostro ? (
             <>
               <EstadoRostroBadge estado={rostro.estado} />
               <p className="text-sm text-slate-600">
@@ -835,7 +761,7 @@ function Referencia({ guardia, rostro }: { guardia: GuardiaResumen; rostro: Rost
         </div>
       </Card>
 
-      {!esCliente && rostro && (
+      {rostro && (
         <Modal
           open={viendo}
           onClose={() => setViendo(false)}

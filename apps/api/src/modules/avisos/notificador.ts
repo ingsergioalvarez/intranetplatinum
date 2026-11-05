@@ -47,10 +47,6 @@ export class NotificadorAvisos implements NotificadorReportes {
       }
       // Notifica también a los compañeros asignados a este sitio
       for (const g of guardiasSitio) destinatarios.add(g);
-      // Notifica a los usuarios del portal del cliente
-      if (avisaACliente(destino)) {
-        for (const c of await this.repo.usuariosDelCliente(r.cliente.id)) destinatarios.add(c);
-      }
 
       destinatarios.delete(actorId);
 
@@ -70,9 +66,7 @@ export class NotificadorAvisos implements NotificadorReportes {
 
   async estatusCambiado(r: ReporteAviso, nuevo: EstatusReporte, actorId: number) {
     await this.seguro('estatusCambiado', async () => {
-      const clientes = await this.repo.usuariosDelCliente(r.cliente.id);
-      const destinatarios = [...new Set([r.creadoPor.id, ...clientes])];
-      await this.repo.crear(this.sin(destinatarios, actorId), {
+      await this.repo.crear(this.sin([r.creadoPor.id], actorId), {
         tipo: 'reporte_estatus',
         titulo: `Reporte actualizado: ${ESTATUS_REPORTE_LABEL[nuevo]}`,
         reporteId: r.id,
@@ -81,13 +75,12 @@ export class NotificadorAvisos implements NotificadorReportes {
     });
   }
 
-  /** Comentario sin cambio de estatus: avisa a supervisores, a quien reportó y a usuarios del cliente (salvo al autor). */
+  /** Comentario sin cambio de estatus: avisa a supervisores y a quien reportó (salvo al autor). */
   async comentarioAgregado(r: ReporteAviso, actorId: number, actorNombre: string) {
     await this.seguro('comentarioAgregado', async () => {
       const destino = resolverDestino(await this.repo.reglasDelCliente(r.cliente.id), r.prioridad);
       const supervisores = avisaASupervisor(destino) ? await this.repo.supervisores(r.sitio.id) : [];
-      const clientes = await this.repo.usuariosDelCliente(r.cliente.id);
-      const destinatarios = [...new Set([...supervisores, r.creadoPor.id, ...clientes])];
+      const destinatarios = [...new Set([...supervisores, r.creadoPor.id])];
       await this.repo.crear(this.sin(destinatarios, actorId), {
         tipo: 'reporte_comentario',
         titulo: 'Nuevo comentario en un reporte',

@@ -431,7 +431,7 @@ export function ReportesPage() {
                 { value: '', label: 'Sitio: todos' },
                 ...(sitios.data ?? []).map((s) => ({
                   value: s.id,
-                  label: yo?.rol === ROLES.CLIENTE ? s.nombre : `${s.nombre} (${s.cliente.nombreComercial})`,
+                  label: `${s.nombre} (${s.cliente.nombreComercial})`,
                 })),
               ]}
               value={sitioId}

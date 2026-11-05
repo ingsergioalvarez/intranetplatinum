@@ -28,5 +28,4 @@ export * from './schemas/horasExtra';
 export * from './schemas/cobertura';
 export * from './schemas/casosCobertura';
 export * from './schemas/emergencias';
-export * from './schemas/reportesCliente';
 export * from './schemas/empresas';

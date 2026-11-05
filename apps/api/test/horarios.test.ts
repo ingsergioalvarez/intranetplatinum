@@ -128,7 +128,6 @@ describe('horario de guardias en PDF (A-55)', () => {
     expect((ok.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
     expect((await pdf(q, ROLES.SUPERVISOR, 5)).status).toBe(200);
     expect((await pdf(q, ROLES.GUARDIA, 10)).status).toBe(403);
-    expect((await pdf(q, ROLES.CLIENTE, 20)).status).toBe(403);
     expect((await request(app).get(`/api/horarios/pdf?${q}`)).status).toBe(401);
   });
 

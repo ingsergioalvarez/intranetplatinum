@@ -3,7 +3,6 @@ import { PERMISOS, ROLES } from '@platinum/shared';
 import { AppShell } from '../components/layout/AppShell';
 import { ProtectedRoute } from '../core/auth/ProtectedRoute';
 import { AccesoRapidoPage } from '../modules/auth/AccesoRapidoPage';
-import { MisGuardiasPage } from '../modules/guardias/MisGuardiasPage';
 import { CambiarPasswordPage } from '../modules/auth/CambiarPasswordPage';
 import { LoginPage } from '../modules/auth/LoginPage';
 import { InicioPage } from '../modules/inicio/InicioPage';
@@ -18,7 +17,6 @@ import { GruposPage } from '../modules/grupos/GruposPage';
 import { NuevoReportePage } from '../modules/reportes/NuevoReportePage';
 import { ReporteDetallePage } from '../modules/reportes/ReporteDetallePage';
 import { ReportesPage } from '../modules/reportes/ReportesPage';
-import { ReportesClientePage } from '../modules/reportes-cliente/ReportesClientePage';
 import { NotFoundPage } from '../modules/shared/PendientePage';
 import { AsistenciaGuardiaPage } from '../modules/asistencia/AsistenciaGuardiaPage';
 import { AsistenciaPage } from '../modules/asistencia/AsistenciaPage';
@@ -65,14 +63,6 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <AccesoRapidoPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'guardias',
-        element: (
-          <ProtectedRoute modulo="clientes" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.CLIENTE]}>
-            <MisGuardiasPage />
           </ProtectedRoute>
         ),
       },
@@ -234,14 +224,6 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute modulo="reportes">
             <ReporteDetallePage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'reportes-cliente',
-        element: (
-          <ProtectedRoute modulo="quejas" roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.CLIENTE]}>
-            <ReportesClientePage />
           </ProtectedRoute>
         ),
       },

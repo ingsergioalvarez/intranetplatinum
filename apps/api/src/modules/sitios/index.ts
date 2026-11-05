@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { z } from 'zod';
 import {
   PERMISOS,
-  ROLES,
   asignacionCreateSchema,
   asignacionUpdateSchema,
   asignarTurnoSchema,
@@ -14,7 +13,6 @@ import {
   PrismaAuditLogger,
   authenticate,
   requirePermission,
-  requireRoles,
   validate,
   type AppModule,
 } from '../../core';
@@ -50,8 +48,6 @@ export function createSitiosModule({
   router.use(authenticate);
 
   router.get('/mios', c.mios);
-  // Portal del cliente (A-38): sus guardias asignados y quién cubre; solo el rol cliente.
-  router.get('/del-cliente', requireRoles(ROLES.CLIENTE), c.delCliente);
   // Para elegir a quién asignar: guardias con su foto y lo que ya tienen (DA-37).
   router.get('/guardias-disponibles', editar, c.guardiasDisponibles);
   // Supervisor del sitio (DA-45).

@@ -95,7 +95,6 @@ export const PERMISOS_POR_ROL: Record<Rol, Permiso[]> = {
     P.ASISTENCIA_MARCAR,
   ],
   [ROLES.GUARDIA]: [P.REPORTES_VER_PROPIOS, P.REPORTES_CREAR, P.REPORTES_SEGUIMIENTO, P.ASISTENCIA_MARCAR],
-  [ROLES.CLIENTE]: [P.REPORTES_VER_PROPIOS, P.REPORTES_SEGUIMIENTO, P.ASISTENCIA_VER],
 };
 
 export const ROL_DESCRIPCIONES: Record<Rol, string> = {
@@ -103,5 +102,4 @@ export const ROL_DESCRIPCIONES: Record<Rol, string> = {
   [ROLES.JEFE]: 'Jefe',
   [ROLES.SUPERVISOR]: 'Supervisor',
   [ROLES.GUARDIA]: 'Colaborador',
-  [ROLES.CLIENTE]: 'Cliente',
 };

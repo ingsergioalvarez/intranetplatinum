@@ -33,7 +33,6 @@ import {
   toast,
 } from '../../components/ui';
 import { ClienteModal } from './ClienteModal';
-import { AccesosClienteCard } from './AccesosCliente';
 import { ContactoModal } from './ContactoModal';
 import { EliminarClienteDialog } from './EliminarSitioClienteDialogs';
 import { EstatusClienteBadge } from './EstatusClienteBadge';
@@ -272,7 +271,6 @@ export function ClienteDetallePage() {
           )}
         </Card>
 
-        <AccesosClienteCard cliente={c} puedeEditar={esAdmin && !deBaja} />
 
         <ReglasAvisoCard cliente={c} puedeEditar={esAdmin && !deBaja} />
 

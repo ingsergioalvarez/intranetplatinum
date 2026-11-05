@@ -15,8 +15,6 @@ export interface UsuarioAuth {
   bloqueadoHasta: Date | null;
   rol: Rol;
   permisos: Permiso[];
-  clienteId?: number | null;
-  clienteNombre?: string | null;
   esSuperAdmin?: boolean;
   empresaId?: number | null;
 }
@@ -89,7 +87,6 @@ export abstract class AuthRepository {
 
 const usuarioAuthInclude = {
   rol: { include: { permisos: { include: { permiso: true } } } },
-  cliente: { select: { id: true, nombreComercial: true } },
 } as const;
 
 export class PrismaAuthRepository extends AuthRepository {
@@ -224,8 +221,6 @@ export class PrismaAuthRepository extends AuthRepository {
     intentosFallidos: number;
     bloqueadoHasta: Date | null;
     rol: { clave: string; permisos: { permiso: { clave: string } }[] };
-    clienteId?: number | null;
-    cliente?: { id: number; nombreComercial: string } | null;
     esSuperAdmin?: boolean;
     empresaId?: number | null;
   }): UsuarioAuth {
@@ -241,8 +236,6 @@ export class PrismaAuthRepository extends AuthRepository {
       bloqueadoHasta: u.bloqueadoHasta,
       rol: u.rol.clave as Rol,
       permisos: u.rol.permisos.map((rp) => rp.permiso.clave as Permiso),
-      clienteId: u.clienteId ?? u.cliente?.id ?? null,
-      clienteNombre: u.cliente?.nombreComercial ?? null,
       esSuperAdmin: u.esSuperAdmin ?? false,
       empresaId: u.empresaId ?? null,
     };

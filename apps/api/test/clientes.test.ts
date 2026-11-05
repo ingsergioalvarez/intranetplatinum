@@ -4,7 +4,6 @@ import request from 'supertest';
 import {
   PERMISOS_POR_ROL,
   ROLES,
-  type AccesoCliente,
   type ClienteCreateData,
   type ClienteResumen,
   type Contacto,
@@ -29,7 +28,6 @@ import {
   type TurnoEstado,
   type GuardiaEstado,
   type RangoAsignacion,
-  type SitioDelClienteRow,
 } from '../src/modules/sitios/sitios.repository';
 import { calcularCambios, hoyISO, signAccessToken } from '../src/core';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
@@ -135,58 +133,6 @@ class MemoryClientesRepository extends ClientesRepository {
   async restoreSitio(id: number) {
     (await this.findSitio(id))!.deletedAt = null;
   }
-  usuarios: {
-    id: number;
-    nombre: string;
-    email: string;
-    rol: string;
-    clienteId: number | null;
-    deletedAt: string | null;
-  }[] = [];
-  private acceso(u: (typeof this.usuarios)[number]): AccesoCliente {
-    return {
-      id: u.id,
-      nombre: u.nombre,
-      email: u.email,
-      activo: !u.deletedAt,
-      ultimoAcceso: null,
-      debeCambiarPassword: true,
-    };
-  }
-  async listAccesos(clienteId: number) {
-    return this.usuarios.filter((u) => u.clienteId === clienteId && u.rol === ROLES.CLIENTE).map((u) => this.acceso(u));
-  }
-  async findUsuarioPorEmail(email: string) {
-    return this.usuarios.find((u) => u.email === email) ?? null;
-  }
-  async findUsuarioPorId(id: number) {
-    return this.usuarios.find((u) => u.id === id) ?? null;
-  }
-  async listClientesDisponibles() {
-    return this.usuarios
-      .filter((u) => u.rol === ROLES.CLIENTE && !u.clienteId && !u.deletedAt)
-      .map(({ id, nombre, email }) => ({ id, nombre, email }));
-  }
-  async crearAcceso(
-    clienteId: number,
-    data: { nombre: string; email: string; passwordHash: string },
-  ) {
-    const u = {
-      id: 100 + this.usuarios.length,
-      nombre: data.nombre,
-      email: data.email,
-      rol: ROLES.CLIENTE,
-      clienteId,
-      deletedAt: null,
-    };
-    this.usuarios.push(u);
-    return this.acceso(u);
-  }
-  async ligarAcceso(usuarioId: number, clienteId: number) {
-    const u = this.usuarios.find((x) => x.id === usuarioId)!;
-    u.clienteId = clienteId;
-    return this.acceso(u);
-  }
   reglas = new Map<number, ReglasAviso>();
   async getReglasAviso(id: number) {
     return this.reglas.get(id) ?? { porDefecto: 'supervisor' as const, porPrioridad: {} };
@@ -197,14 +143,6 @@ class MemoryClientesRepository extends ClientesRepository {
 }
 
 class MemorySitiosRepository extends SitiosRepository {
-  sitiosCliente: SitioDelClienteRow[] = [];
-  async guardiasDelCliente() {
-    return this.sitiosCliente;
-  }
-  clienteUsuarios: number[] = [];
-  async usuariosDelCliente() {
-    return this.clienteUsuarios;
-  }
   sitio = {
     id: 1,
     nombre: 'Torre Norte',
@@ -476,79 +414,6 @@ describe('reglas de aviso (F3-09)', () => {
   });
 });
 
-describe('acceso del cliente (A-29)', () => {
-  const alta = { nombre: 'Marta Ríos', email: 'MARTA@cliente.mx' };
-
-  it('crea el usuario cliente con contraseña temporal y su contacto que recibe avisos', async () => {
-    const res = await como(ADMIN).post('/clientes/1/accesos', alta);
-    expect(res.status).toBe(201);
-    expect(res.body.data.acceso).toMatchObject({ nombre: 'Marta Ríos', email: 'marta@cliente.mx' });
-    expect(res.body.data.passwordTemporal).toHaveLength(12);
-    const detalle = (await como(ADMIN).get('/clientes/1')).body.data;
-    expect(detalle.accesos).toHaveLength(1);
-    expect(detalle.contactos).toMatchObject([
-      { email: 'marta@cliente.mx', recibeNotificaciones: true, esResponsable: true },
-    ]);
-    expect(audit.acciones()).toContain('clientes.acceso_crear');
-  });
-
-  it('liga a un usuario cliente elegido de la lista, sin contraseña nueva', async () => {
-    clientes.usuarios.push({ id: 9, nombre: 'Comunicalo', email: 'comunicalo@platinum.com', rol: ROLES.CLIENTE, clienteId: null, deletedAt: null });
-    const res = await como(ADMIN).post('/clientes/1/accesos', { usuarioId: 9 });
-    expect(res.status).toBe(201);
-    expect(res.body.data.passwordTemporal).toBeNull();
-    expect(clientes.usuarios[0].clienteId).toBe(1);
-    expect((await como(ADMIN).get('/clientes/1')).body.data.contactos).toMatchObject([
-      { email: 'comunicalo@platinum.com', recibeNotificaciones: true },
-    ]);
-  });
-
-  it('la lista de disponibles solo trae usuarios cliente sin cliente asignado', async () => {
-    clientes.usuarios.push(
-      { id: 9, nombre: 'Libre', email: 'libre@x.mx', rol: ROLES.CLIENTE, clienteId: null, deletedAt: null },
-      { id: 10, nombre: 'Ocupado', email: 'ocupado@x.mx', rol: ROLES.CLIENTE, clienteId: 2, deletedAt: null },
-      { id: 11, nombre: 'Sofía', email: 'sofia@x.mx', rol: ROLES.SUPERVISOR, clienteId: null, deletedAt: null },
-      { id: 12, nombre: 'De baja', email: 'baja@x.mx', rol: ROLES.CLIENTE, clienteId: null, deletedAt: 'x' },
-    );
-    const res = await como(ADMIN).get('/clientes/1/accesos/disponibles');
-    expect(res.status).toBe(200);
-    expect(res.body.data).toEqual([{ id: 9, nombre: 'Libre', email: 'libre@x.mx' }]);
-    expect((await como(SUPERVISOR).get('/clientes/1/accesos/disponibles')).status).toBe(403);
-  });
-
-  it('máximo 2 usuarios activos por cliente', async () => {
-    expect((await como(ADMIN).post('/clientes/1/accesos', alta)).status).toBe(201);
-    expect((await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Luis', email: 'luis@cliente.mx' })).status).toBe(201);
-    const res = await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Ana', email: 'ana@cliente.mx' });
-    expect(res.status).toBe(409);
-  });
-
-  it('un correo que ya existe no se liga escribiéndolo: se elige de la lista', async () => {
-    clientes.usuarios.push({ id: 5, nombre: 'Sofía', email: 'sofia@x.mx', rol: ROLES.SUPERVISOR, clienteId: null, deletedAt: null });
-    clientes.usuarios.push({ id: 6, nombre: 'Libre', email: 'libre@x.mx', rol: ROLES.CLIENTE, clienteId: null, deletedAt: null });
-    const supervisor = await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Sofía', email: 'sofia@x.mx' });
-    expect(supervisor.status).toBe(409);
-    expect(supervisor.body.error.message).toContain('no es cliente');
-    const cliente = await como(ADMIN).post('/clientes/1/accesos', { nombre: 'Libre', email: 'libre@x.mx' });
-    expect(cliente.status).toBe(409);
-    expect(cliente.body.error.message).toContain('elígelo de la lista');
-    expect(clientes.usuarios.every((u) => u.clienteId === null)).toBe(true);
-  });
-
-  it('por id solo se liga a un usuario cliente libre', async () => {
-    clientes.usuarios.push({ id: 5, nombre: 'Sofía', email: 'sofia@x.mx', rol: ROLES.SUPERVISOR, clienteId: null, deletedAt: null });
-    clientes.usuarios.push({ id: 6, nombre: 'Otro', email: 'otro@x.mx', rol: ROLES.CLIENTE, clienteId: 2, deletedAt: null });
-    expect((await como(ADMIN).post('/clientes/1/accesos', { usuarioId: 5 })).status).toBe(404);
-    expect((await como(ADMIN).post('/clientes/1/accesos', { usuarioId: 6 })).status).toBe(409);
-    expect((await como(ADMIN).post('/clientes/1/accesos', { usuarioId: 99 })).status).toBe(404);
-  });
-
-  it('solo el administrador da acceso', async () => {
-    expect((await como(SUPERVISOR).post('/clientes/1/accesos', alta)).status).toBe(403);
-    expect((await como(ADMIN).post('/clientes/1/accesos', { nombre: 'X', email: 'no-es-correo' })).status).toBe(400);
-  });
-});
-
 describe('contactos (F2-03)', () => {
   it('varios contactos por cliente; notificaciones exigen correo', async () => {
     expect((await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Laura' })).status).toBe(201);
@@ -744,92 +609,6 @@ describe('horario del turno y avisos al guardia (DA-32, DA-34)', () => {
       'Tu asignación en Torre Norte: nuevo horario: Turno de 24 h · entrada 7:00 a.m.',
     );
     expect(sitios.asignaciones[0]).toMatchObject({ horaInicio: '07:00', horaFin: '07:00' });
-  });
-});
-
-describe('portal del cliente: sus guardias y avisos de cambios (A-38)', () => {
-  const CLIENTE = signAccessToken({
-    id: 20,
-    email: 'c@x.mx',
-    rol: ROLES.CLIENTE,
-    permisos: PERMISOS_POR_ROL[ROLES.CLIENTE],
-    clienteId: 1,
-  });
-  const asignarGuardia = (b: object) => como(SUPERVISOR).post('/sitios/1/guardias', { tipo: 'fija', ...b });
-  const fila = (o: Partial<SitioDelClienteRow['guardias'][number]>): SitioDelClienteRow['guardias'][number] => ({
-    id: 3,
-    nombre: 'Gabriel',
-    fotoClave: null,
-    tipo: 'fija',
-    turno: '24x24',
-    horaInicio: '08:00',
-    horaFin: '08:00',
-    horas: 24,
-    dias: UNO_Y_UNO,
-    desde: '2026-01-01',
-    hasta: null,
-    grupo: null,
-    cobertura: false,
-    ...o,
-  });
-
-  it('el cliente ve los guardias de sus sitios con datos básicos, foto firmada, próximos y coberturas', async () => {
-    sitios.sitiosCliente = [
-      {
-        id: 1,
-        nombre: 'Torre Norte',
-        guardias: [
-          fila({ id: 9, nombre: 'Zoe', fotoClave: 'rostros/a.jpg', desde: HOY, cobertura: false }),
-          fila({ id: 3, nombre: 'Gabriel' }),
-          fila({ id: 3, nombre: 'Gabriel' }),
-          fila({ id: 5, nombre: 'Lucía', desde: '2999-01-01' }),
-          fila({ id: 6, nombre: 'Rosa', cobertura: true, desde: HOY, hasta: HOY }),
-        ],
-      },
-    ];
-    const res = await como(CLIENTE).get('/sitios/del-cliente');
-    expect(res.status).toBe(200);
-    const [sitio] = res.body.data;
-    expect(sitio.nombre).toBe('Torre Norte');
-    // Sin repetir a Gabriel; los que ya están primero (por nombre) y los próximos al final.
-    expect(sitio.guardias.map((g: { nombre: string }) => g.nombre)).toEqual(['Gabriel', 'Rosa', 'Zoe', 'Lucía']);
-    const por = (n: string) => sitio.guardias.find((g: { nombre: string }) => g.nombre === n);
-    expect(por('Zoe')).toMatchObject({ nuevo: true, programada: false });
-    expect(por('Zoe').foto).toMatch(/^\/api\/archivos\/rostros\/a\.jpg\?exp=\d+&sig=/);
-    expect(por('Gabriel').foto).toBeNull();
-    expect(por('Lucía')).toMatchObject({ programada: true, nuevo: false });
-    expect(por('Rosa')).toMatchObject({ cobertura: true, nuevo: false });
-    // Nada de contacto ni de rostro: solo lo básico.
-    expect(Object.keys(por('Zoe')).sort()).not.toContain('email');
-    expect(JSON.stringify(res.body)).not.toMatch(/telefono|email|fotoClave/);
-  });
-
-  it('solo el rol cliente lo ve', async () => {
-    expect((await como(ADMIN).get('/sitios/del-cliente')).status).toBe(403);
-    expect((await como(SUPERVISOR).get('/sitios/del-cliente')).status).toBe(403);
-    expect((await request(app).get('/api/sitios/del-cliente')).status).toBe(401);
-  });
-
-  it('el cliente recibe aviso cuando asignan, cambian o quitan a un guardia de su sitio', async () => {
-    sitios.clienteUsuarios = [20, 21];
-    await asignarGuardia({ usuarioId: 3, turno: '24x24', horaInicio: '08:00', desde: HOY });
-    const alta = avisos.find((a) => a.usuarioIds.join() === '20,21');
-    expect(alta).toMatchObject({
-      tipo: 'asignacion',
-      mensaje: expect.stringContaining('G fue asignado a Torre Norte'),
-    });
-    await como(SUPERVISOR).patch('/sitios/1/guardias/1', { horaInicio: '07:00' });
-    expect(avisos.filter((a) => a.usuarioIds.join() === '20,21').at(-1)?.mensaje).toContain('G en Torre Norte');
-    expect((await como(ADMIN).delete('/sitios/1/guardias/1')).status).toBe(204);
-    expect(avisos.filter((a) => a.usuarioIds.join() === '20,21').at(-1)?.mensaje).toBe(
-      'G ya no está asignado a Torre Norte',
-    );
-  });
-
-  it('sin usuarios del portal no se manda ningún aviso al cliente', async () => {
-    sitios.clienteUsuarios = [];
-    await asignarGuardia({ usuarioId: 3, turno: '24x24', horaInicio: '08:00', desde: HOY });
-    expect(avisos.every((a) => a.mensaje.startsWith('Te asignaron'))).toBe(true);
   });
 });
 
@@ -1069,11 +848,6 @@ describe('clientes de la empresa', () => {
     expect((await como(B).patch(`/clientes/${id}`, { nombreComercial: 'Renombrado' })).status).toBe(200);
   });
 
-  it('el acceso nuevo de un cliente se crea sin dueño', async () => {
-    const res = await como(A).post('/clientes/1/accesos', { nombre: 'Ana', email: 'ana@cliente.mx' });
-    expect(res.status).toBe(201);
-    expect(clientes.usuarios.some((u) => u.email === 'ana@cliente.mx')).toBe(true);
-  });
 });
 
 describe('sitios de la empresa', () => {

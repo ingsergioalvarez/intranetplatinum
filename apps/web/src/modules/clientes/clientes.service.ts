@@ -1,7 +1,4 @@
 import type {
-  AccesoClienteCreado,
-  AccesoClienteData,
-  UsuarioClienteDisponible,
   Asignacion,
   AsignacionCreate,
   AsignacionUpdate,
@@ -18,7 +15,6 @@ import type {
   ReglasAvisoInput,
   Sitio,
   SitioInput,
-  SitioConMisGuardias,
   SupervisorOpcion,
 } from '@platinum/shared';
 import { api, CrudService } from '../../core/api';
@@ -31,16 +27,6 @@ class ClientesService extends CrudService<ClienteResumen, ClienteCreate, Cliente
 
   reglasAviso(clienteId: number, reglas: ReglasAvisoInput) {
     return this.api.put<ReglasAviso>(`${this.resource}/${clienteId}/avisos`, reglas);
-  }
-
-  /** Usuarios cliente sin cliente asignado, que se pueden ligar (A-29). */
-  accesosDisponibles(clienteId: number) {
-    return this.api.get<UsuarioClienteDisponible[]>(`${this.resource}/${clienteId}/accesos/disponibles`);
-  }
-
-  /** Da acceso a la intranet a una persona del cliente (A-29). */
-  crearAcceso(clienteId: number, data: AccesoClienteData) {
-    return this.api.post<AccesoClienteCreado>(`${this.resource}/${clienteId}/accesos`, data);
   }
 
   crearContacto(clienteId: number, data: ContactoInput) {
@@ -80,7 +66,6 @@ export const sitiosService = {
     all: ['sitios'] as const,
     guardias: (sitioId: number, historial: boolean) => ['sitios', sitioId, 'guardias', historial] as const,
     mios: ['sitios', 'mios'] as const,
-    misGuardias: ['sitios', 'del-cliente'] as const,
     disponibles: ['sitios', 'guardias-disponibles'] as const,
     supervisores: ['sitios', 'supervisores'] as const,
   },
@@ -98,8 +83,6 @@ export const sitiosService = {
   /** Guardias activos con su foto y lo que ya tienen asignado. */
   guardiasDisponibles: () => api.get<GuardiaDisponible[]>('/sitios/guardias-disponibles'),
   mios: () => api.get<MiSitio[]>('/sitios/mios'),
-  /** Portal del cliente (A-38): los guardias de los sitios de su empresa. */
-  misGuardias: () => api.get<SitioConMisGuardias[]>('/sitios/del-cliente'),
   /** Supervisores que se pueden asignar a un sitio (DA-45). */
   supervisores: () => api.get<SupervisorOpcion[]>('/sitios/supervisores'),
   asignarSupervisor: (sitioId: number, supervisorId: number | null) =>

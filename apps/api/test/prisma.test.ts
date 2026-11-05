@@ -38,9 +38,8 @@ describe('catálogo de permisos (datos del seed)', () => {
     for (const p of Object.values(PERMISOS)) expect(PERMISO_DESCRIPCIONES[p]).toBeTruthy();
   });
 
-  it('admin tiene todos los permisos; guardia y cliente no administran usuarios', () => {
+  it('admin tiene todos los permisos; el guardia no administra usuarios', () => {
     expect(PERMISOS_POR_ROL[ROLES.ADMIN]).toHaveLength(Object.values(PERMISOS).length);
     expect(PERMISOS_POR_ROL[ROLES.GUARDIA]).not.toContain(PERMISOS.USUARIOS_CREAR);
-    expect(PERMISOS_POR_ROL[ROLES.CLIENTE]).not.toContain(PERMISOS.REPORTES_CREAR);
   });
 });

@@ -19,12 +19,10 @@ export type Visibilidad =
   | { tipo: 'todos' }
   /** Reportes de sus sitios con asignación vigente hoy + los que él creó. */
   | { tipo: 'guardia'; usuarioId: number; hoy: string }
-  | { tipo: 'cliente'; clienteId: number }
   | { tipo: 'ninguno' };
 
 export type RestriccionSitio =
   | { tipo: 'guardia'; usuarioId: number; hoy: string }
-  | { tipo: 'cliente'; clienteId: number }
   | null;
 
 export type ReporteFiltroData = Omit<ReporteFiltro, 'page' | 'limit' | 'desde' | 'hasta' | 'mios'> & {
@@ -147,8 +145,6 @@ function whereVisibilidad(v: Visibilidad): Prisma.ReporteWhereInput {
       return {};
     case 'ninguno':
       return { id: -1 };
-    case 'cliente':
-      return { clienteId: v.clienteId };
     case 'guardia':
       return {
         OR: [
@@ -205,9 +201,6 @@ const sitioReportableWhere = (
 ): Prisma.SitioWhereInput => ({
   deletedAt: null,
   cliente: { deletedAt: null, estatus: 'activo' },
-  ...(filtro?.tipo === 'cliente' && {
-    clienteId: filtro.clienteId,
-  }),
   ...(filtro?.tipo === 'guardia' && {
     OR: [
       { asignaciones: { some: asignadaA(filtro.usuarioId, filtro.hoy) } },

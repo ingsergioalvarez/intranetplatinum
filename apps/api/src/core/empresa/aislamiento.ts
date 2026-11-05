@@ -27,7 +27,6 @@ export const MODELOS_CON_EMPRESA: ReadonlySet<string> = new Set([
   'Reporte',
   'ReporteSeguimiento',
   'ReporteEvidencia',
-  'ReporteCliente',
   'Notificacion',
   'ClienteReglaAviso',
   'Aviso',

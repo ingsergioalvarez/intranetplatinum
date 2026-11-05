@@ -282,7 +282,6 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
     alcance = { sitioIds: new Set([1]), guardiaIds: new Set([11]) };
     expect((await sup().get()).body.data.items.map((a: { guardia: { id: number } }) => a.guardia.id)).toEqual([11]);
     expect((await admin().get()).body.data.items).toHaveLength(2);
-    expect((await como(20, ROLES.CLIENTE).get()).status).toBe(403);
   });
 
   it('la vista previa cuenta las faltas que se justificarían solas', async () => {

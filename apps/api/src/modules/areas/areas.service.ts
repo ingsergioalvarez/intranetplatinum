@@ -89,7 +89,7 @@ export class AreasService extends BaseService {
     const { filas, areas } = await this.cargar();
     if (padreId) this.activa(areas, padreId);
     this.sinRepetir(filas, nombre, padreId ?? null);
-    if (jefeId) await this.personaParaJefe(jefeId);
+    if (jefeId) await this.personaActiva(jefeId);
     const nueva = await this.repo.crear({ nombre: nombre.trim(), padreId: padreId ?? null });
     if (jefeId) await this.hacerJefe(nueva.id, jefeId, ctx);
     await this.registrar(ctx, 'areas.crear', nueva.id, { nombre: nueva.nombre, padreId: padreId ?? null, jefeId: jefeId ?? null });
@@ -137,7 +137,7 @@ export class AreasService extends BaseService {
       despues.jefeId = cambios.jefeId;
       if (cambios.jefeId === null) await this.repo.actualizar(id, { jefeId: null });
       else {
-        await this.personaParaJefe(cambios.jefeId);
+        await this.personaActiva(cambios.jefeId);
         await this.hacerJefe(id, cambios.jefeId, ctx);
       }
       // El jefe anterior deja de serlo: si ya no encabeza ninguna área vuelve a Colaborador.
@@ -156,13 +156,6 @@ export class AreasService extends BaseService {
     if (u.rol !== ROLES.ADMIN && u.rol !== ROLES.JEFE && (await this.repo.ponerRol(usuarioId, ROLES.JEFE))) {
       await this.registrar(ctx, 'areas.rol_jefe', usuarioId, { nombre: u.nombre, de: u.rol, a: ROLES.JEFE });
     }
-  }
-
-  /** Quien tiene rol cliente es del portal del cliente: no puede encabezar un área. */
-  private async personaParaJefe(usuarioId: number) {
-    const u = await this.personaActiva(usuarioId);
-    if (u.rol === ROLES.CLIENTE) throw HttpError.conflict('Un usuario del portal de clientes no puede ser jefe de un área');
-    return u;
   }
 
   /** Quien dejó de ser jefe y ya no encabeza ninguna área vuelve a Colaborador (si su rol era Jefe). */

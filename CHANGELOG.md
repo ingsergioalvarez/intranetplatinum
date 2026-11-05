@@ -5,6 +5,26 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-05 (5) — Se quita el rol Cliente, el portal y Quejas (C-10, DC-018)
+
+#### Quitado
+
+- **Rol Cliente** (`cliente`): ya no existe en el código, en los permisos ni en la lista de roles de Usuarios.
+- **Portal del cliente**: sus pantallas (Inicio del cliente, Guardias, Checador del cliente), la ruta `/sitios/del-cliente`, la vista de asistencia recortada para el cliente y los avisos a usuarios de cliente (cambios de guardias y coberturas).
+- **Accesos de cliente** en la ficha de un cliente (crear o ligar usuarios) y la columna `usuarios.cliente_id`.
+- **Quejas del cliente** (módulo `quejas`, API y pantalla) y su tabla `reportes_cliente`.
+- Migración `20261113000000_quitar_rol_cliente`, probada en una copia de la base con sus datos y con respaldo; borra el rol solo si nadie lo tiene (nunca pierde una cuenta) y los interruptores guardados de Quejas.
+
+#### Cambiado
+
+- El módulo Clientes se queda como directorio de empresas y contactos (los sitios cuelgan de él hasta C-12); ahora se llama "Clientes".
+- Todos los roles ven el botón SOS y las pantallas por su permiso; ya no hay ramas especiales para el cliente.
+
+#### Notas
+
+- Sin desplegar. 576 pruebas (se quitaron las del portal, accesos y quejas), tipos y lint sin errores, 95 de 95 comprobaciones de extremo a extremo.
+- En el servidor la migración se aplica con `db:deploy` junto con las demás (8 nuevas desde las 45).
+
 ### Sesión 2026-11-05 (4) — Estructura de la empresa, paso 4: quitar Carteras (C-10, DC-017)
 
 #### Quitado

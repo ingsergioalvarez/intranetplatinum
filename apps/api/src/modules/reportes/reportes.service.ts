@@ -189,9 +189,6 @@ export class ReportesService extends BaseService {
 
   private visibilidad(user: AuthUser): Visibilidad {
     if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) return { tipo: 'todos' };
-    if (user.rol === ROLES.CLIENTE && user.clienteId && tienePermiso(user, PERMISOS.REPORTES_VER_PROPIOS)) {
-      return { tipo: 'cliente', clienteId: user.clienteId };
-    }
     if (user.rol === ROLES.GUARDIA && tienePermiso(user, PERMISOS.REPORTES_VER_PROPIOS)) {
       return { tipo: 'guardia', usuarioId: user.id, hoy: this.hoy() };
     }
@@ -201,9 +198,6 @@ export class ReportesService extends BaseService {
   /** Sitios que puede consultar/reportar según su rol. */
   private restriccionSitios(user: AuthUser): RestriccionSitio {
     if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) return null;
-    if (user.rol === ROLES.CLIENTE && user.clienteId) {
-      return { tipo: 'cliente', clienteId: user.clienteId };
-    }
     return { tipo: 'guardia', usuarioId: user.id, hoy: this.hoy() };
   }
 

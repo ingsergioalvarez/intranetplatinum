@@ -163,12 +163,8 @@ beforeEach(() => {
 });
 
 describe('bitácora del guardia (DA-41)', () => {
-  it('solo admin y supervisor; el guardia y el cliente no la ven', async () => {
+  it('solo admin y supervisor; el guardia no la ve', async () => {
     expect((await como(ROLES.GUARDIA).get('/guardias/10?mes=2026-10')).status).toBe(403);
-    // El cliente tiene el permiso de ver asistencia (portal), pero no la bitácora interna.
-    expect((await como(ROLES.CLIENTE).get('/guardias/10?mes=2026-10')).status).toBe(403);
-    expect((await como(ROLES.CLIENTE).get('/incidencias/guardias?mes=2026-10')).status).toBe(403);
-    expect((await como(ROLES.CLIENTE).post('/eventos/1/justificar', { categoria: 'permiso' })).status).toBe(403);
     expect((await como(ROLES.ADMIN).get('/guardias/10?mes=2026-10')).status).toBe(200);
   });
 

@@ -446,13 +446,12 @@ describe('perfiles rápidos de guardias (A-40)', { timeout: 30_000 }, () => {
     expect(repo.dispositivos).toHaveLength(2);
   });
 
-  it('admin, supervisor y cliente no se guardan solos: el login pide decidir y guardan al confirmar', async () => {
+  it('admin y supervisor no se guardan solos: el login pide decidir y guardan al confirmar', async () => {
     repo.usuarios.push(
       usuario({ id: 2, email: 'admin@platinum.local', rol: ROLES.ADMIN, permisos: PERMISOS_POR_ROL[ROLES.ADMIN] }),
       usuario({ id: 4, email: 'sup@platinum.local', rol: ROLES.SUPERVISOR, permisos: PERMISOS_POR_ROL[ROLES.SUPERVISOR] }),
-      usuario({ id: 5, email: 'cli@platinum.local', rol: ROLES.CLIENTE, permisos: PERMISOS_POR_ROL[ROLES.CLIENTE] }),
     );
-    for (const correo of ['admin@platinum.local', 'sup@platinum.local', 'cli@platinum.local']) {
+    for (const correo of ['admin@platinum.local', 'sup@platinum.local']) {
       const r = await entrar({}, correo);
       expect(r.body.data.dispositivo).toBeUndefined();
       expect(r.body.data.ofrecerPerfil).toBe(true);

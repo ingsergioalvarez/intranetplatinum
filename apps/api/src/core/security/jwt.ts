@@ -9,8 +9,6 @@ interface AccessTokenPayload {
   permisos: string[];
   /** Debe cambiar contraseña (solo se incluye cuando es true). */
   dcp?: true;
-  cid?: number;
-  cnom?: string;
   /** Super admin (solo se incluye cuando es true). */
   sup?: true;
   /** Empresa del usuario (C-08). */
@@ -24,8 +22,6 @@ export function signAccessToken(user: AuthUser): string {
     rol: user.rol,
     permisos: user.permisos,
     ...(user.debeCambiarPassword ? { dcp: true as const } : {}),
-    ...(user.clienteId ? { cid: user.clienteId } : {}),
-    ...(user.clienteNombre ? { cnom: user.clienteNombre } : {}),
     ...(user.esSuperAdmin ? { sup: true as const } : {}),
     ...(user.empresaId ? { emp: user.empresaId } : {}),
   };
@@ -43,8 +39,6 @@ export function verifyAccessToken(token: string): AuthUser {
     rol: payload.rol,
     permisos: payload.permisos ?? [],
     debeCambiarPassword: payload.dcp === true,
-    clienteId: payload.cid ?? null,
-    clienteNombre: payload.cnom ?? null,
     esSuperAdmin: payload.sup === true,
     empresaId: payload.emp ?? null,
   };

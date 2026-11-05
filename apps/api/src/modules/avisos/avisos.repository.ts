@@ -29,7 +29,6 @@ export abstract class AvisosRepository {
   /** Deja en cola (pendiente) un correo por contacto con `recibe_notificaciones` y correo. Devuelve cuántos. */
   abstract encolarCorreosCliente(reporteId: number, clienteId: number): Promise<number>;
   /** Usuarios activos con rol cliente asociados a esta empresa. */
-  abstract usuariosDelCliente(clienteId: number): Promise<number[]>;
 }
 
 export class PrismaAvisosRepository extends AvisosRepository {
@@ -167,17 +166,5 @@ export class PrismaAvisosRepository extends AvisosRepository {
       data: contactos.map((c) => ({ empresaId: empresaActual(), reporteId, contactoId: c.id, canal: 'email' as const })),
     });
     return contactos.length;
-  }
-
-  async usuariosDelCliente(clienteId: number): Promise<number[]> {
-    const rows = await getPrisma().usuario.findMany({
-      where: {
-        clienteId,
-        activo: true,
-        deletedAt: null,
-      },
-      select: { id: true },
-    });
-    return rows.map((r) => r.id);
   }
 }

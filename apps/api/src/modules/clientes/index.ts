@@ -3,7 +3,6 @@ import { z } from 'zod';
 import {
   PERMISOS,
   ROLES,
-  accesoClienteSchema,
   clienteCreateSchema,
   clienteFiltroSchema,
   clienteUpdateSchema,
@@ -60,15 +59,7 @@ export function createClientesModule({
   router.patch('/:id/baja', requirePermission(PERMISOS.CLIENTES_BAJA), id, c.baja);
   router.patch('/:id/reactivar', requirePermission(PERMISOS.CLIENTES_BAJA), id, c.reactivar);
 
-  // El acceso y los avisos del cliente los define solo un administrador (A-29, A-30).
-  router.get('/:id/accesos/disponibles', requireRoles(ROLES.ADMIN), id, c.accesosDisponibles);
-  router.post(
-    '/:id/accesos',
-    requireRoles(ROLES.ADMIN),
-    validate({ params: idParamSchema, body: accesoClienteSchema }),
-    c.createAcceso,
-  );
-
+  // Los avisos del cliente los define solo un administrador (A-30).
   router.put(
     '/:id/avisos',
     requireRoles(ROLES.ADMIN),

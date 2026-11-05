@@ -7,9 +7,9 @@ import {
   Clock,
   Home,
   CalendarOff,
-  MessageSquareWarning,
+
   Network,
-  ShieldCheck,
+
   MapPin,
   Tags,
   Timer,
@@ -37,7 +37,7 @@ export interface NavItem {
 /** Menú principal. El orden es el de la navegación inferior en celular (máx. 5). */
 export const navItems: NavItem[] = [
   // El guardia entra directo al Checador, así que no tiene Inicio (DA-51).
-  { label: 'Inicio', to: '/', icon: Home, roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.CLIENTE] },
+  { label: 'Inicio', to: '/', icon: Home, roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE] },
   {
     label: 'Checador',
     to: '/marcar',
@@ -52,15 +52,6 @@ export const navItems: NavItem[] = [
     permiso: PERMISOS.ASISTENCIA_MARCAR,
     roles: [ROLES.GUARDIA],
   },
-  // Portal del cliente (A-38): los guardias asignados a sus sitios.
-  {
-    label: 'Guardias',
-    to: '/guardias',
-    modulo: 'clientes',
-    icon: ShieldCheck,
-    permiso: PERMISOS.ASISTENCIA_VER,
-    roles: [ROLES.CLIENTE],
-  },
   {
     label: 'Ausencias',
     to: '/mis-ausencias',
@@ -70,9 +61,6 @@ export const navItems: NavItem[] = [
     roles: [ROLES.GUARDIA],
   },
   { label: 'Reportes', to: '/reportes', modulo: 'reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_VER_PROPIOS },
-  // Lo que el cliente reporta del servicio o de un guardia (A-59).
-  { label: 'Reportar', to: '/reportes-cliente', modulo: 'quejas', icon: MessageSquareWarning, roles: [ROLES.CLIENTE] },
-  { label: 'Quejas', to: '/reportes-cliente', modulo: 'quejas', icon: MessageSquareWarning, roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE] },
   { label: 'Asistencia', to: '/asistencia', icon: ClipboardCheck, permiso: PERMISOS.ASISTENCIA_VER },
   { label: 'Clientes', to: '/clientes', modulo: 'clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
   { label: 'Grupos', to: '/grupos', modulo: 'grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },

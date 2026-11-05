@@ -168,7 +168,7 @@ class MemoryReportesRepository extends ReportesRepository {
   }
   async puedeVer(_id: number, v: Visibilidad) {
     return (
-      v.tipo === 'todos' || (v.tipo === 'guardia' && this.visibleParaGuardia) || (v.tipo === 'cliente' && v.clienteId === 1)
+      v.tipo === 'todos' || (v.tipo === 'guardia' && this.visibleParaGuardia)
     );
   }
   async agregarSeguimiento(_id: number, s: NuevoSeguimiento) {
@@ -197,7 +197,6 @@ const usuario = (id: number, rol: Rol, extra: Partial<AuthUser> = {}): AuthUser 
 const GUARDIA = usuario(3, ROLES.GUARDIA);
 const SUPERVISOR = usuario(2, ROLES.SUPERVISOR);
 const SUPER_ADMIN = usuario(1, ROLES.ADMIN, { esSuperAdmin: true });
-const CLIENTE: AuthUser = { ...usuario(5, ROLES.CLIENTE), clienteId: 1 };
 const datos = {
   sitioId: 1,
   categoriaId: 2,
@@ -253,12 +252,9 @@ describe('alta de reporte', () => {
 });
 
 describe('visibilidad y seguimiento', () => {
-  it('guardia sin acceso al sitio y cliente de otra empresa reciben 404', async () => {
+  it('guardia sin acceso al sitio recibe 404', async () => {
     repo.visibleParaGuardia = false;
-    const OTRO_CLIENTE: AuthUser = { ...usuario(6, ROLES.CLIENTE), clienteId: 99 };
     expect(await codigo(service.detalle(GUARDIA, 1))).toBe('404');
-    expect(await codigo(service.detalle(OTRO_CLIENTE, 1))).toBe('404');
-    expect(await codigo(service.detalle(CLIENTE, 1))).toBe('OK');
     expect(await codigo(service.detalle(SUPERVISOR, 1))).toBe('OK');
   });
 
@@ -298,25 +294,6 @@ describe('visibilidad y seguimiento', () => {
     };
     await service.list(SUPERVISOR, { page: 1, limit: 20, creadoPorId: 5 });
     expect(capturado).toMatchObject({ creadoPorId: 5 });
-  });
-
-  it('el cliente puede ver los reportes de su empresa y comentar en seguimiento', async () => {
-    // El cliente puede consultar el detalle de su reporte
-    const detalle = await service.detalle(CLIENTE, 1);
-    expect(detalle.folio).toBe('PLT-2026-000001');
-    expect(detalle.acciones.comentar).toBe(true);
-    expect(detalle.acciones.estatusPermitidos).toEqual([]);
-
-    // El cliente puede agregar un comentario de seguimiento
-    await service.agregarSeguimiento(CLIENTE, 1, { comentario: 'Confirmamos que ya quedó atendido' }, []);
-    expect(repo.seguimientos.at(-1)).toMatchObject({
-      usuarioId: CLIENTE.id,
-      comentario: 'Confirmamos que ya quedó atendido',
-      estatusNuevo: null,
-    });
-
-    // El cliente no tiene permiso para cambiar estatus (403)
-    expect(await codigo(service.agregarSeguimiento(CLIENTE, 1, { estatus: 'cerrado' }, []))).toBe('403');
   });
 });
 

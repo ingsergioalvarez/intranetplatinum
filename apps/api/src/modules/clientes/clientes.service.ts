@@ -1,10 +1,4 @@
 import {
-  MAX_ACCESOS_CLIENTE,
-  ROLES,
-  type AccesoCliente,
-  type AccesoClienteCreado,
-  type AccesoClienteData,
-  type UsuarioClienteDisponible,
   type ClienteCreateData,
   type ClienteDetalle,
   ClienteFiltro,
@@ -21,8 +15,6 @@ import {
   BaseService,
   HttpError,
   calcularCambios,
-  generateTemporaryPassword,
-  hashPassword,
   hoyISO,
   type AccionCtx,
 } from '../../core';
@@ -58,13 +50,12 @@ export class ClientesService extends BaseService {
   /** Ficha completa: datos, contactos y sitios (incluye sitios de baja para el historial). */
   async getDetalle(id: number): Promise<ClienteDetalle> {
     const { totalSitios: _s, totalContactos: _c, responsable: _r, ...cliente } = await this.getById(id);
-    const [contactos, sitios, reglasAviso, accesos] = await Promise.all([
+    const [contactos, sitios, reglasAviso] = await Promise.all([
       this.repo.listContactos(id),
       this.repo.listSitios(id, this.hoy(), true),
       this.repo.getReglasAviso(id),
-      this.repo.listAccesos(id),
     ]);
-    return { ...cliente, contactos, sitios, reglasAviso, accesos };
+    return { ...cliente, contactos, sitios, reglasAviso };
   }
 
   async crear(data: ClienteCreateData, ctx: AccionCtx): Promise<ClienteResumen> {
@@ -123,75 +114,6 @@ export class ClientesService extends BaseService {
     await this.repo.setReglasAviso(id, limpias);
     await this.auditar(ctx, 'clientes.reglas_aviso', 'clientes', id, { antes, despues: limpias });
     return limpias;
-  }
-
-  // ---------- Acceso del cliente (A-29) ----------
-
-  /** Usuarios cliente que se pueden ligar (activos y sin cliente asignado). */
-  listarClientesDisponibles(): Promise<UsuarioClienteDisponible[]> {
-    return this.repo.listClientesDisponibles();
-  }
-
-  /**
-   * Da acceso a la intranet a una persona del cliente: liga a un usuario cliente que ya existía (por su id,
-   * elegido de la lista) o crea uno nuevo con contraseña temporal. Un correo que ya existe no se liga
-   * escribiéndolo: hay que elegirlo de la lista. Máximo MAX_ACCESOS_CLIENTE activos. Su correo queda
-   * como contacto que recibe los avisos de reportes.
-   */
-  async crearAcceso(clienteId: number, data: AccesoClienteData, ctx: AccionCtx): Promise<AccesoClienteCreado> {
-    await this.clienteEditable(clienteId);
-    const accesos = await this.repo.listAccesos(clienteId);
-    if (accesos.filter((a) => a.activo).length >= MAX_ACCESOS_CLIENTE) {
-      throw HttpError.conflict(`Un cliente puede tener máximo ${MAX_ACCESOS_CLIENTE} usuarios con acceso`);
-    }
-
-    let acceso: AccesoCliente;
-    let passwordTemporal: string | null = null;
-    if ('usuarioId' in data) {
-      const existente = await this.repo.findUsuarioPorId(data.usuarioId);
-      if (!existente || existente.rol !== ROLES.CLIENTE) throw HttpError.notFound('Usuario cliente no encontrado');
-      if (existente.deletedAt) throw HttpError.conflict('Ese usuario está dado de baja; reactívalo primero');
-      if (existente.clienteId === clienteId) throw HttpError.conflict('Ese usuario ya tiene acceso a este cliente');
-      if (existente.clienteId) throw HttpError.conflict('Ese usuario ya está ligado a otro cliente');
-      acceso = await this.repo.ligarAcceso(existente.id, clienteId);
-    } else {
-      const otro = await this.repo.findUsuarioPorEmail(data.email);
-      if (otro) {
-        const message =
-          otro.rol === ROLES.CLIENTE
-            ? 'Ese correo ya existe: elígelo de la lista de usuarios cliente'
-            : 'Ese correo ya pertenece a un usuario que no es cliente';
-        throw HttpError.conflict(message, [{ path: 'email', message }]);
-      }
-      passwordTemporal = generateTemporaryPassword();
-      acceso = await this.repo.crearAcceso(clienteId, {
-        nombre: data.nombre,
-        email: data.email,
-        passwordHash: await hashPassword(passwordTemporal),
-      });
-    }
-
-    // Que los avisos le lleguen también por correo: contacto con "Recibe notificaciones".
-    const contactos = await this.repo.listContactos(clienteId);
-    if (!contactos.some((c) => c.email === acceso.email)) {
-      await this.repo.createContacto(clienteId, {
-        nombre: acceso.nombre,
-        puesto: null,
-        telefono: null,
-        celular: null,
-        email: acceso.email,
-        esResponsable: contactos.length === 0,
-        recibeNotificaciones: true,
-        prioridad: 0,
-      });
-    }
-
-    await this.auditar(ctx, 'clientes.acceso_crear', 'usuarios', acceso.id, {
-      clienteId,
-      email: acceso.email,
-      ligado: passwordTemporal === null,
-    });
-    return { acceso, passwordTemporal };
   }
 
   // ---------- Contactos (F2-03) ----------

@@ -7,8 +7,6 @@ export interface AuthUser {
   permisos: string[];
   /** Contraseña temporal pendiente de cambiar (D-012). */
   debeCambiarPassword?: boolean;
-  clienteId?: number | null;
-  clienteNombre?: string | null;
   /** Super admin (A-65). */
   esSuperAdmin?: boolean;
   /** Empresa a la que pertenece (C-08). Todo lo que haga se limita a ella. */

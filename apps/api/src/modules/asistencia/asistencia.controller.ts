@@ -10,10 +10,9 @@ import type {
   MarcacionCreateData,
   RostroRegistroInput,
 } from '@platinum/shared';
-import { MOTIVO_SALIDA_SIN_MARCAR_LABEL, ROLES, textoMotivoLista } from '@platinum/shared';
+import { MOTIVO_SALIDA_SIN_MARCAR_LABEL, textoMotivoLista } from '@platinum/shared';
 import { BaseController, requestContext } from '../../core';
 import type { AlcanceFn } from '../sitios/alcance';
-import { fichaParaCliente, filaParaCliente } from './vista-cliente';
 import type { ArchivoSubido } from './asistencia.service';
 import type { AsistenciaService } from './asistencia.service';
 
@@ -122,21 +121,17 @@ export class AsistenciaController extends BaseController {
       ),
     );
 
-  private esCliente(req: Request) {
-    return this.currentUser(req).rol === ROLES.CLIENTE;
-  }
-
   dia = async (req: Request, res: Response) => {
     const r = await this.service.dia(this.query<AsistenciaDiaQuery>(req), await this.alcance(req));
     // El cliente no recibe biometría (DA-48).
-    return this.paginated(res, this.esCliente(req) ? { ...r, items: r.items.map(filaParaCliente) } : r);
+    return this.paginated(res, r);
   };
 
   guardia = async (req: Request, res: Response) => {
     const { mes } = this.query<{ mes: string }>(req);
     const alcance = await this.alcance(req);
     const ficha = await this.service.guardia(this.params<IdParam>(req).id, mes, alcance);
-    return this.ok(res, this.esCliente(req) ? fichaParaCliente(ficha, alcance) : ficha);
+    return this.ok(res, ficha);
   };
 
   rostro = async (req: Request, res: Response) => {

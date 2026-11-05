@@ -234,18 +234,7 @@ export class CoberturasService extends BaseService {
       coberturaId: cobertura.id,
       actorId: ctx.actorId,
     });
-    await this.avisarCliente(sitio.id, 'Un guardia cubrirá en tu sitio', `${guardia.nombre} cubrirá en ${sitio.nombre} ${rango}`);
     return { cobertura, advertencia };
-  }
-
-  /**
-   * El cliente se entera de quién cubre en su sitio (A-38), en neutro: sin motivo ni a quién sustituye. Si tiene
-   * dudas, que pregunte a su supervisor.
-   */
-  private async avisarCliente(sitioId: number, titulo: string, mensaje: string) {
-    const usuarios = await this.repo.usuariosDelClienteDeSitio(sitioId);
-    if (usuarios.length === 0) return;
-    await this.avisar(usuarios, { tipo: 'asignacion', titulo, mensaje: `${mensaje}. Si tienes dudas, consulta con tu supervisor.`, ruta: '/guardias' });
   }
 
   async listar(q: CoberturasQuery, alcance: Alcance | null): Promise<Cobertura[]> {
@@ -282,6 +271,5 @@ export class CoberturasService extends BaseService {
       mensaje: `Se canceló tu cobertura en ${c.sitio.nombre} ${rango}: regresas a tu sitio`,
       ruta: '/mis-sitios',
     });
-    await this.avisarCliente(c.sitio.id, 'Cambió quién cubre en tu sitio', `Se canceló la cobertura de ${c.guardia.nombre} en ${c.sitio.nombre} ${rango}`);
   }
 }

@@ -51,7 +51,6 @@ export abstract class CoberturasRepository {
   /** Supervisores de los sitios propios del guardia hoy (para avisarles que su guardia cubre otro). */
   abstract supervisoresDeGuardia(usuarioId: number, hoy: string): Promise<number[]>;
   /** Usuarios activos del portal del cliente dueño de ese sitio (se enteran de quién cubre, A-38). */
-  abstract usuariosDelClienteDeSitio(sitioId: number): Promise<number[]>;
 }
 
 const nombre = { select: { id: true, nombre: true } } as const;
@@ -192,16 +191,6 @@ export class PrismaCoberturasRepository extends CoberturasRepository {
       select,
     });
     return rows.map(aCobertura);
-  }
-
-  async usuariosDelClienteDeSitio(sitioId: number) {
-    const sitio = await getPrisma().sitio.findUnique({ where: { id: sitioId }, select: { clienteId: true } });
-    if (!sitio) return [];
-    const rows = await getPrisma().usuario.findMany({
-      where: { clienteId: sitio.clienteId, activo: true, deletedAt: null, rol: { clave: 'cliente' } },
-      select: { id: true },
-    });
-    return rows.map((r) => r.id);
   }
 
   async supervisoresDeGuardia(usuarioId: number, hoy: string) {

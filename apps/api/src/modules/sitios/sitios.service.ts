@@ -14,11 +14,9 @@ import {
   type AsignacionCreateData,
   type AsignacionUpdate,
   type AsignarTurnoData,
-  type GuardiaDeMiSitio,
   type GuardiaDisponible,
   type MiSitio,
   type PatronTurno,
-  type SitioConMisGuardias,
 } from '@platinum/shared';
 import {
   AuditLogger,
@@ -69,41 +67,6 @@ export class SitiosService extends BaseService {
     private readonly bitacora: RegistrarBitacora = sinBitacora,
   ) {
     super();
-  }
-
-  /** El cliente se entera de los cambios de guardias en sus sitios (A-38). */
-  private async avisarCliente(clienteId: number, titulo: string, mensaje: string) {
-    const usuarios = await this.repo.usuariosDelCliente(clienteId);
-    if (usuarios.length === 0) return;
-    await this.avisar(usuarios, { tipo: 'asignacion', titulo, mensaje, ruta: '/guardias' });
-  }
-
-  /**
-   * Guardias de los sitios del cliente (A-38): quién está asignado (vigente o próximo) y quién cubre, con datos
-   * básicos. Solo la foto aprobada; sin correo ni teléfono. Un guardia no se repite en un sitio.
-   */
-  async misGuardiasDelCliente(clienteId: number): Promise<SitioConMisGuardias[]> {
-    const hoy = this.hoy();
-    const reciente = sumarDiasFecha(hoy, -14);
-    return (await this.repo.guardiasDelCliente(clienteId, hoy)).map((s) => {
-      const vistos = new Set<string>();
-      const guardias = s.guardias
-        .filter((g) => {
-          const clave = `${g.id}:${g.cobertura}`;
-          if (vistos.has(clave)) return false;
-          vistos.add(clave);
-          return true;
-        })
-        .map(({ fotoClave, ...g }): GuardiaDeMiSitio => ({
-          ...g,
-          foto: fotoClave ? firmarArchivo(fotoClave) : null,
-          programada: g.desde > hoy,
-          nuevo: g.desde <= hoy && g.desde >= reciente && !g.cobertura,
-        }))
-        // Primero los que ya están; después los próximos; cada grupo por nombre.
-        .sort((a, b) => Number(a.programada) - Number(b.programada) || a.nombre.localeCompare(b.nombre, 'es'));
-      return { id: s.id, nombre: s.nombre, guardias };
-    });
   }
 
   /** A quién avisar de una asignación: el guardia o los integrantes del grupo (DA-34). */
@@ -188,11 +151,6 @@ export class SitiosService extends BaseService {
         .join(' · ')}`,
       ruta: '/mis-sitios',
     });
-    await this.avisarCliente(
-      sitio.clienteId,
-      'Nuevo guardia en tu sitio',
-      `${asignacion.grupo ? `El grupo ${asignacion.grupo.nombre}` : (asignacion.guardia?.nombre ?? 'Un guardia')} fue asignado a ${sitio.nombre}: ${horario(asignacion)} · desde el ${fechaCorta(asignacion.desde)}`,
-    );
     return asignacion;
   }
 
@@ -298,11 +256,6 @@ export class SitiosService extends BaseService {
         mensaje: `${asignacion.grupo ? `Tu grupo ${asignacion.grupo.nombre} en` : 'Tu asignación en'} ${sitio.nombre}: ${cambios.join(' · ')}`,
         ruta: '/mis-sitios',
       });
-      await this.avisarCliente(
-        sitio.clienteId,
-        'Cambió el horario de un guardia',
-        `${asignacion.grupo ? `Grupo ${asignacion.grupo.nombre}` : (asignacion.guardia?.nombre ?? 'Un guardia')} en ${sitio.nombre}: ${cambios.join(' · ')}`,
-      );
     }
     return asignacion;
   }
@@ -500,13 +453,6 @@ export class SitiosService extends BaseService {
         mensaje: `${quien} a ${sitio.nombre}: ${horario(asignacion)} · desde el ${fechaCorta(n.data.desde)}`,
         ruta: '/mis-sitios',
       });
-      if (avisar.length) {
-        await this.avisarCliente(
-          sitio.clienteId,
-          'Nuevo guardia en tu sitio',
-          `${n.grupo ? `El grupo ${n.grupo}` : n.nombre} fue asignado a ${sitio.nombre}: ${horario(asignacion)} · desde el ${fechaCorta(n.data.desde)}`,
-        );
-      }
     }
     return creadas;
   }
@@ -579,11 +525,6 @@ export class SitiosService extends BaseService {
         mensaje: `Se canceló ${deQuien} en ${sitio.nombre} que empezaba el ${fechaCorta(actual.desde)}`,
         ruta: '/mis-sitios',
       });
-      await this.avisarCliente(
-        sitio.clienteId,
-        'Se canceló la asignación de un guardia',
-        `Se canceló la asignación de ${actual.grupo ? `el grupo ${actual.grupo.nombre}` : (actual.guardia?.nombre ?? 'un guardia')} en ${sitio.nombre} que empezaba el ${fechaCorta(actual.desde)}`,
-      );
     } else if (actual.vigente) {
       await this.avisar(quienes, {
         tipo: 'asignacion',
@@ -591,11 +532,6 @@ export class SitiosService extends BaseService {
         mensaje: `Ya no estás asignado a ${sitio.nombre}${actual.grupo ? ` (grupo ${actual.grupo.nombre})` : ''}`,
         ruta: '/mis-sitios',
       });
-      await this.avisarCliente(
-        sitio.clienteId,
-        'Un guardia ya no está en tu sitio',
-        `${actual.grupo ? `El grupo ${actual.grupo.nombre}` : (actual.guardia?.nombre ?? 'Un guardia')} ya no está asignado a ${sitio.nombre}`,
-      );
     }
   }
 

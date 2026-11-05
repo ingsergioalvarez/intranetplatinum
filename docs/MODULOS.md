@@ -64,9 +64,9 @@ La columna "Decisión" la completa el usuario.
 
 | Módulo | Backend | Frontend | Depende de | Lo usan | Apagarlo | Decisión |
 |---|---|---|---|---|---|---|
-| **Clientes y portal del cliente** | clientes | clientes, guardias | usuarios, grupos | 8 módulos | Difícil: estructural hasta C-10 | — |
+| **Clientes** (ya sin portal) | clientes | clientes | usuarios, grupos | 8 módulos | Difícil: estructural hasta C-10 | — |
 | **Reportes de incidentes** | reportes, categorias | reportes, catalogos (Categorías) | clientes, avisos | tablero de Inicio | Fácil | — |
-| **Quejas del cliente** | reportes-cliente | reportes-cliente | clientes, avisos | nadie | Fácil | — |
+| ~~Quejas del cliente~~ | — | — | — | **Eliminado en C-10 paso 4** (2026-11-05) junto con el rol Cliente y el portal. | — | Quitado |
 | **Cobertura de relevos** | coberturas, cobertura, casos-cobertura, solicitudes-cobertura | cobertura (Calendario), casos, solicitudes | asistencia, sitios, bitácora, avisos | cambios, horas-extra, asistencia | Difícil: Cambios de turno y Horas extra dependen de ella | — |
 
 ## 3. Dependencias clave (qué se rompe al apagar)
@@ -106,7 +106,7 @@ Regla: se parte de lo mínimo y se agrega lo que el usuario pida; lo que diga qu
 | Bitácora, Emergencias (SOS) | Encendidos (decisión del usuario) |
 | Turnos y horarios, Reporte de asistencia | Encendidos (primeros agregados) |
 | Ausencias, Horas extra, Cambios de turno, Grupos | Apagados, se agregan cuando se pidan |
-| Clientes y portal, Quejas del cliente, Cobertura de relevos | Apagados, se agregan cuando se pidan |
+| Clientes, Cobertura de relevos | Apagados, se agregan cuando se pidan |
 | Reportes de incidentes (con sus categorías) | Apagado: no se usará |
 
 Una empresa nueva arranca solo con el núcleo.

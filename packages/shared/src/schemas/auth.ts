@@ -40,8 +40,6 @@ export interface SessionUser {
   permisos: Permiso[];
   /** Tiene contraseña temporal: solo puede cambiarla (D-012). */
   debeCambiarPassword: boolean;
-  clienteId?: number | null;
-  clienteNombre?: string | null;
   /** Super admin (A-65): ve y controla todo. */
   esSuperAdmin?: boolean;
 }

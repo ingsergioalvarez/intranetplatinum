@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express';
 import type {
-  AccesoClienteData,
   ClienteCreateData,
   ClienteFiltro,
   ContactoData,
@@ -58,21 +57,6 @@ export class ClientesController extends BaseController {
         this.accionCtx(req),
       ),
     );
-
-  // ----- Acceso del cliente -----
-
-  createAcceso = async (req: Request, res: Response) =>
-    this.created(
-      res,
-      await this.service.crearAcceso(
-        this.params<IdParam>(req).id,
-        this.body<AccesoClienteData>(req),
-        this.accionCtx(req),
-      ),
-    );
-
-  accesosDisponibles = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.listarClientesDisponibles());
 
   // ----- Contactos -----
 

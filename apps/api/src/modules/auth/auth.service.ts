@@ -459,8 +459,6 @@ export class AuthService extends BaseService {
       rol: u.rol,
       permisos: u.permisos,
       debeCambiarPassword: u.debeCambiarPassword,
-      clienteId: u.clienteId ?? null,
-      clienteNombre: u.clienteNombre ?? null,
       esSuperAdmin: u.esSuperAdmin ?? false,
       empresaId: u.empresaId ?? null,
     });
@@ -474,8 +472,6 @@ export class AuthService extends BaseService {
       rol: u.rol,
       permisos: u.permisos,
       debeCambiarPassword: u.debeCambiarPassword,
-      clienteId: u.clienteId ?? null,
-      clienteNombre: u.clienteNombre ?? null,
       esSuperAdmin: u.esSuperAdmin ?? false,
     };
   }
