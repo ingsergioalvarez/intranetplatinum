@@ -156,16 +156,7 @@ export class AusenciasService extends BaseService {
       ruta: RUTA_ADMIN,
       entidad: { tipo: 'ausencia', id: fila.id },
     });
-    if (user.rol === ROLES.GUARDIA) {
-      const admins = new Set(await this.repo.admins({ guardiaId: guardia.id }));
-      const supervisores = (await this.repo.supervisoresDe(usuarioId, this.hoy())).filter((s) => !admins.has(s));
-      await this.avisar(supervisores, {
-        tipo: 'asignacion',
-        titulo: 'Un guardia pidió una ausencia',
-        mensaje: `${guardia.nombre} pidió ${TIPO_AUSENCIA_LABEL[data.tipo].toLowerCase()} ${rango}. La resuelve el administrador`,
-        ruta: RUTA_ADMIN,
-      });
-    } else {
+    if (user.rol !== ROLES.GUARDIA) {
       await this.avisar([usuarioId], {
         tipo: 'asignacion',
         titulo: 'Pidieron una ausencia por ti',
@@ -226,16 +217,6 @@ export class AusenciasService extends BaseService {
         ruta: RUTA_ADMIN,
       });
     }
-    const admins = new Set(await this.repo.admins({ guardiaId: fila.guardia.id }));
-    const supervisores = (await this.repo.supervisoresDe(fila.guardia.id, this.hoy())).filter(
-      (s) => s !== actorId && s !== fila.solicitante.id && !admins.has(s),
-    );
-    await this.avisar(supervisores, {
-      ...aviso,
-      titulo: 'Ausencia justificada de un guardia',
-      mensaje: `${fila.guardia.nombre}: ${tipo.toLowerCase()} ${rango}. Su sitio puede quedar sin cubrir: revisa el calendario`,
-      ruta: '/asistencia/calendario',
-    });
     return (await this.repo.findById(fila.id))!;
   }
 

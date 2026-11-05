@@ -12,7 +12,7 @@ import type {
 import { tituloDeAviso, trabajaEl } from '@platinum/shared';
 import type { EntidadAviso } from '../avisos/atencion';
 import { getPrisma } from '../../core/data/prisma';
-import { adminsDe, type ContextoDueno } from '../avisos/duenos';
+import { responsablesDe, type ContextoAviso } from '../avisos/cadena';
 import { dateAFecha, fechaADate, hoyISO } from '../../core';
 import { asignadaA, vigenteEn } from '../clientes/clientes.repository';
 import { turnoDeDb } from '../sitios/sitios.repository';
@@ -261,7 +261,7 @@ export abstract class AsistenciaRepository {
   /** Guarda lo que decidió el supervisor sobre un retardo. */
   abstract decidirRetardo(id: number, porId: number, decision: DecisionRetardo, en: Date): Promise<void>;
   /** Usuarios admin activos. */
-  abstract admins(contexto?: ContextoDueno): Promise<number[]>;
+  abstract admins(contexto?: ContextoAviso): Promise<number[]>;
 }
 
 /** Evento de bitácora de un retardo, con lo necesario para decidirlo. */
@@ -602,7 +602,7 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
     const ids = [...new Set(supervisores.map((s) => s.supervisorId!))];
     if (ids.length) return ids;
     // Sin supervisor: los admin dueños del guardia y del cliente del sitio (A-65).
-    return adminsDe({ guardiaId: guardiaId || null, sitioId });
+    return responsablesDe({ guardiaId: guardiaId || null, sitioId });
   }
 
   async avisar(usuarioIds: number[], { tipo, titulo, mensaje, ruta, fotoClave = null, entidad }: AvisoAsistencia) {
@@ -664,8 +664,8 @@ export class PrismaAsistenciaRepository extends AsistenciaRepository {
     });
   }
 
-  admins(contexto?: ContextoDueno) {
-    return adminsDe(contexto);
+  admins(contexto?: ContextoAviso) {
+    return responsablesDe(contexto);
   }
 
   async crearIncidencia(data: NuevaIncidencia) {

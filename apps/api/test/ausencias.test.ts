@@ -99,9 +99,6 @@ class Memoria extends AusenciasRepository {
   async admins() {
     return [1];
   }
-  async supervisoresDe() {
-    return [5];
-  }
 }
 
 let repo: Memoria;
@@ -181,9 +178,9 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
     expect(bitacora[0]).toMatchObject({ tipo: 'ausencia', usuarioIds: [10], actorId: 1 });
     expect(bitacora[0].detalle).toContain('Justificó 2 faltas');
     expect(audit.acciones()).toEqual(['ausencias.crear', 'ausencias.registrar']);
-    // Se avisa al guardia y al supervisor (su sitio puede quedar sin cubrir).
+    // Se avisa al guardia; el supervisor del sitio ya no recibe avisos (DC-017).
     expect(avisos.find((a) => a.usuarioIds.join() === '10')).toMatchObject({ titulo: 'Tu ausencia fue aprobada' });
-    expect(avisos.find((a) => a.usuarioIds.join() === '5')).toMatchObject({ ruta: '/asistencia/calendario' });
+    expect(avisos.find((a) => a.usuarioIds.join() === '5')).toBeUndefined();
   });
 
   it('lo médico exige comprobante; el permiso y "otro", motivo; el comprobante tiene que ser una foto', async () => {
@@ -207,7 +204,7 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
     expect((await admin().pedir({ ...vacaciones, usuarioId: '11' })).status).toBe(201);
   });
 
-  it('el guardia la pide para sí: queda pendiente, avisa al admin (con aviso ligado) y al supervisor; no puede pedir por otro', async () => {
+  it('el guardia la pide para sí: queda pendiente, avisa a quien la revisa (con aviso ligado); no puede pedir por otro', async () => {
     const res = await guardia().pedir({ ...vacaciones, usuarioId: '11' });
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({ estado: 'pendiente', guardia: { id: 10 }, solicitante: { id: 10 } });
@@ -217,7 +214,7 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
       ruta: '/asistencia/ausencias',
       entidad: 'ausencia:1',
     });
-    expect(avisos.find((a) => a.usuarioIds.join() === '5')?.titulo).toBe('Un guardia pidió una ausencia');
+    expect(avisos.find((a) => a.usuarioIds.join() === '5')).toBeUndefined();
   });
 
   it('el supervisor la pide a nombre de un guardia suyo; el de otro supervisor no', async () => {

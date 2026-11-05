@@ -2,7 +2,7 @@ import { tituloDeAviso, type Aviso, type ReglasAviso, type TipoAviso } from '@pl
 import { getPrisma } from '../../core/data/prisma';
 import { firmarArchivo } from '../../core';
 import { notificarPush } from '../push/enviar';
-import { adminsDe } from './duenos';
+import { responsablesDe } from './cadena';
 import { empresaActual } from '../../core/empresa/contexto';
 
 export interface NuevoAviso {
@@ -96,7 +96,7 @@ export class PrismaAvisosRepository extends AvisosRepository {
       select: { supervisor: { select: { id: true, activo: true, deletedAt: true } } },
     });
     const supervisor = s?.supervisor && s.supervisor.activo && !s.supervisor.deletedAt ? [s.supervisor.id] : [];
-    return [...new Set([...supervisor, ...(await adminsDe({ sitioId }))])];
+    return [...new Set([...supervisor, ...(await responsablesDe({ sitioId }))])];
   }
 
   async guardiasDelSitio(sitioId: number, hoy: string): Promise<number[]> {

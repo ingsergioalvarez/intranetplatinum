@@ -85,7 +85,7 @@ export class SolicitudesCoberturaService extends BaseService implements Solicitu
       entidadId: s.id,
       datos: { sitio: d.sitioNombre, guardia: d.guardiaNombre, fecha: d.fecha, motivo: d.motivo },
     });
-    const admins = (await this.repo.admins({ sitioId: d.sitioId })).filter((id) => id !== d.solicitanteId);
+    const admins = (await this.repo.admins({ guardiaId: d.solicitanteId, sitioId: d.sitioId })).filter((id) => id !== d.solicitanteId);
     await this.avisar(admins, {
       tipo: 'cobertura',
       titulo: 'Solicitud de cobertura',
@@ -121,7 +121,7 @@ export class SolicitudesCoberturaService extends BaseService implements Solicitu
     // Si la cancela un admin, se entera quien la pidió; si la cancela quien la pidió, se enteran los admin.
     const destino =
       s.solicitante.id === ctx.actorId
-        ? (await this.repo.admins({ sitioId: s.sitio.id })).filter((a) => a !== ctx.actorId)
+        ? (await this.repo.admins({ guardiaId: s.solicitante.id, sitioId: s.sitio.id })).filter((a) => a !== ctx.actorId)
         : [s.solicitante.id];
     await this.avisar(destino, {
       tipo: 'cobertura',
@@ -179,7 +179,7 @@ export class SolicitudesCoberturaService extends BaseService implements Solicitu
     if (pendientes.length === 0) return;
     for (const s of pendientes) {
       const horas = Math.floor((ahora.getTime() - s.createdAt.getTime()) / HORA);
-      await this.avisar(await this.repo.admins({ sitioId: s.sitio.id }), {
+      await this.avisar(await this.repo.admins({ guardiaId: s.solicitante.id, sitioId: s.sitio.id }), {
         tipo: 'cobertura',
         titulo: 'Solicitud de cobertura sin atender',
         mensaje: `${s.solicitante.nombre} pidió un guardia para ${s.sitio.nombre} (${fechaCorta(s.fecha)}) hace ${horas} h y sigue sin atenderse`,

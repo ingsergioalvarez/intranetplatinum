@@ -45,27 +45,14 @@ export class EmergenciasService extends BaseService {
   }
 
   /**
-   * A quién le llega la alerta: del super admin, a todos los admin; de un admin, a los demás admin y al super admin;
-   * de cualquier otra persona, a su supervisor del sitio (si es guardia) y a los admin. Si no resulta nadie, al
-   * super admin. Pasa a la cadena de jefes y a RH en C-10 paso 5 (DC-017).
+   * A quién le llega la alerta (DC-017): el jefe más cercano de quien la lanza (el de arriba si es jefe) y RH. Si no
+   * resulta nadie, los admin. Si nadie la recibe, escala hacia arriba por la cadena de jefes (`escalar`).
    */
-  private async destinatarios(
-    e: { usuario: { id: number; rol: string }; lanzadaPorSuper: boolean },
-    sitio: { id: number; supervisorId: number | null } | null,
-  ) {
-    const ids = new Set<number>();
-    if (e.lanzadaPorSuper) {
-      for (const a of await this.repo.todosAdmins()) ids.add(a);
-    } else if (e.usuario.rol === ROLES.ADMIN) {
-      for (const a of await this.repo.todosAdmins()) ids.add(a);
-      for (const a of await this.repo.superAdmins()) ids.add(a);
-    } else {
-      if (e.usuario.rol === ROLES.GUARDIA && sitio?.supervisorId) ids.add(sitio.supervisorId);
-      for (const a of await this.repo.adminsDe({ guardiaId: e.usuario.id, sitioId: sitio?.id ?? null })) ids.add(a);
-    }
-    ids.delete(e.usuario.id);
-    // Sin nadie asignado, que no se pierda: le llega al super admin.
-    if (ids.size === 0) for (const a of await this.repo.superAdmins()) if (a !== e.usuario.id) ids.add(a);
+  private async destinatarios(personaId: number) {
+    const [jefe] = await this.repo.cadenaDe(personaId);
+    const ids = new Set<number>([...(jefe ? [jefe] : []), ...(await this.repo.rh())]);
+    ids.delete(personaId);
+    if (ids.size === 0) for (const a of await this.repo.admins()) if (a !== personaId) ids.add(a);
     return [...ids];
   }
 
@@ -83,10 +70,7 @@ export class EmergenciasService extends BaseService {
     const previa = await this.repo.activaDe(user.id);
     if (previa) return aEmergencia(previa, await this.supervisorDe(user));
     const sitio = user.rol === ROLES.GUARDIA ? await this.repo.sitioDe(user.id, hoyISO()) : null;
-    const destinatarios = await this.destinatarios(
-      { usuario: { id: user.id, rol: user.rol }, lanzadaPorSuper: esSuperAdmin(user) },
-      sitio,
-    );
+    const destinatarios = await this.destinatarios(user.id);
     const e = await this.repo.crear({ usuarioId: user.id, sitioId: sitio?.id ?? null, ...input }, destinatarios);
     await this.audit.registrarAccion(ctx, 'emergencias.crear', 'emergencias', e.id, {
       sitio: e.sitio?.nombre ?? null,
@@ -203,22 +187,25 @@ export class EmergenciasService extends BaseService {
     return aEmergencia((await this.repo.findById(id))!);
   }
 
-  /** Cada minuto: repite la alerta (a todos los supervisores y admin) de las que nadie ha recibido. */
+  /** Cada minuto: repite la alerta de las que nadie ha recibido y la sube al siguiente jefe de la cadena. */
   async escalar() {
     const ahora = this.ahora();
     const antes = new Date(ahora.getTime() - SEGUNDOS_ESCALAR_EMERGENCIA * 1000);
     for (const e of await this.repo.porEscalar(antes, antes)) {
+      const vecesAntes = e.escaladas;
       await this.repo.marcarEscalada(e.id, ahora);
       await this.audit.registrar({
         usuarioId: null,
         accion: 'emergencias.escalar',
         entidad: 'emergencias',
         entidadId: e.id,
-        datos: { veces: e.escaladas + 1 },
+        datos: { veces: vecesAntes + 1 },
       });
-      // Se repite a los mismos y ahora también al super admin (A-65).
-      const supers = (await this.repo.superAdmins()).filter((id) => id !== e.usuario.id);
-      const todos = [...new Set([...e.destinatarios, ...supers])];
+      // Se repite a los mismos y sube al siguiente jefe de la cadena; agotada la cadena, a los admin (último recurso).
+      const cadena = await this.repo.cadenaDe(e.usuario.id);
+      const subida = cadena[vecesAntes + 1];
+      const extra = subida ? [subida] : await this.repo.admins();
+      const todos = [...new Set([...e.destinatarios, ...extra])].filter((id) => id !== e.usuario.id);
       if (todos.length !== e.destinatarios.length) await this.repo.guardarDestinatarios(e.id, todos);
       await this.avisar(todos, {
         tipo: 'emergencia',

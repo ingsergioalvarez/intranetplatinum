@@ -1,8 +1,7 @@
 import { sumarDiasFecha, type EstadoAusencia, type TipoAusencia } from '@platinum/shared';
 import { dateAFecha, fechaADate, hoyISO, inicioDelDia } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
-import { adminsDe, type ContextoDueno } from '../avisos/duenos';
-import { asignadaA } from '../clientes/clientes.repository';
+import { responsablesDe, type ContextoAviso } from '../avisos/cadena';
 import { empresaActual } from '../../core/empresa/contexto';
 
 export interface NuevaAusencia {
@@ -67,9 +66,8 @@ export abstract class AusenciasRepository {
   /** Faltas y "No se presentó" sin justificar de esos días. */
   abstract eventosAfectados(usuarioId: number, desde: string, hasta: string): Promise<EventoAfectado[]>;
   abstract justificarEventos(ids: number[], texto: string, porId: number, en: Date): Promise<void>;
-  abstract admins(contexto?: ContextoDueno): Promise<number[]>;
-  /** Supervisores de los sitios del guardia. */
-  abstract supervisoresDe(usuarioId: number, hoy: string): Promise<number[]>;
+  /** A quién avisar de algo de una persona: su jefe más cercano; sin jefe, RH; sin RH, los admin (DC-017). */
+  abstract admins(contexto?: ContextoAviso): Promise<number[]>;
 }
 
 const select = {
@@ -198,15 +196,7 @@ export class PrismaAusenciasRepository extends AusenciasRepository {
     });
   }
 
-  admins(contexto?: ContextoDueno) {
-    return adminsDe(contexto);
-  }
-
-  async supervisoresDe(usuarioId: number, hoy: string) {
-    const rows = await getPrisma().sitioGuardia.findMany({
-      where: { ...asignadaA(usuarioId, hoy), sitio: { supervisor: { activo: true, deletedAt: null } } },
-      select: { sitio: { select: { supervisorId: true } } },
-    });
-    return [...new Set(rows.map((r) => r.sitio.supervisorId!))];
+  admins(contexto?: ContextoAviso) {
+    return responsablesDe(contexto);
   }
 }

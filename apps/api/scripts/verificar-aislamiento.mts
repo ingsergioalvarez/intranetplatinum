@@ -344,6 +344,40 @@ async function main() {
     check('los cambios de rol por jefatura quedan en la auditoría', cambioDeRol >= 3, cambioDeRol);
     check('nadie ve a personas de otra empresa', ![...verJefe, ...verSup, ...conPermiso].includes('admin2@x.mx'));
 
+    console.log('\n12. Avisos por la cadena de jefes (C-10 paso 5, DC-017)');
+    const { cadenaDe, responsablesDe, rhDeLaEmpresa, adminsActivos } = await imp('modules/avisos/cadena.ts');
+    const corp = await area('Corp');
+    const tec = await area('Tec', corp);
+    const soporte2 = await area('Soporte2', tec);
+    const desa = await area('Desa', tec);
+    const carlos = await persona('Carlos CEO', 'carlos@x.mx', rolSupervisor.id, corp);
+    const marta = await persona('Marta Tec', 'marta@x.mx', rolSupervisor.id, tec);
+    const luis = await persona('Luis Soporte', 'luis@x.mx', rolSupervisor.id, soporte2);
+    const ana = await persona('Ana', 'ana@x.mx', rolGuardia.id, soporte2);
+    const sara = await persona('Sara', 'sara@x.mx', rolGuardia.id, desa);
+    await como(T1).patch(`/areas/${corp}`, { jefeId: carlos.id });
+    await como(T1).patch(`/areas/${tec}`, { jefeId: marta.id });
+    await como(T1).patch(`/areas/${soporte2}`, { jefeId: luis.id });
+    const enE1 = <T,>(fn: () => Promise<T>) => conEmpresa(E1, fn);
+    const cadena = (id: number) => enE1(() => cadenaDe(id));
+    check('la cadena de Ana: Luis, Marta y Carlos', JSON.stringify(await cadena(ana.id)) === JSON.stringify([luis.id, marta.id, carlos.id]), await cadena(ana.id));
+    check('Desa no tiene jefe: la cadena de Sara sube a Marta y Carlos', JSON.stringify(await cadena(sara.id)) === JSON.stringify([marta.id, carlos.id]), await cadena(sara.id));
+    check('un jefe no es parte de su propia cadena (Luis: Marta y Carlos)', JSON.stringify(await cadena(luis.id)) === JSON.stringify([marta.id, carlos.id]));
+    check('el de más arriba no tiene a nadie sobre él', (await cadena(carlos.id)).length === 0);
+    check('el aviso de Ana va a su jefe más cercano (Luis)', JSON.stringify(await enE1(() => responsablesDe({ guardiaId: ana.id }))) === JSON.stringify([luis.id]));
+    check('el aviso de Sara va a Marta (su área no tiene jefe)', JSON.stringify(await enE1(() => responsablesDe({ guardiaId: sara.id }))) === JSON.stringify([marta.id]));
+    const admins = await enE1(() => adminsActivos());
+    check('sin jefe arriba y sin RH, el aviso del CEO cae en los admin (último recurso)', JSON.stringify(await enE1(() => responsablesDe({ guardiaId: carlos.id }))) === JSON.stringify(admins.filter((a: number) => a !== carlos.id)) && admins.length > 0, admins);
+    check('nadie es RH mientras no se dé el permiso', (await enE1(() => rhDeLaEmpresa())).length === 0);
+    const rolesPermiso = await sinFiltroDeEmpresa(() => prisma.permiso.upsert({ where: { clave: 'emergencias.recibir' }, update: {}, create: { clave: 'emergencias.recibir', descripcion: 'Recibe las emergencias de la empresa' } }));
+    await sinFiltroDeEmpresa(() => prisma.usuarioPermiso.create({ data: { usuarioId: gRh.id, permisoId: rolesPermiso.id } }));
+    check('quien tiene el permiso es RH', JSON.stringify(await enE1(() => rhDeLaEmpresa())) === JSON.stringify([gRh.id]));
+    check('con RH, el aviso del CEO va a RH y no a los admin', JSON.stringify(await enE1(() => responsablesDe({ guardiaId: carlos.id }))) === JSON.stringify([gRh.id]));
+    check('el aviso de alguien con jefe sigue yendo solo al jefe (no a RH)', JSON.stringify(await enE1(() => responsablesDe({ guardiaId: ana.id }))) === JSON.stringify([luis.id]));
+    check('RH de otra empresa no se mezcla', !(await conEmpresa(E2, () => rhDeLaEmpresa())).includes(gRh.id));
+    await como(T1).patch(`/areas/${soporte2}`, { jefeId: null });
+    check('si el jefe más cercano deja de serlo, el aviso sube al siguiente (Marta)', JSON.stringify(await enE1(() => responsablesDe({ guardiaId: ana.id }))) === JSON.stringify([marta.id]));
+
     await disconnectPrisma();
     console.log(`\n${fallos === 0 ? 'TODO BIEN' : 'HAY FALLOS'}: ${total - fallos} de ${total} comprobaciones correctas.`);
   } finally {

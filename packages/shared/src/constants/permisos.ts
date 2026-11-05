@@ -24,6 +24,8 @@ export const PERMISOS = {
   ASISTENCIA_ROSTROS: 'asistencia.rostros',
   /** Ver a toda la empresa sin importar el área (C-10). Se da a personas concretas; la pantalla para darlo llega con C-11. */
   ALCANCE_EMPRESA: 'alcance.empresa',
+  /** RH: recibe las emergencias de toda la empresa (C-10 paso 5, DC-017). Se da a personas concretas; la pantalla llega con C-11. */
+  EMERGENCIAS_RECIBIR: 'emergencias.recibir',
 } as const;
 
 export type Permiso = (typeof PERMISOS)[keyof typeof PERMISOS];
@@ -50,6 +52,7 @@ export const PERMISO_DESCRIPCIONES: Record<Permiso, string> = {
   'asistencia.ver': 'Ver las marcas de asistencia de todos los guardias',
   'asistencia.rostros': 'Registrar el rostro de los guardias',
   'alcance.empresa': 'Ver a todas las personas de la empresa, sin importar su área',
+  'emergencias.recibir': 'Recibe las emergencias de la empresa',
 };
 
 const P = PERMISOS;

@@ -5,6 +5,26 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-05 (6) — Estructura de la empresa, paso 5: avisos por la cadena de jefes (C-10, DC-017)
+
+#### Añadido
+
+- **Cadena de mando** (`modules/avisos/cadena.ts`): los jefes por encima de cada persona en el árbol de áreas, del más cercano al más lejano. El primero es el jefe de su área o, si no tiene, el del área de arriba; un jefe empieza en el área de arriba; los jefes dados de baja se saltan.
+- **RH** por permiso: `emergencias.recibir` ("Recibe las emergencias de la empresa"), que se da a personas concretas con la nueva tabla `usuario_permisos` (migración `20261114000000_usuario_permisos`). La pantalla para darlo llega con C-11; mientras, se da directo en la base.
+- 13 comprobaciones nuevas de extremo a extremo (108 en total): cadena, área sin jefe, el de más arriba, RH, otra empresa y subida al siguiente jefe.
+
+#### Cambiado
+
+- **Ausencias, retardos, faltas, cambios de turno, horas extra y solicitudes de cobertura:** el aviso va al **jefe más cercano** de la persona; sin nadie arriba, a RH; sin RH, a los admin (último recurso). Los admin ya no los reciben por defecto.
+- **Emergencias:** llegan al jefe más cercano y a RH (al de arriba si quien la lanza es jefe; solo a RH si es el de más arriba; a los admin si no hay ni uno ni otro). Si nadie la recibe, **sube un jefe por minuto**; agotada la cadena, a los admin. El super admin las sigue viendo todas.
+- **Ausencias:** el supervisor del sitio ya no recibe avisos de ausencias (DC-017: el supervisor no recibe avisos por ahora).
+
+#### Notas
+
+- El permiso `emergencias.recibir` lo crea el **seed**: correr `npm run db:seed` después de `db:deploy` (confirmar antes `SEED_ADMIN_EMAIL`). Sin él, nadie es RH y las emergencias van solo a la cadena.
+- Quedan sin tocar (se rehacen con las sedes, C-12/C-13): los avisos al supervisor del sitio en reportes de incidentes, coberturas y revisión de rostros.
+- Sin desplegar. 577 pruebas, tipos y lint sin errores, 108 de 108 comprobaciones de extremo a extremo.
+
 ### Sesión 2026-11-05 (5) — Se quita el rol Cliente, el portal y Quejas (C-10, DC-018)
 
 #### Quitado

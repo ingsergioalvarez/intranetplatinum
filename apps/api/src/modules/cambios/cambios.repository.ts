@@ -1,7 +1,7 @@
 import type { EstadoCambioTurno, Rol, TipoCambioTurno } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
-import { adminsDe, type ContextoDueno } from '../avisos/duenos';
+import { responsablesDe, type ContextoAviso } from '../avisos/cadena';
 import type { Prisma } from '../../generated/prisma/client';
 import { empresaActual } from '../../core/empresa/contexto';
 
@@ -64,7 +64,7 @@ export abstract class CambiosRepository {
   abstract findGuardia(id: number): Promise<GuardiaCambio | null>;
   abstract guardiasActivos(): Promise<Persona[]>;
   /** Admins activos (a quienes se avisa si el sitio no tiene supervisor). */
-  abstract admins(contexto?: ContextoDueno): Promise<number[]>;
+  abstract admins(contexto?: ContextoAviso): Promise<number[]>;
   /** ¿Ya hay un cambio pendiente o aprobado de ese guardia ese día? */
   abstract hayCambio(usuarioId: number, fecha: string): Promise<boolean>;
   abstract crear(data: NuevoCambio): Promise<CambioRow>;
@@ -146,8 +146,8 @@ export class PrismaCambiosRepository extends CambiosRepository {
     });
   }
 
-  admins(contexto?: ContextoDueno) {
-    return adminsDe(contexto);
+  admins(contexto?: ContextoAviso) {
+    return responsablesDe(contexto);
   }
 
   async hayCambio(usuarioId: number, fecha: string) {

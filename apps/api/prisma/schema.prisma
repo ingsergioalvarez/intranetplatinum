@@ -33,8 +33,21 @@ model Permiso {
   clave       String       @unique @db.VarChar(60)
   descripcion String       @db.VarChar(255)
   roles       RolPermiso[]
+  usuarios    UsuarioPermiso[]
 
   @@map("permisos")
+}
+
+/// Permiso dado a una persona concreta, además de los de su rol (C-10 paso 5: "Recibe las emergencias"; la pantalla para darlo llega con C-11).
+model UsuarioPermiso {
+  usuarioId Int     @map("usuario_id")
+  permisoId Int     @map("permiso_id")
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  permiso   Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, permisoId])
+  @@index([permisoId])
+  @@map("usuario_permisos")
 }
 
 model RolPermiso {
@@ -93,6 +106,7 @@ model Usuario {
   areaId               Int?                 @map("area_id")
   area                 Area?                @relation("PersonasDeArea", fields: [areaId], references: [id], onDelete: SetNull)
   areasQueEncabeza     Area[]               @relation("JefeDeArea")
+  permisosPropios      UsuarioPermiso[]
   turnosDia            TurnoDia[]
   bitacoraDecidio      EventoBitacora[]     @relation("BitacoraDecidio")
   coberturas           Cobertura[]          @relation("CoberturaDe")
