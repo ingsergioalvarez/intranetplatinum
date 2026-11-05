@@ -1,5 +1,6 @@
 import type { AppModule } from '../core';
 import { adminModule } from './admin';
+import { areasModule } from './areas';
 import { archivosModule } from './archivos';
 import { asistenciaModule } from './asistencia';
 import { authModule } from './auth';
@@ -34,6 +35,7 @@ export const modules: AppModule[] = [
   healthModule,
   authModule,
   usuariosModule,
+  areasModule,
   clientesModule,
   sitiosModule,
   coberturasModule,

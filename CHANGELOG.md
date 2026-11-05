@@ -5,6 +5,24 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-05 — Estructura de la empresa, paso 1: áreas (C-10, DC-016)
+
+#### Añadido
+
+- **Áreas con subáreas** sin límite de niveles, por empresa: migración `20261111000000_areas` (tabla `areas` y `usuarios.area_id`; probada sobre una copia de los datos). Una persona pertenece a una sola área; el jefe forma parte de su área.
+- **API `/api/areas`** (solo el admin de la empresa; permisos finos en C-11): árbol con nombre completo ("RH / Nómina") y totales por área, crear, renombrar, mover (sin dejar un área dentro de sus propias subáreas), dar de baja (con sus subáreas; sus personas quedan sin área), reactivar, personas del área, candidatos, mover personas y designar jefe. No se repite el nombre dentro de la misma área superior. Todo queda en la auditoría (`areas.*`).
+- **Pantalla "Áreas"** en el menú: árbol a la izquierda y ficha del área a la derecha (superior, jefe, personas, subáreas); en celular, lista y ficha en pantallas separadas. Campo **Área** en el formulario de Usuarios.
+- **Eliminar definitivamente** (solo super admin): borra el área y todas sus subáreas, también las dadas de baja; sus personas quedan sin área; pide confirmación con los números y queda en la auditoría (`areas.eliminar`). El admin de empresa solo da de baja.
+- **Mostrar áreas dadas de baja** (interruptor) con **Reactivar** y, para el super admin, Eliminar definitivamente.
+- Corregido: al crear una subárea la pantalla saltaba a la nueva (que mostraba "Subáreas (0)"); ahora se queda en el área superior y la subárea aparece en su lista.
+- El número de empleado y la carga masiva (C-17) siguen pendientes.
+- Verificación de extremo a extremo ampliada a 79 comprobaciones (aislamiento entre empresas, reglas del árbol, jefe y auditoría).
+
+#### Notas
+
+- Registrados C-15 (primeros pasos), C-16 (restablecer de fábrica) y C-17 (carga masiva desde Excel). "Lugares" se había construido antes de tiempo y se retiró; las sedes se retoman con el calendario (C-12/C-13).
+- Sin desplegar. 643 pruebas, tipos y lint sin errores.
+
 ### Sesión 2026-11-04 (2) — Módulos y marca aplicados a la app (C-09)
 
 #### Añadido

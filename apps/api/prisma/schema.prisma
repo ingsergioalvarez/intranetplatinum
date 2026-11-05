@@ -100,6 +100,10 @@ model Usuario {
   incidenciasRostroDe  IncidenciaRostro[]   @relation("IncidenciaRostroDe")
   incidenciasRevisadas IncidenciaRostro[]   @relation("IncidenciaRevisadaPor")
   sitiosSupervisados   Sitio[]              @relation("SitiosSupervisados")
+  /// Área a la que pertenece (una sola, C-10). null = sin área.
+  areaId               Int?                 @map("area_id")
+  area                 Area?                @relation("PersonasDeArea", fields: [areaId], references: [id], onDelete: SetNull)
+  areasQueEncabeza     Area[]               @relation("JefeDeArea")
   turnosDia            TurnoDia[]
   bitacoraDecidio      EventoBitacora[]     @relation("BitacoraDecidio")
   coberturas           Cobertura[]          @relation("CoberturaDe")
@@ -133,6 +137,7 @@ model Usuario {
   @@index([clienteId])
   @@index([activo, deletedAt])
   @@index([propietarioId])
+  @@index([areaId])
   @@index([empresaId])
   @@map("usuarios")
 }
@@ -170,6 +175,7 @@ model Empresa {
   updatedAt      DateTime        @updatedAt @map("updated_at")
   usuarios       Usuario[]
   modulos        EmpresaModulo[]
+  areas          Area[]
 
   auditorias            Auditoria[]
   clientes              Cliente[]
@@ -1572,4 +1578,28 @@ model Emergencia {
   @@index([usuarioId, createdAt])
   @@index([empresaId])
   @@map("emergencias")
+}
+
+/// Área de la empresa (RH, Sistemas, Técnicos…) con subáreas sin límite de niveles (C-10). Da el alcance de jefes y supervisores.
+model Area {
+  id        Int       @id @default(autoincrement())
+  nombre    String    @db.VarChar(100)
+  /// Área superior; null = área de primer nivel.
+  padreId   Int?      @map("padre_id")
+  /// Jefe del área: debe pertenecer a ella.
+  jefeId    Int?      @map("jefe_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  padre     Area?     @relation("Subareas", fields: [padreId], references: [id], onDelete: Restrict)
+  subareas  Area[]    @relation("Subareas")
+  jefe      Usuario?  @relation("JefeDeArea", fields: [jefeId], references: [id], onDelete: SetNull)
+  personas  Usuario[] @relation("PersonasDeArea")
+
+  empresaId Int       @map("empresa_id")
+  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  @@index([padreId])
+  @@index([jefeId])
+  @@index([empresaId])
+  @@map("areas")
 }

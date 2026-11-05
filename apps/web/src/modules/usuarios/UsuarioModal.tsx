@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound, Trash2, UserCheck, UserX } from 'lucide-react';
 import {
   PERMISOS,
@@ -19,6 +19,7 @@ import { Badge, Button, ConfirmDialog, FormField, Input, Modal, Select, toast } 
 import { EliminarUsuarioDialog } from './EliminarUsuarioDialog';
 import { estadoUsuario } from './estadoUsuario';
 import { TransferirCarteraModal } from '../carteras/TransferirCarteraModal';
+import { areasService } from '../areas/areas.service';
 import { usuariosService } from './usuarios.service';
 
 interface Campos {
@@ -76,15 +77,28 @@ export function UsuarioModal({
   const esSuper = !!yo?.esSuperAdmin;
   // Solo el super admin crea o cambia administradores (A-65).
   const rolOptions = todosLosRoles.filter((r) => r.value !== ROLES.ADMIN || esSuper || usuario?.rol === ROLES.ADMIN);
-  const cambiado = (Object.keys(inicial) as (keyof Campos)[]).some((k) => form[k] !== inicial[k]);
+  // Área (C-10): una por persona. La elige el admin de la empresa y se guarda por la API de áreas, después del usuario.
+  const puedeElegirArea = yo?.rol === ROLES.ADMIN;
+  const areaInicial = usuario?.areaId != null ? String(usuario.areaId) : '';
+  const [areaId, setAreaId] = useState(areaInicial);
+  const areas = useQuery({ queryKey: areasService.keys.list('activas'), queryFn: () => areasService.list('activas'), enabled: puedeElegirArea });
+  const cambiaArea = puedeElegirArea && areaId !== areaInicial;
+  const cambiado = cambiaArea || (Object.keys(inicial) as (keyof Campos)[]).some((k) => form[k] !== inicial[k]);
 
   const refrescar = () => qc.invalidateQueries({ queryKey: usuariosService.keys.all });
 
   const guardar = useMutation({
-    mutationFn: (data: UsuarioCreate): Promise<UsuarioConPassword | Usuario> =>
-      esNuevo ? usuariosService.crear(data) : usuariosService.update(usuario.id, data),
+    mutationFn: async (data: UsuarioCreate): Promise<UsuarioConPassword | Usuario> => {
+      const guardado = esNuevo ? await usuariosService.crear(data) : await usuariosService.update(usuario.id, data);
+      if (cambiaArea) {
+        const id = 'usuario' in guardado ? guardado.usuario.id : guardado.id;
+        await areasService.asignar(id, areaId ? Number(areaId) : null);
+      }
+      return guardado;
+    },
     onSuccess: (res) => {
       void refrescar();
+      if (cambiaArea) void qc.invalidateQueries({ queryKey: areasService.keys.all });
       onClose();
       if (esNuevo) onPasswordTemporal(res as UsuarioConPassword, 'Usuario creado');
       else toast.success('Cambios guardados');
@@ -214,6 +228,19 @@ export function UsuarioModal({
               />
             </FormField>
           </div>
+          {puedeElegirArea && (
+            <FormField label="Área" hint="Una persona pertenece a una sola área. Las áreas se crean en el menú Áreas.">
+              <Select
+                options={[
+                  { value: '', label: 'Sin área' },
+                  ...(areas.data ?? []).map((a) => ({ value: String(a.id), label: a.nombreCompleto })),
+                ]}
+                value={areaId}
+                onChange={(e) => setAreaId(e.target.value)}
+                disabled={!puedeEditar}
+              />
+            </FormField>
+          )}
           <FormField
             label="Teléfono personal (opcional)"
             error={fieldErrors.telefonoPersonal}

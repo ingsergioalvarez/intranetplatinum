@@ -67,6 +67,8 @@ export interface Usuario {
   esSuperAdmin: boolean;
   /** Admin dueño (A-65); null = sin asignar. */
   propietario: { id: number; nombre: string } | null;
+  /** Área a la que pertenece (C-10); null = sin área. */
+  areaId: number | null;
   activo: boolean;
   debeCambiarPassword: boolean;
   bloqueadoHasta: string | null;

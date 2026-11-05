@@ -14,6 +14,7 @@ import { empresaOpcional, esContextoGlobal } from './contexto';
  */
 export const MODELOS_CON_EMPRESA: ReadonlySet<string> = new Set([
   'Usuario',
+  'Area',
   'Auditoria',
   'Cliente',
   'ClienteContacto',

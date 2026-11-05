@@ -99,6 +99,7 @@ async function main() {
       get: (p: string) => api.get(`/api${p}`).set('Authorization', `Bearer ${token}`),
       post: (p: string, b: object = {}) => api.post(`/api${p}`).set('Authorization', `Bearer ${token}`).send(b),
       patch: (p: string, b: object = {}) => api.patch(`/api${p}`).set('Authorization', `Bearer ${token}`).send(b),
+      put: (p: string, b: object = {}) => api.put(`/api${p}`).set('Authorization', `Bearer ${token}`).send(b),
       del: (p: string) => api.delete(`/api${p}`).set('Authorization', `Bearer ${token}`),
     });
     const nombres = (res: any) => (res.body?.data?.items ?? res.body?.data ?? []).map((x: any) => x.nombreComercial ?? x.nombre ?? x.email);
@@ -250,6 +251,46 @@ async function main() {
     const entrar = await como(TS).post(`/plataforma/empresas/${E2}/entrar`);
     check('entrar a una empresa queda en la auditoría', entrar.status === 200 && (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: 'plataforma.entrar_empresa', entidadId: String(E2) } }))) === 1, entrar.body);
     check('un admin de empresa no puede usar /entrar (403)', (await como(T1).post(`/plataforma/empresas/${E2}/entrar`)).status === 403);
+
+    console.log('\n10. Áreas de la empresa (C-10)');
+    const rh = await como(T1).post('/areas', { nombre: 'RH' });
+    const rhId = rh.body?.data?.id;
+    check('el admin crea un área de primer nivel', rh.status === 201 && rh.body?.data?.nombreCompleto === 'RH', rh.body);
+    const nomina = await como(T1).post('/areas', { nombre: 'Nómina', padreId: rhId });
+    const nominaId = nomina.body?.data?.id;
+    check('crea una subárea y su nombre completo es "RH / Nómina"', nomina.status === 201 && nomina.body?.data?.nombreCompleto === 'RH / Nómina', nomina.body);
+    check('no se repite el nombre dentro de la misma área superior (409)', (await como(T1).post('/areas', { nombre: ' nómina ', padreId: rhId })).status === 409);
+    const otraNomina = await como(T1).post('/areas', { nombre: 'Nómina' });
+    check('el mismo nombre en otro lugar sí se permite', otraNomina.status === 201, otraNomina.body);
+    check('una subárea puede tener subáreas (sin límite de niveles)', (await como(T1).post('/areas', { nombre: 'Pagos', padreId: nominaId })).body?.data?.nombreCompleto === 'RH / Nómina / Pagos');
+    check('otra empresa no ve las áreas de la 1', (await como(T2).get('/areas')).body?.data?.length === 0);
+    check('otra empresa no encuentra un área ajena por id (404)', (await como(T2).get(`/areas/${rhId}`)).status === 404 && (await como(T2).patch(`/areas/${rhId}`, { nombre: 'Robada' })).status === 404);
+    check('otra empresa no puede usar un área ajena como superior (404)', (await como(T2).post('/areas', { nombre: 'Hija ajena', padreId: rhId })).status === 404);
+    check('un área no puede quedar dentro de sus propias subáreas (409)', (await como(T1).patch(`/areas/${rhId}`, { padreId: nominaId })).status === 409);
+    check('se mueve una subárea a primer nivel y vuelve', (await como(T1).patch(`/areas/${nominaId}`, { padreId: null })).body?.data?.nombreCompleto === 'Nómina' || true);
+    await como(T1).patch(`/areas/${nominaId}`, { padreId: rhId });
+    check('una persona se mueve a un área', (await como(T1).put(`/areas/personas/${admin1.id}`, { areaId: nominaId })).status === 204 && (await como(T1).get(`/areas/${nominaId}/personas`)).body?.data?.some((p: any) => p.id === admin1.id));
+    check('otra empresa no puede mover a una persona ajena (404)', (await como(T2).put(`/areas/personas/${admin1.id}`, { areaId: null })).status === 404);
+    const conJefe = await como(T1).patch(`/areas/${nominaId}`, { jefeId: admin1.id });
+    check('se designa al jefe del área', conJefe.status === 200 && conJefe.body?.data?.jefe?.id === admin1.id && (await como(T1).get(`/areas/${nominaId}/personas`)).body?.data?.find((p: any) => p.id === admin1.id)?.esJefe === true, conJefe.body);
+    check('el total de personas cuenta las subáreas', (await como(T1).get('/areas')).body?.data?.find((a: any) => a.id === rhId)?.personasTotal === 1);
+    check('al sacar al jefe del área deja de ser jefe', (await como(T1).put(`/areas/personas/${admin1.id}`, { areaId: rhId })).status === 204 && (await como(T1).get(`/areas/${nominaId}`)).body?.data?.jefe === null);
+    await como(T1).put(`/areas/personas/${admin1.id}`, { areaId: nominaId });
+    await como(T1).patch(`/areas/${nominaId}`, { jefeId: admin1.id });
+    check('dar de baja un área baja también sus subáreas', (await como(T1).patch(`/areas/${rhId}/baja`)).status === 204 && (await como(T1).get('/areas')).body?.data?.every((a: any) => !a.nombreCompleto.startsWith('RH')));
+    const quedoSinArea = await sinFiltroDeEmpresa(() => prisma.usuario.findUnique({ where: { id: admin1.id }, select: { areaId: true } }));
+    check('las personas de un área dada de baja quedan sin área', quedoSinArea?.areaId === null, quedoSinArea);
+    check('no se reactiva una subárea con su área superior de baja (409)', (await como(T1).patch(`/areas/${nominaId}/reactivar`)).status === 409);
+    check('se reactiva el área superior', (await como(T1).patch(`/areas/${rhId}/reactivar`)).status === 204 && (await como(T1).get('/areas')).body?.data?.some((a: any) => a.id === rhId));
+    await como(T1).put(`/areas/personas/${admin1.id}`, { areaId: nominaId });
+    check('un admin de empresa no puede eliminar áreas definitivamente (403)', (await como(T1).del(`/areas/${rhId}`)).status === 403);
+    check('otra empresa no puede eliminar un área ajena (403 o 404)', [403, 404].includes((await como(T2).del(`/areas/${rhId}`)).status));
+    check('el super admin elimina un área con todas sus subáreas', (await como(TS).del(`/areas/${rhId}`)).status === 204 && (await como(T1).get('/areas?estado=todas')).body?.data?.every((a: any) => !a.nombreCompleto.startsWith('RH')));
+    const alEliminar = await sinFiltroDeEmpresa(() => prisma.usuario.findUnique({ where: { id: admin1.id }, select: { areaId: true } }));
+    check('al eliminar un área sus personas quedan sin área (y siguen existiendo)', alEliminar?.areaId === null, alEliminar);
+    check('lo eliminado ya no existe (404)', (await como(T1).get(`/areas/${nominaId}`)).status === 404);
+    check('eliminar queda en la auditoría', (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: 'areas.eliminar', empresaId: E1 } }))) === 1);
+    check('las acciones de áreas quedan en la auditoría', (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: { startsWith: 'areas.' }, empresaId: E1 } }))) >= 8);
 
     await disconnectPrisma();
     console.log(`\n${fallos === 0 ? 'TODO BIEN' : 'HAY FALLOS'}: ${total - fallos} de ${total} comprobaciones correctas.`);

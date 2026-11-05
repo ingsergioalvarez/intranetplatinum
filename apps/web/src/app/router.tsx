@@ -10,6 +10,7 @@ import { InicioPage } from '../modules/inicio/InicioPage';
 import { MisSitiosPage } from '../modules/inicio/MisSitiosPage';
 import { UsuariosPage } from '../modules/usuarios/UsuariosPage';
 import { ClienteDetallePage } from '../modules/clientes/ClienteDetallePage';
+import { AreasPage } from '../modules/areas/AreasPage';
 import { ClientesPage } from '../modules/clientes/ClientesPage';
 import { CategoriasPage } from '../modules/catalogos/CategoriasPage';
 import { TurnosPage } from '../modules/catalogos/TurnosPage';
@@ -266,6 +267,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute modulo="turnos" permiso={PERMISOS.CATALOGOS_ADMINISTRAR}>
             <TurnosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'areas',
+        element: (
+          <ProtectedRoute roles={[ROLES.ADMIN]}>
+            <AreasPage />
           </ProtectedRoute>
         ),
       },
