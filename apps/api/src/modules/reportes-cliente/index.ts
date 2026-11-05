@@ -70,12 +70,12 @@ export function createReportesClienteModule({
   const c = new ReportesClienteController(new ReportesClienteService(repo, audit, avisar, atencion, hoy, ahora));
   const router = Router();
   router.use(authenticate);
-  router.get('/', requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.CLIENTE), c.listar);
+  router.get('/', requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.CLIENTE), c.listar);
   router.get('/opciones', requireRoles(ROLES.CLIENTE), c.opciones);
   router.post('/', requireRoles(ROLES.CLIENTE), validate({ body: reporteClienteCreateSchema }), c.crear);
   router.post(
     '/:id/atender',
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
     validate({ params: idParamSchema, body: atenderReporteClienteSchema }),
     c.atender,
   );

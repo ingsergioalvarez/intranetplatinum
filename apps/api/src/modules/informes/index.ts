@@ -111,7 +111,7 @@ export function createInformesModule({
 
   router.use(
     authenticate,
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
     requirePermission(PERMISOS.ASISTENCIA_VER),
   );
   router.get('/opciones', c.opciones);

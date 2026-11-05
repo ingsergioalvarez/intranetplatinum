@@ -245,7 +245,7 @@ export function AsistenciaGuardiaPage() {
   };
   const [abierta, setAbierta] = useState<Jornada | null>(null);
   // Admin y supervisor pueden cerrar una jornada sin salida (DA-49).
-  const puedeCerrar = user?.rol === ROLES.ADMIN || user?.rol === ROLES.SUPERVISOR;
+  const puedeCerrar = user?.rol === ROLES.ADMIN || user?.rol === ROLES.JEFE || user?.rol === ROLES.SUPERVISOR;
   const [cerrando, setCerrando] = useState<Jornada | null>(null);
   // Reporte oficial de asistencia de este guardia (DA-52).
   const [reportando, setReportando] = useState(false);

@@ -56,7 +56,7 @@ export function createHorariosModule({
 }: HorariosModuleDeps = {}): AppModule {
   const c = new HorariosController(new HorariosService(repo, audit, ahora), alcance);
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR), requirePermission(PERMISOS.ASISTENCIA_VER));
+  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), requirePermission(PERMISOS.ASISTENCIA_VER));
   router.get('/pdf', validate({ query: horarioPdfQuerySchema }), c.pdf);
   return { name: 'horarios', basePath: 'horarios', router };
 }

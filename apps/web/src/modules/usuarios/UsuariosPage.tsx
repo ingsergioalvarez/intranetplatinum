@@ -104,7 +104,7 @@ export function UsuariosPage() {
               <Badge tone="brand">Super admin</Badge>
             </span>
           )}
-          {!u.deletedAt && !u.telefono && (u.rol === ROLES.GUARDIA || u.rol === ROLES.SUPERVISOR) && (
+          {!u.deletedAt && !u.telefono && (u.rol === ROLES.GUARDIA || u.rol === ROLES.SUPERVISOR || u.rol === ROLES.JEFE) && (
             <span className="ml-1.5">
               <Badge tone="warning">Sin teléfono</Badge>
             </span>

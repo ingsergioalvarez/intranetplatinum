@@ -326,7 +326,7 @@ export function AppShell() {
       <VentanaComida />
       <OfertaPerfil />
       {conSOS && user && user.rol !== 'cliente' && <BotonSOS />}
-      {conSOS && (user?.rol === 'admin' || user?.rol === 'supervisor') && <AlertaEmergencia />}
+      {conSOS && (user?.rol === 'admin' || user?.rol === 'jefe' || user?.rol === 'supervisor') && <AlertaEmergencia />}
     </div>
   );
 }

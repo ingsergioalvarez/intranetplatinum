@@ -185,7 +185,7 @@ export function AsistenciaPage() {
   );
   const hoy = hoyLocal();
   // Falta o no se presentó: el supervisor o el admin pueden enviar a alguien a cubrir (DA-39).
-  const puedeCubrir = useAuthStore((s) => s.user?.rol === ROLES.ADMIN || s.user?.rol === ROLES.SUPERVISOR);
+  const puedeCubrir = useAuthStore((s) => s.user?.rol === ROLES.ADMIN || s.user?.rol === ROLES.JEFE || s.user?.rol === ROLES.SUPERVISOR);
   const [cubrir, setCubrir] = useState<FilaAsistencia | null>(null);
   const [cerrando, setCerrando] = useState<FilaAsistencia | null>(null);
   const [fecha, setFecha] = useState(hoy);

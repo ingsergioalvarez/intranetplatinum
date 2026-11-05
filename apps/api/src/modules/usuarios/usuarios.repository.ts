@@ -27,6 +27,8 @@ export interface UsuarioUpdateData {
 export type UsuarioFiltroData = Omit<UsuarioFiltro, 'page' | 'limit'> & {
   /** Admin que consulta: ve a los suyos y a sí mismo (A-65). Sin esto (super admin) ve todos. */
   cartera?: { adminId: number; /** Además de los de la cartera, estos ids (él mismo). */ tambien: number[] };
+  /** Solo estas personas (alcance por áreas, C-10). */
+  soloIds?: number[];
 };
 
 export abstract class UsuariosRepository extends BaseRepository<
@@ -99,13 +101,14 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
   }
 
   async findPaged(
-    { q, rol, estado, propietarioId, sinAsignar, cartera }: UsuarioFiltroData,
+    { q, rol, estado, propietarioId, sinAsignar, cartera, soloIds }: UsuarioFiltroData,
     { page, limit }: PaginationQuery,
   ): Promise<Paginated<Usuario>> {
     const where: Prisma.UsuarioWhereInput = {
       ...(estado === 'activos' && { deletedAt: null }),
       ...(estado === 'baja' && { deletedAt: { not: null } }),
       ...(rol && { rol: { clave: rol } }),
+      ...(soloIds && { id: { in: soloIds } }),
       ...(cartera && {
         OR: [{ propietarioId: cartera.adminId }, { id: { in: [cartera.adminId, ...cartera.tambien] } }],
       }),

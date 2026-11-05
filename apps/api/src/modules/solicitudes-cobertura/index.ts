@@ -64,7 +64,7 @@ export function crearServicioSolicitudes({
 export function createSolicitudesCoberturaModule(deps: SolicitudesDeps = {}): AppModule {
   const c = new SolicitudesController(crearServicioSolicitudes(deps));
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR), requirePermission(PERMISOS.ASISTENCIA_VER));
+  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), requirePermission(PERMISOS.ASISTENCIA_VER));
   router.get('/', c.listar);
   router.post('/:id/cancelar', validate({ params: idParamSchema, body: cancelarSolicitudSchema }), c.cancelar);
   return { name: 'solicitudes-cobertura', basePath: 'solicitudes-cobertura', router };

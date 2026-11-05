@@ -14,6 +14,7 @@ import {
   validate,
   type AppModule,
 } from '../../core';
+import { personasVisiblesConPrisma, type PersonasVisibles } from '../areas/alcance';
 import { UsuariosController } from './usuarios.controller';
 import { PrismaUsuariosRepository, UsuariosRepository } from './usuarios.repository';
 import { UsuariosService } from './usuarios.service';
@@ -21,14 +22,17 @@ import { UsuariosService } from './usuarios.service';
 interface UsuariosModuleDeps {
   repo?: UsuariosRepository;
   audit?: AuditLogger;
+  /** A quién puede ver cada quien según las áreas (C-10). */
+  personasVisibles?: PersonasVisibles;
 }
 
 /** Gestión de usuarios (F1-07..F1-10). Fábrica para inyectar dobles en pruebas. */
 export function createUsuariosModule({
   repo = new PrismaUsuariosRepository(),
   audit = new PrismaAuditLogger(),
+  personasVisibles = personasVisiblesConPrisma,
 }: UsuariosModuleDeps = {}): AppModule {
-  const c = new UsuariosController(new UsuariosService(repo, audit));
+  const c = new UsuariosController(new UsuariosService(repo, audit, personasVisibles));
   const id = validate({ params: idParamSchema });
 
   const router = Router();

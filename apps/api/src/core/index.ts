@@ -17,6 +17,7 @@ export * from './audit/cambios';
 export * from './cartera';
 export * from './empresa/contexto';
 export * from './empresa/aislamiento';
+export * from './modulos/lector';
 export * from './modulos/guardia';
 export * from './time/fechas';
 export * from './storage/StorageService';

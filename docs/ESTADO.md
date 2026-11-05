@@ -5,8 +5,8 @@
 
 **Última actualización:** 2026-11-04
 **Fase actual:** En el servidor, `https://gestion.grupocomunicalo.mx` sigue como borrador (copia de Platinum, con el login nuevo de C-05 solo si se despliega). Lo nuevo (C-05 a C-14: marca, plataforma, empresas y módulos guardados) se trabaja **solo en local**; el usuario no ha desplegado nada de esto.
-**Última tarea terminada:** C-10 paso 1 (áreas con subáreas), en local y sin commit; antes C-09 y C-16, C-08, C-07, C-14 y C-05.
-**Tarea en progreso:** C-10 (estructura por áreas): el paso 1 está hecho; siguen jefe y supervisor con alcance por área, y los equipos. Falta que el usuario pruebe la pantalla Áreas en local. Nada está desplegado.
+**Última tarea terminada:** C-10 paso 3 (rol Jefe), en local y sin commit; el paso 2 (alcance por área) también está sin commit; el paso 1 (áreas) ya está en GitHub.
+**Tarea en progreso:** C-10 (estructura por áreas): hechos los pasos 1, 2 y 3; siguen el 4 (quitar Carteras, con migración que borra las 3 columnas `propietario_id`) y el 5 (avisos por la cadena de jefes, DC-017). Nada está desplegado.
 
 ## Siguiente paso
 

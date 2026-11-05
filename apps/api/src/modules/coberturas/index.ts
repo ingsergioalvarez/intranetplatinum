@@ -92,7 +92,7 @@ export function createCoberturasModule({
     alcance,
   );
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR));
+  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE));
   router.get('/candidatos', validate({ query: candidatosCoberturaQuerySchema }), c.candidatos);
   router.get('/', validate({ query: coberturasQuerySchema }), c.listar);
   router.post('/', validate({ body: coberturaCreateSchema }), c.crear);

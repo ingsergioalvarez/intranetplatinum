@@ -138,11 +138,11 @@ export function createAsistenciaModule({
     c.guardia,
   );
   // Tablero del día (DA-51): quién no llegó, jornadas sin cerrar, comidas sin cierre.
-  router.get('/tablero', requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR), ver, c.tablero);
+  router.get('/tablero', requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), ver, c.tablero);
   // Cerrar la jornada de un guardia que no pudo checar su salida (DA-49).
   router.post(
     '/jornadas/:id/cerrar',
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
     ver,
     validate({ params: idParamSchema, body: cerrarJornadaSchema }),
     c.cerrarJornada,
@@ -150,7 +150,7 @@ export function createAsistenciaModule({
   // Ante un retardo: aceptarlo o mandar al guardia a casa (A-25). Justificar sigue en la bitácora.
   router.post(
     '/retardos/:id/decidir',
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
     ver,
     validate({ params: idParamSchema, body: decidirRetardoSchema }),
     c.decidirRetardo,

@@ -120,7 +120,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/cambios',
         element: (
-          <ProtectedRoute modulo="cambios_turno" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="cambios_turno" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <CambiosTurnoPage />
           </ProtectedRoute>
         ),
@@ -128,7 +128,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/casos',
         element: (
-          <ProtectedRoute modulo="cobertura" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="cobertura" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <CasosPage />
           </ProtectedRoute>
         ),
@@ -136,7 +136,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/ausencias',
         element: (
-          <ProtectedRoute modulo="ausencias" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="ausencias" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <AusenciasPage />
           </ProtectedRoute>
         ),
@@ -152,7 +152,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/emergencias',
         element: (
-          <ProtectedRoute modulo="emergencias" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="emergencias" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <EmergenciasPage />
           </ProtectedRoute>
         ),
@@ -160,7 +160,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/solicitudes',
         element: (
-          <ProtectedRoute modulo="cobertura" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="cobertura" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <SolicitudesPage />
           </ProtectedRoute>
         ),
@@ -168,7 +168,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/calendario',
         element: (
-          <ProtectedRoute modulo="cobertura" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="cobertura" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <CalendarioPage />
           </ProtectedRoute>
         ),
@@ -176,7 +176,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/horas-extra',
         element: (
-          <ProtectedRoute modulo="horas_extra" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="horas_extra" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <HorasExtraPage />
           </ProtectedRoute>
         ),
@@ -184,7 +184,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/reportes',
         element: (
-          <ProtectedRoute modulo="reporte_asistencia" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="reporte_asistencia" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <ReportesEmitidosPage />
           </ProtectedRoute>
         ),
@@ -192,7 +192,7 @@ export const router = createBrowserRouter([
       {
         path: 'asistencia/reportes/:id',
         element: (
-          <ProtectedRoute modulo="reporte_asistencia" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+          <ProtectedRoute modulo="reporte_asistencia" permiso={PERMISOS.ASISTENCIA_VER} roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE]}>
             <InformeVerPage />
           </ProtectedRoute>
         ),
@@ -241,7 +241,7 @@ export const router = createBrowserRouter([
       {
         path: 'reportes-cliente',
         element: (
-          <ProtectedRoute modulo="quejas" roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.CLIENTE]}>
+          <ProtectedRoute modulo="quejas" roles={[ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.CLIENTE]}>
             <ReportesClientePage />
           </ProtectedRoute>
         ),

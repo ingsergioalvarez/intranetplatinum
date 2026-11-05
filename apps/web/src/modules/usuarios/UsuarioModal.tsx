@@ -200,7 +200,7 @@ export function UsuarioModal({
           <div className="grid gap-4 md:grid-cols-2">
             <FormField
               label="Teléfono de contacto"
-              required={form.rol === ROLES.GUARDIA || form.rol === ROLES.SUPERVISOR}
+              required={form.rol === ROLES.GUARDIA || form.rol === ROLES.SUPERVISOR || form.rol === ROLES.JEFE}
               error={fieldErrors.telefono}
               hint="Puede ser el de la empresa."
             >

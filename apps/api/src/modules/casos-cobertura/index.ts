@@ -161,7 +161,7 @@ export function createCasosCoberturaModule({ alcance = alcanceConPrisma, ...deps
     validate({ body: noPuedoQuedarmeSchema }),
     c.noPuedo,
   );
-  const revision = [requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR), requirePermission(PERMISOS.ASISTENCIA_VER)];
+  const revision = [requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), requirePermission(PERMISOS.ASISTENCIA_VER)];
   router.get('/', ...revision, c.listar);
   router.get('/:entradaId/vista-previa', ...revision, validate({ params: entradaIdParamSchema, query: vistaPreviaCasoQuerySchema }), c.vistaPrevia);
   router.post('/:entradaId/resolver', ...revision, validate({ params: entradaIdParamSchema, body: resolverCasoSchema }), c.resolver);

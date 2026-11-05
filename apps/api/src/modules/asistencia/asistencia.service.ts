@@ -76,7 +76,7 @@ import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinSolicitudes, type SolicitudesPuerto } from '../solicitudes-cobertura/solicitudes.service';
 import { sinMedidas, type MedidasPuerto } from '../medidas/medidas';
 import { sinHorasExtra, type HorasExtraPuerto } from '../horas-extra/puerto';
-import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
+import { exigirGuardia, filaEnAlcance, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
 import { horaLocal } from './formato';
 import { MIN_FALTA, MIN_NO_SE_PRESENTO } from './vigilancia';
 import type {
@@ -1694,10 +1694,7 @@ export class AsistenciaService extends BaseService {
     const texto = q?.toLowerCase();
     const filas = [...conJornada, ...enCurso, ...sinMarcas]
       // Supervisor: solo sus sitios y sus guardias (DA-45).
-      .filter(
-        (f) =>
-          !alcance || (f.sitio ? alcance.sitioIds.has(f.sitio.id) : alcance.guardiaIds.has(f.guardia.id)),
-      )
+      .filter((f) => filaEnAlcance(alcance, f.sitio?.id, f.guardia.id))
       .filter(
         (f) =>
           !soloAlertas ||
@@ -1749,12 +1746,7 @@ export class AsistenciaService extends BaseService {
     for (const jornada of await this.jornadas(rows)) {
       const guardia = guardiaDe.get(jornada.entrada.id);
       if (!guardia || jornada.salida) continue;
-      if (
-        alcance &&
-        !(jornada.sitio ? alcance.sitioIds.has(jornada.sitio.id) : alcance.guardiaIds.has(guardia.id))
-      ) {
-        continue;
-      }
+      if (!filaEnAlcance(alcance, jornada.sitio?.id, guardia.id)) continue;
       const fila: FilaAsistencia = { guardia, sitio: jornada.sitio, jornada };
       const salida = jornada.programada ? Date.parse(jornada.programada.salida) : null;
       const abierta = jornada.comidas.at(-1);

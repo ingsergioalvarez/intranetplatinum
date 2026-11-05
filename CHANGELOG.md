@@ -5,6 +5,36 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-05 (3) — Estructura de la empresa, paso 3: rol Jefe (C-10, DC-016, DC-017)
+
+#### Añadido
+
+- **Rol Jefe** (`jefe`): lo operativo del supervisor (Usuarios en lectura, Asistencia, reportes, horarios, grupos, catálogos, rostros) más marcar su propia asistencia, **dentro de su área y subáreas**. Crear, editar y dar de baja usuarios, la auditoría y "ver a toda la empresa" quedan para el admin hasta C-11. Donde el supervisor tenía acceso (menús, rutas y API), el jefe también.
+- **Designación automática:** al designar a alguien jefe de un área su rol pasa a Jefe; si ya es admin, no se le cambia; un usuario del portal de clientes no puede ser jefe. Si deja de serlo (se le quita, se va del área, o el área se da de baja o se elimina) y ya no encabeza otra área, vuelve a Colaborador. Cada cambio queda en la auditoría (`areas.rol_jefe`).
+- En pantalla, el rol "Guardia" se ve como **"Colaborador"**; la clave interna sigue siendo `guardia` (el cambio interno es de C-11).
+- Verificación de extremo a extremo ampliada a 95 comprobaciones.
+
+#### Notas
+
+- El rol Jefe lo crea el **seed**: hay que correr `npm run db:seed` después de `db:deploy`. **Antes de correrlo, confirmar que `SEED_ADMIN_EMAIL` apunta al administrador que ya existe**; si no, el seed crea un administrador extra (pasó en local y se quitó).
+- Los avisos todavía llegan como en Platinum; pasan a la cadena de jefes en el paso 5 (DC-017).
+- Sin desplegar. 643 pruebas, tipos y lint sin errores.
+
+### Sesión 2026-11-05 (2) — Estructura de la empresa, paso 2: alcance por área (C-10, DC-016)
+
+#### Añadido
+
+- **Alcance por área:** el admin de la empresa ve a todos; el **jefe** ve a las personas de su área y de todas sus subáreas; el **supervisor** ve solo a las de su propia área; cada quien se ve a sí mismo. Rige en el listado de Usuarios (y al abrir un usuario) y en la Asistencia (día, ficha de la persona, tablero, incidencias y lo que usa el alcance central). Lo que cae fuera responde como si no existiera.
+- **Carteras apagado:** con ese módulo apagado (Comunicalo), el admin de la empresa ve a **toda** su empresa en vez de solo lo que él creó. `authenticate` calcula `sinCarteras` por petición; sin él (pruebas, tareas) rige la cartera de siempre.
+- Permiso **`alcance.empresa`** ("ver a todas las personas de la empresa, sin importar su área"): la regla ya lo respeta; la pantalla para dárselo a una persona llega con C-11.
+- Verificación de extremo a extremo ampliada a 89 comprobaciones (jefe, supervisor, admin, permiso, 404 fuera del alcance y otra empresa).
+
+#### Notas
+
+- Los módulos que se enciendan después (ausencias, horas extra, bitácora, horarios…) heredan este alcance porque usan la misma regla central. Lo que decide por sitio (cambios de turno, cobertura) se rehace con el calendario (C-12/C-13).
+- Lo que puede hacer cada rol (jefe frente a supervisor) se afina en C-11; aquí solo se decide a quién ve cada uno.
+- Sin desplegar. 643 pruebas, tipos y lint sin errores.
+
 ### Sesión 2026-11-05 — Estructura de la empresa, paso 1: áreas (C-10, DC-016)
 
 #### Añadido

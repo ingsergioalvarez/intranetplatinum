@@ -15,8 +15,9 @@ export const SIN_CARTERA = 0;
  * Admin dueño por el que se filtra lo que ve este usuario: el propio admin, o el admin del supervisor.
  * `undefined` = sin límite de dueño: el super admin y los roles con sus propios límites por sitio (guardia, cliente).
  */
-export function carteraDe(u: Pick<AuthUser, 'id' | 'rol' | 'esSuperAdmin' | 'propietarioId'>): number | undefined {
-  if (esSuperAdmin(u)) return undefined;
+export function carteraDe(u: Pick<AuthUser, 'id' | 'rol' | 'esSuperAdmin' | 'propietarioId' | 'sinCarteras'>): number | undefined {
+  // Sin el módulo Carteras no hay dueños que limiten lo que ve cada admin: ve toda su empresa (y los demás, lo de su área).
+  if (esSuperAdmin(u) || u.sinCarteras) return undefined;
   if (u.rol === ROLES.ADMIN) return u.id;
   if (u.rol === ROLES.SUPERVISOR) return u.propietarioId ?? SIN_CARTERA;
   return undefined;
@@ -29,7 +30,7 @@ export function propietarioParaCrear(u: Pick<AuthUser, 'id' | 'rol' | 'esSuperAd
 }
 
 /** ¿Algo con este dueño está dentro de lo que ve el usuario? (`undefined` = sin límite) */
-export function enCartera(u: Pick<AuthUser, 'id' | 'rol' | 'esSuperAdmin' | 'propietarioId'>, propietarioId: number | null) {
+export function enCartera(u: Pick<AuthUser, 'id' | 'rol' | 'esSuperAdmin' | 'propietarioId' | 'sinCarteras'>, propietarioId: number | null) {
   const cartera = carteraDe(u);
   return cartera === undefined || propietarioId === cartera;
 }

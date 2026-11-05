@@ -108,11 +108,11 @@ export function createAusenciasModule({
 }: AusenciasDeps = {}): AppModule {
   const c = new AusenciasController(new AusenciasService(repo, storage, audit, avisar, bitacora, atencion, hoy, ahora), alcance);
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.GUARDIA));
+  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.GUARDIA));
   router.get('/', c.listar);
   router.get(
     '/vista-previa',
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
     validate({ query: vistaPreviaAusenciaQuerySchema }),
     c.vistaPrevia,
   );

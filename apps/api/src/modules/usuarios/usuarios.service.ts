@@ -22,6 +22,7 @@ import {
   type AccionCtx,
   type AuthUser,
 } from '../../core';
+import { todasLasPersonas, type PersonasVisibles } from '../areas/alcance';
 import type { UsuariosRepository } from './usuarios.repository';
 
 const correoDuplicado = () =>
@@ -35,16 +36,19 @@ export class UsuariosService extends BaseService {
   constructor(
     private readonly repo: UsuariosRepository,
     private readonly audit: AuditLogger,
+    /** A quién puede ver cada quien según las áreas (C-10); solo rige cuando la empresa no usa Carteras. */
+    private readonly personasVisibles: PersonasVisibles = todasLasPersonas,
   ) {
     super();
   }
 
   /** Un admin ve a sus usuarios y a sí mismo; el super admin ve todos (y puede filtrar por dueño o sin asignar). */
-  list({ page, limit, ...filtro }: UsuarioFiltro, actor: AuthUser): Promise<Paginated<Usuario>> {
+  async list({ page, limit, ...filtro }: UsuarioFiltro, actor: AuthUser): Promise<Paginated<Usuario>> {
     const cartera = carteraDe(actor);
+    const visibles = actor.sinCarteras ? await this.personasVisibles(actor) : null;
     return this.repo.findPaged(
       cartera === undefined
-        ? filtro
+        ? { ...filtro, ...(visibles && { soloIds: [...visibles] }) }
         : {
             ...filtro,
             propietarioId: undefined,
@@ -59,6 +63,10 @@ export class UsuariosService extends BaseService {
   async getById(id: number, actor?: AuthUser): Promise<Usuario> {
     const usuario = await this.repo.findById(id);
     if (!usuario) throw HttpError.notFound('Usuario no encontrado');
+    if (actor?.sinCarteras) {
+      const visibles = await this.personasVisibles(actor);
+      if (visibles && !visibles.has(id)) throw HttpError.notFound('Usuario no encontrado');
+    }
     if (actor) {
       const cartera = carteraDe(actor);
       if (

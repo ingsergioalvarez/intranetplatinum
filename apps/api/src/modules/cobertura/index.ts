@@ -47,7 +47,7 @@ export function createCoberturaModule({
 }: CoberturaDeps = {}): AppModule {
   const c = new CoberturaController(new CoberturaService(repo, turnos, ahora), alcance);
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR), requirePermission(PERMISOS.ASISTENCIA_VER));
+  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), requirePermission(PERMISOS.ASISTENCIA_VER));
   router.get('/', validate({ query: coberturaQuerySchema }), c.sitio);
   router.get('/resumen', validate({ query: resumenCoberturaQuerySchema }), c.resumen);
   return { name: 'cobertura', basePath: 'cobertura', router };

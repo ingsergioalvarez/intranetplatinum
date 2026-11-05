@@ -135,7 +135,7 @@ export function createHorasExtraModule({ alcance = alcanceConPrisma, ...deps }: 
     validate({ body: extenderHorarioSchema }),
     c.extender,
   );
-  const revision = [requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR), requirePermission(PERMISOS.ASISTENCIA_VER)];
+  const revision = [requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), requirePermission(PERMISOS.ASISTENCIA_VER)];
   router.get('/opciones', ...revision, c.opciones);
   router.get('/reporte', ...revision, validate({ query: reporteHorasExtraQuerySchema }), c.reporte);
   router.get('/', ...revision, validate({ query: horasExtraQuerySchema }), c.listar);

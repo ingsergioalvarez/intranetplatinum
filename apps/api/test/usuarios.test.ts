@@ -206,7 +206,7 @@ describe('GET /api/usuarios (F1-07)', () => {
   });
 
   it('valida filtros y obtiene por id (404 si no existe)', async () => {
-    expect((await como(ADMIN).get('/?rol=jefe')).status).toBe(400);
+    expect((await como(ADMIN).get('/?rol=gerente')).status).toBe(400);
     expect((await como(ADMIN).get('/3')).body.data.nombre).toBe('Gabriel Guardia');
     expect((await como(ADMIN).get('/99')).status).toBe(404);
   });
@@ -281,7 +281,7 @@ describe('POST /api/usuarios (F1-08)', () => {
   });
 
   it('valida campos obligatorios', async () => {
-    const res = await como(ADMIN).post('/', { nombre: 'A', email: 'x', rol: 'jefe' });
+    const res = await como(ADMIN).post('/', { nombre: 'A', email: 'x', rol: 'gerente' });
     expect(res.status).toBe(400);
     expect(res.body.error.details.map((d: { path: string }) => d.path).sort()).toEqual([
       'email',

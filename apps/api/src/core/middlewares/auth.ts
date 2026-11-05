@@ -2,6 +2,7 @@ import type { Request, RequestHandler } from 'express';
 import type { Rol } from '@platinum/shared';
 import { HttpError } from '../errors/HttpError';
 import { conEmpresa } from '../empresa/contexto';
+import { lectorModulos } from '../modulos/lector';
 import { verifyAccessToken } from '../security/jwt';
 import type { AuthUser } from '../types/auth';
 
@@ -48,8 +49,16 @@ function createAuthenticate(permitirPasswordTemporal: boolean): RequestHandler {
     }
     // Lo que sigue (y lo asíncrono que lance) corre como parte de la empresa de la sesión (C-08).
     const { empresaId } = req.user;
-    if (empresaId) return conEmpresa(empresaId, () => next());
-    next();
+    if (!empresaId) return next();
+    const user = req.user;
+    // Si la empresa tiene apagado Carteras, el alcance sale de las áreas (C-10). Si no se puede saber, rige la cartera.
+    lectorModulos
+      .encendidos(empresaId)
+      .then((on) => {
+        user.sinCarteras = !on.has('carteras');
+      })
+      .catch(() => undefined)
+      .then(() => conEmpresa(empresaId, () => next()));
   };
 }
 

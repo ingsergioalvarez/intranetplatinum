@@ -14,7 +14,7 @@ const textoOpcional = (max: number) =>
     .nullish();
 
 /** Guardias y supervisores deben tener un teléfono de contacto: es el que se marca en una emergencia (A-60). */
-export const ROLES_CON_TELEFONO: readonly Rol[] = [ROLES.GUARDIA, ROLES.SUPERVISOR];
+export const ROLES_CON_TELEFONO: readonly Rol[] = [ROLES.GUARDIA, ROLES.SUPERVISOR, ROLES.JEFE];
 export const MENSAJE_TELEFONO_OBLIGATORIO = 'Escribe el teléfono de contacto (puede ser el de la empresa)';
 
 const usuarioBaseSchema = z.object({

@@ -80,7 +80,7 @@ export class AusenciasService extends BaseService {
   /** Admin: todas; supervisor: las de sus guardias; guardia: las suyas. Las pendientes primero. */
   async listar(user: AuthUser, alcance: Alcance | null): Promise<AusenciasLista> {
     const ids =
-      user.rol === ROLES.ADMIN ? null : user.rol === ROLES.SUPERVISOR ? [...(alcance?.guardiaIds ?? [])] : [user.id];
+      user.rol === ROLES.ADMIN ? null : user.rol === ROLES.SUPERVISOR || user.rol === ROLES.JEFE ? [...(alcance?.guardiaIds ?? [])] : [user.id];
     const filas = await this.repo.listar(ids, 100);
     return { items: filas.map((f) => this.aAusencia(f)), pendientes: filas.filter((f) => f.estado === 'pendiente').length };
   }
@@ -102,7 +102,7 @@ export class AusenciasService extends BaseService {
   ): Promise<Ausencia> {
     const usuarioId = user.rol === ROLES.GUARDIA ? user.id : data.usuarioId;
     if (!usuarioId) throw campo('usuarioId', 'Elige el guardia');
-    if (user.rol === ROLES.SUPERVISOR) exigirGuardia(alcance, usuarioId);
+    if (user.rol === ROLES.SUPERVISOR || user.rol === ROLES.JEFE) exigirGuardia(alcance, usuarioId);
     const guardia = await this.repo.guardia(usuarioId);
     if (!guardia || !guardia.activo || guardia.rol !== ROLES.GUARDIA) throw campo('usuarioId', 'Elige un guardia activo');
 

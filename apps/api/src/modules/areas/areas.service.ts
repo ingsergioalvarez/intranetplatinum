@@ -6,6 +6,7 @@ import type {
   CandidatoArea,
   PersonaDeArea,
 } from '@platinum/shared';
+import { ROLES } from '@platinum/shared';
 import { AuditLogger, BaseService, HttpError, type AccionCtx } from '../../core';
 import type { AreaFila, AreasRepository } from './areas.repository';
 
@@ -88,9 +89,9 @@ export class AreasService extends BaseService {
     const { filas, areas } = await this.cargar();
     if (padreId) this.activa(areas, padreId);
     this.sinRepetir(filas, nombre, padreId ?? null);
-    if (jefeId) await this.personaActiva(jefeId);
+    if (jefeId) await this.personaParaJefe(jefeId);
     const nueva = await this.repo.crear({ nombre: nombre.trim(), padreId: padreId ?? null });
-    if (jefeId) await this.hacerJefe(nueva.id, jefeId);
+    if (jefeId) await this.hacerJefe(nueva.id, jefeId, ctx);
     await this.registrar(ctx, 'areas.crear', nueva.id, { nombre: nueva.nombre, padreId: padreId ?? null, jefeId: jefeId ?? null });
     return this.getById(nueva.id);
   }
@@ -136,18 +137,43 @@ export class AreasService extends BaseService {
       despues.jefeId = cambios.jefeId;
       if (cambios.jefeId === null) await this.repo.actualizar(id, { jefeId: null });
       else {
-        await this.personaActiva(cambios.jefeId);
-        await this.hacerJefe(id, cambios.jefeId);
+        await this.personaParaJefe(cambios.jefeId);
+        await this.hacerJefe(id, cambios.jefeId, ctx);
       }
+      // El jefe anterior deja de serlo: si ya no encabeza ninguna área vuelve a Colaborador.
+      if (actual.jefe) await this.soltarJefes([actual.jefe.id], ctx);
     }
     if (Object.keys(despues).length > 0) await this.registrar(ctx, 'areas.editar', id, { antes, despues });
     return this.getById(id);
   }
 
-  /** La persona pasa a formar parte del área y queda como su jefe (el jefe pertenece a su área). */
-  private async hacerJefe(areaId: number, usuarioId: number) {
+  /** La persona pasa a formar parte del área y queda como su jefe (el jefe pertenece a su área) y con el rol Jefe. */
+  private async hacerJefe(areaId: number, usuarioId: number, ctx: AccionCtx) {
     await this.repo.asignar(usuarioId, areaId);
     await this.repo.actualizar(areaId, { jefeId: usuarioId });
+    // Un admin se queda como admin: no se le baja de nivel.
+    const u = await this.personaActiva(usuarioId);
+    if (u.rol !== ROLES.ADMIN && u.rol !== ROLES.JEFE && (await this.repo.ponerRol(usuarioId, ROLES.JEFE))) {
+      await this.registrar(ctx, 'areas.rol_jefe', usuarioId, { nombre: u.nombre, de: u.rol, a: ROLES.JEFE });
+    }
+  }
+
+  /** Quien tiene rol cliente es del portal del cliente: no puede encabezar un área. */
+  private async personaParaJefe(usuarioId: number) {
+    const u = await this.personaActiva(usuarioId);
+    if (u.rol === ROLES.CLIENTE) throw HttpError.conflict('Un usuario del portal de clientes no puede ser jefe de un área');
+    return u;
+  }
+
+  /** Quien dejó de ser jefe y ya no encabeza ninguna área vuelve a Colaborador (si su rol era Jefe). */
+  private async soltarJefes(usuarioIds: number[], ctx: AccionCtx) {
+    const { filas } = await this.cargar();
+    for (const id of new Set(usuarioIds)) {
+      if (filas.some((f) => !f.deletedAt && f.jefeId === id)) continue;
+      if (await this.repo.ponerRol(id, ROLES.GUARDIA, ROLES.JEFE)) {
+        await this.registrar(ctx, 'areas.rol_jefe', id, { de: ROLES.JEFE, a: ROLES.GUARDIA });
+      }
+    }
   }
 
   private async personaActiva(usuarioId: number) {
@@ -163,7 +189,9 @@ export class AreasService extends BaseService {
     if (!area) throw HttpError.notFound('Área no encontrada');
     if (area.deletedAt) return;
     const ids = this.descendientes(filas, id).filter((i) => !areas.get(i)?.deletedAt);
+    const jefes = ids.flatMap((i) => (areas.get(i)?.jefe ? [areas.get(i)!.jefe!.id] : []));
     await this.repo.darDeBaja(ids);
+    await this.soltarJefes(jefes, ctx);
     await this.registrar(ctx, 'areas.baja', id, {
       nombre: area.nombreCompleto,
       areasDadasDeBaja: ids.length,
@@ -178,7 +206,9 @@ export class AreasService extends BaseService {
     if (!area) throw HttpError.notFound('Área no encontrada');
     // Del área hacia sus subáreas; al revés para borrar primero las de más abajo.
     const ids = this.descendientes(filas, id);
+    const jefes = ids.flatMap((i) => (areas.get(i)?.jefe ? [areas.get(i)!.jefe!.id] : []));
     await this.repo.eliminar([...ids].reverse());
+    await this.soltarJefes(jefes, ctx);
     await this.registrar(ctx, 'areas.eliminar', id, {
       nombre: area.nombreCompleto,
       areasEliminadas: ids.map((i) => areas.get(i)?.nombreCompleto ?? String(i)),
@@ -213,6 +243,8 @@ export class AreasService extends BaseService {
     if (areaId !== null) this.activa(areas, areaId);
     if (usuario.areaId === areaId) return;
     await this.repo.asignar(usuarioId, areaId);
+    // Si era jefe de otra área, deja de serlo al irse de ella.
+    await this.soltarJefes([usuarioId], ctx);
     await this.registrar(ctx, 'areas.asignar_persona', usuarioId, {
       nombre: usuario.nombre,
       de: usuario.areaId === null ? null : (areas.get(usuario.areaId)?.nombreCompleto ?? null),
@@ -230,6 +262,6 @@ export class AreasService extends BaseService {
 
   private registrar(ctx: AccionCtx, accion: string, id: number, datos: Record<string, unknown>) {
     this.log(accion, { actorId: ctx.actorId, areas: id });
-    return this.audit.registrarAccion(ctx, accion, accion === 'areas.asignar_persona' ? 'usuarios' : 'areas', id, datos);
+    return this.audit.registrarAccion(ctx, accion, accion === 'areas.asignar_persona' || accion === 'areas.rol_jefe' ? 'usuarios' : 'areas', id, datos);
   }
 }

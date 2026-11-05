@@ -1,6 +1,7 @@
 import { ROLES } from '@platinum/shared';
 import { HttpError, esSuperAdmin, fechaADate, hoyISO, type AuthUser } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
+import { personasVisiblesConPrisma } from '../areas/alcance';
 
 /**
  * Lo que un supervisor puede ver (DA-45): sus sitios y los guardias asignados a ellos (directo o
@@ -11,6 +12,8 @@ import { getPrisma } from '../../core/data/prisma';
 export interface Alcance {
   sitioIds: Set<number>;
   guardiaIds: Set<number>;
+  /** El alcance sale de las áreas (C-10): se decide por la persona y no por el sitio. */
+  porPersonas?: boolean;
 }
 
 export type AlcanceFn = (user: AuthUser) => Promise<Alcance | null>;
@@ -19,6 +22,11 @@ export type AlcanceFn = (user: AuthUser) => Promise<Alcance | null>;
 const DIAS_RECIENTES = 31;
 
 export const alcanceConPrisma: AlcanceFn = async (user) => {
+  // Sin el módulo Carteras (C-10): admin ve toda la empresa, el jefe su área y subáreas, el supervisor su área.
+  if (user.sinCarteras && (user.rol === ROLES.ADMIN || user.rol === ROLES.JEFE || user.rol === ROLES.SUPERVISOR)) {
+    const personas = await personasVisiblesConPrisma(user);
+    return personas ? { sitioIds: new Set(), guardiaIds: personas, porPersonas: true } : null;
+  }
   const esAdminDeCartera = user.rol === ROLES.ADMIN && !esSuperAdmin(user);
   if (user.rol !== ROLES.SUPERVISOR && user.rol !== ROLES.CLIENTE && !esAdminDeCartera) return null;
   const db = getPrisma();
@@ -66,6 +74,11 @@ export const alcanceConPrisma: AlcanceFn = async (user) => {
 
 /** Para pruebas y módulos sin límite: todos ven todo. */
 export const sinAlcance: AlcanceFn = async () => null;
+
+/** ¿Esta fila (de un sitio y de una persona) está dentro del alcance? Con alcance por áreas decide la persona. */
+export const filaEnAlcance = (alcance: Alcance | null, sitioId: number | null | undefined, guardiaId: number) =>
+  !alcance ||
+  (alcance.porPersonas || sitioId == null ? alcance.guardiaIds.has(guardiaId) : alcance.sitioIds.has(sitioId));
 
 export const guardiaEnAlcance = (alcance: Alcance | null, guardiaId: number) =>
   !alcance || alcance.guardiaIds.has(guardiaId);

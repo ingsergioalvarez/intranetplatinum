@@ -155,7 +155,7 @@ export function createBitacoraModule({
   // cliente también lo tiene (portal de clientes, DA-48) y no debe ver la bitácora disciplinaria.
   router.use(
     authenticate,
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),
+    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
     requirePermission(PERMISOS.ASISTENCIA_VER),
   );
   // Incidencias de todos (DA-42): por guardia y lista general.

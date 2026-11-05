@@ -38,7 +38,7 @@ export interface NavItem {
 /** Menú principal. El orden es el de la navegación inferior en celular (máx. 5). */
 export const navItems: NavItem[] = [
   // El guardia entra directo al Checador, así que no tiene Inicio (DA-51).
-  { label: 'Inicio', to: '/', icon: Home, roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.CLIENTE] },
+  { label: 'Inicio', to: '/', icon: Home, roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.CLIENTE] },
   {
     label: 'Checador',
     to: '/marcar',
@@ -73,7 +73,7 @@ export const navItems: NavItem[] = [
   { label: 'Reportes', to: '/reportes', modulo: 'reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_VER_PROPIOS },
   // Lo que el cliente reporta del servicio o de un guardia (A-59).
   { label: 'Reportar', to: '/reportes-cliente', modulo: 'quejas', icon: MessageSquareWarning, roles: [ROLES.CLIENTE] },
-  { label: 'Quejas', to: '/reportes-cliente', modulo: 'quejas', icon: MessageSquareWarning, roles: [ROLES.ADMIN, ROLES.SUPERVISOR] },
+  { label: 'Quejas', to: '/reportes-cliente', modulo: 'quejas', icon: MessageSquareWarning, roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE] },
   { label: 'Asistencia', to: '/asistencia', icon: ClipboardCheck, permiso: PERMISOS.ASISTENCIA_VER },
   { label: 'Clientes', to: '/clientes', modulo: 'clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
   { label: 'Grupos', to: '/grupos', modulo: 'grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
@@ -87,7 +87,7 @@ export const navItems: NavItem[] = [
     modulo: 'turnos',
     icon: Clock,
     permiso: PERMISOS.CATALOGOS_ADMINISTRAR,
-    roles: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE],
   },
   { label: 'Catálogos', to: '/catalogos/categorias', modulo: 'reportes', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
   // Plataforma (C-07): empresas, su marca y sus módulos. Solo el super admin.

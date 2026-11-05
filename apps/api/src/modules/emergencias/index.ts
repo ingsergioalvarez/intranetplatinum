@@ -99,8 +99,8 @@ export function crearServicioEmergencias({
 export function createEmergenciasModule(deps: EmergenciasDeps = {}): AppModule {
   const c = new EmergenciasController(crearServicioEmergencias(deps));
   const router = Router();
-  const personal = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.GUARDIA);
-  const mando = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR);
+  const personal = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.GUARDIA);
+  const mando = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE);
   router.use(authenticate);
   router.post('/', personal, rateLimit({ windowMin: 1, max: 10 }), validate({ body: emergenciaCreateSchema }), c.crear);
   router.get('/mia', personal, c.mia);

@@ -22,6 +22,8 @@ export const PERMISOS = {
   ASISTENCIA_MARCAR: 'asistencia.marcar',
   ASISTENCIA_VER: 'asistencia.ver',
   ASISTENCIA_ROSTROS: 'asistencia.rostros',
+  /** Ver a toda la empresa sin importar el área (C-10). Se da a personas concretas; la pantalla para darlo llega con C-11. */
+  ALCANCE_EMPRESA: 'alcance.empresa',
 } as const;
 
 export type Permiso = (typeof PERMISOS)[keyof typeof PERMISOS];
@@ -47,6 +49,7 @@ export const PERMISO_DESCRIPCIONES: Record<Permiso, string> = {
   'asistencia.marcar': 'Marcar entrada, comida y salida',
   'asistencia.ver': 'Ver las marcas de asistencia de todos los guardias',
   'asistencia.rostros': 'Registrar el rostro de los guardias',
+  'alcance.empresa': 'Ver a todas las personas de la empresa, sin importar su área',
 };
 
 const P = PERMISOS;
@@ -71,13 +74,34 @@ export const PERMISOS_POR_ROL: Record<Rol, Permiso[]> = {
     P.ASISTENCIA_VER,
     P.ASISTENCIA_ROSTROS,
   ],
+  // Jefe (C-10): lo operativo, igual que el supervisor, más marcar su propia asistencia. Crear, editar y dar de baja usuarios,
+  // la auditoría y ver a toda la empresa quedan para el admin hasta C-11.
+  [ROLES.JEFE]: [
+    P.USUARIOS_VER,
+    P.CLIENTES_VER,
+    P.CLIENTES_CREAR,
+    P.CLIENTES_EDITAR,
+    P.CLIENTES_BAJA,
+    P.REPORTES_VER_TODOS,
+    P.REPORTES_VER_PROPIOS,
+    P.REPORTES_CREAR,
+    P.REPORTES_SEGUIMIENTO,
+    P.REPORTES_NOTIFICAR,
+    P.REPORTES_ESTATUS,
+    P.CATALOGOS_ADMINISTRAR,
+    P.GRUPOS_ADMINISTRAR,
+    P.ASISTENCIA_VER,
+    P.ASISTENCIA_ROSTROS,
+    P.ASISTENCIA_MARCAR,
+  ],
   [ROLES.GUARDIA]: [P.REPORTES_VER_PROPIOS, P.REPORTES_CREAR, P.REPORTES_SEGUIMIENTO, P.ASISTENCIA_MARCAR],
   [ROLES.CLIENTE]: [P.REPORTES_VER_PROPIOS, P.REPORTES_SEGUIMIENTO, P.ASISTENCIA_VER],
 };
 
 export const ROL_DESCRIPCIONES: Record<Rol, string> = {
   [ROLES.ADMIN]: 'Administrador',
+  [ROLES.JEFE]: 'Jefe',
   [ROLES.SUPERVISOR]: 'Supervisor',
-  [ROLES.GUARDIA]: 'Guardia',
+  [ROLES.GUARDIA]: 'Colaborador',
   [ROLES.CLIENTE]: 'Cliente',
 };

@@ -130,7 +130,7 @@ export function createCambiosModule({
   const c = new CambiosController(new CambiosService(repo, turnos, puerto, audit, avisar, bitacora, hoy, ahora, atencion), alcance);
   const router = Router();
   // El guardia pide los suyos; admin y supervisor, todos los de su alcance.
-  router.use(authenticate, requireRoles(ROLES.GUARDIA, ROLES.SUPERVISOR, ROLES.ADMIN));
+  router.use(authenticate, requireRoles(ROLES.GUARDIA, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.ADMIN));
   router.get('/opciones', c.opciones);
   router.get('/', validate({ query: cambiosTurnoQuerySchema }), c.listar);
   router.post('/', validate({ body: nuevoCambioTurnoSchema }), c.crear);

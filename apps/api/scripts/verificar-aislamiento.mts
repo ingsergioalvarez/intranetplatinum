@@ -231,7 +231,7 @@ async function main() {
     check('la empresa 1 solo ve su aviso', ve1.length === 1 && ve1[0].empresaId === E1, ve1.length);
 
     console.log('\n9. Módulos encendidos y empresa elegida por el super admin (C-09)');
-    const { lectorModulos } = await imp('core/modulos/guardia.ts');
+    const { lectorModulos } = await imp('core/modulos/lector.ts');
     // La empresa 1 tiene solo Ausencias encendido; la 2 (Acme) no tiene ninguno.
     await sinFiltroDeEmpresa(() => prisma.empresaModulo.deleteMany({}));
     await sinFiltroDeEmpresa(() => prisma.empresaModulo.create({ data: { empresaId: E1, modulo: 'ausencias', encendido: true } }));
@@ -291,6 +291,58 @@ async function main() {
     check('lo eliminado ya no existe (404)', (await como(T1).get(`/areas/${nominaId}`)).status === 404);
     check('eliminar queda en la auditoría', (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: 'areas.eliminar', empresaId: E1 } }))) === 1);
     check('las acciones de áreas quedan en la auditoría', (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: { startsWith: 'areas.' }, empresaId: E1 } }))) >= 8);
+
+    console.log('\n11. Alcance por área (C-10): jefe, supervisor y permiso de empresa');
+    const { PERMISOS_POR_ROL } = await import('@platinum/shared');
+    const rolGuardia = (await prisma.rol.findFirst({ where: { clave: 'guardia' } })) ?? (await prisma.rol.create({ data: { clave: 'guardia', nombre: 'Guardia' } }));
+    (await prisma.rol.findFirst({ where: { clave: 'jefe' } })) ?? (await prisma.rol.create({ data: { clave: 'jefe', nombre: 'Jefe' } }));
+    const rolSupervisor = await prisma.rol.findFirst({ where: { clave: 'supervisor' } });
+    const area = async (nombre: string, padreId?: number) => (await como(T1).post('/areas', { nombre, padreId })).body.data.id as number;
+    const sistemas = await area('Sistemas');
+    const soporte = await area('Soporte', sistemas);
+    const rrhh = await area('Recursos Humanos');
+    const persona = (nombre: string, email: string, rolId: number, areaId: number) =>
+      sinFiltroDeEmpresa(() => prisma.usuario.create({ data: { nombre, email, passwordHash: 'x', rolId, empresaId: E1, telefono: '5550000009', areaId } }));
+    const jefeSis = await persona('Jefe Sistemas', 'jefe.sis@x.mx', rolSupervisor.id, sistemas);
+    const supSoporte = await persona('Sup Soporte', 'sup.soporte@x.mx', rolSupervisor.id, soporte);
+    const gSis = await persona('Guardia Sistemas', 'g.sis@x.mx', rolGuardia.id, sistemas);
+    const gSoporte = await persona('Guardia Soporte', 'g.soporte@x.mx', rolGuardia.id, soporte);
+    const gRh = await persona('Guardia RH', 'g.rh@x.mx', rolGuardia.id, rrhh);
+    await como(T1).patch(`/areas/${sistemas}`, { jefeId: jefeSis.id });
+    const tokenDe = (u: any, permisos: string[] = [...PERMISOS_POR_ROL.supervisor], rol = 'supervisor') =>
+      signAccessToken({ id: u.id, email: u.email, rol, permisos, empresaId: E1 });
+    const rolDe = async (id: number) =>
+      (await sinFiltroDeEmpresa(() => prisma.usuario.findUnique({ where: { id }, select: { rol: { select: { clave: true } } } })))?.rol.clave;
+    check('al designar a alguien jefe de un área su rol pasa a Jefe', (await rolDe(jefeSis.id)) === 'jefe');
+    const TJefe = tokenDe(jefeSis, [...PERMISOS_POR_ROL.jefe], 'jefe');
+    const TSup = tokenDe(supSoporte);
+    const correosDe = async (t: string) => ((await como(t).get('/usuarios?limit=100')).body?.data?.items ?? []).map((u: any) => u.email);
+
+    const verJefe = await correosDe(TJefe);
+    check('el jefe ve su área y las subáreas', ['jefe.sis@x.mx', 'sup.soporte@x.mx', 'g.sis@x.mx', 'g.soporte@x.mx'].every((e) => verJefe.includes(e)), verJefe);
+    check('el jefe no ve a las personas de otra área', !verJefe.includes('g.rh@x.mx') && !verJefe.includes('admin1@x.mx'), verJefe);
+    const verSup = await correosDe(TSup);
+    check('el supervisor ve solo su propia área', verSup.includes('g.soporte@x.mx') && verSup.includes('sup.soporte@x.mx') && !verSup.includes('g.sis@x.mx') && !verSup.includes('g.rh@x.mx'), verSup);
+    const adminVe = await correosDe(T1);
+    check('el admin de la empresa ve a todos (Carteras apagado)', ['g.sis@x.mx', 'g.rh@x.mx', 'jefe.sis@x.mx'].every((e) => adminVe.includes(e)));
+    check('un usuario fuera del alcance responde 404', (await como(TJefe).get(`/usuarios/${gRh.id}`)).status === 404 && (await como(TSup).get(`/usuarios/${gSis.id}`)).status === 404);
+    check('un usuario dentro del alcance se puede ver', (await como(TJefe).get(`/usuarios/${gSoporte.id}`)).status === 200);
+    check('la ficha de asistencia de alguien fuera del alcance responde 404', (await como(TJefe).get(`/asistencia/guardias/${gRh.id}?mes=2026-11`)).status === 404);
+    check('la ficha de asistencia de alguien del alcance responde 200', (await como(TJefe).get(`/asistencia/guardias/${gSis.id}?mes=2026-11`)).status === 200);
+    const conPermiso = await correosDe(tokenDe(supSoporte, [...PERMISOS_POR_ROL.supervisor, 'alcance.empresa']));
+    check('con el permiso "ver a toda la empresa" ve a todos', ['g.rh@x.mx', 'g.sis@x.mx', 'admin1@x.mx'].every((e) => conPermiso.includes(e)), conPermiso);
+    const direccion = await area('Dirección');
+    await como(T1).patch(`/areas/${direccion}`, { jefeId: admin1.id });
+    check('un admin designado jefe sigue siendo admin (no se le baja de nivel)', (await rolDe(admin1.id)) === 'admin');
+    await como(T1).patch(`/areas/${sistemas}`, { jefeId: null });
+    check('al quitarle la jefatura vuelve a Colaborador', (await rolDe(jefeSis.id)) === 'guardia');
+    await como(T1).patch(`/areas/${sistemas}`, { jefeId: jefeSis.id });
+    check('al designarlo de nuevo vuelve a ser Jefe', (await rolDe(jefeSis.id)) === 'jefe');
+    await como(T1).put(`/areas/personas/${jefeSis.id}`, { areaId: rrhh });
+    check('si el jefe se va de su área deja de serlo y vuelve a Colaborador', (await rolDe(jefeSis.id)) === 'guardia' && (await como(T1).get(`/areas/${sistemas}`)).body?.data?.jefe === null);
+    const cambioDeRol = await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: 'areas.rol_jefe', empresaId: E1 } }));
+    check('los cambios de rol por jefatura quedan en la auditoría', cambioDeRol >= 3, cambioDeRol);
+    check('nadie ve a personas de otra empresa', ![...verJefe, ...verSup, ...conPermiso].includes('admin2@x.mx'));
 
     await disconnectPrisma();
     console.log(`\n${fallos === 0 ? 'TODO BIEN' : 'HAY FALLOS'}: ${total - fallos} de ${total} comprobaciones correctas.`);

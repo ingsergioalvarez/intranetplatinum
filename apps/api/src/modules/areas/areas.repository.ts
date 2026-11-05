@@ -25,6 +25,7 @@ export interface UsuarioParaArea {
   id: number;
   nombre: string;
   areaId: number | null;
+  rol: Rol;
 }
 
 export interface CandidatoFila extends PersonaFila {
@@ -44,6 +45,8 @@ export abstract class AreasRepository {
   abstract eliminar(ids: number[]): Promise<void>;
   abstract personas(areaId: number): Promise<PersonaFila[]>;
   abstract usuario(id: number): Promise<UsuarioParaArea | null>;
+  /** Cambia el rol de una persona. Con `soloSiEs`, solo si hoy tiene ese rol. Devuelve si lo cambió. */
+  abstract ponerRol(usuarioId: number, rol: Rol, soloSiEs?: Rol): Promise<boolean>;
   /** Cambia el área de una persona (null = sin área). Si era jefe de otra área, deja de serlo. */
   abstract asignar(usuarioId: number, areaId: number | null): Promise<void>;
   abstract candidatos(q: string | undefined): Promise<CandidatoFila[]>;
@@ -120,7 +123,23 @@ export class PrismaAreasRepository extends AreasRepository {
   }
 
   async usuario(id: number) {
-    return getPrisma().usuario.findFirst({ where: { id, deletedAt: null }, select: { id: true, nombre: true, areaId: true } });
+    const u = await getPrisma().usuario.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, nombre: true, areaId: true, rol: { select: { clave: true } } },
+    });
+    return u && { id: u.id, nombre: u.nombre, areaId: u.areaId, rol: u.rol.clave as Rol };
+  }
+
+  async ponerRol(usuarioId: number, rol: Rol, soloSiEs?: Rol) {
+    const prisma = getPrisma();
+    const destino = await prisma.rol.findFirst({ where: { clave: rol }, select: { id: true } });
+    // Los roles los crea el seed: sin él, designar jefes no puede cambiar el rol y es mejor enterarse.
+    if (!destino) throw new Error(`Falta el rol "${rol}": ejecuta npm run db:seed`);
+    const { count } = await prisma.usuario.updateMany({
+      where: { id: usuarioId, ...(soloSiEs && { rol: { clave: soloSiEs } }) },
+      data: { rolId: destino.id },
+    });
+    return count > 0;
   }
 
   async asignar(usuarioId: number, areaId: number | null) {

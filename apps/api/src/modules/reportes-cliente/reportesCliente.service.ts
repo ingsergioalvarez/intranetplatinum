@@ -50,7 +50,7 @@ export class ReportesClienteService extends BaseService {
       if (!user.clienteId) throw HttpError.forbidden();
       return { tipo: 'cliente', clienteId: user.clienteId };
     }
-    if (user.rol === ROLES.SUPERVISOR) return { tipo: 'supervisor', usuarioId: user.id };
+    if (user.rol === ROLES.SUPERVISOR || user.rol === ROLES.JEFE) return { tipo: 'supervisor', usuarioId: user.id };
     if (user.rol === ROLES.ADMIN) {
       const cartera = carteraDe(user);
       return cartera === undefined ? { tipo: 'todos' } : { tipo: 'cartera', propietarioId: cartera };
