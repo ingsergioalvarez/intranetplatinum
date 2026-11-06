@@ -5,6 +5,23 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-06 (4) — Roles y permisos, parte 1: catálogo de permisos (C-11, DC-019)
+
+#### Añadido
+
+- **Catálogo de 33 permisos** agrupados por módulo (`CATALOGO_PERMISOS` y `GRUPOS_PERMISOS` en `packages/shared`): personas, áreas, asistencia, ausencias, horas extra, cambios de turno, turnos y horarios, bitácora, reporte de asistencia, emergencias, cobertura, y grupos, auditoría, alcance y roles. Es lo que la pantalla de Roles y permisos (parte 5) mostrará.
+- Permisos nuevos: `areas.*`, `asistencia.decidir`, `asistencia.administrar` (revertir decisiones y borrar rostros; por defecto solo el admin), `ausencias.*`, `horas_extra.*`, `cambios.*`, `turnos.administrar`, `horarios.*`, `bitacora.*`, `informes.ver`, `emergencias.lanzar` y `emergencias.atender`, `cobertura.*` y `roles.administrar`.
+- **Roles de partida:** el admin tiene todos; Jefe y Supervisor son iguales (el jefe además marca su propia asistencia); el Colaborador recibe lo que necesita por lógica (marcar, pedir ausencias y cambios de turno, pedir cubrir, lanzar SOS, ver su bitácora, solicitar horas extra) mientras se define su pantalla.
+- Prueba nueva `permisos.test.ts` (9 pruebas): catálogo único y completo, el admin tiene todo, **ningún rol pierde lo que podía hacer antes**, lo delicado es solo del admin y el colaborador no tiene nada de mando.
+
+#### Notas
+
+- **No cambia lo que se ve ni lo que cada rol puede hacer:** las rutas todavía deciden por el nombre del rol. Esto se convierte a permisos en la parte 2.
+- Los permisos de clientes y `catalogos.administrar` siguen existiendo como "heredados": las rutas de turnos, sitios y clientes todavía los piden. No salen en el catálogo editable y se van con las sedes (C-12 y C-13).
+- **A confirmar en la parte 2:** hoy solo el admin puede resolver ausencias, pero desde el paso 5 de C-10 los avisos de ausencias llegan al jefe. En la matriz de partida el Jefe y el Supervisor ya tienen `ausencias.resolver`, para que el aviso sea accionable. Se puede cambiar desde la pantalla de roles.
+- El seed crea los permisos nuevos: correr `npm run db:seed` después de `db:deploy` (confirmar antes `SEED_ADMIN_EMAIL`).
+- Sin desplegar. 554 pruebas, tipos y lint sin errores, 118 de 118 comprobaciones de extremo a extremo.
+
 ### Sesión 2026-11-06 (3) — Supervisor de área (C-19, DC-019)
 
 #### Añadido
