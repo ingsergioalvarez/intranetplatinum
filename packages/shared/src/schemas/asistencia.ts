@@ -576,7 +576,6 @@ export interface HistorialSitio {
 /** Lo que se borraría al eliminar definitivamente un cliente con sus sitios (solo admin, DA-50). */
 export interface HistorialCliente extends HistorialSitio {
   sitios: number;
-  contactos: number;
   /** Usuarios del portal de este cliente: no se borran, quedan sin cliente. */
 }
 

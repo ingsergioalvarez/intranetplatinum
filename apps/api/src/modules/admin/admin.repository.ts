@@ -137,11 +137,8 @@ export class PrismaAdminRepository extends AdminRepository {
     const sitios = (await db.sitio.findMany({ where: { clienteId: id }, select: { id: true } })).map(
       (x) => x.id,
     );
-    const [historial, contactos] = await Promise.all([
-      this.contarSitios(sitios),
-      db.clienteContacto.count({ where: { clienteId: id } }),
-    ]);
-    return { ...historial, sitios: sitios.length, contactos };
+    const historial = await this.contarSitios(sitios);
+    return { ...historial, sitios: sitios.length };
   }
 
   /** Borra, dentro de la transacción, todo lo que cuelga de esos sitios; devuelve los archivos. */
@@ -173,7 +170,6 @@ export class PrismaAdminRepository extends AdminRepository {
         (x) => x.id,
       );
       const archivos = await this.borrarSitios(tx, sitios);
-      await tx.clienteContacto.deleteMany({ where: { clienteId: id } });
       await tx.cliente.delete({ where: { id } });
       return archivos;
     }

@@ -5,7 +5,6 @@ import {
   clienteCreateSchema,
   clienteFiltroSchema,
   clienteUpdateSchema,
-  contactoSchema,
   idParamSchema,
   sitioSchema,
 } from '@platinum/shared';
@@ -21,7 +20,6 @@ import { ClientesController } from './clientes.controller';
 import { ClientesRepository, PrismaClientesRepository } from './clientes.repository';
 import { ClientesService } from './clientes.service';
 
-const contactoParams = idParamSchema.extend({ contactoId: z.coerce.number().int().positive() });
 const sitioParams = idParamSchema.extend({ sitioId: z.coerce.number().int().positive() });
 
 interface ClientesModuleDeps {
@@ -55,20 +53,6 @@ export function createClientesModule({
   router.patch('/:id', editar, validate({ params: idParamSchema, body: clienteUpdateSchema }), c.update);
   router.patch('/:id/baja', requirePermission(PERMISOS.CLIENTES_BAJA), id, c.baja);
   router.patch('/:id/reactivar', requirePermission(PERMISOS.CLIENTES_BAJA), id, c.reactivar);
-
-  router.post(
-    '/:id/contactos',
-    editar,
-    validate({ params: idParamSchema, body: contactoSchema }),
-    c.createContacto,
-  );
-  router.put(
-    '/:id/contactos/:contactoId',
-    editar,
-    validate({ params: contactoParams, body: contactoSchema }),
-    c.updateContacto,
-  );
-  router.delete('/:id/contactos/:contactoId', editar, validate({ params: contactoParams }), c.deleteContacto);
 
   router.post('/:id/sitios', editar, validate({ params: idParamSchema, body: sitioSchema }), c.createSitio);
   router.put(

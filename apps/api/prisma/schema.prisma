@@ -177,7 +177,6 @@ model Empresa {
 
   auditorias            Auditoria[]
   clientes              Cliente[]
-  clienteContactos      ClienteContacto[]
   sitios                Sitio[]
   sitioGuardias         SitioGuardia[]
   grupoGuardiass        GrupoGuardias[]
@@ -302,7 +301,6 @@ model Cliente {
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   deletedAt       DateTime?           @map("deleted_at")
-  contactos       ClienteContacto[]
   sitios          Sitio[]
 
   empresaId         Int     @map("empresa_id")
@@ -312,29 +310,6 @@ model Cliente {
   @@unique([empresaId, rfc])
   @@index([empresaId])
   @@map("clientes")
-}
-
-model ClienteContacto {
-  id                   Int            @id @default(autoincrement())
-  clienteId            Int            @map("cliente_id")
-  nombre               String         @db.VarChar(120)
-  puesto               String?        @db.VarChar(100)
-  telefono             String?        @db.VarChar(30)
-  celular              String?        @db.VarChar(30)
-  email                String?        @db.VarChar(160)
-  esResponsable        Boolean        @default(false) @map("es_responsable")
-  // Orden de aparición / escalamiento (menor = primero).
-  prioridad            Int            @default(0)
-  createdAt            DateTime       @default(now()) @map("created_at")
-  updatedAt            DateTime       @updatedAt @map("updated_at")
-  deletedAt            DateTime?      @map("deleted_at")
-  cliente              Cliente        @relation(fields: [clienteId], references: [id])
-
-  empresaId         Int     @map("empresa_id")
-  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  @@index([clienteId, deletedAt])
-  @@index([empresaId])
-  @@map("cliente_contactos")
 }
 
 model Sitio {

@@ -3,8 +3,6 @@ import {
   type ClienteDetalle,
   ClienteFiltro,
   ClienteResumen,
-  Contacto,
-  ContactoData,
   Paginated,
   Sitio,
   SitioData,
@@ -48,12 +46,9 @@ export class ClientesService extends BaseService {
 
   /** Ficha completa: datos, contactos y sitios (incluye sitios de baja para el historial). */
   async getDetalle(id: number): Promise<ClienteDetalle> {
-    const { totalSitios: _s, totalContactos: _c, responsable: _r, ...cliente } = await this.getById(id);
-    const [contactos, sitios] = await Promise.all([
-      this.repo.listContactos(id),
-      this.repo.listSitios(id, this.hoy(), true),
-    ]);
-    return { ...cliente, contactos, sitios };
+    const { totalSitios: _s, ...cliente } = await this.getById(id);
+    const sitios = await this.repo.listSitios(id, this.hoy(), true);
+    return { ...cliente, sitios };
   }
 
   async crear(data: ClienteCreateData, ctx: AccionCtx): Promise<ClienteResumen> {
@@ -94,47 +89,6 @@ export class ClientesService extends BaseService {
     await this.repo.restore(id);
     await this.auditar(ctx, 'clientes.reactivar', 'clientes', id, {
       nombreComercial: cliente.nombreComercial,
-    });
-  }
-
-  // ---------- Contactos (F2-03) ----------
-
-  async crearContacto(clienteId: number, data: ContactoData, ctx: AccionCtx): Promise<Contacto> {
-    await this.clienteEditable(clienteId);
-    const contacto = await this.repo.createContacto(clienteId, data);
-    await this.auditar(ctx, 'clientes.contacto_crear', 'cliente_contactos', contacto.id, {
-      clienteId,
-      nombre: contacto.nombre,
-    });
-    return contacto;
-  }
-
-  async actualizarContacto(
-    clienteId: number,
-    contactoId: number,
-    data: ContactoData,
-    ctx: AccionCtx,
-  ): Promise<Contacto> {
-    await this.clienteEditable(clienteId);
-    const actual = await this.contactoDe(clienteId, contactoId);
-    const { antes, despues, hayCambios } = calcularCambios<ContactoData>(actual, data);
-    if (!hayCambios) return actual;
-    const contacto = await this.repo.updateContacto(contactoId, data);
-    await this.auditar(ctx, 'clientes.contacto_editar', 'cliente_contactos', contactoId, {
-      clienteId,
-      antes,
-      despues,
-    });
-    return contacto;
-  }
-
-  async eliminarContacto(clienteId: number, contactoId: number, ctx: AccionCtx): Promise<void> {
-    await this.clienteEditable(clienteId);
-    const contacto = await this.contactoDe(clienteId, contactoId);
-    await this.repo.softDeleteContacto(contactoId);
-    await this.auditar(ctx, 'clientes.contacto_eliminar', 'cliente_contactos', contactoId, {
-      clienteId,
-      nombre: contacto.nombre,
     });
   }
 
@@ -188,13 +142,6 @@ export class ClientesService extends BaseService {
     const cliente = await this.getById(id);
     if (cliente.deletedAt) throw HttpError.conflict('El cliente está dado de baja; reactívalo primero');
     return cliente;
-  }
-
-  /** El contacto debe pertenecer al cliente de la ruta (evita editar contactos ajenos por id). */
-  private async contactoDe(clienteId: number, contactoId: number) {
-    const contacto = await this.repo.findContacto(contactoId);
-    if (!contacto || contacto.clienteId !== clienteId) throw HttpError.notFound('Contacto no encontrado');
-    return contacto;
   }
 
   private async sitioDe(clienteId: number, sitioId: number) {

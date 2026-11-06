@@ -34,10 +34,9 @@ export function EliminarSitioDialog({
 const ETIQUETAS_CLIENTE: Record<keyof HistorialCliente, [string, string]> = {
   ...ETIQUETAS_SITIO,
   sitios: ['sitio', 'sitios'],
-  contactos: ['contacto', 'contactos'],
 };
 
-/** Eliminación definitiva de un cliente con sus sitios y contactos (solo admin, DA-50). */
+/** Eliminación definitiva de un cliente con sus sitios (solo admin, DA-50). */
 export function EliminarClienteDialog({
   cliente,
   onCancel,

@@ -11,13 +11,11 @@ import {
   Plus,
   RotateCcw,
   Shield,
-  Star,
-  Users,
   XCircle,
   UserCog,
   Trash2,
 } from 'lucide-react';
-import { PERMISOS, ROLES, type Contacto, type Sitio } from '@platinum/shared';
+import { PERMISOS, ROLES, type Sitio } from '@platinum/shared';
 import { ApiError, mensajeDeError } from '../../core/api';
 import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { mapsUrl } from '../../core/format/mapas';
@@ -32,17 +30,15 @@ import {
   toast,
 } from '../../components/ui';
 import { ClienteModal } from './ClienteModal';
-import { ContactoModal } from './ContactoModal';
 import { EliminarClienteDialog } from './EliminarSitioClienteDialogs';
 import { EstatusClienteBadge } from './EstatusClienteBadge';
 import { CoberturaSitioModal } from './CoberturaSitioModal';
 import { SitioModal } from './SitioModal';
 import { clientesService } from './clientes.service';
 
-/** Modal abierto en la ficha: `null` en contacto/sitio = alta. */
+/** Modal abierto en la ficha: `null` en sitio = alta. */
 type Abierto =
   | { tipo: 'cliente' }
-  | { tipo: 'contacto'; contacto: Contacto | null }
   | { tipo: 'sitio'; sitio: Sitio | null }
   | { tipo: 'guardias'; sitio: Sitio };
 
@@ -205,65 +201,6 @@ export function ClienteDetallePage() {
           </dl>
         </Card>
 
-        <Card>
-          <CardHeader
-            title={
-              <span className="flex items-center gap-2">
-                <Users className="size-4 text-slate-400" />
-                Contactos
-              </span>
-            }
-            subtitle={`${c.contactos.length} registrados`}
-            actions={
-              puedeEditar && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  icon={<Plus className="size-4" />}
-                  onClick={() => setAbierto({ tipo: 'contacto', contacto: null })}
-                >
-                  Agregar
-                </Button>
-              )
-            }
-          />
-          {c.contactos.length === 0 ? (
-            <EmptyState
-              title="Sin contactos"
-              description="Agrega al responsable y a quienes deben recibir avisos."
-            />
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {c.contactos.map((ct) => (
-                <li key={ct.id}>
-                  <button
-                    type="button"
-                    onClick={() => setAbierto({ tipo: 'contacto', contacto: ct })}
-                    className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 active:bg-slate-100"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-slate-900">{ct.nombre}</p>
-                      <p className="truncate text-sm text-slate-500">
-                        {[ct.puesto, ct.celular ?? ct.telefono, ct.email].filter(Boolean).join(' · ') ||
-                          'Sin datos de contacto'}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-1">
-                      {ct.esResponsable && (
-                        <Badge tone="brand">
-                          <Star className="mr-1 size-3" />
-                          Responsable
-                        </Badge>
-                      )}
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
-
         <Card className="md:col-span-2">
           <CardHeader
             title={
@@ -366,15 +303,6 @@ export function ClienteDetallePage() {
       </div>
 
       {abierto?.tipo === 'cliente' && <ClienteModal cliente={c} onClose={() => setAbierto(null)} />}
-      {abierto?.tipo === 'contacto' && (
-        <ContactoModal
-          key={abierto.contacto?.id ?? 'nuevo'}
-          clienteId={c.id}
-          contacto={abierto.contacto}
-          readOnly={!puedeEditar}
-          onClose={() => setAbierto(null)}
-        />
-      )}
       {abierto?.tipo === 'sitio' && (
         <SitioModal
           key={abierto.sitio?.id ?? 'nuevo'}

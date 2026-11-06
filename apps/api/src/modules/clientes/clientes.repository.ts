@@ -2,8 +2,6 @@ import type {
   ClienteCreateData,
   ClienteFiltro,
   ClienteResumen,
-  Contacto,
-  ContactoData,
   Paginated,
   PaginationQuery,
   Sitio,
@@ -26,12 +24,6 @@ export abstract class ClientesRepository extends BaseRepository<
 > {
   /** Incluye clientes dados de baja (el RFC es único en toda la tabla). */
   abstract findByRfc(rfc: string): Promise<ClienteResumen | null>;
-
-  abstract listContactos(clienteId: number): Promise<Contacto[]>;
-  abstract findContacto(id: number): Promise<Contacto | null>;
-  abstract createContacto(clienteId: number, data: ContactoData): Promise<Contacto>;
-  abstract updateContacto(id: number, data: ContactoData): Promise<Contacto>;
-  abstract softDeleteContacto(id: number): Promise<void>;
 
   /** Sitios del cliente; `asignacionesVigentes` se calcula a la fecha `hoy`. */
   abstract listSitios(clienteId: number, hoy: string, incluirBaja?: boolean): Promise<Sitio[]>;
@@ -62,41 +54,20 @@ const clienteSelect = {
   _count: {
     select: {
       sitios: { where: { deletedAt: null } },
-      contactos: { where: { deletedAt: null } },
     },
-  },
-  contactos: {
-    where: { deletedAt: null, esResponsable: true },
-    orderBy: [{ prioridad: 'asc' }, { id: 'asc' }],
-    take: 1,
-    select: { nombre: true },
   },
 } satisfies Prisma.ClienteSelect;
 
 type ClienteRow = Prisma.ClienteGetPayload<{ select: typeof clienteSelect }>;
 
-function toCliente({ _count, contactos, createdAt, deletedAt, ...c }: ClienteRow): ClienteResumen {
+function toCliente({ _count, createdAt, deletedAt, ...c }: ClienteRow): ClienteResumen {
   return {
     ...c,
     createdAt: createdAt.toISOString(),
     deletedAt: deletedAt?.toISOString() ?? null,
     totalSitios: _count.sitios,
-    totalContactos: _count.contactos,
-    responsable: contactos[0]?.nombre ?? null,
   };
 }
-
-const contactoSelect = {
-  id: true,
-  clienteId: true,
-  nombre: true,
-  puesto: true,
-  telefono: true,
-  celular: true,
-  email: true,
-  esResponsable: true,
-  prioridad: true,
-} satisfies Prisma.ClienteContactoSelect;
 
 /** Asignación vigente a la fecha `hoy` (usa `vigenteHasta`, que ya considera eventos que cruzan medianoche). */
 export function vigenteEn(hoy: string): Prisma.SitioGuardiaWhereInput {
@@ -211,32 +182,6 @@ export class PrismaClientesRepository extends ClientesRepository {
 
   async restore(id: number) {
     await getPrisma().cliente.update({ where: { id }, data: { deletedAt: null } });
-  }
-
-  // ----- Contactos -----
-
-  async listContactos(clienteId: number) {
-    return getPrisma().clienteContacto.findMany({
-      where: { clienteId, deletedAt: null },
-      select: contactoSelect,
-      orderBy: [{ esResponsable: 'desc' }, { prioridad: 'asc' }, { nombre: 'asc' }],
-    });
-  }
-
-  async findContacto(id: number) {
-    return getPrisma().clienteContacto.findFirst({ where: { id, deletedAt: null }, select: contactoSelect });
-  }
-
-  async createContacto(clienteId: number, data: ContactoData) {
-    return getPrisma().clienteContacto.create({ data: { ...data, clienteId, empresaId: empresaActual() }, select: contactoSelect });
-  }
-
-  async updateContacto(id: number, data: ContactoData) {
-    return getPrisma().clienteContacto.update({ where: { id }, data, select: contactoSelect });
-  }
-
-  async softDeleteContacto(id: number) {
-    await getPrisma().clienteContacto.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
   // ----- Sitios -----

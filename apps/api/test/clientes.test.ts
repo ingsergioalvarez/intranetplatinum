@@ -6,8 +6,6 @@ import {
   ROLES,
   type ClienteCreateData,
   type ClienteResumen,
-  type Contacto,
-  type ContactoData,
   type Rol,
   type Sitio,
   type SitioData,
@@ -38,7 +36,6 @@ const DIARIO = { tipo: 'diario' as const };
 // ---------- Dobles en memoria ----------
 class MemoryClientesRepository extends ClientesRepository {
   clientes: ClienteResumen[] = [];
-  contactos: (Contacto & { deletedAt: string | null })[] = [];
   sitios: Sitio[] = [];
   terminados: number[] = [];
 
@@ -66,8 +63,6 @@ class MemoryClientesRepository extends ClientesRepository {
       createdAt: new Date().toISOString(),
       deletedAt: null,
       totalSitios: 0,
-      totalContactos: 0,
-      responsable: null,
     };
     this.clientes.push(c);
     return c;
@@ -80,25 +75,6 @@ class MemoryClientesRepository extends ClientesRepository {
   }
   async restore(id: number) {
     (await this.findById(id))!.deletedAt = null;
-  }
-  async listContactos(clienteId: number) {
-    return this.contactos.filter((c) => c.clienteId === clienteId && !c.deletedAt);
-  }
-  async findContacto(id: number) {
-    return this.contactos.find((c) => c.id === id && !c.deletedAt) ?? null;
-  }
-  async createContacto(clienteId: number, data: ContactoData) {
-    const c = { id: this.contactos.length + 1, clienteId, deletedAt: null, ...data } as Contacto & {
-      deletedAt: null;
-    };
-    this.contactos.push(c);
-    return c;
-  }
-  async updateContacto(id: number, data: ContactoData) {
-    return Object.assign((await this.findContacto(id))!, data);
-  }
-  async softDeleteContacto(id: number) {
-    this.contactos.find((c) => c.id === id)!.deletedAt = 'x';
   }
   async listSitios(clienteId: number) {
     return this.sitios.filter((s) => s.clienteId === clienteId);
@@ -360,42 +336,20 @@ describe('clientes (F2-02)', () => {
     expect(audit.eventos.at(-1)?.datos).toEqual({ antes: { giro: null }, despues: { giro: 'Comercial' } });
   });
 
-  it('cliente de baja: no se edita ni se le agregan contactos/sitios; reactivar lo permite', async () => {
+  it('cliente de baja: no se edita ni se le agregan sitios; reactivar lo permite', async () => {
     expect((await como(SUPERVISOR).patch('/clientes/1/baja')).status).toBe(204);
     expect((await como(SUPERVISOR).patch('/clientes/1', { giro: 'X' })).status).toBe(409);
-    expect((await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Ana' })).status).toBe(409);
     expect((await como(SUPERVISOR).post('/clientes/1/sitios', { nombre: 'Torre' })).status).toBe(409);
     expect((await como(SUPERVISOR).patch('/clientes/1/reactivar')).status).toBe(204);
     expect((await como(SUPERVISOR).patch('/clientes/1', { giro: 'X' })).status).toBe(200);
   });
 
-  it('detalle incluye contactos y sitios; 404 si no existe', async () => {
-    await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Laura', esResponsable: true });
+  it('detalle incluye los sitios; 404 si no existe', async () => {
     await como(SUPERVISOR).post('/clientes/1/sitios', { nombre: 'Torre A' });
     const res = await como(SUPERVISOR).get('/clientes/1');
-    expect(res.body.data.contactos).toHaveLength(1);
     expect(res.body.data.sitios).toHaveLength(1);
     expect(res.body.data.totalSitios).toBeUndefined();
     expect((await como(SUPERVISOR).get('/clientes/99')).status).toBe(404);
-  });
-});
-
-describe('contactos (F2-03)', () => {
-  it('varios contactos por cliente; el correo debe ser válido', async () => {
-    expect((await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Laura' })).status).toBe(201);
-    expect((await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Pedro' })).status).toBe(201);
-    const malCorreo = await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Ana', email: 'no-es-correo' });
-    expect(malCorreo.status).toBe(400);
-    expect(malCorreo.body.error.details[0].path).toBe('email');
-    expect(await clientes.listContactos(1)).toHaveLength(2);
-  });
-
-  it('no permite editar o borrar un contacto de otro cliente', async () => {
-    await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Laura' });
-    expect((await como(SUPERVISOR).put('/clientes/2/contactos/1', { nombre: 'Xavier' })).status).toBe(404);
-    expect((await como(SUPERVISOR).delete('/clientes/2/contactos/1')).status).toBe(404);
-    expect((await como(SUPERVISOR).delete('/clientes/1/contactos/1')).status).toBe(204);
-    expect(await clientes.listContactos(1)).toHaveLength(0);
   });
 });
 

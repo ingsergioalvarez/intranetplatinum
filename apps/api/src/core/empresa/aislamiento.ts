@@ -17,7 +17,6 @@ export const MODELOS_CON_EMPRESA: ReadonlySet<string> = new Set([
   'Area',
   'Auditoria',
   'Cliente',
-  'ClienteContacto',
   'Sitio',
   'SitioGuardia',
   'GrupoGuardias',

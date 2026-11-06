@@ -49,7 +49,6 @@ class MemoryAdminRepository extends AdminRepository {
       marcas: 40,
       coberturas: 1,
       sitios: 2,
-      contactos: 1,
     };
   }
   async eliminarSitio(id: number) {
@@ -168,10 +167,7 @@ describe('admin: eliminar sitios y clientes definitivamente (DA-50)', () => {
       marcas: 40,
       coberturas: 1,
     });
-    expect((await como('admin').get('/clientes/3/historial')).body.data).toMatchObject({
-      sitios: 2,
-      contactos: 1,
-    });
+    expect((await como('admin').get('/clientes/3/historial')).body.data).toMatchObject({ sitios: 2 });
     expect((await como('admin').get('/sitios/99/historial')).status).toBe(404);
   });
 

@@ -86,39 +86,9 @@ export interface Cliente {
 /** Fila de la lista de clientes con totales. */
 export interface ClienteResumen extends Cliente {
   totalSitios: number;
-  totalContactos: number;
-  /** Nombre del primer responsable, para mostrar en la lista. */
-  responsable: string | null;
 }
 
 // ---------- Contactos ----------
-
-export const contactoSchema = z
-  .object({
-    nombre: z.string().trim().min(2, 'Escribe el nombre').max(120),
-    puesto: textoOpcional(100),
-    telefono: textoOpcional(30),
-    celular: textoOpcional(30),
-    email: emailOpcional,
-    esResponsable: z.boolean().default(false),
-    prioridad: z.coerce.number().int().min(0).max(99).default(0),
-  })
-  ;
-
-export type ContactoInput = z.input<typeof contactoSchema>;
-export type ContactoData = z.output<typeof contactoSchema>;
-
-export interface Contacto {
-  id: number;
-  clienteId: number;
-  nombre: string;
-  puesto: string | null;
-  telefono: string | null;
-  celular: string | null;
-  email: string | null;
-  esResponsable: boolean;
-  prioridad: number;
-}
 
 // ---------- Sitios ----------
 
@@ -358,6 +328,5 @@ export interface Grupo {
 }
 
 export interface ClienteDetalle extends Cliente {
-  contactos: Contacto[];
   sitios: Sitio[];
 }

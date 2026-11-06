@@ -5,6 +5,19 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-06 (2) — Se quitan los contactos de un cliente (C-20)
+
+#### Quitado
+
+- **Contactos de un cliente**: la tabla `cliente_contactos` (migración `20261116000000_quitar_contactos_cliente`, probada antes en una copia con sus datos y con respaldo), los endpoints, la tarjeta y el formulario de la ficha del cliente, y la columna "Responsable" de la lista. Habían quedado sin función al borrar Reportes de incidentes.
+- El borrado definitivo de un cliente ya no cuenta ni borra contactos.
+
+#### Notas
+
+- Clientes queda solo con su ficha y sus sitios, hasta que las sedes (C-12 y C-13) los reemplacen y el módulo se borre completo. No hay que pasar nada a Empresas: una Empresa es quien usa la plataforma; un Cliente era un nivel de más de Platinum.
+- Sin desplegar. 545 pruebas, tipos y lint sin errores, 108 de 108 comprobaciones de extremo a extremo.
+- En el servidor la migración se aplica con `db:deploy` junto con las demás (11 nuevas desde las 45).
+
 ### Sesión 2026-11-06 — Se quitan los Reportes de incidentes (C-18, DC-019)
 
 #### Quitado

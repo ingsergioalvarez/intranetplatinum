@@ -7,9 +7,7 @@ import type {
   ClienteDetalle,
   ClienteResumen,
   ClienteUpdate,
-  Contacto,
   GuardiaDisponible,
-  ContactoInput,
   MiSitio,
   Sitio,
   SitioInput,
@@ -21,18 +19,6 @@ class ClientesService extends CrudService<ClienteResumen, ClienteCreate, Cliente
   /** Ficha completa: datos, contactos y sitios. */
   detalle(id: number) {
     return this.api.get<ClienteDetalle>(`${this.resource}/${id}`);
-  }
-
-  crearContacto(clienteId: number, data: ContactoInput) {
-    return this.api.post<Contacto>(`${this.resource}/${clienteId}/contactos`, data);
-  }
-
-  actualizarContacto(clienteId: number, id: number, data: ContactoInput) {
-    return this.api.put<Contacto>(`${this.resource}/${clienteId}/contactos/${id}`, data);
-  }
-
-  eliminarContacto(clienteId: number, id: number) {
-    return this.api.delete(`${this.resource}/${clienteId}/contactos/${id}`);
   }
 
   crearSitio(clienteId: number, data: SitioInput) {

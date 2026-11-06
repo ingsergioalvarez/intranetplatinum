@@ -52,7 +52,6 @@ const columns: Column<ClienteResumen>[] = [
     mobile: 'subtitle',
     render: (c) => <span className="text-slate-600">{c.razonSocial}</span>,
   },
-  { key: 'responsable', header: 'Responsable', render: (c) => c.responsable ?? '—' },
   {
     key: 'sitios',
     header: 'Sitios',

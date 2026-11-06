@@ -174,7 +174,7 @@ async function main() {
     check('transacción interactiva: solo ve lo de la empresa', JSON.stringify(enTx) === '["Cliente Uno"]', enTx);
     const lote = await conEmpresa(E2, () => prisma.$transaction([prisma.cliente.count(), prisma.usuario.count()]));
     check('transacción en lote: cuenta solo lo de la empresa', lote[0] === 2 && lote[1] === 2, lote);
-    const anidado = await conEmpresa(E1, () => prisma.cliente.findMany({ include: { sitios: true, contactos: true } }));
+    const anidado = await conEmpresa(E1, () => prisma.cliente.findMany({ include: { sitios: true } }));
     check('lecturas con relaciones anidadas siguen acotadas', anidado.length === 1 && anidado[0].nombreComercial === 'Cliente Uno');
     msg = '';
     try { await conEmpresa(E2, () => prisma.cliente.findUniqueOrThrow({ where: { id: c1.id } })); } catch (e: any) { msg = e.code ?? e.name; }

@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import type {
   ClienteCreateData,
   ClienteFiltro,
-  ContactoData,
   IdParam,
   SitioData,
 } from '@platinum/shared';
@@ -10,7 +9,6 @@ import { BaseController } from '../../core';
 import type { ClienteUpdateData } from './clientes.repository';
 import type { ClientesService } from './clientes.service';
 
-type ContactoParams = { id: number; contactoId: number };
 type SitioParams = { id: number; sitioId: number };
 
 export class ClientesController extends BaseController {
@@ -44,37 +42,6 @@ export class ClientesController extends BaseController {
 
   reactivar = async (req: Request, res: Response) => {
     await this.service.reactivar(this.params<IdParam>(req).id, this.accionCtx(req));
-    return this.noContent(res);
-  };
-
-  // ----- Contactos -----
-
-  createContacto = async (req: Request, res: Response) =>
-    this.created(
-      res,
-      await this.service.crearContacto(
-        this.params<IdParam>(req).id,
-        this.body<ContactoData>(req),
-        this.accionCtx(req),
-      ),
-    );
-
-  updateContacto = async (req: Request, res: Response) => {
-    const { id, contactoId } = this.params<ContactoParams>(req);
-    return this.ok(
-      res,
-      await this.service.actualizarContacto(
-        id,
-        contactoId,
-        this.body<ContactoData>(req),
-        this.accionCtx(req),
-      ),
-    );
-  };
-
-  deleteContacto = async (req: Request, res: Response) => {
-    const { id, contactoId } = this.params<ContactoParams>(req);
-    await this.service.eliminarContacto(id, contactoId, this.accionCtx(req));
     return this.noContent(res);
   };
 
