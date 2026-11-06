@@ -91,7 +91,7 @@ export function UsuariosPage() {
               <Badge tone="brand">Super admin</Badge>
             </span>
           )}
-          {!u.deletedAt && !u.telefono && (u.rol === ROLES.GUARDIA || u.rol === ROLES.SUPERVISOR || u.rol === ROLES.JEFE) && (
+          {!u.deletedAt && !u.telefono && (u.rol === ROLES.COLABORADOR || u.rol === ROLES.SUPERVISOR || u.rol === ROLES.JEFE) && (
             <span className="ml-1.5">
               <Badge tone="warning">Sin teléfono</Badge>
             </span>
@@ -189,7 +189,7 @@ export function UsuariosPage() {
               puedeRostros || esAdmin
                 ? (u) => (
                       <>
-                        {puedeRostros && u.rol === ROLES.GUARDIA && (
+                        {puedeRostros && u.rol === ROLES.COLABORADOR && (
                           <Button
                             variant="ghost"
                             size="sm"

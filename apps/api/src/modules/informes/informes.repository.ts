@@ -1,4 +1,4 @@
-import { TIPOS_EVENTO_BITACORA, type InformeDatos, type TipoInforme } from '@platinum/shared';
+import { TIPOS_EVENTO_BITACORA, type InformeDatos, type TipoInforme, ROLES } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
@@ -142,7 +142,7 @@ export class PrismaInformesRepository extends InformesRepository {
     return getPrisma().usuario.findMany({
       where: {
         deletedAt: null,
-        rol: { clave: 'guardia' },
+        rol: { clave: ROLES.COLABORADOR },
         ...(ids ? { id: { in: ids } } : { activo: true }),
       },
       orderBy: { nombre: 'asc' },
@@ -152,7 +152,7 @@ export class PrismaInformesRepository extends InformesRepository {
 
   async guardia(id: number) {
     return getPrisma().usuario.findFirst({
-      where: { id, deletedAt: null, rol: { clave: 'guardia' } },
+      where: { id, deletedAt: null, rol: { clave: ROLES.COLABORADOR } },
       select: { id: true, nombre: true, email: true },
     });
   }

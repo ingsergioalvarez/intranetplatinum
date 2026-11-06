@@ -6,6 +6,8 @@ import {
   type EmpresaUpdate,
 } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
+import { sinFiltroDeEmpresa } from '../../core/empresa/contexto';
+import { crearRolesBase } from '../../core/empresa/rolesBase';
 
 /** Empresa tal como se guarda. */
 export interface EmpresaFila {
@@ -116,8 +118,12 @@ export class PrismaPlataformaRepository extends PlataformaRepository {
     return getPrisma().empresa.findUnique({ where: { id } });
   }
 
-  create(data: EmpresaCreate) {
-    return getPrisma().empresa.create({ data });
+  async create(data: EmpresaCreate) {
+    const prisma = getPrisma();
+    const empresa = await prisma.empresa.create({ data });
+    // Toda empresa nace con sus roles de partida (C-11): los suyos, editables sin afectar a las demás.
+    await sinFiltroDeEmpresa(() => crearRolesBase(prisma, empresa.id));
+    return empresa;
   }
 
   update(id: number, data: ActualizacionEmpresa) {
@@ -163,7 +169,7 @@ export class PrismaPlataformaRepository extends PlataformaRepository {
         telefono,
         passwordHash,
         debeCambiarPassword: true,
-        rol: { connect: { clave: ROLES.ADMIN } },
+        rol: { connect: { empresaId_clave: { empresaId, clave: ROLES.ADMIN } } },
         empresa: { connect: { id: empresaId } },
       },
       select: SELECT_ADMIN,

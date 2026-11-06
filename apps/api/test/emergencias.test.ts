@@ -35,10 +35,10 @@ const ROL_DE: Record<number, string> = {
   11: 'admin',
   5: 'supervisor',
   6: 'supervisor',
-  21: 'guardia',
-  22: 'guardia',
-  31: 'guardia',
-  40: 'guardia',
+  21: 'colaborador',
+  22: 'colaborador',
+  31: 'colaborador',
+  40: 'colaborador',
 };
 
 class Memoria extends EmergenciasRepository {
@@ -164,10 +164,10 @@ const adminA = () => como(10, ROLES.ADMIN);
 const adminB = () => como(11, ROLES.ADMIN);
 const supA = () => como(5, ROLES.SUPERVISOR);
 const supB = () => como(6, ROLES.SUPERVISOR);
-const juan = () => como(21, ROLES.GUARDIA);
-const ana = () => como(22, ROLES.GUARDIA);
-const luis = () => como(31, ROLES.GUARDIA);
-const nadia = () => como(40, ROLES.GUARDIA);
+const juan = () => como(21, ROLES.COLABORADOR);
+const ana = () => como(22, ROLES.COLABORADOR);
+const luis = () => como(31, ROLES.COLABORADOR);
+const nadia = () => como(40, ROLES.COLABORADOR);
 
 beforeEach(() => {
   repo = new Memoria();

@@ -5,6 +5,25 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-06 (6) — Roles y permisos, parte 3: roles por empresa (C-11, DC-019)
+
+#### Cambiado
+
+- **Cada empresa tiene sus propios roles** (`roles.empresa_id`, `es_base`): admin, jefe, supervisor y colaborador, cada uno con sus permisos, que se podrán editar sin afectar a las demás. Migración `20261118000000_roles_por_empresa`, probada antes en una copia de la base con una segunda empresa y usuarios en ella y con respaldo: los roles que ya existían pasan a ser los de la primera empresa, las demás reciben una copia con los mismos permisos y sus usuarios se pasan a esa copia. No se perdió ningún usuario ni permiso.
+- **El rol "guardia" pasa a "colaborador"** también por dentro (`ROLES.COLABORADOR`, clave `colaborador`), en la base, el código, las pantallas y las pruebas.
+- **El seed ya no pisa lo editado:** crea los roles de partida que falten y los permisos nuevos del catálogo (solo a los roles que los llevan de partida), pero nunca quita ni vuelve a dar un permiso que ya existía. El admin siempre conserva todos los permisos.
+- **Toda empresa nueva nace con sus roles de partida** (al crearla desde Plataforma). Los usuarios se conectan al rol de su propia empresa.
+
+#### Añadido
+
+- `core/empresa/rolesBase.ts` (`crearRolesBase`, `sembrarRolesDeEmpresa`) y 8 comprobaciones nuevas de extremo a extremo (126 en total): cada empresa tiene sus 4 roles; quitarle un permiso a un rol de una empresa no toca el de la otra; volver a correr el seed no devuelve lo que se quitó; un permiso nuevo del catálogo sí llega; el admin conserva todo; una empresa nueva nace con sus roles.
+
+#### Notas
+
+- Sin desplegar. 583 pruebas, tipos y lint sin errores, 126 de 126 comprobaciones de extremo a extremo.
+- En el servidor: `db:deploy` y luego `db:seed` (confirmar antes `SEED_ADMIN_EMAIL`). El seed crea los permisos nuevos y los reparte a los roles de partida de cada empresa.
+- Quien tenga una sesión abierta con el rol anterior sigue funcionando: los permisos se leen al renovar el acceso.
+
 ### Sesión 2026-11-06 (5) — Roles y permisos, parte 2: rutas y pantallas por permiso (C-11, DC-019)
 
 #### Cambiado

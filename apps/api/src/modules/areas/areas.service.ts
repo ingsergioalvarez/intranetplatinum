@@ -183,7 +183,7 @@ export class AreasService extends BaseService {
     for (const id of new Set(usuarioIds)) {
       if (filas.some((f) => !f.deletedAt && f.jefeId === id)) continue;
       // Si todavía supervisa algún equipo, pasa a Supervisor; si no, vuelve a Colaborador.
-      const destino = filas.some((f) => !f.deletedAt && f.supervisores.some((x) => x.id === id)) ? ROLES.SUPERVISOR : ROLES.GUARDIA;
+      const destino = filas.some((f) => !f.deletedAt && f.supervisores.some((x) => x.id === id)) ? ROLES.SUPERVISOR : ROLES.COLABORADOR;
       if (await this.repo.ponerRol(id, destino, ROLES.JEFE)) {
         await this.registrar(ctx, 'areas.rol_jefe', id, { de: ROLES.JEFE, a: destino });
       }
@@ -206,7 +206,7 @@ export class AreasService extends BaseService {
     await this.repo.fijarSupervisores(areaId, nuevos);
     for (const uid of nuevos.filter((n) => !antes.includes(n))) {
       const u = await this.personaActiva(uid);
-      if (u.rol === ROLES.GUARDIA && (await this.repo.ponerRol(uid, ROLES.SUPERVISOR, ROLES.GUARDIA))) {
+      if (u.rol === ROLES.COLABORADOR && (await this.repo.ponerRol(uid, ROLES.SUPERVISOR, ROLES.COLABORADOR))) {
         await this.registrar(ctx, 'areas.rol_supervisor', uid, { nombre: u.nombre, de: u.rol, a: ROLES.SUPERVISOR });
       }
     }
@@ -218,8 +218,8 @@ export class AreasService extends BaseService {
     const { filas } = await this.cargar();
     for (const id of new Set(usuarioIds)) {
       if (filas.some((f) => !f.deletedAt && f.supervisores.some((x) => x.id === id))) continue;
-      if (await this.repo.ponerRol(id, ROLES.GUARDIA, ROLES.SUPERVISOR)) {
-        await this.registrar(ctx, 'areas.rol_supervisor', id, { de: ROLES.SUPERVISOR, a: ROLES.GUARDIA });
+      if (await this.repo.ponerRol(id, ROLES.COLABORADOR, ROLES.SUPERVISOR)) {
+        await this.registrar(ctx, 'areas.rol_supervisor', id, { de: ROLES.SUPERVISOR, a: ROLES.COLABORADOR });
       }
     }
   }

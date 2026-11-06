@@ -22,7 +22,7 @@ const guardia = (id: number, nombre: string): GuardiaCobertura => ({
   id,
   nombre,
   email: `${id}@x.mx`,
-  rol: ROLES.GUARDIA,
+  rol: ROLES.COLABORADOR,
   activo: true,
   fotoClave: null,
 });
@@ -157,7 +157,7 @@ beforeEach(() => {
 
 describe('cubrir otro sitio (DA-39, DA-46)', () => {
   it('solo admin y supervisor', async () => {
-    expect((await como(10, ROLES.GUARDIA).get('/')).status).toBe(403);
+    expect((await como(10, ROLES.COLABORADOR).get('/')).status).toBe(403);
   });
 
   it('candidatos: primero quien descansa; quien trabaja a esa hora queda en pausa; descanso en horas', async () => {

@@ -136,7 +136,7 @@ class MemoryAsistenciaRepository extends AsistenciaRepository {
     if (id === 5)
       return { id, nombre: 'Supervisora', rol: 'supervisor' as Rol, activo: true, deletedAt: null };
     return NOMBRES[id]
-      ? { id, nombre: NOMBRES[id], rol: 'guardia' as Rol, activo: true, deletedAt: null }
+      ? { id, nombre: NOMBRES[id], rol: 'colaborador' as Rol, activo: true, deletedAt: null }
       : null;
   }
   async eliminarRostros(usuarioId: number) {
@@ -359,7 +359,7 @@ let solicitudesCreadas: Parameters<SolicitudesPuerto['crear']>[0][];
 let salidasSinMarcar = 0;
 let ahora: Date;
 
-const token = (id: number, rol: Rol = 'guardia') =>
+const token = (id: number, rol: Rol = 'colaborador') =>
   `Bearer ${signAccessToken({ id, email: `u${id}@x.mx`, rol, permisos: PERMISOS_POR_ROL[rol] })}`;
 
 let n = 0;
@@ -731,7 +731,7 @@ describe('asistencia: registro de rostro (AS1-02)', () => {
   });
 
   it('un guardia no puede registrar rostros; tampoco sin rostro registrado', async () => {
-    expect((await registrar(11, ROSA, { rol: 'guardia' })).status).toBe(403);
+    expect((await registrar(11, ROSA, { rol: 'colaborador' })).status).toBe(403);
     const sinRostro = await request(app)
       .get('/api/asistencia/rostros/11')
       .set('Authorization', token(5, 'supervisor'));
@@ -829,8 +829,8 @@ describe('asistencia: vista de admin / supervisor (AS1-07)', () => {
   it('supervisor y admin ven la asistencia; el guardia no', async () => {
     expect((await ver('dia?fecha=2026-10-20')).status).toBe(200);
     expect((await ver('dia?fecha=2026-10-20', 'admin')).status).toBe(200);
-    expect((await ver('dia?fecha=2026-10-20', 'guardia')).status).toBe(403);
-    expect((await ver('guardias/10?mes=2026-10', 'guardia')).status).toBe(403);
+    expect((await ver('dia?fecha=2026-10-20', 'colaborador')).status).toBe(403);
+    expect((await ver('guardias/10?mes=2026-10', 'colaborador')).status).toBe(403);
   });
 
   it('una fila por guardia con su jornada, más los asignados que no han marcado', async () => {
@@ -1532,7 +1532,7 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     it('al mandar a casa el motivo es obligatorio; solo con la jornada abierta; solo admin o supervisor', async () => {
       await llegaTarde();
       expect((await decidir(77, { decision: 'enviado_a_casa', responsabilidad: 'queda_solo' })).status).toBe(400);
-      expect((await decidir(77, { decision: 'aceptado' }, 10, 'guardia')).status).toBe(403);
+      expect((await decidir(77, { decision: 'aceptado' }, 10, 'colaborador')).status).toBe(403);
       expect((await decidir(9999, { decision: 'aceptado' })).status).toBe(404);
       // Ya salió: no se puede mandar a casa.
       avanzar(2);
@@ -1600,7 +1600,7 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
         (await cerrar(entradaId, { categoria: 'olvido', salidaEn: '2026-10-22T10:00:00.000Z' })).status,
       ).toBe(400);
       // El guardia no puede cerrarse la jornada solo.
-      expect((await cerrar(entradaId, { categoria: 'olvido' }, 10, 'guardia')).status).toBe(403);
+      expect((await cerrar(entradaId, { categoria: 'olvido' }, 10, 'colaborador')).status).toBe(403);
       // Una checada que no es entrada no es una jornada.
       expect((await cerrar(9999, { categoria: 'olvido' })).status).toBe(404);
       // El admin sí, con la hora indicada.
@@ -1715,7 +1715,7 @@ describe('asistencia: horario del turno, retardo y salida anticipada (DA-32, DA-
     });
 
     it('solo admin y supervisor; el guardia no', async () => {
-      expect((await tablero(10, 'guardia')).status).toBe(403);
+      expect((await tablero(10, 'colaborador')).status).toBe(403);
       expect((await tablero(1, 'admin')).status).toBe(200);
     });
   });

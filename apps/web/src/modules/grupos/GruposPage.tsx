@@ -155,8 +155,8 @@ function GrupoModal({ grupo, onClose }: { grupo: Grupo | null; onClose: () => vo
     integrantes.size !== inicial.size || [...integrantes].some((id) => !inicial.has(id));
 
   const guardias = useQuery({
-    queryKey: usuariosService.keys.list({ rol: ROLES.GUARDIA, estado: 'activos', limit: 100 }),
-    queryFn: () => usuariosService.list({ rol: ROLES.GUARDIA, estado: 'activos', limit: 100 }),
+    queryKey: usuariosService.keys.list({ rol: ROLES.COLABORADOR, estado: 'activos', limit: 100 }),
+    queryFn: () => usuariosService.list({ rol: ROLES.COLABORADOR, estado: 'activos', limit: 100 }),
   });
   const visibles = (guardias.data?.items ?? []).filter((g) =>
     `${g.nombre} ${g.email}`.toLowerCase().includes(filtro.trim().toLowerCase()),

@@ -155,7 +155,7 @@ describe('solicitudes de cobertura (A-39)', () => {
     const suyas = await sup().get();
     expect(suyas.body.data.items.map((s: { id: number }) => s.id)).toEqual([1]);
     expect(suyas.body.data.pendientes).toBe(0);
-    expect((await como(10, ROLES.GUARDIA).get()).status).toBe(403);
+    expect((await como(10, ROLES.COLABORADOR).get()).status).toBe(403);
   });
 
   it('cancelar pide motivo de la lista; "otro" exige explicarlo', async () => {

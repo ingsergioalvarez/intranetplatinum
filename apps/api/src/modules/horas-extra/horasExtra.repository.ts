@@ -1,3 +1,4 @@
+import { ROLES } from '@platinum/shared';
 import type { EstadoHoraExtra, OrigenHoraExtra, Rol } from '@platinum/shared';
 import { dateAFecha, fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
@@ -204,7 +205,7 @@ export class PrismaHorasExtraRepository extends HorasExtraRepository {
 
   async guardiasActivos() {
     return getPrisma().usuario.findMany({
-      where: { activo: true, deletedAt: null, rol: { clave: 'guardia' } },
+      where: { activo: true, deletedAt: null, rol: { clave: ROLES.COLABORADOR } },
       orderBy: { nombre: 'asc' },
       select: { id: true, nombre: true },
     });

@@ -257,7 +257,7 @@ export class HorasExtraService extends BaseService implements HorasExtraPuerto {
   /** Horas extra que el supervisor o el admin capturan: quedan aprobadas, con motivo. */
   async capturar(input: CapturaHoraExtraInput, ctx: AccionCtx, alcance: Alcance | null) {
     const guardia = await this.repo.findGuardia(input.guardiaId);
-    if (!guardia || !guardia.activo || guardia.rol !== ROLES.GUARDIA) {
+    if (!guardia || !guardia.activo || guardia.rol !== ROLES.COLABORADOR) {
       throw new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [
         { path: 'guardiaId', message: 'Elige un guardia activo' },
       ]);

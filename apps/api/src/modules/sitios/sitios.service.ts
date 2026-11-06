@@ -89,7 +89,7 @@ export class SitiosService extends BaseService {
     let destinatario: string;
     if (data.usuarioId) {
       const guardia = await this.repo.findGuardia(data.usuarioId);
-      if (!guardia || guardia.deletedAt || guardia.rol !== ROLES.GUARDIA) {
+      if (!guardia || guardia.deletedAt || guardia.rol !== ROLES.COLABORADOR) {
         throw invalido('usuarioId', 'Selecciona un guardia activo');
       }
       destinatario = guardia.nombre;
@@ -315,7 +315,7 @@ export class SitiosService extends BaseService {
     }[] = [];
     for (const [i, g] of data.guardias.entries()) {
       const guardia = await this.repo.findGuardia(g.usuarioId);
-      if (!guardia || guardia.deletedAt || guardia.rol !== ROLES.GUARDIA) {
+      if (!guardia || guardia.deletedAt || guardia.rol !== ROLES.COLABORADOR) {
         throw invalido(`guardias.${i}.usuarioId`, 'Selecciona guardias activos');
       }
       nuevas.push({

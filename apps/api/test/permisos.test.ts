@@ -22,7 +22,7 @@ const ANTES = {
     P.USUARIOS_VER, P.CLIENTES_VER, P.CLIENTES_CREAR, P.CLIENTES_EDITAR, P.CLIENTES_BAJA,
     P.CATALOGOS_ADMINISTRAR, P.GRUPOS_ADMINISTRAR, P.ASISTENCIA_VER, P.ASISTENCIA_ROSTROS, P.ASISTENCIA_MARCAR,
   ],
-  [ROLES.GUARDIA]: [P.ASISTENCIA_MARCAR],
+  [ROLES.COLABORADOR]: [P.ASISTENCIA_MARCAR],
 } as const;
 
 describe('catálogo de permisos (C-11, DC-019)', () => {
@@ -75,7 +75,7 @@ describe('permisos de cada rol de partida', () => {
   });
 
   it('el colaborador tiene lo que necesita por lógica y nada de mando (su bitácora llega con el alcance por rol)', () => {
-    expect(new Set(PERMISOS_POR_ROL[ROLES.GUARDIA])).toEqual(
+    expect(new Set(PERMISOS_POR_ROL[ROLES.COLABORADOR])).toEqual(
       new Set([
         P.ASISTENCIA_MARCAR,
         P.AUSENCIAS_PEDIR,
@@ -100,7 +100,7 @@ describe('permisos de cada rol de partida', () => {
       P.USUARIOS_EDITAR,
       P.USUARIOS_BAJA,
     ];
-    for (const rol of [ROLES.JEFE, ROLES.SUPERVISOR, ROLES.GUARDIA]) {
+    for (const rol of [ROLES.JEFE, ROLES.SUPERVISOR, ROLES.COLABORADOR]) {
       for (const p of soloAdmin) expect(PERMISOS_POR_ROL[rol], `${rol} no debe tener ${p}`).not.toContain(p);
     }
   });

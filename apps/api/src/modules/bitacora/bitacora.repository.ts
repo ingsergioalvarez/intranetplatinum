@@ -1,3 +1,4 @@
+import { ROLES } from '@platinum/shared';
 import type {
   ConclusionIncidencia,
   DECISION_SUPERADO,
@@ -183,7 +184,7 @@ export class PrismaBitacoraRepository extends BitacoraRepository {
 
   async guardiasActivos() {
     const rows = await getPrisma().usuario.findMany({
-      where: { activo: true, deletedAt: null, rol: { clave: 'guardia' } },
+      where: { activo: true, deletedAt: null, rol: { clave: ROLES.COLABORADOR } },
       orderBy: { nombre: 'asc' },
       select: {
         id: true,

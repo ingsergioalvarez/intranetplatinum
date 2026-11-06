@@ -102,11 +102,11 @@ export class AusenciasService extends BaseService {
     ctx: AccionCtx,
     alcance: Alcance | null,
   ): Promise<Ausencia> {
-    const usuarioId = user.rol === ROLES.GUARDIA ? user.id : data.usuarioId;
+    const usuarioId = user.rol === ROLES.COLABORADOR ? user.id : data.usuarioId;
     if (!usuarioId) throw campo('usuarioId', 'Elige el guardia');
     if (user.rol === ROLES.SUPERVISOR || user.rol === ROLES.JEFE) exigirGuardia(alcance, usuarioId);
     const guardia = await this.repo.guardia(usuarioId);
-    if (!guardia || !guardia.activo || guardia.rol !== ROLES.GUARDIA) throw campo('usuarioId', 'Elige un guardia activo');
+    if (!guardia || !guardia.activo || guardia.rol !== ROLES.COLABORADOR) throw campo('usuarioId', 'Elige un guardia activo');
 
     // Lo médico exige comprobante; el resto, según el tipo.
     const regla = COMPROBANTE_AUSENCIA[data.tipo];
@@ -148,7 +148,7 @@ export class AusenciasService extends BaseService {
 
     const rango = rangoTexto(data.desde, data.hasta);
     const quien =
-      user.rol === ROLES.GUARDIA ? guardia.nombre : `${(await this.repo.nombreDe(user.id)) ?? 'Un supervisor'} (por ${guardia.nombre})`;
+      user.rol === ROLES.COLABORADOR ? guardia.nombre : `${(await this.repo.nombreDe(user.id)) ?? 'Un supervisor'} (por ${guardia.nombre})`;
     await this.avisar(await this.repo.admins({ guardiaId: guardia.id }), {
       tipo: 'asignacion',
       titulo: 'Solicitud de ausencia',
@@ -158,7 +158,7 @@ export class AusenciasService extends BaseService {
       ruta: RUTA_ADMIN,
       entidad: { tipo: 'ausencia', id: fila.id },
     });
-    if (user.rol !== ROLES.GUARDIA) {
+    if (user.rol !== ROLES.COLABORADOR) {
       await this.avisar([usuarioId], {
         tipo: 'asignacion',
         titulo: 'Pidieron una ausencia por ti',

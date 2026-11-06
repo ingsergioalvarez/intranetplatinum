@@ -241,7 +241,7 @@ export function LoginPage() {
                     <span className="block text-base leading-tight font-semibold break-words text-slate-900">
                       {p.nombre}
                     </span>
-                    {p.rol && p.rol !== ROLES.GUARDIA && (
+                    {p.rol && p.rol !== ROLES.COLABORADOR && (
                       <span className="block text-xs font-medium text-brand-fondo">{ROL_DESCRIPCIONES[p.rol]}</span>
                     )}
                     <span className="mt-0.5 block text-xs text-slate-500">

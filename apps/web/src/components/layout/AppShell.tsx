@@ -306,7 +306,7 @@ export function AppShell() {
   const conSOS = useModulos()('emergencias');
   // Envía las checadas guardadas sin conexión al abrir la app y al volver la señal (AS2-02).
   const user = useAuthStore((s) => s.user);
-  useSincronizacion(user?.rol === 'guardia' ? user.id : undefined);
+  useSincronizacion(user?.rol === 'colaborador' ? user.id : undefined);
   return (
     <div className="flex min-h-dvh">
       <Sidebar />

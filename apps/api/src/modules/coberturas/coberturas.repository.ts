@@ -143,7 +143,7 @@ export class PrismaCoberturasRepository extends CoberturasRepository {
 
   async guardiasActivos() {
     const rows = await getPrisma().usuario.findMany({
-      where: { activo: true, deletedAt: null, rol: { clave: ROLES.GUARDIA } },
+      where: { activo: true, deletedAt: null, rol: { clave: ROLES.COLABORADOR } },
       orderBy: { nombre: 'asc' },
       select: this.guardiaSelect,
     });

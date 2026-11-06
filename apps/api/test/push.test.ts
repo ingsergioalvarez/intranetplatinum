@@ -121,7 +121,7 @@ describe('push: enviar avisos al celular (A-20)', () => {
 
 describe('push: rutas', () => {
   const token = (id: number) =>
-    `Bearer ${signAccessToken({ id, email: 'x@x.mx', rol: ROLES.GUARDIA, permisos: PERMISOS_POR_ROL[ROLES.GUARDIA] })}`;
+    `Bearer ${signAccessToken({ id, email: 'x@x.mx', rol: ROLES.COLABORADOR, permisos: PERMISOS_POR_ROL[ROLES.COLABORADOR] })}`;
   const app = () => createApp([createPushModule({ service })]);
 
   it('exige sesión', async () => {

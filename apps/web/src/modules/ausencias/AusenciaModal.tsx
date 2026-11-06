@@ -25,7 +25,7 @@ import { ausenciasService } from './ausencias.service';
  */
 export function AusenciaModal({ onClose }: { onClose: () => void }) {
   const user = useAuthStore((s) => s.user)!;
-  const esGuardia = user.rol === ROLES.GUARDIA;
+  const esGuardia = user.rol === ROLES.COLABORADOR;
   const puedeResolver = hasPermission(user, PERMISOS.AUSENCIAS_RESOLVER);
   const qc = useQueryClient();
   const hoy = hoyLocal();

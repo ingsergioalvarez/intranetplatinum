@@ -118,15 +118,15 @@ describe('core del API', () => {
   });
 
   it('token válido → devuelve el usuario', async () => {
-    const res = await request(app).get('/api/health/me').set('Authorization', bearer('guardia'));
+    const res = await request(app).get('/api/health/me').set('Authorization', bearer('colaborador'));
     expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({ id: 1, rol: 'guardia' });
+    expect(res.body.data).toMatchObject({ id: 1, rol: 'colaborador' });
   });
 
   it('rol no permitido → 403', async () => {
     const res = await request(app)
       .post('/api/notas')
-      .set('Authorization', bearer('guardia'))
+      .set('Authorization', bearer('colaborador'))
       .send({ texto: 'hola' });
     expect(res.status).toBe(403);
   });
@@ -162,7 +162,7 @@ describe('core del API', () => {
   });
 
   it('upload: acepta imágenes y rechaza otros tipos', async () => {
-    const auth = bearer('guardia');
+    const auth = bearer('colaborador');
     const ok = await request(app)
       .post('/api/notas/fotos')
       .set('Authorization', auth)

@@ -145,7 +145,7 @@ const token = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean } = {}) =>
   `Bearer ${signAccessToken({ id, email: 'x@x.mx', rol, permisos: PERMISOS_POR_ROL[rol], ...extra })}`;
 const SUPER = token(1, ROLES.ADMIN, { esSuperAdmin: true });
 const ADMIN = token(3, ROLES.ADMIN);
-const GUARDIA = token(4, ROLES.GUARDIA);
+const GUARDIA = token(4, ROLES.COLABORADOR);
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40)]);
 const SVG_OK = Buffer.from('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#0b3263"/></svg>');

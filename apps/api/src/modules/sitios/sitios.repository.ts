@@ -568,7 +568,7 @@ export class PrismaSitiosRepository extends SitiosRepository {
       where: {
         activo: true,
         deletedAt: null,
-        rol: { clave: 'guardia' },
+        rol: { clave: ROLES.COLABORADOR },
       },
       orderBy: { nombre: 'asc' },
       select: {

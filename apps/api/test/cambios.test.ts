@@ -36,9 +36,9 @@ const TURNOS: TurnoProgramado[] = [
 ];
 
 const PERSONAS = [
-  { id: 10, nombre: 'Juan', rol: ROLES.GUARDIA as Rol, activo: true },
-  { id: 11, nombre: 'Ana', rol: ROLES.GUARDIA as Rol, activo: true },
-  { id: 12, nombre: 'Beto', rol: ROLES.GUARDIA as Rol, activo: true },
+  { id: 10, nombre: 'Juan', rol: ROLES.COLABORADOR as Rol, activo: true },
+  { id: 11, nombre: 'Ana', rol: ROLES.COLABORADOR as Rol, activo: true },
+  { id: 12, nombre: 'Beto', rol: ROLES.COLABORADOR as Rol, activo: true },
   { id: 5, nombre: 'Sofía Sup', rol: ROLES.SUPERVISOR as Rol, activo: true },
 ];
 
@@ -49,7 +49,7 @@ class MemoryCambiosRepository extends CambiosRepository {
     return PERSONAS.find((p) => p.id === id) ?? null;
   }
   async guardiasActivos() {
-    return PERSONAS.filter((p) => p.rol === ROLES.GUARDIA).map(({ id, nombre }) => ({ id, nombre }));
+    return PERSONAS.filter((p) => p.rol === ROLES.COLABORADOR).map(({ id, nombre }) => ({ id, nombre }));
   }
   async admins() {
     return [1];
@@ -139,7 +139,7 @@ const como = (id: number, rol: Rol) => ({
   get: (u: string) => request(app).get(`/api/cambios-turno${u}`).set('Authorization', token(id, rol)),
   post: (u: string, b: object = {}) => request(app).post(`/api/cambios-turno${u}`).set('Authorization', token(id, rol)).send(b),
 });
-const guardia = () => como(10, ROLES.GUARDIA);
+const guardia = () => como(10, ROLES.COLABORADOR);
 const sup = () => como(5, ROLES.SUPERVISOR);
 
 const cubrir = { tipo: 'cubrir', fecha: '2026-10-27', cubreId: 11, motivo: 'Cita médica' };
@@ -305,9 +305,9 @@ describe('cambios de turno (TC-22)', () => {
 
   it('el guardia ve solo lo suyo y el supervisor cuenta los pendientes', async () => {
     await guardia().post('', cubrir);
-    const ajeno = await como(12, ROLES.GUARDIA).get('');
+    const ajeno = await como(12, ROLES.COLABORADOR).get('');
     expect(ajeno.body.data.items).toHaveLength(0);
-    const propio = await como(11, ROLES.GUARDIA).get(''); // Ana: la que cubre
+    const propio = await como(11, ROLES.COLABORADOR).get(''); // Ana: la que cubre
     expect(propio.body.data.items).toHaveLength(1);
     expect((await sup().get('')).body.data.pendientes).toBe(1);
     expect((await request(app).get('/api/cambios-turno')).status).toBe(401);

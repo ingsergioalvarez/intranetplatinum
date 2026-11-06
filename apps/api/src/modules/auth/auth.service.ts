@@ -129,7 +129,7 @@ export class AuthService extends BaseService {
     this.log('login', { usuarioId: usuario.id });
     // Perfil rápido (A-40): si este celular ya traía su clave se reutiliza; los guardias se guardan solos y
     // el resto (admin, supervisor, cliente) decide: la app pregunta y crea el celular al confirmar.
-    const dispositivo = await this.vincularDispositivo(usuario, dispositivoToken, ctx, usuario.rol === ROLES.GUARDIA);
+    const dispositivo = await this.vincularDispositivo(usuario, dispositivoToken, ctx, usuario.rol === ROLES.COLABORADOR);
     if (dispositivo) sesion.dispositivo = dispositivo;
     else sesion.ofrecerPerfil = true;
     return sesion;

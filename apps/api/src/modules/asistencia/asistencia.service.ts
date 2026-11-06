@@ -1321,7 +1321,7 @@ export class AsistenciaService extends BaseService {
   private async guardiaActivo(usuarioId: number) {
     const usuario = await this.repo.findUsuarioRostro(usuarioId);
     if (!usuario || usuario.deletedAt || !usuario.activo) throw HttpError.notFound('Guardia no encontrado');
-    if (usuario.rol !== ROLES.GUARDIA) throw HttpError.badRequest('Solo se registra el rostro de guardias');
+    if (usuario.rol !== ROLES.COLABORADOR) throw HttpError.badRequest('Solo se registra el rostro de guardias');
     return usuario;
   }
 

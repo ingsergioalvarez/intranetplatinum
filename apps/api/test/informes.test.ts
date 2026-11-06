@@ -348,7 +348,7 @@ describe('Reporte de asistencia', { timeout: 30_000 }, () => {
   });
 
   it('solo admin y supervisor; el guardia no entra', async () => {
-    expect((await como(10, ROLES.GUARDIA).get('')).status).toBe(403);
+    expect((await como(10, ROLES.COLABORADOR).get('')).status).toBe(403);
     expect((await request(app).get('/api/informes')).status).toBe(401);
   });
 

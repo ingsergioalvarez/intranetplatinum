@@ -120,10 +120,10 @@ class MemorySitiosRepository extends SitiosRepository {
     supervisorId: null as number | null,
   };
   guardias: GuardiaEstado[] = [
-    { id: 3, nombre: 'Gabriel', rol: ROLES.GUARDIA, deletedAt: null },
-    { id: 4, nombre: 'Lucía', rol: ROLES.GUARDIA, deletedAt: null },
+    { id: 3, nombre: 'Gabriel', rol: ROLES.COLABORADOR, deletedAt: null },
+    { id: 4, nombre: 'Lucía', rol: ROLES.COLABORADOR, deletedAt: null },
     { id: 2, nombre: 'Sofía', rol: ROLES.SUPERVISOR, deletedAt: null },
-    { id: 5, nombre: 'Otro guardia', rol: ROLES.GUARDIA, deletedAt: null },
+    { id: 5, nombre: 'Otro guardia', rol: ROLES.COLABORADOR, deletedAt: null },
   ];
   turnos = new Map<number, TurnoEstado>([
     [1, { id: 1, nombre: '24 h · 8:00', horas: 24, horaEntrada: '08:00', dias: UNO_Y_UNO, activo: true }],
@@ -240,7 +240,7 @@ class MemorySitiosRepository extends SitiosRepository {
   }
   async guardiasActivos() {
     return this.guardias
-      .filter((g) => g.rol === ROLES.GUARDIA)
+      .filter((g) => g.rol === ROLES.COLABORADOR)
       .map((g) => ({ id: g.id, nombre: g.nombre, email: `u${g.id}@x.mx`, fotoClave: null }));
   }
   async eliminarAsignacion(id: number) {
@@ -260,7 +260,7 @@ const tokenDe = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean } = {}) =
   signAccessToken({ id, email: `u${id}@x.mx`, rol, permisos: PERMISOS_POR_ROL[rol], ...extra });
 /** El admin 1 es super admin. */
 const SUPERVISOR = tokenDe(2, ROLES.SUPERVISOR);
-const GUARDIA = tokenDe(3, ROLES.GUARDIA);
+const GUARDIA = tokenDe(3, ROLES.COLABORADOR);
 const ADMIN = tokenDe(1, ROLES.ADMIN, { esSuperAdmin: true });
 
 const como = (t: string) => ({

@@ -111,7 +111,7 @@ beforeEach(() => {
     });
   usuario(1, 'admin');
   usuario(2, 'supervisor');
-  usuario(10, 'guardia', { marcas: 4, rostros: 1 }, ['asistencia/a.jpg', 'rostros/r.jpg']);
+  usuario(10, 'colaborador', { marcas: 4, rostros: 1 }, ['asistencia/a.jpg', 'rostros/r.jpg']);
   app = createApp([createAdminModule({ repo, storage, audit })]);
 });
 
@@ -193,7 +193,7 @@ describe('admin: la cuenta del super admin', () => {
 
   beforeEach(() => {
     const base = { activo: true, deletedAt: null, archivos: [], historial: { ...sinHistorial } };
-    repo.usuarios.set(20, { ...base, id: 20, nombre: 'Guardia', email: 'g@x.mx', rol: 'guardia' });
+    repo.usuarios.set(20, { ...base, id: 20, nombre: 'Guardia', email: 'g@x.mx', rol: 'colaborador' });
     repo.usuarios.set(11, { ...base, id: 11, nombre: 'Admin B', email: 'b@x.mx', rol: 'admin' });
     repo.usuarios.set(1, { ...repo.usuarios.get(1)!, esSuperAdmin: true });
   });

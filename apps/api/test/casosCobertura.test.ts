@@ -133,7 +133,7 @@ const como = (id: number, rol: Rol) => ({
   post: (u: string, b: object = {}) => request(app).post(`/api/casos-cobertura${u}`).set('Authorization', token(id, rol)).send(b),
 });
 const sup = () => como(5, ROLES.SUPERVISOR);
-const guardia = () => como(10, ROLES.GUARDIA);
+const guardia = () => como(10, ROLES.COLABORADOR);
 
 beforeEach(() => {
   repo = new MemoriaCasos();

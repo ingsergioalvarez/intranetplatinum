@@ -133,7 +133,7 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
       data: {
         ...data,
         empresa: { connect: { id: empresaActual() } },
-        rol: { connect: { clave: rol } },
+        rol: { connect: { empresaId_clave: { empresaId: empresaActual(), clave: rol } } },
       },
       select,
     });
@@ -143,7 +143,7 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
   async update(id: number, { rol, ...data }: UsuarioUpdateData) {
     const u = await getPrisma().usuario.update({
       where: { id },
-      data: { ...data, ...(rol && { rol: { connect: { clave: rol } } }) },
+      data: { ...data, ...(rol && { rol: { connect: { empresaId_clave: { empresaId: empresaActual(), clave: rol } } } }) },
       select,
     });
     return toUsuario(u);

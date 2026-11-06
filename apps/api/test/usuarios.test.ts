@@ -125,7 +125,7 @@ const tokenDe = (id: number, rol: Rol, extra: { esSuperAdmin?: boolean } = {}) =
 /** Admin 1 = super admin: las pruebas de antes siguen igual. */
 const ADMIN = tokenDe(1, ROLES.ADMIN, { esSuperAdmin: true });
 const SUPERVISOR = tokenDe(2, ROLES.SUPERVISOR);
-const GUARDIA = tokenDe(3, ROLES.GUARDIA);
+const GUARDIA = tokenDe(3, ROLES.COLABORADOR);
 
 const como = (token: string) => ({
   get: (url: string) => request(app).get(`/api/usuarios${url}`).set('Authorization', `Bearer ${token}`),
@@ -141,8 +141,8 @@ beforeEach(() => {
   repo.filas.push(
     semilla(1, ROLES.ADMIN, { nombre: 'Admin Principal', esSuperAdmin: true }),
     semilla(2, ROLES.SUPERVISOR, { nombre: 'Sofía Supervisora' }),
-    semilla(3, ROLES.GUARDIA, { nombre: 'Gabriel Guardia' }),
-    semilla(4, ROLES.GUARDIA, { nombre: 'Baja Antigua', deletedAt: new Date().toISOString(), activo: false }),
+    semilla(3, ROLES.COLABORADOR, { nombre: 'Gabriel Guardia' }),
+    semilla(4, ROLES.COLABORADOR, { nombre: 'Baja Antigua', deletedAt: new Date().toISOString(), activo: false }),
   );
   app = createApp([createUsuariosModule({ repo, audit, personasVisibles: todasLasPersonas })]);
 });
@@ -154,7 +154,7 @@ describe('permisos', () => {
     expect((await como(GUARDIA).get('/')).status).toBe(403);
     expect((await como(SUPERVISOR).get('/')).status).toBe(200);
     expect(
-      (await como(SUPERVISOR).post('/', { nombre: 'Nuevo', email: 'n@x.mx', rol: 'guardia' })).status,
+      (await como(SUPERVISOR).post('/', { nombre: 'Nuevo', email: 'n@x.mx', rol: 'colaborador' })).status,
     ).toBe(403);
     expect((await como(SUPERVISOR).patch('/3/baja')).status).toBe(403);
   });
@@ -185,7 +185,7 @@ describe('GET /api/usuarios (F1-07)', () => {
   it('filtra por estado, rol y búsqueda', async () => {
     expect((await como(ADMIN).get('/?estado=baja')).body.data.total).toBe(1);
     expect((await como(ADMIN).get('/?estado=todos')).body.data.total).toBe(4);
-    expect((await como(ADMIN).get('/?rol=guardia')).body.data.total).toBe(1);
+    expect((await como(ADMIN).get('/?rol=colaborador')).body.data.total).toBe(1);
     expect((await como(ADMIN).get('/?q=Sof')).body.data.items[0].id).toBe(2);
   });
 
@@ -202,7 +202,7 @@ describe('POST /api/usuarios (F1-08)', () => {
       nombre: '  Nora Nueva ',
       email: 'NORA@Platinum.local',
       telefono: '5559998888',
-      rol: 'guardia',
+      rol: 'colaborador',
     });
     expect(res.status).toBe(201);
     expect(res.body.data.usuario).toMatchObject({
@@ -228,7 +228,7 @@ describe('POST /api/usuarios (F1-08)', () => {
       nombre: 'Otra Persona',
       email: 'u4@platinum.local',
       telefono: '5550001111',
-      rol: 'guardia',
+      rol: 'colaborador',
     });
     expect(res.status).toBe(409);
     expect(res.body.error.details).toEqual([
@@ -237,7 +237,7 @@ describe('POST /api/usuarios (F1-08)', () => {
   });
 
   it('guardia y supervisor deben tener teléfono de contacto; el admin no; el personal es opcional (A-60)', async () => {
-    for (const rol of ['guardia', 'supervisor']) {
+    for (const rol of ['colaborador', 'supervisor']) {
       const res = await como(ADMIN).post('/', { nombre: 'Sin Teléfono', email: `${rol}@x.mx`, rol });
       expect(res.status).toBe(400);
       expect(res.body.error.details[0]).toMatchObject({ path: 'telefono' });
@@ -246,7 +246,7 @@ describe('POST /api/usuarios (F1-08)', () => {
     const ok = await como(ADMIN).post('/', {
       nombre: 'Con Personal',
       email: 'cp@x.mx',
-      rol: 'guardia',
+      rol: 'colaborador',
       telefono: '5550001111',
       telefonoPersonal: '5552223333',
     });
@@ -279,7 +279,7 @@ describe('PATCH /api/usuarios/:id', () => {
   it('edita y audita solo los cambios reales', async () => {
     const res = await como(ADMIN).patch('/3', {
       nombre: 'Gabriel G.',
-      rol: 'guardia',
+      rol: 'colaborador',
       telefono: '5551234567',
     });
     expect(res.status).toBe(200);
@@ -382,9 +382,9 @@ describe('usuarios de la empresa', () => {
       semilla(10, ROLES.ADMIN, { nombre: 'Admin A' }),
       semilla(11, ROLES.ADMIN, { nombre: 'Admin B' }),
       semilla(20, ROLES.SUPERVISOR, { nombre: 'Sup de A' }),
-      semilla(21, ROLES.GUARDIA, { nombre: 'Guardia de A' }),
+      semilla(21, ROLES.COLABORADOR, { nombre: 'Guardia de A' }),
       semilla(30, ROLES.SUPERVISOR, { nombre: 'Sup de B' }),
-      semilla(31, ROLES.GUARDIA, { nombre: 'Guardia de B' }),
+      semilla(31, ROLES.COLABORADOR, { nombre: 'Guardia de B' }),
     );
   });
 
@@ -403,7 +403,7 @@ describe('usuarios de la empresa', () => {
   });
 
   it('lo que crea un admin lo ven todos', async () => {
-    const res = await como(A).post('/', { nombre: 'Nuevo Guardia A', email: 'nga@x.mx', telefono: '5551112222', rol: 'guardia' });
+    const res = await como(A).post('/', { nombre: 'Nuevo Guardia A', email: 'nga@x.mx', telefono: '5551112222', rol: 'colaborador' });
     expect(res.status).toBe(201);
     expect(nombres(await como(B).get('/'))).toContain('Nuevo Guardia A');
   });
@@ -423,7 +423,7 @@ describe('usuarios de la empresa', () => {
     for (const t of [A, B, C]) expect((await como(t).patch('/1', { nombre: 'Hackeado' })).status).toBe(403);
     // El super admin no se da de baja a sí mismo ni se quita su rol.
     expect((await como(ADMIN).patch('/1/baja')).status).toBe(400);
-    expect((await como(ADMIN).patch('/1', { rol: 'guardia' })).status).toBe(400);
+    expect((await como(ADMIN).patch('/1', { rol: 'colaborador' })).status).toBe(400);
     expect((await como(ADMIN).patch('/1', { nombre: 'Super Admin' })).status).toBe(200);
   });
 });

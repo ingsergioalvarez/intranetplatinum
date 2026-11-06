@@ -186,7 +186,7 @@ export const PERMISOS_POR_ROL: Record<Rol, Permiso[]> = {
   [ROLES.ADMIN]: Object.values(PERMISOS),
   [ROLES.SUPERVISOR]: [...MANDO],
   [ROLES.JEFE]: [...MANDO, P.ASISTENCIA_MARCAR],
-  [ROLES.GUARDIA]: [
+  [ROLES.COLABORADOR]: [
     P.ASISTENCIA_MARCAR,
     P.AUSENCIAS_PEDIR,
     P.CAMBIOS_PEDIR,
@@ -202,5 +202,5 @@ export const ROL_DESCRIPCIONES: Record<Rol, string> = {
   [ROLES.ADMIN]: 'Administrador',
   [ROLES.JEFE]: 'Jefe',
   [ROLES.SUPERVISOR]: 'Supervisor',
-  [ROLES.GUARDIA]: 'Colaborador',
+  [ROLES.COLABORADOR]: 'Colaborador',
 };

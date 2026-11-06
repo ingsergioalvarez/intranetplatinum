@@ -9,7 +9,7 @@ const PERFIL = 'offline.perfil';
 /** Perfil del guardia para abrir el Checador sin señal (AS2-01); las checadas se envían al volver la red. */
 const guardarPerfil = (user: AuthSession['user']) => {
   try {
-    if (user.rol === 'guardia') localStorage.setItem(PERFIL, JSON.stringify(user));
+    if (user.rol === 'colaborador') localStorage.setItem(PERFIL, JSON.stringify(user));
     else localStorage.removeItem(PERFIL);
   } catch {
     // Sin almacenamiento: sin modo sin señal.

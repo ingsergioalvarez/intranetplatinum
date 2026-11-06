@@ -59,8 +59,8 @@ const ENTRADA_SABADO: EntradaExtra = {
 };
 
 const PERSONAS = [
-  { id: 10, nombre: 'Juan', rol: ROLES.GUARDIA as Rol, activo: true },
-  { id: 11, nombre: 'Ana', rol: ROLES.GUARDIA as Rol, activo: true },
+  { id: 10, nombre: 'Juan', rol: ROLES.COLABORADOR as Rol, activo: true },
+  { id: 11, nombre: 'Ana', rol: ROLES.COLABORADOR as Rol, activo: true },
   { id: 5, nombre: 'Sofía Sup', rol: ROLES.SUPERVISOR as Rol, activo: true },
 ];
 
@@ -77,7 +77,7 @@ class MemoryHorasExtraRepository extends HorasExtraRepository {
     return PERSONAS.find((p) => p.id === id) ?? null;
   }
   async guardiasActivos() {
-    return PERSONAS.filter((p) => p.rol === ROLES.GUARDIA).map(({ id, nombre }) => ({ id, nombre }));
+    return PERSONAS.filter((p) => p.rol === ROLES.COLABORADOR).map(({ id, nombre }) => ({ id, nombre }));
   }
   async sitiosActivos() {
     return [{ id: 1, nombre: 'POETAS' }, { id: 2, nombre: 'Plaza Norte' }];
@@ -201,7 +201,7 @@ const como = (id: number, rol: Rol) => ({
   get: (u: string) => request(app).get(`/api/horas-extra${u}`).set('Authorization', token(id, rol)),
   post: (u: string, b: object = {}) => request(app).post(`/api/horas-extra${u}`).set('Authorization', token(id, rol)).send(b),
 });
-const guardia = () => como(10, ROLES.GUARDIA);
+const guardia = () => como(10, ROLES.COLABORADOR);
 const sup = () => como(5, ROLES.SUPERVISOR);
 const admin = () => como(1, ROLES.ADMIN);
 

@@ -127,7 +127,7 @@ describe('horario de guardias en PDF (A-55)', () => {
     expect(ok.headers['content-disposition']).toContain('horario_2026-10-19_a_2026-10-25.pdf');
     expect((ok.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
     expect((await pdf(q, ROLES.SUPERVISOR, 5)).status).toBe(200);
-    expect((await pdf(q, ROLES.GUARDIA, 10)).status).toBe(403);
+    expect((await pdf(q, ROLES.COLABORADOR, 10)).status).toBe(403);
     expect((await request(app).get(`/api/horarios/pdf?${q}`)).status).toBe(401);
   });
 

@@ -29,11 +29,11 @@ async function main() {
     return;
   }
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
-  const rol = async (clave: string) => (await prisma.rol.findUniqueOrThrow({ where: { clave } })).id;
+  const rol = async (clave: string) => (await prisma.rol.findFirstOrThrow({ where: { empresaId: 1, clave } })).id;
   const [rAdmin, rSup, rGuardia] = await Promise.all([
     rol(ROLES.ADMIN),
     rol(ROLES.SUPERVISOR),
-    rol(ROLES.GUARDIA),
+    rol(ROLES.COLABORADOR),
   ]);
   const usuario = (nombre: string, email: string, rolId: number, extra: object = {}) =>
     prisma.usuario.create({

@@ -15,16 +15,23 @@ datasource db {
 // Seguridad: roles, permisos y usuarios (F0-04)
 // ============================================================
 
+/// Rol de una empresa (C-11 parte 3): cada empresa tiene los suyos, con sus permisos editables. Los de partida
+/// (admin, jefe, supervisor, colaborador) son `esBase`: se editan pero no se borran.
 model Rol {
   id          Int          @id @default(autoincrement())
-  clave       String       @unique @db.VarChar(30)
+  clave       String       @db.VarChar(30)
   nombre      String       @db.VarChar(60)
   descripcion String?      @db.VarChar(255)
+  esBase      Boolean      @default(false) @map("es_base")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
   permisos    RolPermiso[]
   usuarios    Usuario[]
 
+  empresaId   Int          @map("empresa_id")
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  @@unique([empresaId, clave])
+  @@index([empresaId])
   @@map("roles")
 }
 
@@ -175,6 +182,7 @@ model Empresa {
   usuarios       Usuario[]
   modulos        EmpresaModulo[]
   areas          Area[]
+  roles          Rol[]
 
   auditorias            Auditoria[]
   clientes              Cliente[]

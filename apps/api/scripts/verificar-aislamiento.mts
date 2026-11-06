@@ -63,15 +63,16 @@ async function main() {
     // ---------- Datos de partida (con el cliente SIN filtro, como hace el seed) ----------
     const raw = createPrismaClient(urlTemp.toString());
     const hash = await bcrypt.hash('Password-123456', 4);
-    const rolAdmin = await raw.rol.create({ data: { clave: 'admin', nombre: 'Administrador' } });
-    const rolSup = await raw.rol.create({ data: { clave: 'supervisor', nombre: 'Supervisor' } });
-    await raw.rol.create({ data: { clave: 'guardia', nombre: 'Guardia' } });
-    await raw.rol.create({ data: { clave: 'cliente', nombre: 'Cliente' } });
     const acme = await raw.empresa.create({ data: { nombre: 'Acme', zonaHoraria: 'America/Mexico_City' } });
     const E1 = 1;
     const E2 = acme.id;
+    // Cada empresa tiene sus propios roles (C-11 parte 3).
+    const { crearRolesBase } = await imp('core/empresa/rolesBase.ts');
+    const rolesE1 = await crearRolesBase(raw, E1);
+    const rolesE2 = await crearRolesBase(raw, E2);
+    const rolSup = { id: rolesE1.supervisor };
     const mkUser = (nombre: string, email: string, empresaId: number, extra: object = {}) =>
-      raw.usuario.create({ data: { nombre, email, passwordHash: hash, rolId: rolAdmin.id, empresaId, telefono: '5550000000', ...extra } });
+      raw.usuario.create({ data: { nombre, email, passwordHash: hash, rolId: empresaId === E1 ? rolesE1.admin : rolesE2.admin, empresaId, telefono: '5550000000', ...extra } });
     const admin1 = await mkUser('Admin Uno', 'admin1@x.mx', E1);
     const admin2 = await mkUser('Admin Dos', 'admin2@x.mx', E2);
     await mkUser('Super', 'super@x.mx', E1, { esSuperAdmin: true });
@@ -294,9 +295,8 @@ async function main() {
 
     console.log('\n11. Alcance por área (C-10): jefe, supervisor y permiso de empresa');
     const { PERMISOS_POR_ROL } = await import('@platinum/shared');
-    const rolGuardia = (await prisma.rol.findFirst({ where: { clave: 'guardia' } })) ?? (await prisma.rol.create({ data: { clave: 'guardia', nombre: 'Guardia' } }));
-    if (!(await prisma.rol.findFirst({ where: { clave: 'jefe' } }))) await prisma.rol.create({ data: { clave: 'jefe', nombre: 'Jefe' } });
-    const rolSupervisor = await prisma.rol.findFirst({ where: { clave: 'supervisor' } });
+    const rolGuardia = { id: rolesE1.colaborador };
+    const rolSupervisor = { id: rolesE1.supervisor };
     const area = async (nombre: string, padreId?: number) => (await como(T1).post('/areas', { nombre, padreId })).body.data.id as number;
     const sistemas = await area('Sistemas');
     const soporte = await area('Soporte', sistemas);
@@ -335,11 +335,11 @@ async function main() {
     await como(T1).patch(`/areas/${direccion}`, { jefeId: admin1.id });
     check('un admin designado jefe sigue siendo admin (no se le baja de nivel)', (await rolDe(admin1.id)) === 'admin');
     await como(T1).patch(`/areas/${sistemas}`, { jefeId: null });
-    check('al quitarle la jefatura vuelve a Colaborador', (await rolDe(jefeSis.id)) === 'guardia');
+    check('al quitarle la jefatura vuelve a Colaborador', (await rolDe(jefeSis.id)) === 'colaborador');
     await como(T1).patch(`/areas/${sistemas}`, { jefeId: jefeSis.id });
     check('al designarlo de nuevo vuelve a ser Jefe', (await rolDe(jefeSis.id)) === 'jefe');
     await como(T1).put(`/areas/personas/${jefeSis.id}`, { areaId: rrhh });
-    check('si el jefe se va de su área deja de serlo y vuelve a Colaborador', (await rolDe(jefeSis.id)) === 'guardia' && (await como(T1).get(`/areas/${sistemas}`)).body?.data?.jefe === null);
+    check('si el jefe se va de su área deja de serlo y vuelve a Colaborador', (await rolDe(jefeSis.id)) === 'colaborador' && (await como(T1).get(`/areas/${sistemas}`)).body?.data?.jefe === null);
     const cambioDeRol = await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: 'areas.rol_jefe', empresaId: E1 } }));
     check('los cambios de rol por jefatura quedan en la auditoría', cambioDeRol >= 3, cambioDeRol);
     check('nadie ve a personas de otra empresa', ![...verJefe, ...verSup, ...conPermiso].includes('admin2@x.mx'));
@@ -395,15 +395,46 @@ async function main() {
     const conflicto = await como(T1).patch(`/areas/${ops}`, { supervisorIds: [sup1.id, jefeOps.id] });
     check('el jefe no puede ser también supervisor de su área (409)', conflicto.status === 409);
     await como(T1).patch(`/areas/${ops}`, { supervisorIds: [sup2.id] });
-    check('al quitarlo de la lista vuelve a Colaborador', (await rolDe(sup1.id)) === 'guardia' && JSON.stringify(await sup(ops)) === JSON.stringify([sup2.id]));
+    check('al quitarlo de la lista vuelve a Colaborador', (await rolDe(sup1.id)) === 'colaborador' && JSON.stringify(await sup(ops)) === JSON.stringify([sup2.id]));
     await como(T1).put(`/areas/personas/${sup2.id}`, { areaId: otra });
-    check('si el supervisor se va del área deja de serlo y vuelve a Colaborador', (await rolDe(sup2.id)) === 'guardia' && (await sup(ops)).length === 0);
+    check('si el supervisor se va del área deja de serlo y vuelve a Colaborador', (await rolDe(sup2.id)) === 'colaborador' && (await sup(ops)).length === 0);
     await como(T1).patch(`/areas/${ops}`, { supervisorIds: [sup1.id] });
     await como(T1).patch(`/areas/${ops}/baja`);
-    check('al dar de baja el área sus supervisores vuelven a Colaborador', (await rolDe(sup1.id)) === 'guardia');
+    check('al dar de baja el área sus supervisores vuelven a Colaborador', (await rolDe(sup1.id)) === 'colaborador');
     const vis = await correosDe(tokenDe(sup2, [...PERMISOS_POR_ROL.supervisor]));
     check('el alcance de un supervisor sigue siendo su área', vis.includes('sup.dos@x.mx') && !vis.includes('g.rh@x.mx'), vis);
     check('los cambios de rol de supervisor quedan en la auditoría', (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: 'areas.rol_supervisor', empresaId: E1 } }))) >= 4);
+
+    console.log('\n14. Roles por empresa (C-11 parte 3)');
+    const { sembrarRolesDeEmpresa } = await imp('core/empresa/rolesBase.ts');
+    const raw2 = createPrismaClient(urlTemp.toString());
+    const permMarcar = await raw2.permiso.upsert({ where: { clave: 'asistencia.marcar' }, update: {}, create: { clave: 'asistencia.marcar', descripcion: 'Marcar' } });
+    await raw2.permiso.upsert({ where: { clave: 'asistencia.ver' }, update: {}, create: { clave: 'asistencia.ver', descripcion: 'Ver' } });
+    const rolesDe = async (empresaId: number) => (await raw2.rol.findMany({ where: { empresaId }, select: { id: true, clave: true, esBase: true } }));
+    const r1 = await rolesDe(E1);
+    const r2 = await rolesDe(E2);
+    check('cada empresa tiene sus propios 4 roles de partida', r1.length === 4 && r2.length === 4 && r1.every((x: any) => x.esBase) && !r1.some((x: any) => r2.some((y: any) => y.id === x.id)));
+    check('el rol colaborador existe y guardia ya no', r1.some((x: any) => x.clave === 'colaborador') && !r1.some((x: any) => x.clave === 'guardia'));
+    // Dar permisos de partida (permisos "nuevos") y luego editarlos en UNA empresa.
+    await sembrarRolesDeEmpresa(raw2, E1, ['asistencia.marcar', 'asistencia.ver']);
+    await sembrarRolesDeEmpresa(raw2, E2, ['asistencia.marcar', 'asistencia.ver']);
+    const colabDe = async (e: number) => (await rolesDe(e)).find((x: any) => x.clave === 'colaborador').id as number;
+    const tiene = async (rolId: number, permisoId: number) => (await raw2.rolPermiso.count({ where: { rolId, permisoId } })) === 1;
+    check('el colaborador de partida marca su asistencia en las dos empresas', (await tiene(await colabDe(E1), permMarcar.id)) && (await tiene(await colabDe(E2), permMarcar.id)));
+    await raw2.rolPermiso.delete({ where: { rolId_permisoId: { rolId: await colabDe(E2), permisoId: permMarcar.id } } });
+    check('quitarle un permiso a un rol de una empresa no toca el de la otra', !(await tiene(await colabDe(E2), permMarcar.id)) && (await tiene(await colabDe(E1), permMarcar.id)));
+    await sembrarRolesDeEmpresa(raw2, E2, []);
+    check('volver a correr el seed no devuelve lo que el admin quitó', !(await tiene(await colabDe(E2), permMarcar.id)));
+    await sembrarRolesDeEmpresa(raw2, E2, ['asistencia.marcar']);
+    check('un permiso NUEVO del catálogo sí llega a los roles que lo llevan de partida', await tiene(await colabDe(E2), permMarcar.id));
+    const adminE2 = (await rolesDe(E2)).find((x: any) => x.clave === 'admin').id as number;
+    await raw2.rolPermiso.deleteMany({ where: { rolId: adminE2 } });
+    await sembrarRolesDeEmpresa(raw2, E2, []);
+    check('el admin siempre conserva todos los permisos (el seed se los repone)', (await raw2.rolPermiso.count({ where: { rolId: adminE2 } })) === (await raw2.permiso.count()));
+    const nuevaEmp = await como(TS).post('/plataforma/empresas', { nombre: 'Nueva SA', zonaHoraria: 'America/Mexico_City' });
+    const idNueva = nuevaEmp.body?.data?.id as number | undefined;
+    check('al crear una empresa nacen sus roles de partida', nuevaEmp.status === 201 && !!idNueva && (await rolesDe(idNueva!)).length === 4, nuevaEmp.body);
+    await raw2.$disconnect();
 
     await disconnectPrisma();
     console.log(`\n${fallos === 0 ? 'TODO BIEN' : 'HAY FALLOS'}: ${total - fallos} de ${total} comprobaciones correctas.`);

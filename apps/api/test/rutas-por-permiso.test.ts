@@ -42,7 +42,7 @@ const sinAdmin = (permiso: string): Rol[] =>
 
 const P = PERMISOS;
 const MANDO: Rol[] = [ROLES.JEFE, ROLES.SUPERVISOR];
-const TODOS: Rol[] = [ROLES.JEFE, ROLES.SUPERVISOR, ROLES.GUARDIA];
+const TODOS: Rol[] = [ROLES.JEFE, ROLES.SUPERVISOR, ROLES.COLABORADOR];
 
 /** módulo → permiso → roles (sin contar al admin, que tiene todo) que podían entrar a esas rutas antes de C-11. */
 const ANTES: [string, string, Rol[], string?][] = [
@@ -69,7 +69,7 @@ const ANTES: [string, string, Rol[], string?][] = [
   ['emergencias', P.EMERGENCIAS_LANZAR, TODOS],
   ['emergencias', P.EMERGENCIAS_ATENDER, MANDO],
   ['horarios', P.HORARIOS_VER, MANDO],
-  ['horas-extra', P.HORAS_EXTRA_SOLICITAR, [ROLES.GUARDIA]],
+  ['horas-extra', P.HORAS_EXTRA_SOLICITAR, [ROLES.COLABORADOR]],
   ['horas-extra', P.HORAS_EXTRA_RESOLVER, MANDO],
   ['informes', P.INFORMES_VER, MANDO],
   ['sitios', P.HORARIOS_EDITAR, MANDO],

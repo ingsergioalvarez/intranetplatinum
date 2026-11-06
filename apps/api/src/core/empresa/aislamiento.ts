@@ -14,6 +14,7 @@ import { empresaOpcional, esContextoGlobal } from './contexto';
  */
 export const MODELOS_CON_EMPRESA: ReadonlySet<string> = new Set([
   'Usuario',
+  'Rol',
   'Area',
   'Auditoria',
   'Cliente',
@@ -49,9 +50,8 @@ export const MODELOS_CON_EMPRESA: ReadonlySet<string> = new Set([
  * la prueba "vigilante" falla si alguien agrega una tabla y se olvida de decidir.
  */
 export const MODELOS_SIN_EMPRESA: Readonly<Record<string, string>> = {
-  Rol: 'Catálogo global de roles; por empresa llega con C-11',
   Permiso: 'Catálogo global de permisos',
-  RolPermiso: 'Relación global rol-permiso; por empresa llega con C-11',
+  RolPermiso: 'Cuelga de un rol, que ya es de una empresa: se consulta siempre a través de él',
   UsuarioPermiso: 'Cuelga de un usuario, que ya es de una empresa: se consulta siempre a través de él',
   AreaSupervisor: 'Cuelga de un área, que ya es de una empresa: se consulta siempre a través de ella',
   Empresa: 'Es la propia empresa',

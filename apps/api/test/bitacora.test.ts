@@ -164,7 +164,7 @@ beforeEach(() => {
 
 describe('bitácora del guardia (DA-41)', () => {
   it('solo admin y supervisor; el guardia no la ve', async () => {
-    expect((await como(ROLES.GUARDIA).get('/guardias/10?mes=2026-10')).status).toBe(403);
+    expect((await como(ROLES.COLABORADOR).get('/guardias/10?mes=2026-10')).status).toBe(403);
     expect((await como(ROLES.ADMIN).get('/guardias/10?mes=2026-10')).status).toBe(200);
   });
 
@@ -223,7 +223,7 @@ describe('bitácora del guardia (DA-41)', () => {
       { guardia: expect.objectContaining({ id: 11 }), asistencia: 1, rostro: 1, pendientes: 1 },
       { guardia: expect.objectContaining({ id: 10 }), asistencia: 1, rostro: 0, pendientes: 1 },
     ]);
-    expect((await como(ROLES.GUARDIA).get('/incidencias/guardias?mes=2026-10')).status).toBe(403);
+    expect((await como(ROLES.COLABORADOR).get('/incidencias/guardias?mes=2026-10')).status).toBe(403);
   });
 
   it('una nota no atiende lo justificable, pero sí lo que no se puede justificar (racha)', async () => {

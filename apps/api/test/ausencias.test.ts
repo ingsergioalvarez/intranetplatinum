@@ -17,7 +17,7 @@ import { MemoryAuditLogger } from './helpers/memoryAudit';
 
 const HOY = '2026-11-03';
 const NOMBRES: Record<number, string> = { 1: 'Admin Ada', 5: 'Sofía Sup', 6: 'Pedro Sup', 10: 'Juan Pérez', 11: 'Ana Ruiz' };
-const ROL_DE: Record<number, string> = { 1: 'admin', 5: 'supervisor', 6: 'supervisor', 10: 'guardia', 11: 'guardia' };
+const ROL_DE: Record<number, string> = { 1: 'admin', 5: 'supervisor', 6: 'supervisor', 10: 'colaborador', 11: 'colaborador' };
 /** Bytes de un JPEG (lo que `detectarImagen` reconoce por su firma). */
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01]);
 
@@ -125,7 +125,7 @@ const como = (id: number, rol: Rol) => ({
 });
 const admin = () => como(1, ROLES.ADMIN);
 const sup = () => como(5, ROLES.SUPERVISOR);
-const guardia = () => como(10, ROLES.GUARDIA);
+const guardia = () => como(10, ROLES.COLABORADOR);
 
 const vacaciones = { usuarioId: '10', tipo: 'vacaciones', desde: '2026-11-04', hasta: '2026-11-08' };
 
@@ -257,7 +257,7 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
 
   it('cancelar: quien la pidió su pendiente; la aprobada futura solo quien resuelve; una que ya empezó no', async () => {
     await guardia().pedir(vacaciones);
-    expect((await como(11, ROLES.GUARDIA).post('/1/cancelar', { categoria: 'se_equivoco' })).status).toBe(404);
+    expect((await como(11, ROLES.COLABORADOR).post('/1/cancelar', { categoria: 'se_equivoco' })).status).toBe(404);
     expect((await guardia().post('/1/cancelar', {})).status).toBe(400);
     const c = await guardia().post('/1/cancelar', { categoria: 'se_equivoco' });
     expect(c.body.data).toMatchObject({ estado: 'cancelada', resolucion: 'Se pidió por error' });

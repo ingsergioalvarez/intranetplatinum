@@ -100,7 +100,7 @@ export class CambiosService extends BaseService {
     super();
   }
 
-  private esGuardia = (user: AuthUser) => user.rol === ROLES.GUARDIA;
+  private esGuardia = (user: AuthUser) => user.rol === ROLES.COLABORADOR;
 
   private aCambio(r: CambioRow): CambioTurno {
     return {
@@ -172,7 +172,7 @@ export class CambiosService extends BaseService {
     if (!guardia) throw HttpError.badRequest('Elige un guardia');
     if (this.esGuardia(user) && !tienePermiso(user, PERMISOS.ASISTENCIA_MARCAR)) throw HttpError.forbidden();
     const persona = await this.repo.findGuardia(guardia.id);
-    if (!persona || !persona.activo || persona.rol !== ROLES.GUARDIA) {
+    if (!persona || !persona.activo || persona.rol !== ROLES.COLABORADOR) {
       throw HttpError.badRequest('Elige un guardia activo');
     }
     if (!this.esGuardia(user) && alcance && !alcance.guardiaIds.has(persona.id)) throw noEsDeEllos();
@@ -197,7 +197,7 @@ export class CambiosService extends BaseService {
     let cubre: { id: number; nombre: string } | null = null;
     if (data.tipo === 'cubrir') {
       const c = await this.repo.findGuardia(data.cubreId!);
-      if (!c || !c.activo || c.rol !== ROLES.GUARDIA || c.id === persona.id) {
+      if (!c || !c.activo || c.rol !== ROLES.COLABORADOR || c.id === persona.id) {
         throw HttpError.badRequest('Elige a un compañero activo');
       }
       if (!this.esGuardia(user) && alcance && !alcance.guardiaIds.has(c.id)) throw noEsDeEllos();

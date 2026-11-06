@@ -69,7 +69,7 @@ export class EmergenciasService extends BaseService {
   async crear(input: EmergenciaCreateInput, user: AuthUser, ctx: AccionCtx): Promise<Emergencia> {
     const previa = await this.repo.activaDe(user.id);
     if (previa) return aEmergencia(previa, await this.supervisorDe(user));
-    const sitio = user.rol === ROLES.GUARDIA ? await this.repo.sitioDe(user.id, hoyISO()) : null;
+    const sitio = user.rol === ROLES.COLABORADOR ? await this.repo.sitioDe(user.id, hoyISO()) : null;
     const destinatarios = await this.destinatarios(user.id);
     const e = await this.repo.crear({ usuarioId: user.id, sitioId: sitio?.id ?? null, ...input }, destinatarios);
     await this.audit.registrarAccion(ctx, 'emergencias.crear', 'emergencias', e.id, {
@@ -91,7 +91,7 @@ export class EmergenciasService extends BaseService {
 
   /** A quién llamar desde la alerta propia: el supervisor del sitio del guardia (null si no tiene). */
   private async supervisorDe(user: AuthUser): Promise<ContactoTelefono | null> {
-    if (user.rol !== ROLES.GUARDIA) return null;
+    if (user.rol !== ROLES.COLABORADOR) return null;
     const id = (await this.repo.sitioDe(user.id, hoyISO()))?.supervisorId;
     return id ? this.repo.contactoDe(id) : null;
   }

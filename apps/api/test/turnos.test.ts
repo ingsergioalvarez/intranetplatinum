@@ -201,7 +201,7 @@ describe('catálogo de turnos (DA-37)', () => {
     repo.usosPorTurno.clear();
     expect((await sup().patch('/1/baja')).status).toBe(204);
     expect((await sup().get('')).body.data[0].activo).toBe(false);
-    const guardia = await request(app).get('/api/turnos').set('Authorization', token(ROLES.GUARDIA));
+    const guardia = await request(app).get('/api/turnos').set('Authorization', token(ROLES.COLABORADOR));
     expect(guardia.status).toBe(403);
   });
 });
@@ -298,8 +298,8 @@ describe('borrar un turno (supervisor o admin)', () => {
   });
 
   it('el guardia no puede borrar ni consultar', async () => {
-    expect((await borrar(ROLES.GUARDIA, 1)).status).toBe(403);
-    expect((await request(app).get('/api/turnos/1/uso').set('Authorization', token(ROLES.GUARDIA))).status).toBe(403);
+    expect((await borrar(ROLES.COLABORADOR, 1)).status).toBe(403);
+    expect((await request(app).get('/api/turnos/1/uso').set('Authorization', token(ROLES.COLABORADOR))).status).toBe(403);
   });
 });
 

@@ -9,6 +9,7 @@ import {
   type CoberturaCreada,
   type CoberturaData,
   type CoberturasQuery,
+  ROLES,
 } from '@platinum/shared';
 import {
   AuditLogger,
@@ -153,7 +154,7 @@ export class CoberturasService extends BaseService {
     const sitio = await this.repo.findSitio(data.sitioId);
     if (!sitio || !sitio.activo) throw HttpError.badRequest('Elige un sitio activo');
     const guardia = await this.repo.findGuardia(data.usuarioId);
-    if (!guardia || !guardia.activo || guardia.rol !== 'guardia')
+    if (!guardia || !guardia.activo || guardia.rol !== ROLES.COLABORADOR)
       throw HttpError.badRequest('Elige un guardia activo');
     if (alcance && (!alcance.sitioIds.has(sitio.id) || !alcance.guardiaIds.has(guardia.id)))
       throw prohibido();

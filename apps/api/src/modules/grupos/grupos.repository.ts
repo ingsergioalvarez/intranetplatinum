@@ -97,7 +97,7 @@ export class PrismaGruposRepository extends GruposRepository {
         id: { in: ids },
         activo: true,
         deletedAt: null,
-        rol: { clave: ROLES.GUARDIA },
+        rol: { clave: ROLES.COLABORADOR },
       },
       select: { id: true },
     });

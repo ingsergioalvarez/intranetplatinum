@@ -275,7 +275,7 @@ describe('GET /api/cobertura', () => {
   });
 
   it('el guardia no puede consultarla', async () => {
-    expect((await api()(ROLES.GUARDIA)).status).toBe(403);
+    expect((await api()(ROLES.COLABORADOR)).status).toBe(403);
   });
 
   it('rechaza rangos de más de 62 días o invertidos', async () => {
@@ -322,7 +322,7 @@ describe('GET /api/cobertura/resumen (AS6-03)', () => {
   });
 
   it('el guardia no puede consultarlo', async () => {
-    expect((await obtener(ROLES.GUARDIA)).status).toBe(403);
+    expect((await obtener(ROLES.COLABORADOR)).status).toBe(403);
   });
 });
 

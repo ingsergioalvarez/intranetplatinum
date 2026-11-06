@@ -131,8 +131,8 @@ function usuario(over: Partial<UsuarioAuth> = {}): UsuarioAuth {
     deletedAt: null,
     intentosFallidos: 0,
     bloqueadoHasta: null,
-    rol: ROLES.GUARDIA,
-    permisos: PERMISOS_POR_ROL[ROLES.GUARDIA],
+    rol: ROLES.COLABORADOR,
+    permisos: PERMISOS_POR_ROL[ROLES.COLABORADOR],
     ...over,
   };
 }
@@ -172,7 +172,7 @@ describe('POST /api/auth/login', () => {
     const res = await login('  ANA@platinum.local ');
 
     expect(res.status).toBe(200);
-    expect(res.body.data.user).toMatchObject({ id: 1, email: 'ana@platinum.local', rol: 'guardia' });
+    expect(res.body.data.user).toMatchObject({ id: 1, email: 'ana@platinum.local', rol: 'colaborador' });
     expect(res.body.data.user.passwordHash).toBeUndefined();
     expect(res.body.data.refreshToken).toBeUndefined();
 
@@ -188,7 +188,7 @@ describe('POST /api/auth/login', () => {
       .get('/api/health/me')
       .set('Authorization', `Bearer ${res.body.data.accessToken}`);
     expect(me.status).toBe(200);
-    expect(me.body.data).toMatchObject({ id: 1, rol: 'guardia' });
+    expect(me.body.data).toMatchObject({ id: 1, rol: 'colaborador' });
   });
 
   it('con contraseña incorrecta responde 401 genérico y cuenta el intento', async () => {
@@ -496,7 +496,7 @@ describe('perfiles rápidos de guardias (A-40)', { timeout: 30_000 }, () => {
 
     const res = await pinPor(token, '1234');
     expect(res.status).toBe(200);
-    expect(res.body.data.user).toMatchObject({ id: 1, rol: 'guardia' });
+    expect(res.body.data.user).toMatchObject({ id: 1, rol: 'colaborador' });
     expect(res.body.data.dispositivo).toEqual({ id: 1, tienePin: true });
     expect(refreshCookie(res)).toBeTruthy();
     expect(audit.acciones()).toContain('auth.login_pin');
