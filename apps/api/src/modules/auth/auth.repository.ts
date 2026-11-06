@@ -88,6 +88,7 @@ export abstract class AuthRepository {
 
 const usuarioAuthInclude = {
   rol: { include: { permisos: { include: { permiso: true } } } },
+  permisosPropios: { include: { permiso: true } },
 } as const;
 
 export class PrismaAuthRepository extends AuthRepository {
@@ -222,9 +223,12 @@ export class PrismaAuthRepository extends AuthRepository {
     intentosFallidos: number;
     bloqueadoHasta: Date | null;
     rol: { clave: string; alcance?: string; permisos: { permiso: { clave: string } }[] };
+    permisosPropios?: { permiso: { clave: string } }[];
     esSuperAdmin?: boolean;
     empresaId?: number | null;
   }): UsuarioAuth {
+    const permisos = new Set<Permiso>(u.rol.permisos.map((rp) => rp.permiso.clave as Permiso));
+    for (const up of u.permisosPropios ?? []) permisos.add(up.permiso.clave as Permiso);
     return {
       id: u.id,
       nombre: u.nombre,
@@ -236,7 +240,7 @@ export class PrismaAuthRepository extends AuthRepository {
       intentosFallidos: u.intentosFallidos,
       bloqueadoHasta: u.bloqueadoHasta,
       rol: u.rol.clave as Rol,
-      permisos: u.rol.permisos.map((rp) => rp.permiso.clave as Permiso),
+      permisos: [...permisos],
       alcance: u.rol.alcance as AlcanceRol | undefined,
       esSuperAdmin: u.esSuperAdmin ?? false,
       empresaId: u.empresaId ?? null,

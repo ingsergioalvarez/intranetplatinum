@@ -170,9 +170,12 @@ export class AreasService extends BaseService {
     await this.repo.actualizar(areaId, { jefeId: usuarioId });
     // El jefe no es a la vez supervisor del mismo equipo.
     await this.repo.quitarSupervisor(areaId, usuarioId);
-    // Un admin se queda como admin: no se le baja de nivel.
+    // Solo cambia a Jefe si era Colaborador o Supervisor; un admin o un rol personalizado (ej. Nómina) conserva su rol (C-11 parte 5).
     const u = await this.personaActiva(usuarioId);
-    if (u.rol !== ROLES.ADMIN && u.rol !== ROLES.JEFE && (await this.repo.ponerRol(usuarioId, ROLES.JEFE))) {
+    if (
+      (u.rol === ROLES.COLABORADOR || u.rol === ROLES.SUPERVISOR) &&
+      (await this.repo.ponerRol(usuarioId, ROLES.JEFE))
+    ) {
       await this.registrar(ctx, 'areas.rol_jefe', usuarioId, { nombre: u.nombre, de: u.rol, a: ROLES.JEFE });
     }
   }

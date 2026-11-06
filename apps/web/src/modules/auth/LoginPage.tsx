@@ -242,7 +242,7 @@ export function LoginPage() {
                       {p.nombre}
                     </span>
                     {p.rol && p.rol !== ROLES.COLABORADOR && (
-                      <span className="block text-xs font-medium text-brand-fondo">{ROL_DESCRIPCIONES[p.rol]}</span>
+                      <span className="block text-xs font-medium text-brand-fondo">{ROL_DESCRIPCIONES[p.rol] ?? p.rol}</span>
                     )}
                     <span className="mt-0.5 block text-xs text-slate-500">
                       {p.bloqueado ? 'PIN bloqueado: usa tu contraseña' : p.tienePin ? 'Entra con tu PIN' : 'Entra con tu contraseña'}

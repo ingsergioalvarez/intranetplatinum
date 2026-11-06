@@ -10,6 +10,7 @@ import {
   Network,
 
   MapPin,
+  ShieldCheck,
   Timer,
   Users,
   UsersRound,
@@ -62,6 +63,7 @@ export const navItems: NavItem[] = [
   { label: 'Clientes', to: '/clientes', modulo: 'clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
   { label: 'Grupos', to: '/grupos', modulo: 'grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
   { label: 'Usuarios', to: '/usuarios', icon: Users, permiso: PERMISOS.USUARIOS_VER },
+  { label: 'Roles y permisos', to: '/roles', icon: ShieldCheck, permiso: PERMISOS.ROLES_ADMINISTRAR },
   // Estructura de la empresa (C-10): áreas con subáreas, sus personas y su jefe. Parte de lo siempre incluido.
   { label: 'Áreas', to: '/areas', icon: Network, permiso: PERMISOS.AREAS_VER },
   {

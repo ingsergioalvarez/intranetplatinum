@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { IdParam, UsuarioCreate, UsuarioFiltro, UsuarioUpdate } from '@platinum/shared';
+import type { IdParam, UsuarioCreate, UsuarioFiltro, UsuarioPermisosUpdate, UsuarioUpdate } from '@platinum/shared';
 import { BaseController } from '../../core';
 import type { UsuariosService } from './usuarios.service';
 
@@ -26,6 +26,17 @@ export class UsuariosController extends BaseController {
       await this.service.actualizar(
         this.params<IdParam>(req).id,
         this.body<UsuarioUpdate>(req),
+        this.accionCtx(req),
+        this.currentUser(req),
+      ),
+    );
+
+  permisos = async (req: Request, res: Response) =>
+    this.ok(
+      res,
+      await this.service.fijarPermisos(
+        this.params<IdParam>(req).id,
+        this.body<UsuarioPermisosUpdate>(req),
         this.accionCtx(req),
         this.currentUser(req),
       ),

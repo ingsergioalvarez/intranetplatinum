@@ -22,6 +22,7 @@ import { emergenciasModule } from './emergencias';
 import { miEmpresaModule } from './mi-empresa';
 import { plataformaModule } from './plataforma';
 import { pushModule } from './push';
+import { rolesModule } from './roles';
 import { sitiosModule } from './sitios';
 import { turnosModule } from './turnos';
 import { usuariosModule } from './usuarios';
@@ -31,6 +32,7 @@ export const modules: AppModule[] = [
   healthModule,
   authModule,
   usuariosModule,
+  rolesModule,
   areasModule,
   clientesModule,
   sitiosModule,

@@ -1,11 +1,15 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Trash2, UserCheck, UserX } from 'lucide-react';
+import { ChevronDown, ChevronRight, KeyRound, Trash2, UserCheck, UserX } from 'lucide-react';
 import {
+  CATALOGO_PERMISOS,
+  GRUPOS_PERMISOS,
   PERMISOS,
+  PERMISOS_POR_ROL,
   ROL_DESCRIPCIONES,
   ROLES,
   usuarioCreateSchema,
+  type Permiso,
   type Rol,
   type Usuario,
   type UsuarioConPassword,
@@ -15,10 +19,11 @@ import { ApiError } from '../../core/api';
 import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import { formatFechaHora } from '../../core/format/fechas';
-import { Badge, Button, ConfirmDialog, FormField, Input, Modal, Select, toast } from '../../components/ui';
+import { Badge, Button, Checkbox, ConfirmDialog, FormField, Input, Modal, Select, toast } from '../../components/ui';
 import { EliminarUsuarioDialog } from './EliminarUsuarioDialog';
 import { estadoUsuario } from './estadoUsuario';
 import { areasService } from '../areas/areas.service';
+import { rolesService } from '../roles/roles.service';
 import { usuariosService } from './usuarios.service';
 
 interface Campos {
@@ -26,17 +31,17 @@ interface Campos {
   email: string;
   telefono: string;
   telefonoPersonal: string;
-  rol: Rol | '';
+  rol: string;
 }
 type FieldErrors = Partial<Record<keyof Campos, string>>;
 type Accion = 'baja' | 'reactivar' | 'reset';
 
-const todosLosRoles = (Object.values(ROLES) as Rol[]).map((r) => ({ value: r, label: ROL_DESCRIPCIONES[r] }));
+const rolesBaseOpciones = (Object.values(ROLES) as Rol[]).map((r) => ({ value: r, label: ROL_DESCRIPCIONES[r] }));
 
 const mensajeError = (e: unknown) => (e instanceof ApiError ? e.message : 'Ocurrió un error inesperado');
 
 /**
- * Alta / edición de usuario y acciones de su cuenta (baja, reactivar, restablecer contraseña).
+ * Alta / edición de usuario, asignación de rol de la empresa, área y permisos adicionales por persona (C-11 parte 5).
  * `usuario = null` es alta. Se monta con `key` por usuario para reiniciar el formulario.
  */
 export function UsuarioModal({
@@ -57,6 +62,7 @@ export function UsuarioModal({
     hasPermission(yo, esNuevo ? PERMISOS.USUARIOS_CREAR : PERMISOS.USUARIOS_EDITAR) && !deBaja;
   const puedeBaja = hasPermission(yo, PERMISOS.USUARIOS_BAJA) && !esYo && !esNuevo;
   const puedeReset = hasPermission(yo, PERMISOS.USUARIOS_EDITAR) && !esYo && !esNuevo && !deBaja;
+  const puedeAdministrarRoles = hasPermission(yo, PERMISOS.ROLES_ADMINISTRAR) && !deBaja;
   // Eliminar definitivamente: solo el rol admin (no el supervisor), para limpiar cuentas de prueba.
   const puedeEliminar = yo?.rol === ROLES.ADMIN && !esYo && !esNuevo;
   const [eliminando, setEliminando] = useState(false);
@@ -72,29 +78,103 @@ export function UsuarioModal({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [confirmar, setConfirmar] = useState<Accion | null>(null);
   const esSuper = !!yo?.esSuperAdmin;
+
+  // Roles de la empresa (C-11 parte 5).
+  const rolesQuery = useQuery({
+    queryKey: rolesService.keys.list(),
+    queryFn: () => rolesService.list(),
+    enabled: hasPermission(yo, PERMISOS.ROLES_ADMINISTRAR),
+  });
+
+  const opcionesTodas = useMemo(() => {
+    if (rolesQuery.data && rolesQuery.data.length > 0) {
+      return rolesQuery.data.map((r) => ({ value: r.clave, label: r.nombre }));
+    }
+    const base = [...rolesBaseOpciones];
+    if (usuario?.rol && !base.some((b) => b.value === usuario.rol)) {
+      base.push({ value: usuario.rol, label: usuario.rolNombre ?? usuario.rol });
+    }
+    return base;
+  }, [rolesQuery.data, usuario?.rol, usuario?.rolNombre]);
+
   // Solo el super admin crea o cambia administradores (A-65).
-  const rolOptions = todosLosRoles.filter((r) => r.value !== ROLES.ADMIN || esSuper || usuario?.rol === ROLES.ADMIN);
+  const rolOptions = opcionesTodas.filter(
+    (r) => r.value !== ROLES.ADMIN || esSuper || usuario?.rol === ROLES.ADMIN,
+  );
+
+  // Permisos que ya incluye el rol seleccionado (para indicarlo en la lista de permisos adicionales).
+  const permisosDelRol = useMemo(() => {
+    if (!form.rol) return new Set<Permiso>();
+    const enLista = rolesQuery.data?.find((r) => r.clave === form.rol);
+    if (enLista) return new Set<Permiso>(enLista.permisos);
+    const porDefecto = PERMISOS_POR_ROL[form.rol as Rol];
+    return new Set<Permiso>(porDefecto ?? []);
+  }, [form.rol, rolesQuery.data]);
+
+  const rolSeleccionadoNombre =
+    opcionesTodas.find((r) => r.value === form.rol)?.label ?? form.rol;
+
+  // Permisos individuales adicionales (C-11 parte 5).
+  const permisosIniciales = useMemo(
+    () => [...(usuario?.permisosPropios ?? [])].sort(),
+    [usuario?.permisosPropios],
+  );
+  const [permisosPropios, setPermisosPropios] = useState<Set<Permiso>>(
+    () => new Set(permisosIniciales),
+  );
+  const [verOtrosPermisos, setVerOtrosPermisos] = useState(false);
+
+  const permisosActualesLista = useMemo(
+    () => [...permisosPropios].sort(),
+    [permisosPropios],
+  );
+  const cambianPermisos =
+    puedeAdministrarRoles &&
+    (permisosActualesLista.length !== permisosIniciales.length ||
+      permisosActualesLista.some((p, i) => p !== permisosIniciales[i]));
+
   // Área (C-10): una por persona. La elige el admin de la empresa y se guarda por la API de áreas, después del usuario.
   const puedeElegirArea = hasPermission(yo, PERMISOS.AREAS_ADMINISTRAR);
   const areaInicial = usuario?.areaId != null ? String(usuario.areaId) : '';
   const [areaId, setAreaId] = useState(areaInicial);
-  const areas = useQuery({ queryKey: areasService.keys.list('activas'), queryFn: () => areasService.list('activas'), enabled: puedeElegirArea });
+  const areas = useQuery({
+    queryKey: areasService.keys.list('activas'),
+    queryFn: () => areasService.list('activas'),
+    enabled: puedeElegirArea,
+  });
   const cambiaArea = puedeElegirArea && areaId !== areaInicial;
-  const cambiado = cambiaArea || (Object.keys(inicial) as (keyof Campos)[]).some((k) => form[k] !== inicial[k]);
+  const cambianDatos = (Object.keys(inicial) as (keyof Campos)[]).some((k) => form[k] !== inicial[k]);
+  const cambiado = cambiaArea || cambianPermisos || cambianDatos;
 
   const refrescar = () => qc.invalidateQueries({ queryKey: usuariosService.keys.all });
 
   const guardar = useMutation({
     mutationFn: async (data: UsuarioCreate): Promise<UsuarioConPassword | Usuario> => {
-      const guardado = esNuevo ? await usuariosService.crear(data) : await usuariosService.update(usuario.id, data);
+      let guardado: UsuarioConPassword | Usuario;
+      if (esNuevo) {
+        guardado = await usuariosService.crear(data);
+      } else if (cambianDatos) {
+        guardado = await usuariosService.update(usuario.id, data);
+      } else {
+        guardado = usuario;
+      }
+      const id = 'usuario' in guardado ? guardado.usuario.id : guardado.id;
       if (cambiaArea) {
-        const id = 'usuario' in guardado ? guardado.usuario.id : guardado.id;
         await areasService.asignar(id, areaId ? Number(areaId) : null);
+      }
+      if (cambianPermisos && data.rol !== ROLES.ADMIN) {
+        const actualizadoConPermisos = await usuariosService.fijarPermisos(id, [...permisosPropios]);
+        if ('usuario' in guardado) {
+          guardado = { ...guardado, usuario: actualizadoConPermisos };
+        } else {
+          guardado = actualizadoConPermisos;
+        }
       }
       return guardado;
     },
     onSuccess: (res) => {
       void refrescar();
+      void qc.invalidateQueries({ queryKey: rolesService.keys.all });
       if (cambiaArea) void qc.invalidateQueries({ queryKey: areasService.keys.all });
       onClose();
       if (esNuevo) onPasswordTemporal(res as UsuarioConPassword, 'Usuario creado');
@@ -115,6 +195,7 @@ export function UsuarioModal({
     },
     onSuccess: (res, a) => {
       void refrescar();
+      void qc.invalidateQueries({ queryKey: rolesService.keys.all });
       setConfirmar(null);
       onClose();
       if (res) onPasswordTemporal(res, 'Contraseña restablecida');
@@ -138,8 +219,48 @@ export function UsuarioModal({
     guardar.mutate(parsed.data);
   };
 
+  // Atajo RH (Decisión 3): activa/desactiva emergencias.recibir + emergencias.atender en un solo paso.
+  const esRhActivo = permisosPropios.has(PERMISOS.EMERGENCIAS_RECIBIR);
+  const alternarRh = () => {
+    setPermisosPropios((prev) => {
+      const copia = new Set(prev);
+      if (copia.has(PERMISOS.EMERGENCIAS_RECIBIR)) {
+        copia.delete(PERMISOS.EMERGENCIAS_RECIBIR);
+        copia.delete(PERMISOS.EMERGENCIAS_ATENDER);
+      } else {
+        copia.add(PERMISOS.EMERGENCIAS_RECIBIR);
+        copia.add(PERMISOS.EMERGENCIAS_ATENDER);
+      }
+      return copia;
+    });
+  };
+
+  const alternarPermisoIndividual = (clave: Permiso) => {
+    setPermisosPropios((prev) => {
+      const copia = new Set(prev);
+      if (copia.has(clave)) copia.delete(clave);
+      else copia.add(clave);
+      return copia;
+    });
+  };
+
+  // Catálogo para el desplegable "Otros permisos individuales" (sin roles.administrar ni los 2 atajos superiores).
+  const otrosCatalogo = useMemo(
+    () =>
+      CATALOGO_PERMISOS.filter(
+        (p) =>
+          p.clave !== PERMISOS.ROLES_ADMINISTRAR &&
+          p.clave !== PERMISOS.EMERGENCIAS_RECIBIR &&
+          p.clave !== PERMISOS.ALCANCE_EMPRESA,
+      ),
+    [],
+  );
+
+  const otrosIndividualesActivos = otrosCatalogo.filter((p) => permisosPropios.has(p.clave)).length;
+
   const estado = usuario && estadoUsuario(usuario);
   const formId = 'usuario-form';
+  const puedeGuardarModal = puedeEditar || puedeAdministrarRoles;
 
   return (
     <>
@@ -158,9 +279,9 @@ export function UsuarioModal({
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>
-              {puedeEditar ? 'Cancelar' : 'Cerrar'}
+              {puedeGuardarModal ? 'Cancelar' : 'Cerrar'}
             </Button>
-            {puedeEditar && (
+            {puedeGuardarModal && (
               <Button
                 type="submit"
                 form={formId}
@@ -194,10 +315,14 @@ export function UsuarioModal({
               disabled={!puedeEditar}
             />
           </FormField>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField
               label="Teléfono de contacto"
-              required={form.rol === ROLES.COLABORADOR || form.rol === ROLES.SUPERVISOR || form.rol === ROLES.JEFE}
+              required={
+                form.rol === ROLES.COLABORADOR ||
+                form.rol === ROLES.SUPERVISOR ||
+                form.rol === ROLES.JEFE
+              }
               error={fieldErrors.telefono}
               hint="Puede ser el de la empresa."
             >
@@ -252,6 +377,87 @@ export function UsuarioModal({
               disabled={!puedeEditar}
             />
           </FormField>
+
+          {puedeAdministrarRoles && form.rol !== ROLES.ADMIN && !usuario?.esSuperAdmin && (
+            <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-2">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Permisos adicionales (solo para esta persona)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Se suman a los de su rol ({rolSeleccionadoNombre || 'sin elegir'}).
+                </p>
+              </div>
+
+              <div className="divide-y divide-slate-200/70">
+                <Checkbox
+                  label="Recibe y atiende las emergencias de la empresa (RH)"
+                  description="Recibe las alertas SOS de toda la empresa y puede atenderlas y cerrarlas."
+                  checked={esRhActivo || (permisosDelRol.has(PERMISOS.EMERGENCIAS_RECIBIR) && permisosDelRol.has(PERMISOS.EMERGENCIAS_ATENDER))}
+                  disabled={permisosDelRol.has(PERMISOS.EMERGENCIAS_RECIBIR) && permisosDelRol.has(PERMISOS.EMERGENCIAS_ATENDER)}
+                  onChange={alternarRh}
+                />
+
+                <Checkbox
+                  label="Ver a todas las personas de la empresa"
+                  description="Amplía su alcance a toda la empresa, sin importar el área a la que pertenezca."
+                  checked={permisosPropios.has(PERMISOS.ALCANCE_EMPRESA) || permisosDelRol.has(PERMISOS.ALCANCE_EMPRESA)}
+                  disabled={permisosDelRol.has(PERMISOS.ALCANCE_EMPRESA)}
+                  onChange={() => alternarPermisoIndividual(PERMISOS.ALCANCE_EMPRESA)}
+                />
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setVerOtrosPermisos((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:text-brand-800"
+                >
+                  {verOtrosPermisos ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                  <span>
+                    Otros permisos individuales
+                    {otrosIndividualesActivos > 0 ? ` (${otrosIndividualesActivos} activos)` : ''}
+                  </span>
+                </button>
+
+                {verOtrosPermisos && (
+                  <div className="mt-2 max-h-60 space-y-3 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3">
+                    {GRUPOS_PERMISOS.map((grupo) => {
+                      const items = otrosCatalogo.filter((p) => p.grupo === grupo.clave);
+                      if (items.length === 0) return null;
+                      return (
+                        <div key={grupo.clave} className="space-y-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {grupo.nombre}
+                          </p>
+                          <div className="divide-y divide-slate-100">
+                            {items.map((p) => {
+                              const enSuRol = permisosDelRol.has(p.clave);
+                              const marcado = enSuRol || permisosPropios.has(p.clave);
+                              return (
+                                <Checkbox
+                                  key={p.clave}
+                                  label={
+                                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                                      <span>{p.descripcion}</span>
+                                      {enSuRol && <Badge tone="neutral">Por su rol</Badge>}
+                                    </span>
+                                  }
+                                  checked={marcado}
+                                  disabled={enSuRol}
+                                  onChange={() => alternarPermisoIndividual(p.clave)}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </form>
 
         {usuario && (

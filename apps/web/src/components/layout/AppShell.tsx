@@ -121,7 +121,7 @@ function Sidebar() {
       {user && (
         <div className="border-t border-brand-800 p-4">
           <p className="truncate text-sm font-medium">{user.nombre}</p>
-          <p className="truncate text-xs text-brand-200">{ROL_DESCRIPCIONES[user.rol]}</p>
+          <p className="truncate text-xs text-brand-200">{ROL_DESCRIPCIONES[user.rol] ?? user.rol}</p>
           <Link
             to="/acceso-rapido"
             className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white"

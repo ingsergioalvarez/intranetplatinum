@@ -4,6 +4,7 @@ import {
   idParamSchema,
   usuarioCreateSchema,
   usuarioFiltroSchema,
+  usuarioPermisosSchema,
   usuarioUpdateSchema,
 } from '@platinum/shared';
 import {
@@ -54,6 +55,12 @@ export function createUsuariosModule({
   router.patch('/:id/baja', requirePermission(PERMISOS.USUARIOS_BAJA), id, c.baja);
   router.patch('/:id/reactivar', requirePermission(PERMISOS.USUARIOS_BAJA), id, c.reactivar);
   router.post('/:id/reset-password', requirePermission(PERMISOS.USUARIOS_EDITAR), id, c.resetPassword);
+  router.put(
+    '/:id/permisos',
+    requirePermission(PERMISOS.ROLES_ADMINISTRAR),
+    validate({ params: idParamSchema, body: usuarioPermisosSchema }),
+    c.permisos,
+  );
 
   return { name: 'usuarios', basePath: 'usuarios', router };
 }

@@ -1,8 +1,10 @@
 import { z } from 'zod';
+import type { Permiso } from '../constants/permisos';
 import { ROLES, type Rol } from '../constants/roles';
 import { paginationQuerySchema } from './pagination';
 
-const roles = Object.values(ROLES) as [Rol, ...Rol[]];
+/** Clave de un rol: cualquiera de los 4 base o uno creado por la empresa (C-11 parte 5). */
+export type ClaveRol = Rol | (string & {});
 
 /** Texto opcional: vacío o solo espacios se guarda como null. */
 const textoOpcional = (max: number) =>
@@ -14,8 +16,13 @@ const textoOpcional = (max: number) =>
     .nullish();
 
 /** Guardias y supervisores deben tener un teléfono de contacto: es el que se marca en una emergencia (A-60). */
-export const ROLES_CON_TELEFONO: readonly Rol[] = [ROLES.COLABORADOR, ROLES.SUPERVISOR, ROLES.JEFE];
+export const ROLES_CON_TELEFONO: readonly string[] = [ROLES.COLABORADOR, ROLES.SUPERVISOR, ROLES.JEFE];
 export const MENSAJE_TELEFONO_OBLIGATORIO = 'Escribe el teléfono de contacto (puede ser el de la empresa)';
+
+const rolClaveSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-z0-9_]{1,30}$/, 'Selecciona un rol');
 
 const usuarioBaseSchema = z.object({
   nombre: z.string().trim().min(3, 'Escribe el nombre completo').max(120),
@@ -24,7 +31,7 @@ const usuarioBaseSchema = z.object({
   telefono: textoOpcional(30),
   /** Número personal, opcional: si lo tiene, es el que se marca primero. */
   telefonoPersonal: textoOpcional(30),
-  rol: z.enum(roles, 'Selecciona un rol'),
+  rol: rolClaveSchema,
 });
 
 export const usuarioCreateSchema = usuarioBaseSchema.superRefine((v, ctx) => {
@@ -45,7 +52,7 @@ export type EstadoUsuarioFiltro = (typeof ESTADOS_USUARIO)[number];
 export const usuarioFiltroSchema = paginationQuerySchema.extend({
   /** Busca en nombre, correo y teléfono. */
   q: z.string().trim().max(100).optional(),
-  rol: z.enum(roles).optional(),
+  rol: rolClaveSchema.optional(),
   estado: z.enum(ESTADOS_USUARIO).default('activos'),
 });
 
@@ -59,6 +66,10 @@ export interface Usuario {
   telefono: string | null;
   telefonoPersonal: string | null;
   rol: Rol;
+  /** Nombre visible del rol en la empresa (C-11 parte 5). */
+  rolNombre?: string;
+  /** Permisos individuales adicionales otorgados a esta persona (C-11 parte 5). */
+  permisosPropios?: Permiso[];
   /** Super admin (A-65). */
   esSuperAdmin: boolean;
   /** Área a la que pertenece (C-10); null = sin área. */

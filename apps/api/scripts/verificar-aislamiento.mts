@@ -467,6 +467,41 @@ async function main() {
     const TSup15 = signAccessToken({ id: w.id, email: w.email, rol: 'supervisor', permisos: [...PERMISOS_POR_ROL.supervisor], alcance: 'area', empresaId: E1 });
     check('un supervisor (alcance su área) ve la bitácora de su área y no la de otra', (await como(TSup15).get(`/bitacora/guardias/${x.id}?mes=2026-11`)).status === 200 && (await como(TSup15).get(`/bitacora/guardias/${y.id}?mes=2026-11`)).status === 404);
 
+    console.log('\n16. Pantalla y API de Roles y permisos + permisos por persona (C-11 parte 5)');
+    const listaRoles1 = await como(T1).get('/roles');
+    check('el admin lista los 4 roles base de su empresa', listaRoles1.status === 200 && listaRoles1.body?.data?.length === 4, listaRoles1.body);
+    const rolAdmin1 = listaRoles1.body.data.find((r: any) => r.clave === 'admin');
+    const rolColab1 = listaRoles1.body.data.find((r: any) => r.clave === 'colaborador');
+    check('el rol admin no se puede modificar ni borrar', (await como(T1).patch(`/roles/${rolAdmin1.id}`, { nombre: 'Otro' })).status === 400 && (await como(T1).del(`/roles/${rolAdmin1.id}`)).status === 409);
+    check('un rol base no se puede borrar', (await como(T1).del(`/roles/${rolColab1.id}`)).status === 409);
+    const crearNomina = await como(T1).post('/roles', { nombre: 'Nómina', aPartirDeId: rolColab1.id });
+    const nominaRolId = crearNomina.body?.data?.id as number;
+    check('se crea un rol nuevo "Nómina" a partir de Colaborador', crearNomina.status === 201 && crearNomina.body?.data?.clave === 'nomina' && crearNomina.body?.data?.esBase === false, crearNomina.body);
+    const editarNomina = await como(T1).patch(`/roles/${nominaRolId}`, { alcance: 'empresa', permisos: ['usuarios.ver', 'informes.ver'] });
+    check('se edita el alcance y permisos del rol nuevo', editarNomina.status === 200 && editarNomina.body?.data?.alcance === 'empresa' && JSON.stringify(editarNomina.body?.data?.permisos) === JSON.stringify(['informes.ver', 'usuarios.ver']), editarNomina.body);
+    check('la empresa 2 no ve el rol nuevo de la empresa 1 ni puede tocarlo (404)', !(await como(T2).get('/roles')).body?.data?.some((r: any) => r.clave === 'nomina') && (await como(T2).get(`/roles/${nominaRolId}`)).status === 404 && (await como(T2).patch(`/roles/${nominaRolId}`, { nombre: 'Robado' })).status === 404);
+    const asignarNomina = await como(T1).patch(`/usuarios/${w.id}`, { rol: 'nomina' });
+    check('se asigna el rol nuevo a una persona', asignarNomina.status === 200 && asignarNomina.body?.data?.rol === 'nomina' && asignarNomina.body?.data?.rolNombre === 'Nómina', asignarNomina.body);
+    check('no se puede eliminar un rol que tiene personas asignadas (409)', (await como(T1).del(`/roles/${nominaRolId}`)).status === 409);
+    // Decisión 1: al designar jefe o supervisor a alguien con rol personalizado ("Nómina"), se respeta su rol.
+    const areaNom = await area(' Contabilidad ');
+    await como(T1).patch(`/areas/${areaNom}`, { jefeId: w.id });
+    check('designar jefe de área a quien tiene un rol propio (Nómina) respeta su rol', (await rolDe(w.id)) === 'nomina');
+    await como(T1).patch(`/areas/${areaNom}`, { jefeId: null, supervisorIds: [w.id] });
+    check('designar supervisor de área a quien tiene un rol propio (Nómina) respeta su rol', (await rolDe(w.id)) === 'nomina');
+    // Decisión 2 y 3: permisos individuales, bloqueo de roles.administrar y atajo RH
+    check('no se puede dar roles.administrar como permiso individual (400)', (await como(T1).put(`/usuarios/${w.id}/permisos`, { permisos: ['roles.administrar'] })).status === 400);
+    const darRh = await como(T1).put(`/usuarios/${w.id}/permisos`, { permisos: ['emergencias.recibir'] });
+    check('el atajo RH da emergencias.recibir y emergencias.atender en un solo paso', darRh.status === 200 && JSON.stringify(darRh.body?.data?.permisosPropios) === JSON.stringify(['emergencias.atender', 'emergencias.recibir']), darRh.body);
+    // Verificar que al iniciar sesión o refrescar el token suma los permisos del rol + los individuales
+    const { PrismaAuthRepository } = await imp('modules/auth/auth.repository.ts');
+    const authUsuario = await conEmpresa(E1, () => new PrismaAuthRepository().findUsuarioById(w.id));
+    check('la sesión suma los permisos del rol y los permisos individuales de la persona', ['usuarios.ver', 'informes.ver', 'emergencias.recibir', 'emergencias.atender'].every((p) => authUsuario?.permisos.includes(p)) && authUsuario?.alcance === 'empresa', authUsuario?.permisos);
+    // Liberar el rol y borrarlo
+    await como(T1).patch(`/usuarios/${w.id}`, { rol: 'colaborador' });
+    check('al quedar sin personas, el rol nuevo sí se puede eliminar', (await como(T1).del(`/roles/${nominaRolId}`)).status === 204 && (await como(T1).get(`/roles/${nominaRolId}`)).status === 404);
+    check('crear, editar y eliminar roles y permisos individuales quedan en la auditoría', (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: { in: ['roles.crear', 'roles.editar', 'roles.eliminar', 'usuarios.permisos'] }, empresaId: E1 } }))) === 4);
+
     await disconnectPrisma();
     console.log(`\n${fallos === 0 ? 'TODO BIEN' : 'HAY FALLOS'}: ${total - fallos} de ${total} comprobaciones correctas.`);
   } finally {

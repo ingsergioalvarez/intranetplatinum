@@ -8,6 +8,8 @@ import { LoginPage } from '../modules/auth/LoginPage';
 import { InicioPage } from '../modules/inicio/InicioPage';
 import { MisSitiosPage } from '../modules/inicio/MisSitiosPage';
 import { UsuariosPage } from '../modules/usuarios/UsuariosPage';
+import { RolesPage } from '../modules/roles/RolesPage';
+import { RolDetallePage } from '../modules/roles/RolDetallePage';
 import { ClienteDetallePage } from '../modules/clientes/ClienteDetallePage';
 import { AreasPage } from '../modules/areas/AreasPage';
 import { ClientesPage } from '../modules/clientes/ClientesPage';
@@ -260,6 +262,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.USUARIOS_VER}>
             <UsuariosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'roles',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ROLES_ADMINISTRAR}>
+            <RolesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'roles/:id',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.ROLES_ADMINISTRAR}>
+            <RolDetallePage />
           </ProtectedRoute>
         ),
       },

@@ -539,7 +539,7 @@ function DetalleArea({
                   ) : p.esSupervisor ? (
                     <Badge tone="brand">Supervisor</Badge>
                   ) : (
-                    <Badge>{ROL_DESCRIPCIONES[p.rol]}</Badge>
+                    <Badge>{ROL_DESCRIPCIONES[p.rol] ?? p.rol}</Badge>
                   )}
                   <Button
                     size="sm"

@@ -73,6 +73,7 @@ const ANTES: [string, string, Rol[], string?][] = [
   ['horas-extra', P.HORAS_EXTRA_SOLICITAR, [ROLES.COLABORADOR]],
   ['horas-extra', P.HORAS_EXTRA_RESOLVER, MANDO],
   ['informes', P.INFORMES_VER, MANDO],
+  ['roles', P.ROLES_ADMINISTRAR, []],
   ['sitios', P.HORARIOS_EDITAR, MANDO],
   ['sitios', P.HORARIOS_VER, MANDO],
   ['turnos', P.TURNOS_ADMINISTRAR, MANDO],

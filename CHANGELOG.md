@@ -5,6 +5,25 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-06 (8) — Roles y permisos, parte 5: pantallas de Roles y permisos y permisos por persona (C-11, DC-019)
+
+#### Añadido
+
+- **API `/api/roles`** (`apps/api/src/modules/roles/`): listar roles de la empresa con conteo de personas activas, consultar detalle, crear un rol nuevo "a partir de" otro (copiando su alcance y permisos, incluidos heredados si no es admin), editar nombre, alcance y permisos del catálogo (`CATALOGO_PERMISOS`), y eliminar roles creados por la empresa cuando no tienen personas asignadas. Todas las rutas piden `roles.administrar` y están acotadas por empresa.
+- **Permisos individuales por persona** (`PUT /api/usuarios/:id/permisos`): asigna o quita permisos adicionales del catálogo (excepto `roles.administrar`, que solo se da mediante un rol). Incluye el **atajo RH** acordado: marcar `emergencias.recibir` otorga también `emergencias.atender` en un solo paso.
+- **Suma de permisos en sesión** (`apps/api/src/modules/auth/auth.repository.ts`): al iniciar o renovar sesión, `UsuarioAuth.permisos` une los permisos del rol con los `permisosPropios` (`usuario_permisos`) de la persona.
+- **Pantallas de Roles y permisos** (`apps/web/src/modules/roles/`):
+  - `/roles` (`RolesPage.tsx` + `NuevoRolModal.tsx`): tabla/tarjetas con nombre, personas asignadas, alcance, conteo de permisos y tipo (`Base · fijo`, `Base`, `Creado por ti`), y modal para crear un rol nuevo a partir de otro.
+  - `/roles/:id` (`RolDetallePage.tsx`): edición de nombre, selector de alcance con explicación clara y cuadrícula de los 12 grupos de permisos con contador `(activos/total)` y botón rápido `Todos / Ninguno` por bloque. El rol Administrador se muestra en solo lectura con aviso de bloqueo.
+- **Ficha de Usuario (`UsuarioModal.tsx` y `UsuariosPage.tsx`)**:
+  - Selector y filtro de rol cargados dinámicamente desde los roles de la empresa.
+  - Sección **Permisos adicionales (solo para esta persona)** con las 2 casillas principales a la vista (*Recibe y atiende las emergencias de la empresa (RH)* y *Ver a todas las personas de la empresa*) y desplegable *Otros permisos individuales* que distingue los permisos que ya incluye su rol (`Por su rol`).
+- Pruebas nuevas: `apps/api/test/roles.test.ts` (6 pruebas), prueba de permisos individuales y atajo RH en `apps/api/test/usuarios.test.ts`, ruta `roles` en `apps/api/test/rutas-por-permiso.test.ts` y sección 16 en `apps/api/scripts/verificar-aislamiento.mts`.
+
+#### Cambiado
+
+- **Respeto a roles propios en Áreas** (`apps/api/src/modules/areas/areas.service.ts`): al designar a una persona como jefe o supervisor de un área, su rol solo cambia automáticamente si era Colaborador (o Supervisor al pasar a Jefe); si tiene un rol personalizado (por ejemplo "Nómina") o es Administrador, se conserva su rol y solo se asigna al área.
+
 ### Sesión 2026-11-06 (7) — Roles y permisos, parte 4: alcance por rol (C-11, DC-019)
 
 #### Añadido

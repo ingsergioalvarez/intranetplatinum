@@ -5,8 +5,8 @@
 
 **Última actualización:** 2026-11-06
 **Fase actual:** En el servidor, `https://gestion.grupocomunicalo.mx` sigue como borrador (copia de Platinum, con el login nuevo de C-05 solo si se despliega). Lo nuevo (C-05 a C-14: marca, plataforma, empresas y módulos guardados) se trabaja **solo en local**; el usuario no ha desplegado nada de esto.
-**Última tarea terminada:** C-11 parte 4 (alcance por rol), en local; las partes 1 a 3 y lo anterior ya están en GitHub.
-**Tarea en progreso:** C-11 (roles y permisos): hechas las partes 1 a 4; falta la 5 (pantallas de Roles y permisos y permisos por persona). Después, C-21 (personas que marcan por permiso). Nada está desplegado.
+**Última tarea terminada:** C-11 completa (partes 1 a 5: roles y permisos por empresa, alcance por rol, pantallas de Roles y permisos y permisos individuales por persona), en local.
+**Tarea en progreso:** Siguiente paso: C-21 (personas que marcan por permiso `asistencia.marcar` en lugar del nombre de rol `colaborador`). Nada está desplegado.
 
 ## Siguiente paso
 

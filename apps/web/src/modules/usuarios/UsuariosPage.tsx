@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ScanFace, Search, Smartphone, UserPlus } from 'lucide-react';
 import {
@@ -26,6 +26,7 @@ import {
   type Column,
 } from '../../components/ui';
 import { RegistrarRostroModal } from '../asistencia/RegistrarRostroModal';
+import { rolesService } from '../roles/roles.service';
 import { DispositivosModal } from './DispositivosModal';
 import { estadoUsuario } from './estadoUsuario';
 import { PasswordTemporalModal } from './PasswordTemporalModal';
@@ -34,7 +35,7 @@ import { usuariosService } from './usuarios.service';
 
 const LIMIT = 20;
 
-const rolFiltro = [
+const rolFiltroBase = [
   { value: '', label: 'Rol: todos' },
   ...(Object.values(ROLES) as Rol[]).map((r) => ({ value: r, label: ROL_DESCRIPCIONES[r] })),
 ];
@@ -48,7 +49,7 @@ const estadoFiltro: { value: EstadoUsuarioFiltro; label: string }[] = [
 export function UsuariosPage() {
   const yo = useAuthStore((s) => s.user);
   const [busqueda, setBusqueda] = useState('');
-  const [rol, setRol] = useState<Rol | ''>('');
+  const [rol, setRol] = useState<string>('');
   const [estado, setEstado] = useState<EstadoUsuarioFiltro>('activos');
   const [page, setPage] = useState(1);
   /** undefined = cerrado, null = alta, Usuario = edición. */
@@ -60,6 +61,20 @@ export function UsuariosPage() {
   /** Guardia cuyos celulares con acceso rápido se administran: solo el admin (A-40). */
   const [dispositivosDe, setDispositivosDe] = useState<Usuario | null>(null);
   const esAdmin = yo?.rol === ROLES.ADMIN;
+
+  const rolesQuery = useQuery({
+    queryKey: rolesService.keys.list(),
+    queryFn: () => rolesService.list(),
+    enabled: hasPermission(yo, PERMISOS.ROLES_ADMINISTRAR),
+  });
+
+  const rolFiltro = useMemo(() => {
+    if (!rolesQuery.data || rolesQuery.data.length === 0) return rolFiltroBase;
+    return [
+      { value: '', label: 'Rol: todos' },
+      ...rolesQuery.data.map((r) => ({ value: r.clave, label: r.nombre })),
+    ];
+  }, [rolesQuery.data]);
 
   const q = useDebounced(busqueda.trim());
   useEffect(() => setPage(1), [q, rol, estado]);
@@ -103,7 +118,7 @@ export function UsuariosPage() {
     {
       key: 'rol',
       header: 'Rol',
-      render: (u) => <Badge tone="brand">{ROL_DESCRIPCIONES[u.rol]}</Badge>,
+      render: (u) => <Badge tone="brand">{u.rolNombre ?? ROL_DESCRIPCIONES[u.rol] ?? u.rol}</Badge>,
     },
     {
       key: 'estado',
@@ -157,7 +172,7 @@ export function UsuariosPage() {
               aria-label="Filtrar por rol"
               options={rolFiltro}
               value={rol}
-              onChange={(e) => setRol(e.target.value as Rol | '')}
+              onChange={(e) => setRol(e.target.value)}
             />
             <Select
               aria-label="Filtrar por estado"

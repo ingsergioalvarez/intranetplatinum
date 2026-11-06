@@ -1,4 +1,12 @@
-import type { Paginated, PaginationQuery, Rol, Usuario, UsuarioFiltro } from '@platinum/shared';
+import {
+  PERMISO_DESCRIPCIONES,
+  type Paginated,
+  type PaginationQuery,
+  type Permiso,
+  type Rol,
+  type Usuario,
+  type UsuarioFiltro,
+} from '@platinum/shared';
 import { BaseRepository } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
@@ -9,7 +17,7 @@ export interface UsuarioCreateData {
   email: string;
   telefono?: string | null;
   telefonoPersonal?: string | null;
-  rol: Rol;
+  rol: string;
   passwordHash: string;
   debeCambiarPassword: boolean;
 }
@@ -19,7 +27,7 @@ export interface UsuarioUpdateData {
   email?: string;
   telefono?: string | null;
   telefonoPersonal?: string | null;
-  rol?: Rol;
+  rol?: string;
 }
 
 export type UsuarioFiltroData = Omit<UsuarioFiltro, 'page' | 'limit'> & {
@@ -41,6 +49,10 @@ export abstract class UsuariosRepository extends BaseRepository<
   abstract setPasswordTemporal(id: number, passwordHash: string): Promise<void>;
   /** Revoca todos los refresh tokens vigentes (baja, reset de contraseña). */
   abstract revocarSesiones(id: number): Promise<void>;
+  /** Comprueba si la clave de rol existe en la empresa actual (C-11 parte 5). */
+  abstract existeRol(clave: string): Promise<boolean>;
+  /** Reemplaza los permisos individuales de una persona (C-11 parte 5). */
+  abstract fijarPermisosPropios(id: number, permisos: Permiso[]): Promise<Usuario>;
 }
 
 const select = {
@@ -57,7 +69,8 @@ const select = {
   ultimoAcceso: true,
   createdAt: true,
   deletedAt: true,
-  rol: { select: { clave: true } },
+  rol: { select: { clave: true, nombre: true } },
+  permisosPropios: { select: { permiso: { select: { clave: true } } } },
 } as const;
 
 type UsuarioRow = Prisma.UsuarioGetPayload<{ select: typeof select }>;
@@ -70,6 +83,8 @@ function toUsuario(u: UsuarioRow): Usuario {
     telefono: u.telefono,
     telefonoPersonal: u.telefonoPersonal,
     rol: u.rol.clave as Rol,
+    rolNombre: u.rol.nombre,
+    permisosPropios: u.permisosPropios.map((p) => p.permiso.clave as Permiso).sort(),
     esSuperAdmin: u.esSuperAdmin,
     areaId: u.areaId,
     activo: u.activo,
@@ -178,5 +193,36 @@ export class PrismaUsuariosRepository extends UsuariosRepository {
       where: { usuarioId: id, revocadoEn: null },
       data: { revocadoEn: new Date() },
     });
+  }
+
+  async existeRol(clave: string) {
+    return (await getPrisma().rol.count({ where: { clave } })) > 0;
+  }
+
+  async fijarPermisosPropios(id: number, permisos: Permiso[]) {
+    const prisma = getPrisma();
+    const unicos = [...new Set(permisos)];
+    if (unicos.length > 0) {
+      await prisma.permiso.createMany({
+        data: unicos.map((clave) => ({ clave, descripcion: PERMISO_DESCRIPCIONES[clave] ?? clave })),
+        skipDuplicates: true,
+      });
+    }
+    const catalogo = unicos.length
+      ? await prisma.permiso.findMany({ where: { clave: { in: unicos } }, select: { id: true } })
+      : [];
+    await prisma.$transaction([
+      prisma.usuarioPermiso.deleteMany({ where: { usuarioId: id } }),
+      ...(catalogo.length
+        ? [
+            prisma.usuarioPermiso.createMany({
+              data: catalogo.map((p) => ({ usuarioId: id, permisoId: p.id })),
+              skipDuplicates: true,
+            }),
+          ]
+        : []),
+    ]);
+    const u = await prisma.usuario.findUniqueOrThrow({ where: { id }, select });
+    return toUsuario(u);
   }
 }

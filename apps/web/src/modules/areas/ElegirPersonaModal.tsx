@@ -63,7 +63,7 @@ export function ElegirPersonaModal({
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">{p.nombre}</p>
                   <p className="truncate text-xs text-slate-500">
-                    {ROL_DESCRIPCIONES[p.rol]} · {p.email}
+                    {ROL_DESCRIPCIONES[p.rol] ?? p.rol} · {p.email}
                   </p>
                   {p.area ? (
                     <Badge className="mt-1">Hoy en: {p.area.nombreCompleto}</Badge>

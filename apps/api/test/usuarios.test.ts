@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
 import {
+  PERMISOS,
   PERMISOS_POR_ROL,
   ROLES,
   passwordSchema,
   type Paginated,
   type PaginationQuery,
+  type Permiso,
   type Rol,
   type Usuario,
 } from '@platinum/shared';
@@ -27,6 +29,7 @@ type Fila = Usuario & { passwordHash: string; sesionesActivas: number };
 
 class MemoryUsuariosRepository extends UsuariosRepository {
   filas: Fila[] = [];
+  rolesValidos = new Set<string>(Object.values(ROLES));
 
   private pub = ({ passwordHash: _p, sesionesActivas: _s, ...u }: Fila): Usuario => u;
   private fila = (id: number) => this.filas.find((f) => f.id === id)!;
@@ -65,6 +68,8 @@ class MemoryUsuariosRepository extends UsuariosRepository {
       deletedAt: null,
       sesionesActivas: 0,
       ...data,
+      rol: data.rol as Rol,
+      permisosPropios: [],
       telefono: data.telefono ?? null,
       telefonoPersonal: data.telefonoPersonal ?? null,
     };
@@ -89,6 +94,13 @@ class MemoryUsuariosRepository extends UsuariosRepository {
   }
   async revocarSesiones(id: number) {
     this.fila(id).sesionesActivas = 0;
+  }
+  async existeRol(clave: string) {
+    return this.rolesValidos.has(clave);
+  }
+  async fijarPermisosPropios(id: number, permisos: Permiso[]) {
+    this.fila(id).permisosPropios = [...permisos].sort();
+    return this.pub(this.fila(id));
   }
 }
 
@@ -133,6 +145,8 @@ const como = (token: string) => ({
     request(app).post(`/api/usuarios${url}`).set('Authorization', `Bearer ${token}`).send(body),
   patch: (url: string, body?: object) =>
     request(app).patch(`/api/usuarios${url}`).set('Authorization', `Bearer ${token}`).send(body),
+  put: (url: string, body?: object) =>
+    request(app).put(`/api/usuarios${url}`).set('Authorization', `Bearer ${token}`).send(body),
 });
 
 beforeEach(() => {
@@ -264,13 +278,22 @@ describe('POST /api/usuarios (F1-08)', () => {
     );
   });
 
-  it('valida campos obligatorios', async () => {
-    const res = await como(ADMIN).post('/', { nombre: 'A', email: 'x', rol: 'gerente' });
+  it('valida campos obligatorios y que el rol exista en la empresa', async () => {
+    const res = await como(ADMIN).post('/', { nombre: 'A', email: 'x', rol: '' });
     expect(res.status).toBe(400);
     expect(res.body.error.details.map((d: { path: string }) => d.path).sort()).toEqual([
       'email',
       'nombre',
       'rol',
+    ]);
+    const rolInexistente = await como(ADMIN).post('/', {
+      nombre: 'Ana Perez',
+      email: 'ana@x.mx',
+      rol: 'gerente',
+    });
+    expect(rolInexistente.status).toBe(400);
+    expect(rolInexistente.body.error.details).toEqual([
+      { path: 'rol', message: 'Selecciona un rol válido' },
     ]);
   });
 });
@@ -425,5 +448,41 @@ describe('usuarios de la empresa', () => {
     expect((await como(ADMIN).patch('/1/baja')).status).toBe(400);
     expect((await como(ADMIN).patch('/1', { rol: 'colaborador' })).status).toBe(400);
     expect((await como(ADMIN).patch('/1', { nombre: 'Super Admin' })).status).toBe(200);
+  });
+
+  it('asigna permisos individuales, aplica el atajo RH y rechaza roles.administrar (C-11 parte 5)', async () => {
+    // Atajo RH: marcar emergencias.recibir incluye automáticamente emergencias.atender
+    const rh = await como(A).put('/21/permisos', {
+      permisos: [PERMISOS.EMERGENCIAS_RECIBIR, PERMISOS.ALCANCE_EMPRESA],
+    });
+    expect(rh.status).toBe(200);
+    expect(rh.body.data.permisosPropios).toEqual([
+      PERMISOS.ALCANCE_EMPRESA,
+      PERMISOS.EMERGENCIAS_ATENDER,
+      PERMISOS.EMERGENCIAS_RECIBIR,
+    ]);
+    expect(audit.eventos.at(-1)).toMatchObject({
+      accion: 'usuarios.permisos',
+      entidadId: 21,
+      datos: {
+        antes: { permisos: [] },
+        despues: {
+          permisos: [
+            PERMISOS.ALCANCE_EMPRESA,
+            PERMISOS.EMERGENCIAS_ATENDER,
+            PERMISOS.EMERGENCIAS_RECIBIR,
+          ],
+        },
+      },
+    });
+
+    // No se puede otorgar roles.administrar como permiso individual
+    const prohibido = await como(A).put('/21/permisos', {
+      permisos: [PERMISOS.ROLES_ADMINISTRAR],
+    });
+    expect(prohibido.status).toBe(400);
+
+    // Quien no tiene roles.administrar recibe 403
+    expect((await como(SUPERVISOR).put('/21/permisos', { permisos: [] })).status).toBe(403);
   });
 });

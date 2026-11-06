@@ -1,12 +1,15 @@
 import {
   MENSAJE_TELEFONO_OBLIGATORIO,
+  PERMISOS,
   ROLES,
   ROLES_CON_TELEFONO,
   type Paginated,
+  type Permiso,
   type Usuario,
   type UsuarioConPassword,
   type UsuarioCreate,
   type UsuarioFiltro,
+  type UsuarioPermisosUpdate,
   type UsuarioUpdate,
 } from '@platinum/shared';
 import {
@@ -42,6 +45,9 @@ export class UsuariosService extends BaseService {
 
   /** Cada quien ve a las personas de su alcance por áreas (C-10); el admin y el super admin ven a todas. */
   async list({ page, limit, ...filtro }: UsuarioFiltro, actor: AuthUser): Promise<Paginated<Usuario>> {
+    if (filtro.rol && !(await this.repo.existeRol(filtro.rol))) {
+      throw HttpError.badRequest('Selecciona un rol válido', [{ path: 'rol', message: 'Selecciona un rol válido' }]);
+    }
     const visibles = await this.personasVisibles(actor);
     return this.repo.findPaged({ ...filtro, ...(visibles && { soloIds: [...visibles] }) }, { page, limit });
   }
@@ -65,15 +71,22 @@ export class UsuariosService extends BaseService {
   }
 
   /** Solo el super admin maneja cuentas de administrador. */
-  private exigirSuperAdminParaAdmin(rol: Usuario['rol'] | undefined, actor: AuthUser) {
+  private exigirSuperAdminParaAdmin(rol: string | undefined, actor: AuthUser) {
     if (rol === ROLES.ADMIN && !esSuperAdmin(actor)) {
       throw HttpError.forbidden('Solo el super admin puede crear o cambiar administradores');
+    }
+  }
+
+  private async validarRol(rol: string) {
+    if (!(await this.repo.existeRol(rol))) {
+      throw HttpError.badRequest('Selecciona un rol válido', [{ path: 'rol', message: 'Selecciona un rol válido' }]);
     }
   }
 
   /** Alta con contraseña temporal que el usuario cambia al entrar (D-012). */
   async crear(data: UsuarioCreate, ctx: AccionCtx, actor: AuthUser): Promise<UsuarioConPassword> {
     this.exigirSuperAdminParaAdmin(data.rol, actor);
+    await this.validarRol(data.rol);
     if (await this.repo.findByEmail(data.email)) throw correoDuplicado();
 
     const passwordTemporal = generateTemporaryPassword();
@@ -93,7 +106,10 @@ export class UsuariosService extends BaseService {
     const actual = await this.getById(id, actor);
     this.protegerSuperAdmin(actual, actor);
     this.exigirSuperAdminParaAdmin(actual.rol, actor);
-    if (data.rol && data.rol !== actual.rol) this.exigirSuperAdminParaAdmin(data.rol, actor);
+    if (data.rol && data.rol !== actual.rol) {
+      this.exigirSuperAdminParaAdmin(data.rol, actor);
+      await this.validarRol(data.rol);
+    }
 
     if (data.email && data.email !== actual.email) {
       const otro = await this.repo.findByEmail(data.email);
@@ -119,12 +135,45 @@ export class UsuariosService extends BaseService {
       ]);
     }
 
-    const { antes, despues, hayCambios } = calcularCambios<Usuario>(actual, data);
+    const { antes, despues, hayCambios } = calcularCambios<Usuario>(actual, data as Partial<Usuario>);
     if (!hayCambios) return actual;
 
     const usuario = await this.repo.update(id, despues);
     await this.auditar(ctx, 'usuarios.editar', id, { antes, despues });
     return usuario;
+  }
+
+  /**
+   * Guarda los permisos individuales adicionales de una persona (C-11 parte 5, DC-019).
+   * Atajo RH: marcar "Recibe las emergencias" (`emergencias.recibir`) otorga también `emergencias.atender`.
+   */
+  async fijarPermisos(
+    id: number,
+    { permisos }: UsuarioPermisosUpdate,
+    ctx: AccionCtx,
+    actor: AuthUser,
+  ): Promise<Usuario> {
+    const actual = await this.getById(id, actor);
+    this.protegerSuperAdmin(actual, actor);
+    if ((permisos as Permiso[]).includes(PERMISOS.ROLES_ADMINISTRAR)) {
+      throw HttpError.badRequest('El permiso de administrar roles solo se asigna mediante un rol');
+    }
+    const conjunto = new Set<Permiso>(permisos);
+    if (conjunto.has(PERMISOS.EMERGENCIAS_RECIBIR)) {
+      conjunto.add(PERMISOS.EMERGENCIAS_ATENDER);
+    }
+    const antes = [...(actual.permisosPropios ?? [])].sort();
+    const despues = [...conjunto].sort();
+    if (antes.length === despues.length && antes.every((p, i) => p === despues[i])) {
+      return actual;
+    }
+    const actualizado = await this.repo.fijarPermisosPropios(id, despues);
+    await this.auditar(ctx, 'usuarios.permisos', id, {
+      nombre: actual.nombre,
+      antes: { permisos: antes },
+      despues: { permisos: despues },
+    });
+    return actualizado;
   }
 
   /** Baja lógica (D-006): no puede entrar ni renovar sesión; se revocan sus sesiones al instante. */
