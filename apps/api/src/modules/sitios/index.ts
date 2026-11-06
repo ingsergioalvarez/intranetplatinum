@@ -42,7 +42,8 @@ export function createSitiosModule({
   bitacora = bitacoraConPrisma,
 }: SitiosModuleDeps = {}): AppModule {
   const c = new SitiosController(new SitiosService(repo, audit, hoy, avisar, bitacora));
-  const editar = requirePermission(PERMISOS.CLIENTES_EDITAR);
+  // Asignar guardias y turnos a un sitio es editar horarios.
+  const editar = requirePermission(PERMISOS.HORARIOS_EDITAR);
 
   const router = Router();
   router.use(authenticate);
@@ -72,7 +73,7 @@ export function createSitiosModule({
   );
   router.get(
     '/:id/guardias',
-    requirePermission(PERMISOS.CLIENTES_VER),
+    requirePermission(PERMISOS.HORARIOS_VER),
     validate({ params: idParamSchema, query: historialQuery }),
     c.listAsignaciones,
   );

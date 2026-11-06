@@ -1,7 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import {
   PERMISOS,
-  ROLES,
   bitacoraQuerySchema,
   comentarioBitacoraSchema,
   confirmarFaltaSchema,
@@ -25,7 +24,6 @@ import {
   PrismaAuditLogger,
   authenticate,
   requirePermission,
-  requireRoles,
   validate,
   type AppModule,
 } from '../../core';
@@ -151,38 +149,38 @@ export function createBitacoraModule({
   const id = idParamSchema;
 
   const router = Router();
-  // Control interno: solo admin y supervisor. El permiso de ver asistencia no basta porque el rol
-  // cliente también lo tiene (portal de clientes, DA-48) y no debe ver la bitácora disciplinaria.
-  router.use(
-    authenticate,
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
-    requirePermission(PERMISOS.ASISTENCIA_VER),
-  );
-  // Incidencias de todos (DA-42): por guardia y lista general.
-  router.get('/incidencias/guardias', validate({ query: bitacoraQuerySchema }), c.incidenciasPorGuardia);
-  router.get('/incidencias', validate({ query: incidenciasMesQuerySchema }), c.incidencias);
-  router.get('/guardias/:id', validate({ params: id, query: bitacoraQuerySchema }), c.guardia);
-  router.get('/guardias/:id/medidas', validate({ params: id }), c.medidas);
+  // Control interno: ver la bitácora y anotar en ella son permisos distintos (el colaborador no tiene ninguno de los dos
+  // sobre otras personas).
+  const ver = requirePermission(PERMISOS.BITACORA_VER);
+  const anotar = requirePermission(PERMISOS.BITACORA_ANOTAR);
+  router.use(authenticate);
+  router.get('/incidencias/guardias', ver, validate({ query: bitacoraQuerySchema }), c.incidenciasPorGuardia);
+  router.get('/incidencias', ver, validate({ query: incidenciasMesQuerySchema }), c.incidencias);
+  router.get('/guardias/:id', ver, validate({ params: id, query: bitacoraQuerySchema }), c.guardia);
+  router.get('/guardias/:id/medidas', ver, validate({ params: id }), c.medidas);
   router.post(
     '/eventos/:id/confirmar-falta',
+    anotar,
     validate({ params: id, body: confirmarFaltaSchema }),
     c.confirmarFalta,
   );
-  // Revertir una decisión ya tomada: solo el admin (A-52).
+  // Revertir una decisión ya tomada: lo delicado, por defecto solo el admin (A-52).
   router.post(
     '/eventos/:id/revertir',
-    requireRoles(ROLES.ADMIN),
+    requirePermission(PERMISOS.ASISTENCIA_ADMINISTRAR),
     validate({ params: id, body: revertirDecisionSchema }),
     c.revertir,
   );
-  router.post('/eventos/:id/decidir', validate({ params: id, body: decidirFaltaSchema }), c.decidir);
+  router.post('/eventos/:id/decidir', anotar, validate({ params: id, body: decidirFaltaSchema }), c.decidir);
   router.post(
     '/eventos/:id/comentarios',
+    anotar,
     validate({ params: id, body: comentarioBitacoraSchema }),
     c.comentar,
   );
   router.post(
     '/eventos/:id/justificar',
+    anotar,
     validate({ params: id, body: justificarBitacoraSchema }),
     c.justificar,
   );

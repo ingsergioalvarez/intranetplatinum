@@ -22,7 +22,6 @@ import {
   incidenciaCuenta,
   incidenciaPendiente,
   PERMISOS,
-  ROLES,
   TIPOS_EVENTO_BITACORA,
   type EventoBitacora,
   type GuardiaResumen,
@@ -240,7 +239,7 @@ export function AsistenciaGuardiaPage() {
   };
   const [abierta, setAbierta] = useState<Jornada | null>(null);
   // Admin y supervisor pueden cerrar una jornada sin salida (DA-49).
-  const puedeCerrar = user?.rol === ROLES.ADMIN || user?.rol === ROLES.JEFE || user?.rol === ROLES.SUPERVISOR;
+  const puedeCerrar = hasPermission(user, PERMISOS.ASISTENCIA_DECIDIR);
   const [cerrando, setCerrando] = useState<Jornada | null>(null);
   // Reporte oficial de asistencia de este guardia (DA-52).
   const [reportando, setReportando] = useState(false);

@@ -1,6 +1,5 @@
 import { Router, type Request, type Response } from 'express';
 import {
-  ROLES,
   areaCreateSchema,
   areaFiltroSchema,
   areaUpdateSchema,
@@ -12,6 +11,7 @@ import {
   type AreaUpdate,
   type AsignarArea,
   type CandidatosAreaFiltro,
+  PERMISOS,
 } from '@platinum/shared';
 import { z } from 'zod';
 import {
@@ -21,9 +21,9 @@ import {
   PrismaAuditLogger,
   authenticate,
   esSuperAdmin,
-  requireRoles,
   validate,
   type AppModule,
+  requirePermission,
 } from '../../core';
 import { AreasRepository, PrismaAreasRepository } from './areas.repository';
 import { AreasService } from './areas.service';
@@ -88,19 +88,21 @@ export function createAreasModule({ repo = new PrismaAreasRepository(), audit = 
   const id = validate({ params: idParamSchema });
 
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN));
-  router.get('/', validate({ query: areaFiltroSchema }), c.list);
-  router.post('/', validate({ body: areaCreateSchema }), c.create);
+  const ver = requirePermission(PERMISOS.AREAS_VER);
+  const administrar = requirePermission(PERMISOS.AREAS_ADMINISTRAR);
+  router.use(authenticate);
+  router.get('/', ver, validate({ query: areaFiltroSchema }), c.list);
+  router.post('/', administrar, validate({ body: areaCreateSchema }), c.create);
   // Antes de '/:id' para que "candidatos" no se tome por un id.
-  router.get('/candidatos', validate({ query: candidatosAreaFiltroSchema }), c.candidatos);
-  router.put('/personas/:usuarioId', validate({ params: usuarioParam, body: asignarAreaSchema }), c.asignar);
-  router.get('/:id', id, c.get);
-  router.patch('/:id', validate({ params: idParamSchema, body: areaUpdateSchema }), c.update);
-  router.get('/:id/personas', id, c.personas);
-  router.patch('/:id/baja', id, c.baja);
-  router.patch('/:id/reactivar', id, c.reactivar);
+  router.get('/candidatos', ver, validate({ query: candidatosAreaFiltroSchema }), c.candidatos);
+  router.put('/personas/:usuarioId', administrar, validate({ params: usuarioParam, body: asignarAreaSchema }), c.asignar);
+  router.get('/:id', ver, id, c.get);
+  router.patch('/:id', administrar, validate({ params: idParamSchema, body: areaUpdateSchema }), c.update);
+  router.get('/:id/personas', ver, id, c.personas);
+  router.patch('/:id/baja', administrar, id, c.baja);
+  router.patch('/:id/reactivar', administrar, id, c.reactivar);
   // Borrado definitivo: solo el super admin (el admin de empresa solo da de baja, que se puede revertir).
-  router.delete('/:id', id, (req, _res, next) =>
+  router.delete('/:id', administrar, id, (req, _res, next) =>
     esSuperAdmin(req.user ?? {}) ? next() : next(HttpError.forbidden('Solo el super admin puede eliminar áreas definitivamente')),
   c.eliminar);
 

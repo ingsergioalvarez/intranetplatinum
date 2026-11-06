@@ -1,6 +1,5 @@
 import { Router, type Request, type Response } from 'express';
 import {
-  ROLES,
   cambiosTurnoQuerySchema,
   idParamSchema,
   nuevoCambioTurnoSchema,
@@ -9,15 +8,16 @@ import {
   type IdParam,
   type NuevoCambioTurnoData,
   type ResolverCambioTurnoInput,
+  PERMISOS,
 } from '@platinum/shared';
 import {
   AuditLogger,
   BaseController,
   PrismaAuditLogger,
   authenticate,
-  requireRoles,
   validate,
   type AppModule,
+  requirePermission,
 } from '../../core';
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
@@ -130,11 +130,11 @@ export function createCambiosModule({
   const c = new CambiosController(new CambiosService(repo, turnos, puerto, audit, avisar, bitacora, hoy, ahora, atencion), alcance);
   const router = Router();
   // El guardia pide los suyos; admin y supervisor, todos los de su alcance.
-  router.use(authenticate, requireRoles(ROLES.GUARDIA, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.ADMIN));
+  router.use(authenticate, requirePermission(PERMISOS.CAMBIOS_PEDIR));
   router.get('/opciones', c.opciones);
   router.get('/', validate({ query: cambiosTurnoQuerySchema }), c.listar);
   router.post('/', validate({ body: nuevoCambioTurnoSchema }), c.crear);
-  router.post('/:id/resolver', validate({ params: idParamSchema, body: resolverCambioTurnoSchema }), c.resolver);
+  router.post('/:id/resolver', requirePermission(PERMISOS.CAMBIOS_RESOLVER), validate({ params: idParamSchema, body: resolverCambioTurnoSchema }), c.resolver);
   router.post('/:id/cancelar', validate({ params: idParamSchema }), c.cancelar);
   return { name: 'cambios-turno', basePath: 'cambios-turno', router, modulo: 'cambios_turno' };
 }

@@ -2,7 +2,6 @@ import { Router } from 'express';
 import {
   MUESTRAS_ROSTRO_MAX,
   PERMISOS,
-  ROLES,
   asistenciaDiaQuerySchema,
   cerrarJornadaSchema,
   decidirRetardoSchema,
@@ -24,7 +23,6 @@ import {
   authenticate,
   paraCadaEmpresa,
   requirePermission,
-  requireRoles,
   uploadImages,
   validate,
   type AppModule,
@@ -107,6 +105,8 @@ export function createAsistenciaModule({
   const marcar = requirePermission(PERMISOS.ASISTENCIA_MARCAR);
   const ver = requirePermission(PERMISOS.ASISTENCIA_VER);
   const rostros = requirePermission(PERMISOS.ASISTENCIA_ROSTROS);
+  const decidir = requirePermission(PERMISOS.ASISTENCIA_DECIDIR);
+  const administrar = requirePermission(PERMISOS.ASISTENCIA_ADMINISTRAR);
   // Una sola foto; en peticiones JSON (comida) multer no hace nada.
   const foto = uploadImages.single('foto');
   // Fotos del registro de rostro (una por muestra).
@@ -138,20 +138,18 @@ export function createAsistenciaModule({
     c.guardia,
   );
   // Tablero del día (DA-51): quién no llegó, jornadas sin cerrar, comidas sin cierre.
-  router.get('/tablero', requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), ver, c.tablero);
+  router.get('/tablero', ver, c.tablero);
   // Cerrar la jornada de un guardia que no pudo checar su salida (DA-49).
   router.post(
     '/jornadas/:id/cerrar',
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
-    ver,
+    decidir,
     validate({ params: idParamSchema, body: cerrarJornadaSchema }),
     c.cerrarJornada,
   );
   // Ante un retardo: aceptarlo o mandar al guardia a casa (A-25). Justificar sigue en la bitácora.
   router.post(
     '/retardos/:id/decidir',
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
-    ver,
+    decidir,
     validate({ params: idParamSchema, body: decidirRetardoSchema }),
     c.decidirRetardo,
   );
@@ -182,10 +180,10 @@ export function createAsistenciaModule({
     c.rechazarRostro,
   );
 
-  // Borrar rostros: solo el admin (no el supervisor).
+  // Borrar rostros: lo delicado, por defecto solo el admin.
   router.delete(
     '/rostros/:id',
-    requireRoles(ROLES.ADMIN),
+    administrar,
     validate({ params: idParamSchema }),
     c.eliminarRostro,
   );

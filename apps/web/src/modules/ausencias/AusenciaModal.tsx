@@ -9,10 +9,11 @@ import {
   TIPO_AUSENCIA_LABEL,
   ausenciaCreateSchema,
   type TipoAusencia,
+  PERMISOS,
 } from '@platinum/shared';
 import { FormField, FormModal, Input, PhotoUploader, Select, Textarea, toast } from '../../components/ui';
 import { ApiError, mensajeDeError } from '../../core/api';
-import { useAuthStore } from '../../core/auth/authStore';
+import { useAuthStore, hasPermission } from '../../core/auth/authStore';
 import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import { hoyLocal } from '../../core/format/fechas';
 import { informesService } from '../informes/informes.service';
@@ -25,7 +26,7 @@ import { ausenciasService } from './ausencias.service';
 export function AusenciaModal({ onClose }: { onClose: () => void }) {
   const user = useAuthStore((s) => s.user)!;
   const esGuardia = user.rol === ROLES.GUARDIA;
-  const esAdmin = user.rol === ROLES.ADMIN;
+  const puedeResolver = hasPermission(user, PERMISOS.AUSENCIAS_RESOLVER);
   const qc = useQueryClient();
   const hoy = hoyLocal();
   const [usuarioId, setUsuarioId] = useState('');
@@ -44,7 +45,7 @@ export function AusenciaModal({ onClose }: { onClose: () => void }) {
   const previa = useQuery({
     queryKey: ausenciasService.keys.previa(Number(usuarioId), desde, hasta),
     queryFn: () => ausenciasService.vistaPrevia(Number(usuarioId), desde, hasta),
-    enabled: esAdmin && !!usuarioId && fechasValidas,
+    enabled: puedeResolver && !!usuarioId && fechasValidas,
   });
 
   const guardar = useMutation({
@@ -89,15 +90,15 @@ export function AusenciaModal({ onClose }: { onClose: () => void }) {
 
   return (
     <FormModal
-      title={esAdmin ? 'Registrar ausencia' : esGuardia ? 'Pedir una ausencia' : 'Pedir una ausencia para un guardia'}
+      title={puedeResolver ? 'Registrar ausencia' : esGuardia ? 'Pedir una ausencia' : 'Pedir una ausencia para un guardia'}
       description={
-        esAdmin
+        puedeResolver
           ? 'Queda aprobada al guardarla.'
           : 'La resuelve el administrador: te avisamos cuando la apruebe o la rechace.'
       }
       onClose={onClose}
       onSubmit={onSubmit}
-      submitLabel={esAdmin ? 'Registrar' : 'Enviar solicitud'}
+      submitLabel={puedeResolver ? 'Registrar' : 'Enviar solicitud'}
       loading={guardar.isPending}
       dirty={!!tipo || !!motivo || fotos.length > 0 || !!usuarioId}
       size="md"
@@ -145,7 +146,7 @@ export function AusenciaModal({ onClose }: { onClose: () => void }) {
           <PhotoUploader value={fotos} onChange={setFotos} max={1} error={errores.foto} />
         </FormField>
       )}
-      {esAdmin && previa.data && previa.data.faltas > 0 && (
+      {puedeResolver && previa.data && previa.data.faltas > 0 && (
         <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200 ring-inset">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" />
           <span>

@@ -5,6 +5,30 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-06 (5) — Roles y permisos, parte 2: rutas y pantallas por permiso (C-11, DC-019)
+
+#### Cambiado
+
+- **La API decide por permiso, no por el nombre del rol.** Las rutas de áreas, asistencia, ausencias, bitácora, cambios de turno, casos de cobertura, cobertura, coberturas, solicitudes de cobertura, emergencias, horarios, horas extra, informes, sitios y turnos piden ahora su permiso (`areas.*`, `asistencia.decidir`, `asistencia.administrar`, `ausencias.*`, `bitacora.*`, `cambios.*`, `cobertura.*`, `emergencias.*`, `horarios.*`, `horas_extra.*`, `informes.ver`, `turnos.administrar`). Solo quedan por rol (solo admin) el módulo de administración (borrado definitivo) y las rutas de celulares de otros usuarios.
+- Middleware nuevo `requireAnyPermission` (basta uno de varios) y los middlewares de rol y permiso quedan etiquetados para poder revisarlos.
+- **Pantallas:** rutas, menú, alerta de emergencias y botones (cerrar jornada, cubrir, revertir decisiones, borrar rostro, registrar o resolver ausencias, elegir área) se muestran según el permiso. Las pantallas del colaborador (Checador, Mis sitios, Mis ausencias) y la entrada directa al Checador ya no dependen del nombre "guardia": se muestran a quien marca su asistencia y no ve la de los demás (`esColaborador`), así que funcionan igual con un rol nuevo.
+
+#### Acordado y marcado en las pruebas
+
+- **Ausencias:** el Jefe y el Supervisor pueden aprobar, rechazar y cancelar ausencias (antes solo el admin), y quien puede resolver las registra directo (queda aprobada).
+- **"No puedo quedarme"** (casos de cobertura): antes solo el colaborador; ahora quien tenga `cobertura.pedir` (jefe y supervisor también).
+- **Bitácora del colaborador:** `bitacora.ver` se le quitó por ahora al Colaborador: las rutas de bitácora todavía no limitan por persona y darle el permiso abriría la de todos. Se enciende con el alcance por rol (parte 4).
+
+#### Añadido
+
+- Prueba nueva `rutas-por-permiso.test.ts` (29 pruebas): recorre las rutas reales, comprueba que **ninguna decide por el nombre del rol** (salvo administración) y que cada permiso que piden lo tienen, entre los roles que no son admin, **exactamente los mismos que podían entrar antes** (las diferencias acordadas están marcadas).
+
+#### Notas
+
+- **Se queda por rol a propósito** (se resuelve con el alcance por rol, parte 4, y la clave `colaborador`, parte 3): quién ve a quién (alcance), a quién se puede asignar (colaboradores), la protección del admin y del super admin, y las reglas de plataforma.
+- Las sesiones abiertas conservan los permisos de cuando iniciaron: tras desplegar, cada quien los recibe al renovar su acceso (o al volver a entrar).
+- Sin desplegar. 583 pruebas, tipos y lint sin errores, 118 de 118 comprobaciones de extremo a extremo.
+
 ### Sesión 2026-11-06 (4) — Roles y permisos, parte 1: catálogo de permisos (C-11, DC-019)
 
 #### Añadido

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { ROLES } from '@platinum/shared';
+import { PERMISOS } from '@platinum/shared';
 import type {
   AsignacionCreateData,
   AsignacionUpdate,
@@ -7,7 +7,7 @@ import type {
   IdParam,
   SupervisorSitioInput,
 } from '@platinum/shared';
-import { BaseController } from '../../core';
+import { BaseController, tienePermiso } from '../../core';
 import type { SitiosService } from './sitios.service';
 
 export class SitiosController extends BaseController {
@@ -77,7 +77,8 @@ export class SitiosController extends BaseController {
 
   cancelarAsignacion = async (req: Request, res: Response) => {
     const { id, asignacionId } = this.params<{ id: number; asignacionId: number }>(req);
-    const esAdmin = this.currentUser(req).rol === ROLES.ADMIN;
+    // Quitar al momento una asignación que ya empezó es lo delicado: por defecto solo el admin.
+    const esAdmin = tienePermiso(this.currentUser(req), PERMISOS.ASISTENCIA_ADMINISTRAR);
     await this.service.cancelarAsignacion(id, asignacionId, this.accionCtx(req), esAdmin);
     return this.noContent(res);
   };

@@ -45,6 +45,7 @@ import {
   type DecisionFalta,
   type EventoBitacora,
   type TipoEventoBitacora,
+  PERMISOS,
 } from '@platinum/shared';
 import {
   Badge,
@@ -64,7 +65,7 @@ import { formatFechaHora } from '../../core/format/fechas';
 import { asistenciaService } from './asistencia.service';
 import { formatDia, formatHora } from './formato';
 import { DecisionRetardo, NotaDecisionRetardo } from './DecisionRetardo';
-import { useAuthStore } from '../../core/auth/authStore';
+import { useAuthStore, hasPermission } from '../../core/auth/authStore';
 import { ConfirmarFaltaModal } from './ConfirmarFaltaModal';
 import { RevertirModal } from './RevertirModal';
 import { IncidenciaModal } from './IncidenciaModal';
@@ -347,7 +348,7 @@ function Evento({
   onRevertir: () => void;
   onIncidencia: (id: number) => void;
 }) {
-  const esAdmin = useAuthStore((s) => s.user?.rol === 'admin');
+  const puedeRevertir = useAuthStore((s) => hasPermission(s.user, PERMISOS.ASISTENCIA_ADMINISTRAR));
   const Icono = ICONO[e.tipo];
   // Una decisión tomada es definitiva (A-52): ya no se ofrece justificar ni confirmar; solo el admin la revierte.
   const justificable = TIPOS_JUSTIFICABLES.includes(e.tipo) && !e.justificacion && !e.decision;
@@ -498,7 +499,7 @@ function Evento({
           <Button variant="ghost" size="sm" icon={<MessageSquare className="size-4" />} onClick={onComentar}>
             Agregar nota
           </Button>
-          {esAdmin && TIPOS_JUSTIFICABLES.includes(e.tipo) && decisionRevertible(e) && (
+          {puedeRevertir && TIPOS_JUSTIFICABLES.includes(e.tipo) && decisionRevertible(e) && (
             <Button variant="ghost" size="sm" icon={<Undo2 className="size-4" />} onClick={onRevertir}>
               Revertir decisión
             </Button>

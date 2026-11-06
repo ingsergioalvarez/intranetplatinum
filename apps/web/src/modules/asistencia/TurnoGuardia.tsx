@@ -6,13 +6,12 @@ import {
   COMIDA_MIN,
   PERMISOS,
   RADIO_GEOCERCA_M,
-  ROLES,
   distanciaMetros,
   type EstadoAsistencia,
   type TurnoDelGuardia,
 } from '@platinum/shared';
 import { Button, Modal, Spinner, cn, toast } from '../../components/ui';
-import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
+import { hasPermission, useAuthStore, esColaborador } from '../../core/auth/authStore';
 import { asistenciaService } from './asistencia.service';
 import { formatDia, formatHora } from './formato';
 import { nuevoIdMarca, obtenerUbicacion } from './ubicacion';
@@ -131,7 +130,7 @@ const omitida = (t: TurnoDelGuardia) => {
  */
 export function VentanaTurno() {
   const user = useAuthStore((s) => s.user);
-  const esGuardia = hasRole(user, [ROLES.GUARDIA]) && hasPermission(user, PERMISOS.ASISTENCIA_MARCAR);
+  const esGuardia = esColaborador(user) && hasPermission(user, PERMISOS.ASISTENCIA_MARCAR);
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [cerrada, setCerrada] = useState(false);
@@ -237,7 +236,7 @@ export function VentanaTurno() {
  */
 export function VentanaComida() {
   const user = useAuthStore((s) => s.user);
-  const esGuardia = hasRole(user, [ROLES.GUARDIA]) && hasPermission(user, PERMISOS.ASISTENCIA_MARCAR);
+  const esGuardia = esColaborador(user) && hasPermission(user, PERMISOS.ASISTENCIA_MARCAR);
   const qc = useQueryClient();
   const [, setTic] = useState(0);
   const [cerrada, setCerrada] = useState<number | null>(null);

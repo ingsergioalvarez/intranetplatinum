@@ -1,6 +1,5 @@
 import { Router, type Request, type Response } from 'express';
 import {
-  ROLES,
   ausenciaCreateSchema,
   cancelarAusenciaSchema,
   idParamSchema,
@@ -11,6 +10,7 @@ import {
   type IdParam,
   type ResolverAusenciaInput,
   type VistaPreviaAusenciaQuery,
+  PERMISOS,
 } from '@platinum/shared';
 import {
   AuditLogger,
@@ -19,10 +19,10 @@ import {
   PrismaAuditLogger,
   StorageService,
   authenticate,
-  requireRoles,
   uploadImages,
   validate,
   type AppModule,
+  requirePermission,
 } from '../../core';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
@@ -108,17 +108,19 @@ export function createAusenciasModule({
 }: AusenciasDeps = {}): AppModule {
   const c = new AusenciasController(new AusenciasService(repo, storage, audit, avisar, bitacora, atencion, hoy, ahora), alcance);
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.GUARDIA));
+  const pedir = requirePermission(PERMISOS.AUSENCIAS_PEDIR);
+  const resolver = requirePermission(PERMISOS.AUSENCIAS_RESOLVER);
+  router.use(authenticate, pedir);
   router.get('/', c.listar);
   router.get(
     '/vista-previa',
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
+    resolver,
     validate({ query: vistaPreviaAusenciaQuerySchema }),
     c.vistaPrevia,
   );
   // Comprobante opcional según el tipo: una sola foto; multer no hace nada si la petición no la trae.
   router.post('/', uploadImages.single('foto'), validate({ body: ausenciaCreateSchema }), c.crear);
-  router.post('/:id/resolver', requireRoles(ROLES.ADMIN), validate({ params: idParamSchema, body: resolverAusenciaSchema }), c.resolver);
+  router.post('/:id/resolver', resolver, validate({ params: idParamSchema, body: resolverAusenciaSchema }), c.resolver);
   router.post('/:id/cancelar', validate({ params: idParamSchema, body: cancelarAusenciaSchema }), c.cancelar);
   return { name: 'ausencias', basePath: 'ausencias', router, modulo: 'ausencias' };
 }

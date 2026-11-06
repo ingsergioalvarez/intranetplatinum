@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScanFace, Trash2, TriangleAlert } from 'lucide-react';
-import { ROLES } from '@platinum/shared';
+import { PERMISOS } from '@platinum/shared';
 import { Button, ConfirmDialog, Modal, Spinner, toast } from '../../components/ui';
-import { useAuthStore } from '../../core/auth/authStore';
+import { useAuthStore, hasPermission } from '../../core/auth/authStore';
 import { asistenciaService } from './asistencia.service';
 import { RevisionRostro } from './RevisionRostro';
 import { CapturaRegistro } from './rostro/CapturaRegistro';
@@ -27,7 +27,7 @@ export function RegistrarRostroModal({
     queryKey: asistenciaService.keys.rostro(guardia.id),
     queryFn: () => asistenciaService.rostro(guardia.id),
   });
-  const esAdmin = useAuthStore((s) => s.user?.rol === ROLES.ADMIN);
+  const puedeBorrar = useAuthStore((s) => hasPermission(s.user, PERMISOS.ASISTENCIA_ADMINISTRAR));
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [capturando, setCapturando] = useState(false);
   /** Consejos previos a la cámara (registrar en las mismas condiciones en que marcará). */
@@ -139,7 +139,7 @@ export function RegistrarRostroModal({
             >
               Registrar en persona
             </Button>
-            {registrado && esAdmin && (
+            {registrado && puedeBorrar && (
               <Button
                 variant="ghost"
                 className="text-red-700 hover:bg-red-50"

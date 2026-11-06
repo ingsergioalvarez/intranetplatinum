@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import type { ModuloOpcionalClave, Permiso, Rol } from '@platinum/shared';
 import { EmptyState, Spinner } from '../../components/ui';
 import { useContextoEmpresa } from '../empresa/useContextoEmpresa';
-import { hasPermission, hasRole, useAuthStore } from './authStore';
+import { esColaborador, hasPermission, hasRole, useAuthStore } from './authStore';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -11,6 +11,8 @@ interface ProtectedRouteProps {
   permiso?: Permiso;
   /** Roles permitidos; vacío = cualquier rol con sesión. */
   roles?: Rol[];
+  /** Solo quien vive de marcar su asistencia (pantallas del colaborador). */
+  soloColaborador?: boolean;
   /** Solo el super admin (A-65). */
   superAdmin?: boolean;
   /** Módulo de producto requerido: si la empresa lo tiene apagado, no se puede entrar (C-09). */
@@ -20,7 +22,7 @@ interface ProtectedRouteProps {
 }
 
 /** Exige sesión (y opcionalmente permiso/rol). Sin sesión redirige a /login conservando el destino. */
-export function ProtectedRoute({ children, permiso, roles, superAdmin, modulo, allowTemporaryPassword }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, permiso, roles, soloColaborador, superAdmin, modulo, allowTemporaryPassword }: ProtectedRouteProps) {
   const { user, restoring, loggedOut } = useAuthStore();
   const contexto = useContextoEmpresa();
   const location = useLocation();
@@ -41,7 +43,7 @@ export function ProtectedRoute({ children, permiso, roles, superAdmin, modulo, a
     return <Navigate to="/cambiar-password" replace />;
   }
 
-  if (!hasRole(user, roles) || !hasPermission(user, permiso) || (superAdmin && !user.esSuperAdmin)) {
+  if (!hasRole(user, roles) || !hasPermission(user, permiso) || (soloColaborador && !esColaborador(user)) || (superAdmin && !user.esSuperAdmin)) {
     return <EmptyState title="Sin acceso" description="No tienes permiso para ver esta sección." />;
   }
 

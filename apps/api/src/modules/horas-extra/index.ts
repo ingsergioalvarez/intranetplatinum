@@ -1,7 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import {
   PERMISOS,
-  ROLES,
   capturaHoraExtraSchema,
   cortarHoraExtraSchema,
   extenderHorarioSchema,
@@ -23,7 +22,6 @@ import {
   PrismaAuditLogger,
   authenticate,
   requirePermission,
-  requireRoles,
   validate,
   type AppModule,
 } from '../../core';
@@ -130,12 +128,11 @@ export function createHorasExtraModule({ alcance = alcanceConPrisma, ...deps }: 
   router.use(authenticate);
   router.post(
     '/extender',
-    requireRoles(ROLES.GUARDIA),
-    requirePermission(PERMISOS.ASISTENCIA_MARCAR),
+    requirePermission(PERMISOS.HORAS_EXTRA_SOLICITAR),
     validate({ body: extenderHorarioSchema }),
     c.extender,
   );
-  const revision = [requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), requirePermission(PERMISOS.ASISTENCIA_VER)];
+  const revision = [requirePermission(PERMISOS.HORAS_EXTRA_RESOLVER)];
   router.get('/opciones', ...revision, c.opciones);
   router.get('/reporte', ...revision, validate({ query: reporteHorasExtraQuerySchema }), c.reporte);
   router.get('/', ...revision, validate({ query: horasExtraQuerySchema }), c.listar);

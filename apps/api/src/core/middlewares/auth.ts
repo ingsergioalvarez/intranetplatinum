@@ -64,20 +64,30 @@ export const authenticateAllowingTemporaryPassword = createAuthenticate(true);
 
 /** Permite el acceso solo a los roles indicados. Usar después de `authenticate`. */
 export function requireRoles(...roles: Rol[]): RequestHandler {
-  return (req, _res, next) => {
+  const handler: RequestHandler = (req, _res, next) => {
     if (!req.user) return next(HttpError.unauthorized());
     if (!roles.includes(req.user.rol)) return next(HttpError.forbidden());
     next();
   };
+  // Etiqueta para la prueba que revisa qué pide cada ruta (`rutas-por-permiso.test.ts`).
+  return Object.assign(handler, { roles });
 }
 
 /** Exige un permiso granular (ej. `usuarios.crear`). El rol admin pasa siempre. */
 export function requirePermission(permiso: string): RequestHandler {
-  return (req, _res, next) => {
+  return requireAnyPermission(permiso);
+}
+
+/** Basta con uno de estos permisos. El rol admin pasa siempre. */
+export function requireAnyPermission(...permisos: string[]): RequestHandler {
+  const handler: RequestHandler = (req, _res, next) => {
     if (!req.user) return next(HttpError.unauthorized());
-    if (!tienePermiso(req.user, permiso)) return next(HttpError.forbidden());
+    const user = req.user;
+    if (!permisos.some((p) => tienePermiso(user, p))) return next(HttpError.forbidden());
     next();
   };
+  // Etiqueta para la prueba que revisa qué pide cada ruta (`rutas-por-permiso.test.ts`).
+  return Object.assign(handler, { permisos });
 }
 
 /** Misma regla que `requirePermission`, para decisiones dentro de servicios. El admin tiene todo. */

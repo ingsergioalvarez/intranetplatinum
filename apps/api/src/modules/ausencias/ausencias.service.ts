@@ -2,6 +2,7 @@ import {
   COMPROBANTE_AUSENCIA,
   MOTIVO_CANCELAR_AUSENCIA_LABEL,
   MOTIVO_RECHAZAR_AUSENCIA_LABEL,
+  PERMISOS,
   ROLES,
   TIPO_AUSENCIA_LABEL,
   diasDeAusencia,
@@ -20,6 +21,7 @@ import {
   detectarImagen,
   firmarArchivo,
   hoyISO,
+  tienePermiso,
   type AccionCtx,
   type AuthUser,
   type StorageService,
@@ -141,8 +143,8 @@ export class AusenciasService extends BaseService {
       conComprobante: !!clave,
     });
 
-    // El admin la registra directo; lo demás espera su aprobación.
-    if (user.rol === ROLES.ADMIN) return this.aAusencia(await this.aplicar(fila, user.id, ctx, 'ausencias.registrar'));
+    // Quien puede resolver ausencias la registra directo: queda aprobada. Lo demás espera su aprobación.
+    if (tienePermiso(user, PERMISOS.AUSENCIAS_RESOLVER)) return this.aAusencia(await this.aplicar(fila, user.id, ctx, 'ausencias.registrar'));
 
     const rango = rangoTexto(data.desde, data.hasta);
     const quien =
@@ -244,19 +246,19 @@ export class AusenciasService extends BaseService {
   }
 
   /**
-   * Cancelar: una pendiente, quien la pidió o el admin; una aprobada que aún no empieza, solo el admin. Una ya
+   * Cancelar: una pendiente, quien la pidió o quien puede resolver; una aprobada que aún no empieza, solo quien puede resolver. Una ya
    * empezada no se cancela (sus faltas ya se justificaron).
    */
   async cancelar(id: number, { categoria, nota }: CancelarAusenciaInput, user: AuthUser, ctx: AccionCtx): Promise<Ausencia> {
     const fila = await this.repo.findById(id);
-    const esAdmin = user.rol === ROLES.ADMIN;
+    const esAdmin = tienePermiso(user, PERMISOS.AUSENCIAS_RESOLVER);
     if (!fila || (!esAdmin && fila.solicitante.id !== user.id && fila.guardia.id !== user.id)) {
       throw HttpError.notFound('Ausencia no encontrada');
     }
     if (fila.estado === 'pendiente') {
       if (!esAdmin && fila.solicitante.id !== user.id) throw HttpError.forbidden('Solo quien la pidió puede cancelarla');
     } else if (fila.estado === 'aprobada') {
-      if (!esAdmin) throw HttpError.forbidden('Pídele al administrador que la cancele');
+      if (!esAdmin) throw HttpError.forbidden('Pídele a quien aprueba ausencias que la cancele');
       if (fila.desde <= this.hoy()) throw HttpError.conflict('Esta ausencia ya empezó y no se puede cancelar');
     } else {
       throw HttpError.conflict('Esta ausencia ya no se puede cancelar');

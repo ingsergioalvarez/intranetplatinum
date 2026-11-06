@@ -1,8 +1,8 @@
 import { Fragment, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Ellipsis, KeyRound, LockKeyhole, LogOut } from 'lucide-react';
-import { ROL_DESCRIPCIONES, generarPaleta } from '@platinum/shared';
-import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
+import { ROL_DESCRIPCIONES, generarPaleta, PERMISOS } from '@platinum/shared';
+import { esColaborador, hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
 import { useContextoEmpresa, useMarcaEmpresa, useModulos } from '../../core/empresa/useContextoEmpresa';
 import {
@@ -30,7 +30,7 @@ function useVisibleNav() {
   return navItems.filter(
     (i) =>
       hasPermission(user, i.permiso) &&
-      hasRole(user, i.roles) &&
+      (!i.soloColaborador || esColaborador(user)) &&
       (!i.superAdmin || !!user?.esSuperAdmin) &&
       moduloEncendido(i.modulo),
   );
@@ -326,7 +326,7 @@ export function AppShell() {
       <VentanaComida />
       <OfertaPerfil />
       {conSOS && user && <BotonSOS />}
-      {conSOS && (user?.rol === 'admin' || user?.rol === 'jefe' || user?.rol === 'supervisor') && <AlertaEmergencia />}
+      {conSOS && hasPermission(user, PERMISOS.EMERGENCIAS_ATENDER) && <AlertaEmergencia />}
     </div>
   );
 }

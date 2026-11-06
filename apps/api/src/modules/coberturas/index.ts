@@ -1,6 +1,5 @@
 import { Router, type Request, type Response } from 'express';
 import {
-  ROLES,
   candidatosCoberturaQuerySchema,
   coberturaCreateSchema,
   coberturasQuerySchema,
@@ -9,15 +8,16 @@ import {
   type CoberturaData,
   type CoberturasQuery,
   type IdParam,
+  PERMISOS,
 } from '@platinum/shared';
 import {
   AuditLogger,
   BaseController,
   PrismaAuditLogger,
   authenticate,
-  requireRoles,
   validate,
   type AppModule,
+  requirePermission,
 } from '../../core';
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
@@ -92,7 +92,7 @@ export function createCoberturasModule({
     alcance,
   );
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE));
+  router.use(authenticate, requirePermission(PERMISOS.COBERTURA_ASIGNAR));
   router.get('/candidatos', validate({ query: candidatosCoberturaQuerySchema }), c.candidatos);
   router.get('/', validate({ query: coberturasQuerySchema }), c.listar);
   router.post('/', validate({ body: coberturaCreateSchema }), c.crear);

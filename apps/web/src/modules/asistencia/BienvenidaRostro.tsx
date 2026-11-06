@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Glasses, Lightbulb, ScanFace, Smartphone } from 'lucide-react';
-import { PERMISOS, ROLES } from '@platinum/shared';
+import { PERMISOS } from '@platinum/shared';
 import { Button, Modal, toast } from '../../components/ui';
 import { ApiError } from '../../core/api';
-import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
+import { hasPermission, useAuthStore, esColaborador } from '../../core/auth/authStore';
 import { asistenciaService } from './asistencia.service';
 import { alPedirBienvenidaRostro } from './bienvenidaRostroEvento';
 import { CapturaRegistro } from './rostro/CapturaRegistro';
@@ -30,7 +30,7 @@ const PASOS = [
  */
 export function BienvenidaRostro() {
   const user = useAuthStore((s) => s.user);
-  const esGuardia = hasRole(user, [ROLES.GUARDIA]) && hasPermission(user, PERMISOS.ASISTENCIA_MARCAR);
+  const esGuardia = esColaborador(user) && hasPermission(user, PERMISOS.ASISTENCIA_MARCAR);
   const qc = useQueryClient();
   const [cerrada, setCerrada] = useState(false);
   const [capturando, setCapturando] = useState(false);

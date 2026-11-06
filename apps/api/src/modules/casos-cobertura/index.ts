@@ -1,7 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import {
   PERMISOS,
-  ROLES,
   cancelarPlanSchema,
   entradaIdParamSchema,
   noPuedoQuedarmeSchema,
@@ -19,7 +18,6 @@ import {
   PrismaAuditLogger,
   authenticate,
   requirePermission,
-  requireRoles,
   validate,
   type AppModule,
 } from '../../core';
@@ -156,12 +154,11 @@ export function createCasosCoberturaModule({ alcance = alcanceConPrisma, ...deps
   router.use(authenticate);
   router.post(
     '/no-puedo',
-    requireRoles(ROLES.GUARDIA),
-    requirePermission(PERMISOS.ASISTENCIA_MARCAR),
+    requirePermission(PERMISOS.COBERTURA_PEDIR),
     validate({ body: noPuedoQuedarmeSchema }),
     c.noPuedo,
   );
-  const revision = [requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), requirePermission(PERMISOS.ASISTENCIA_VER)];
+  const revision = [requirePermission(PERMISOS.COBERTURA_ASIGNAR)];
   router.get('/', ...revision, c.listar);
   router.get('/:entradaId/vista-previa', ...revision, validate({ params: entradaIdParamSchema, query: vistaPreviaCasoQuerySchema }), c.vistaPrevia);
   router.post('/:entradaId/resolver', ...revision, validate({ params: entradaIdParamSchema, body: resolverCasoSchema }), c.resolver);

@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import {
   ESTADO_COBERTURA_LABEL,
-  ROLES,
   asignacionCreateSchema,
   esUnoYUno,
   horaLegible,
@@ -21,9 +20,10 @@ import {
   type Asignacion,
   type Sitio,
   type TurnoCatalogo,
+  PERMISOS,
 } from '@platinum/shared';
 import { mensajeDeError } from '../../core/api';
-import { useAuthStore } from '../../core/auth/authStore';
+import { useAuthStore, hasPermission } from '../../core/auth/authStore';
 import { formatFecha, hoyLocal } from '../../core/format/fechas';
 import { useForm } from '../../core/forms/useForm';
 import {
@@ -91,7 +91,7 @@ export function CoberturaSitioModal({
   const [legado, setLegado] = useState<Asignacion | null>(null);
   const [quitar, setQuitar] = useState<Asignacion | null>(null);
   const [eliminar, setEliminar] = useState<Asignacion | null>(null);
-  const esAdmin = useAuthStore((s) => s.user?.rol === ROLES.ADMIN);
+  const esAdmin = useAuthStore((s) => hasPermission(s.user, PERMISOS.ASISTENCIA_ADMINISTRAR));
 
   const asignaciones = useQuery({
     queryKey: sitiosService.keys.guardias(sitio.id, historial),

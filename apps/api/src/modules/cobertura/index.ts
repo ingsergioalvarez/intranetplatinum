@@ -1,13 +1,12 @@
 import { Router, type Request, type Response } from 'express';
 import {
   PERMISOS,
-  ROLES,
   coberturaQuerySchema,
   resumenCoberturaQuerySchema,
   type CoberturaQuery,
   type ResumenCoberturaQuery,
 } from '@platinum/shared';
-import { BaseController, authenticate, requirePermission, requireRoles, validate, type AppModule } from '../../core';
+import { BaseController, authenticate, requirePermission, validate, type AppModule } from '../../core';
 import { PrismaVigilanciaRepository } from '../asistencia/vigilancia.repository';
 import type { TurnosFn } from '../coberturas/coberturas.service';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
@@ -47,7 +46,7 @@ export function createCoberturaModule({
 }: CoberturaDeps = {}): AppModule {
   const c = new CoberturaController(new CoberturaService(repo, turnos, ahora), alcance);
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE), requirePermission(PERMISOS.ASISTENCIA_VER));
+  router.use(authenticate, requirePermission(PERMISOS.COBERTURA_VER));
   router.get('/', validate({ query: coberturaQuerySchema }), c.sitio);
   router.get('/resumen', validate({ query: resumenCoberturaQuerySchema }), c.resumen);
   return { name: 'cobertura', basePath: 'cobertura', router };

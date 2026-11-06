@@ -8,7 +8,6 @@ import {
   MOTIVOS_RECHAZAR_AUSENCIA,
   MOTIVO_CANCELAR_AUSENCIA_LABEL,
   MOTIVO_RECHAZAR_AUSENCIA_LABEL,
-  ROLES,
   TIPO_AUSENCIA_LABEL,
   cancelarAusenciaSchema,
   resolverAusenciaSchema,
@@ -16,6 +15,7 @@ import {
   type EstadoAusencia,
   type MotivoCancelarAusencia,
   type MotivoRechazarAusencia,
+  PERMISOS,
 } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -31,7 +31,7 @@ import {
   type BadgeTone,
 } from '../../components/ui';
 import { mensajeDeError } from '../../core/api';
-import { useAuthStore } from '../../core/auth/authStore';
+import { useAuthStore, hasPermission } from '../../core/auth/authStore';
 import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import { formatFecha, formatFechaHora, hoyLocal } from '../../core/format/fechas';
 import { Chips } from '../asistencia/BitacoraGuardia';
@@ -52,7 +52,7 @@ const TONO: Record<EstadoAusencia, BadgeTone> = {
  */
 export function AusenciasPage({ propias = false }: { propias?: boolean }) {
   const user = useAuthStore((s) => s.user)!;
-  const esAdmin = user.rol === ROLES.ADMIN;
+  const puedeResolver = hasPermission(user, PERMISOS.AUSENCIAS_RESOLVER);
   const [filtro, setFiltro] = useState<'pendientes' | 'todas'>('pendientes');
   const [pidiendo, setPidiendo] = useState(false);
   const [rechazando, setRechazando] = useState<Ausencia | null>(null);
@@ -97,13 +97,13 @@ export function AusenciasPage({ propias = false }: { propias?: boolean }) {
         subtitle={
           propias
             ? 'Vacaciones, incapacidades y permisos que pides al administrador'
-            : esAdmin
+            : puedeResolver
               ? 'Vacaciones, incapacidades y permisos de los guardias'
               : 'Las ausencias de tus guardias; tú las pides y el administrador las aprueba'
         }
         actions={
           <Button icon={<Plus className="size-4" />} onClick={() => setPidiendo(true)}>
-            {esAdmin ? 'Registrar ausencia' : 'Pedir ausencia'}
+            {puedeResolver ? 'Registrar ausencia' : 'Pedir ausencia'}
           </Button>
         }
       />
@@ -135,7 +135,7 @@ export function AusenciasPage({ propias = false }: { propias?: boolean }) {
             <li key={a.id}>
               <Tarjeta
                 ausencia={a}
-                esAdmin={esAdmin}
+                puedeResolver={puedeResolver}
                 propias={propias}
                 miId={user.id}
                 onAprobar={() => setAprobando(a)}
@@ -175,7 +175,7 @@ export function AusenciasPage({ propias = false }: { propias?: boolean }) {
 
 function Tarjeta({
   ausencia: a,
-  esAdmin,
+  puedeResolver,
   propias,
   miId,
   onAprobar,
@@ -184,7 +184,7 @@ function Tarjeta({
   onComprobante,
 }: {
   ausencia: Ausencia;
-  esAdmin: boolean;
+  puedeResolver: boolean;
   propias: boolean;
   miId: number;
   onAprobar: () => void;
@@ -196,7 +196,7 @@ function Tarjeta({
   const pendiente = a.estado === 'pendiente';
   // Pendiente: quien la pidió o el admin; aprobada que no ha empezado: solo el admin.
   const puedeCancelar =
-    (pendiente && (esAdmin || a.solicitante.id === miId)) || (a.estado === 'aprobada' && esAdmin && a.desde > hoy);
+    (pendiente && (puedeResolver || a.solicitante.id === miId)) || (a.estado === 'aprobada' && puedeResolver && a.desde > hoy);
   return (
     <Card className="space-y-2 p-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -231,7 +231,7 @@ function Tarjeta({
             Ver comprobante
           </Button>
         )}
-        {pendiente && esAdmin && (
+        {pendiente && puedeResolver && (
           <>
             <Button icon={<Check className="size-4" />} onClick={onAprobar}>
               Aprobar

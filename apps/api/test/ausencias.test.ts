@@ -221,15 +221,15 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
     alcance = { sitioIds: new Set([1]), guardiaIds: new Set([10]) };
     expect((await sup().pedir({ ...vacaciones, usuarioId: '11' })).status).toBe(404);
     expect((await sup().pedir(vacaciones)).status).toBe(201);
-    expect(repo.filas[0]).toMatchObject({ estado: 'pendiente', solicitante: { id: 5 } });
-    expect(avisos.find((a) => a.usuarioIds.join() === '10')?.titulo).toBe('Pidieron una ausencia por ti');
+    // Quien puede resolver ausencias (jefe y supervisor desde C-11) la registra directo: queda aprobada.
+    expect(repo.filas[0]).toMatchObject({ estado: 'aprobada', solicitante: { id: 5 } });
+    expect(avisos.find((a) => a.usuarioIds.join() === '10')?.titulo).toBe('Tu ausencia fue aprobada');
     const { usuarioId: _guardia, ...sinGuardia } = vacaciones;
     expect((await sup().pedir(sinGuardia)).status).toBe(400);
   });
 
-  it('solo el admin aprueba o rechaza; al rechazar pide motivo; no se cruzan dos ausencias', async () => {
+  it('solo quien tiene el permiso aprueba o rechaza (no el colaborador); al rechazar pide motivo; no se cruzan dos ausencias', async () => {
     await guardia().pedir(vacaciones);
-    expect((await sup().post('/1/resolver', { decision: 'aprobar' })).status).toBe(403);
     expect((await guardia().post('/1/resolver', { decision: 'aprobar' })).status).toBe(403);
     expect((await admin().post('/1/resolver', { decision: 'rechazar' })).status).toBe(400);
     expect((await admin().post('/1/resolver', { decision: 'rechazar', categoria: 'otro' })).status).toBe(400);
@@ -255,7 +255,7 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
     expect((await guardia().pedir(vacaciones)).status).toBe(201);
   });
 
-  it('cancelar: quien la pidió su pendiente; la aprobada futura solo el admin; una que ya empezó no', async () => {
+  it('cancelar: quien la pidió su pendiente; la aprobada futura solo quien resuelve; una que ya empezó no', async () => {
     await guardia().pedir(vacaciones);
     expect((await como(11, ROLES.GUARDIA).post('/1/cancelar', { categoria: 'se_equivoco' })).status).toBe(404);
     expect((await guardia().post('/1/cancelar', {})).status).toBe(400);
@@ -265,8 +265,7 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
 
     await admin().pedir({ ...vacaciones, desde: '2026-11-10', hasta: '2026-11-12' });
     expect((await guardia().post('/2/cancelar', { categoria: 'ya_no_se_necesita' })).status).toBe(403);
-    expect((await sup().post('/2/cancelar', { categoria: 'ya_no_se_necesita' })).status).toBe(404);
-    expect((await admin().post('/2/cancelar', { categoria: 'ya_no_se_necesita' })).status).toBe(200);
+    expect((await sup().post('/2/cancelar', { categoria: 'ya_no_se_necesita' })).status).toBe(200);
 
     await admin().pedir({ ...vacaciones, desde: '2026-11-03', hasta: '2026-11-05' });
     expect((await admin().post('/3/cancelar', { categoria: 'ya_no_se_necesita' })).status).toBe(409);

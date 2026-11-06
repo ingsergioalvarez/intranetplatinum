@@ -16,6 +16,7 @@ import {
   requirePermission,
   validate,
   type AppModule,
+  requireAnyPermission,
 } from '../../core';
 import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
@@ -90,13 +91,13 @@ export function createTurnosModule({
   alcance = alcanceConPrisma,
 }: TurnosModuleDeps = {}): AppModule {
   const c = new TurnosController(new TurnosService(repo, audit, avisar, hoy, bitacora), alcance);
-  const editar = requirePermission(PERMISOS.CLIENTES_EDITAR);
-  const baja = requirePermission(PERMISOS.CLIENTES_BAJA);
+  const editar = requirePermission(PERMISOS.TURNOS_ADMINISTRAR);
+  const baja = editar;
   const id = validate({ params: idParamSchema });
 
   const router = Router();
   router.use(authenticate);
-  router.get('/', requirePermission(PERMISOS.CLIENTES_VER), c.list);
+  router.get('/', requireAnyPermission(PERMISOS.HORARIOS_VER, PERMISOS.TURNOS_ADMINISTRAR), c.list);
   router.post('/', editar, validate({ body: turnoSchema }), c.create);
   router.put('/:id', editar, validate({ params: idParamSchema, body: turnoSchema }), c.update);
   router.patch('/:id/baja', editar, id, c.baja);

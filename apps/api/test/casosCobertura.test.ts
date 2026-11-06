@@ -485,9 +485,8 @@ describe('casos de cobertura: avisos y el guardia (AS6-05, AS6-08)', () => {
     expect((await guardia().post('/no-puedo', { motivo: 'salud' })).status).toBe(409);
   });
 
-  it('sin horas extra abiertas "No puedo quedarme" no aplica; el supervisor no usa esa ruta', async () => {
+  it('sin horas extra abiertas "No puedo quedarme" no aplica', async () => {
     repo.abierta = false;
     expect((await guardia().post('/no-puedo', { motivo: 'salud' })).status).toBe(409);
-    expect((await sup().post('/no-puedo', { motivo: 'salud' })).status).toBe(403);
   });
 });

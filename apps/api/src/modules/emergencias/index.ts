@@ -1,7 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import {
-  ROLES,
   emergenciaCerrarSchema,
   emergenciaCreateSchema,
   emergenciaTipoSchema,
@@ -10,6 +9,7 @@ import {
   type EmergenciaCreateInput,
   type EmergenciaTipoInput,
   type IdParam,
+  PERMISOS,
 } from '@platinum/shared';
 import {
   AuditLogger,
@@ -17,9 +17,9 @@ import {
   PrismaAuditLogger,
   authenticate,
   rateLimit,
-  requireRoles,
   validate,
   type AppModule,
+  requirePermission,
 } from '../../core';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
@@ -99,8 +99,8 @@ export function crearServicioEmergencias({
 export function createEmergenciasModule(deps: EmergenciasDeps = {}): AppModule {
   const c = new EmergenciasController(crearServicioEmergencias(deps));
   const router = Router();
-  const personal = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE, ROLES.GUARDIA);
-  const mando = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE);
+  const personal = requirePermission(PERMISOS.EMERGENCIAS_LANZAR);
+  const mando = requirePermission(PERMISOS.EMERGENCIAS_ATENDER);
   router.use(authenticate);
   router.post('/', personal, rateLimit({ windowMin: 1, max: 10 }), validate({ body: emergenciaCreateSchema }), c.crear);
   router.get('/mia', personal, c.mia);

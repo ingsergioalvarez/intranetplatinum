@@ -75,7 +75,7 @@ export function UsuarioModal({
   // Solo el super admin crea o cambia administradores (A-65).
   const rolOptions = todosLosRoles.filter((r) => r.value !== ROLES.ADMIN || esSuper || usuario?.rol === ROLES.ADMIN);
   // Área (C-10): una por persona. La elige el admin de la empresa y se guarda por la API de áreas, después del usuario.
-  const puedeElegirArea = yo?.rol === ROLES.ADMIN;
+  const puedeElegirArea = hasPermission(yo, PERMISOS.AREAS_ADMINISTRAR);
   const areaInicial = usuario?.areaId != null ? String(usuario.areaId) : '';
   const [areaId, setAreaId] = useState(areaInicial);
   const areas = useQuery({ queryKey: areasService.keys.list('activas'), queryFn: () => areasService.list('activas'), enabled: puedeElegirArea });

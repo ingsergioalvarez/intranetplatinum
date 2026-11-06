@@ -108,7 +108,7 @@ export const CATALOGO_PERMISOS: readonly PermisoDeCatalogo[] = [
   { clave: P.ASISTENCIA_VER, descripcion: 'Ver la asistencia de las personas de su alcance', grupo: 'asistencia' },
   { clave: P.ASISTENCIA_ROSTROS, descripcion: 'Registrar y revisar los rostros', grupo: 'asistencia' },
   { clave: P.ASISTENCIA_DECIDIR, descripcion: 'Decidir retardos, confirmar faltas, justificar y cerrar jornadas', grupo: 'asistencia' },
-  { clave: P.ASISTENCIA_ADMINISTRAR, descripcion: 'Revertir decisiones ya tomadas y borrar rostros', grupo: 'asistencia' },
+  { clave: P.ASISTENCIA_ADMINISTRAR, descripcion: 'Revertir decisiones ya tomadas, borrar rostros y quitar asignaciones que ya empezaron', grupo: 'asistencia' },
   { clave: P.AUSENCIAS_PEDIR, descripcion: 'Pedir una ausencia', grupo: 'ausencias' },
   { clave: P.AUSENCIAS_RESOLVER, descripcion: 'Aprobar o rechazar ausencias', grupo: 'ausencias' },
   { clave: P.HORAS_EXTRA_SOLICITAR, descripcion: 'Solicitar horas extra', grupo: 'horas_extra' },
@@ -192,8 +192,9 @@ export const PERMISOS_POR_ROL: Record<Rol, Permiso[]> = {
     P.CAMBIOS_PEDIR,
     P.COBERTURA_PEDIR,
     P.EMERGENCIAS_LANZAR,
-    P.BITACORA_VER,
     P.HORAS_EXTRA_SOLICITAR,
+    // Su propia bitácora (`bitacora.ver` con alcance "solo él") se enciende con el alcance por rol (C-11 parte 4): hoy las
+    // rutas de bitácora no limitan por persona y darle el permiso abriría la de todos.
   ],
 };
 

@@ -2,7 +2,6 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import {
   PERMISOS,
-  ROLES,
   idParamSchema,
   informesQuerySchema,
   nuevoInformeSchema,
@@ -17,7 +16,6 @@ import {
   authenticate,
   rateLimit,
   requirePermission,
-  requireRoles,
   validate,
   type AppModule,
 } from '../../core';
@@ -111,8 +109,7 @@ export function createInformesModule({
 
   router.use(
     authenticate,
-    requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE),
-    requirePermission(PERMISOS.ASISTENCIA_VER),
+    requirePermission(PERMISOS.INFORMES_VER),
   );
   router.get('/opciones', c.opciones);
   router.get('/', validate({ query: informesQuerySchema }), c.listar);

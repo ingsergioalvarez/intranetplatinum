@@ -38,6 +38,16 @@ export function hasPermission(user: SessionUser | null, permiso?: Permiso) {
   return user.permisos.includes(permiso);
 }
 
+/**
+ * ¿Es alguien cuyo día a día es marcar su asistencia, sin revisar la de otros? Es lo que antes se decidía por el rol
+ * "guardia": ahora se decide por lo que puede hacer (marcar y no ver la asistencia de los demás), así que sirve igual
+ * para un rol nuevo. El admin nunca lo es.
+ */
+export function esColaborador(user: SessionUser | null) {
+  if (!user || user.rol === 'admin') return false;
+  return user.permisos.includes('asistencia.marcar') && !user.permisos.includes('asistencia.ver');
+}
+
 export function hasRole(user: SessionUser | null, roles?: Rol[]) {
   if (!user) return false;
   return !roles?.length || roles.includes(user.rol);
