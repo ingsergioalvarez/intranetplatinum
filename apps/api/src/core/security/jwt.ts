@@ -1,5 +1,6 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { env } from '../../config/env';
+import type { AlcanceRol } from '@platinum/shared';
 import type { AuthUser } from '../types/auth';
 
 interface AccessTokenPayload {
@@ -7,6 +8,8 @@ interface AccessTokenPayload {
   email: string;
   rol: AuthUser['rol'];
   permisos: string[];
+  /** Alcance del rol (C-11 parte 4). */
+  alc?: AlcanceRol;
   /** Debe cambiar contraseña (solo se incluye cuando es true). */
   dcp?: true;
   /** Super admin (solo se incluye cuando es true). */
@@ -21,6 +24,7 @@ export function signAccessToken(user: AuthUser): string {
     email: user.email,
     rol: user.rol,
     permisos: user.permisos,
+    ...(user.alcance ? { alc: user.alcance } : {}),
     ...(user.debeCambiarPassword ? { dcp: true as const } : {}),
     ...(user.esSuperAdmin ? { sup: true as const } : {}),
     ...(user.empresaId ? { emp: user.empresaId } : {}),
@@ -38,6 +42,7 @@ export function verifyAccessToken(token: string): AuthUser {
     email: payload.email,
     rol: payload.rol,
     permisos: payload.permisos ?? [],
+    alcance: payload.alc,
     debeCambiarPassword: payload.dcp === true,
     esSuperAdmin: payload.sup === true,
     empresaId: payload.emp ?? null,

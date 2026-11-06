@@ -5,6 +5,25 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-06 (7) — Roles y permisos, parte 4: alcance por rol (C-11, DC-019)
+
+#### Añadido
+
+- **Alcance por rol** (`roles.alcance`, migración `20261119000000_alcance_por_rol`): cada rol dice hasta dónde llega: *toda la empresa*, *su área y sus subáreas*, *solo su área* o *solo ella o él*. Los roles de partida conservan lo que tenían por su nombre (admin: empresa; jefe: área y subáreas; supervisor: su área; colaborador: lo suyo) y un rol nuevo empieza en "solo ella o él". El alcance viaja en el token.
+- Quien ve a quién ya no depende del nombre del rol: `personasVisiblesConPrisma` lo calcula por el alcance, sobre la propia área de la persona, las que encabeza y las que supervisa. El permiso "ver a toda la empresa" sigue ampliándolo por persona.
+- **El colaborador ve su propia bitácora** (`bitacora.ver`, con alcance "solo ella o él"; no anota ni ve la de nadie más). Quedó pendiente en la parte 2.
+- 11 comprobaciones nuevas de extremo a extremo (137 en total): cada alcance, el permiso de empresa, 404 fuera del alcance, la bitácora del colaborador y la de un supervisor.
+
+#### Cambiado
+
+- Ausencias (quién las ve y para quién se piden) y solicitudes de cobertura (quién ve todas) deciden por el alcance del rol, no por su nombre. Los colaboradores ya no tienen "sin límite" en los módulos que filtran por alcance: quedan limitados a sí mismos.
+
+#### Notas
+
+- **Pendiente (C-21):** las listas de "personas que marcan" (horarios, ausencias, cambios, horas extra, informes, grupos, cobertura) siguen armándose con quienes tienen el rol `colaborador`; con roles nuevos esas personas no aparecerían. Pasa a ser por el permiso `asistencia.marcar`, después de la pantalla de Roles.
+- Sin desplegar. 583 pruebas, tipos y lint sin errores, 137 de 137 comprobaciones de extremo a extremo.
+- En el servidor: `db:deploy` junto con las demás (14 nuevas desde las 45). Las sesiones abiertas reciben su alcance al renovar el acceso.
+
 ### Sesión 2026-11-06 (6) — Roles y permisos, parte 3: roles por empresa (C-11, DC-019)
 
 #### Cambiado

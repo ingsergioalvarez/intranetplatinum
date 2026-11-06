@@ -2,14 +2,13 @@ import {
   HORAS_RECORDAR_SOLICITUD,
   HORAS_REPETIR_SOLICITUD,
   MOTIVO_CANCELAR_SOLICITUD_LABEL,
-  ROLES,
   sumarDiasFecha,
   textoMotivoLista,
   type CancelarSolicitudInput,
   type SolicitudCobertura,
   type SolicitudesLista,
 } from '@platinum/shared';
-import { AuditLogger, BaseService, HttpError, type AccionCtx, type AuthUser } from '../../core';
+import { AuditLogger, BaseService, HttpError, alcanceDe, type AccionCtx, type AuthUser } from '../../core';
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type { SolicitudRow, SolicitudesRepository } from './solicitudes.repository';
@@ -97,16 +96,21 @@ export class SolicitudesCoberturaService extends BaseService implements Solicitu
     });
   }
 
-  /** Admin: todas; supervisor: solo las que él pidió. Las pendientes primero. */
+  /** Quien ve a toda la empresa (alcance del rol): todas; los demás, solo las que pidieron. */
+  private veTodas(user: AuthUser) {
+    return alcanceDe(user) === 'empresa';
+  }
+
+  /** Todas o solo las que pidió quien consulta. Las pendientes primero. */
   async listar(user: AuthUser): Promise<SolicitudesLista> {
-    const filas = await this.repo.listar(user.rol === ROLES.ADMIN ? null : user.id, 100);
+    const filas = await this.repo.listar(this.veTodas(user) ? null : user.id, 100);
     return { items: filas.map(aSolicitud), pendientes: filas.filter((f) => f.estado === 'pendiente').length };
   }
 
   /** Cancelar una pendiente: quien la pidió o el admin, con motivo. */
   async cancelar(id: number, { categoria, nota }: CancelarSolicitudInput, user: AuthUser, ctx: AccionCtx) {
     const s = await this.repo.findById(id);
-    if (!s || (user.rol !== ROLES.ADMIN && s.solicitante.id !== user.id)) {
+    if (!s || (!this.veTodas(user) && s.solicitante.id !== user.id)) {
       throw HttpError.notFound('Solicitud no encontrada');
     }
     if (s.estado !== 'pendiente') throw HttpError.conflict('Esta solicitud ya se cerró');

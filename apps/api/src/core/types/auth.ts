@@ -1,10 +1,12 @@
-import type { Rol } from '@platinum/shared';
+import type { AlcanceRol, Rol } from '@platinum/shared';
 
 export interface AuthUser {
   id: number;
   email: string;
   rol: Rol;
   permisos: string[];
+  /** Hasta dónde llega su rol (C-11 parte 4). Sin él (pruebas, tokens viejos) rige el alcance de partida de su rol. */
+  alcance?: AlcanceRol;
   /** Contraseña temporal pendiente de cambiar (D-012). */
   debeCambiarPassword?: boolean;
   /** Super admin (A-65). */

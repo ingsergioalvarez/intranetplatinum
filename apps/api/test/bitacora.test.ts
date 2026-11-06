@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { PERMISOS_POR_ROL, ROLES, type Rol } from '@platinum/shared';
 import { createApp } from '../src/app';
-import { signAccessToken } from '../src/core';
+import { alcanceDe, signAccessToken } from '../src/core';
 import { createBitacoraModule } from '../src/modules/bitacora';
 import { sinMedidas, type MedidaNueva } from '../src/modules/medidas/medidas';
 import { BitacoraRepository, type EventoBitacoraRow } from '../src/modules/bitacora/bitacora.repository';
-import { sinAlcance } from '../src/modules/sitios/alcance';
+import type { AlcanceFn } from '../src/modules/sitios/alcance';
 import { MemoryAuditLogger } from './helpers/memoryAudit';
 
 const NOMBRES: Record<number, string> = { 2: 'Supervisora' };
@@ -136,6 +136,10 @@ const como = (rol: Rol) => ({
 });
 const sup = () => como(ROLES.SUPERVISOR);
 
+/** Como el alcance real: quien ve solo lo suyo queda limitado a sí mismo; el resto, sin límite en esta prueba. */
+const alcancePorRol: AlcanceFn = async (u) =>
+  alcanceDe(u) === 'propio' ? { sitioIds: new Set(), guardiaIds: new Set([u.id]), porPersonas: true } : null;
+
 beforeEach(() => {
   repo = new MemoryBitacoraRepository();
   audit = new MemoryAuditLogger();
@@ -152,7 +156,7 @@ beforeEach(() => {
       repo,
       audit,
       ahora: () => new Date('2026-10-21T18:00:00.000Z'),
-      alcance: sinAlcance,
+      alcance: alcancePorRol,
       medidas: { ...sinMedidas, aplicar: async (m) => void medidas.push(m) },
       atencion: {
         atender: async (e, a) => void atencion.push(`atendido ${(e as { id: number }).id}: ${a.resultado}`),
@@ -163,8 +167,9 @@ beforeEach(() => {
 });
 
 describe('bitácora del guardia (DA-41)', () => {
-  it('solo admin y supervisor; el guardia no la ve', async () => {
-    expect((await como(ROLES.COLABORADOR).get('/guardias/10?mes=2026-10')).status).toBe(403);
+  it('el colaborador solo ve la suya (alcance propio) y no anota; admin y supervisor ven la de su alcance', async () => {
+    expect((await como(ROLES.COLABORADOR).get('/guardias/10?mes=2026-10')).status).toBe(404);
+    expect((await como(ROLES.COLABORADOR).post('/eventos/1/justificar', { categoria: 'permiso' })).status).toBe(403);
     expect((await como(ROLES.ADMIN).get('/guardias/10?mes=2026-10')).status).toBe(200);
   });
 
@@ -223,7 +228,8 @@ describe('bitácora del guardia (DA-41)', () => {
       { guardia: expect.objectContaining({ id: 11 }), asistencia: 1, rostro: 1, pendientes: 1 },
       { guardia: expect.objectContaining({ id: 10 }), asistencia: 1, rostro: 0, pendientes: 1 },
     ]);
-    expect((await como(ROLES.COLABORADOR).get('/incidencias/guardias?mes=2026-10')).status).toBe(403);
+    // Con alcance "solo ella o él" no ve las incidencias de nadie más.
+    expect((await como(ROLES.COLABORADOR).get('/incidencias/guardias?mes=2026-10')).body.data).toEqual([]);
   });
 
   it('una nota no atiende lo justificable, pero sí lo que no se puede justificar (racha)', async () => {

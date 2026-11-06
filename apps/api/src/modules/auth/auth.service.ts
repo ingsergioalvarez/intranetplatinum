@@ -458,6 +458,7 @@ export class AuthService extends BaseService {
       email: u.email,
       rol: u.rol,
       permisos: u.permisos,
+      alcance: u.alcance,
       debeCambiarPassword: u.debeCambiarPassword,
       esSuperAdmin: u.esSuperAdmin ?? false,
       empresaId: u.empresaId ?? null,

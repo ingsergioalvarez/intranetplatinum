@@ -1,4 +1,4 @@
-import { PERMISOS_POR_ROL, ROLES, ROL_DESCRIPCIONES, type Rol } from '@platinum/shared';
+import { ALCANCE_POR_ROL, PERMISOS_POR_ROL, ROLES, ROL_DESCRIPCIONES, type Rol } from '@platinum/shared';
 import type { PrismaClient } from '../../generated/prisma/client';
 
 /**
@@ -19,7 +19,7 @@ export async function crearRolesBase(
       ids[clave] = existente.id;
       continue;
     }
-    const rol = await db.rol.create({ data: { empresaId, clave, nombre: ROL_DESCRIPCIONES[clave], esBase: true }, select: { id: true } });
+    const rol = await db.rol.create({ data: { empresaId, clave, nombre: ROL_DESCRIPCIONES[clave], esBase: true, alcance: ALCANCE_POR_ROL[clave] }, select: { id: true } });
     ids[clave] = rol.id;
     const permisos = PERMISOS_POR_ROL[clave].map((p) => permisoId.get(p)).filter((id): id is number => id !== undefined);
     if (permisos.length) await db.rolPermiso.createMany({ data: permisos.map((permisoId) => ({ rolId: rol.id, permisoId })) });

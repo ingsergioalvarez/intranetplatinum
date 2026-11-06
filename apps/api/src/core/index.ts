@@ -15,6 +15,7 @@ export * from './security/passwords';
 export * from './audit/AuditLogger';
 export * from './audit/cambios';
 export * from './superadmin';
+export * from './alcance';
 export * from './empresa/contexto';
 export * from './empresa/aislamiento';
 export * from './modulos/lector';

@@ -74,7 +74,7 @@ describe('permisos de cada rol de partida', () => {
     expect(jefe).toEqual(sup);
   });
 
-  it('el colaborador tiene lo que necesita por lógica y nada de mando (su bitácora llega con el alcance por rol)', () => {
+  it('el colaborador tiene lo que necesita por lógica (incluida su bitácora, con alcance propio) y nada de mando', () => {
     expect(new Set(PERMISOS_POR_ROL[ROLES.COLABORADOR])).toEqual(
       new Set([
         P.ASISTENCIA_MARCAR,
@@ -82,6 +82,7 @@ describe('permisos de cada rol de partida', () => {
         P.CAMBIOS_PEDIR,
         P.COBERTURA_PEDIR,
         P.EMERGENCIAS_LANZAR,
+        P.BITACORA_VER,
         P.HORAS_EXTRA_SOLICITAR,
       ]),
     );

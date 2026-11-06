@@ -192,9 +192,8 @@ export const PERMISOS_POR_ROL: Record<Rol, Permiso[]> = {
     P.CAMBIOS_PEDIR,
     P.COBERTURA_PEDIR,
     P.EMERGENCIAS_LANZAR,
+    P.BITACORA_VER,
     P.HORAS_EXTRA_SOLICITAR,
-    // Su propia bitácora (`bitacora.ver` con alcance "solo él") se enciende con el alcance por rol (C-11 parte 4): hoy las
-    // rutas de bitácora no limitan por persona y darle el permiso abriría la de todos.
   ],
 };
 

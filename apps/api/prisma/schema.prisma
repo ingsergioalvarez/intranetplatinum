@@ -15,6 +15,13 @@ datasource db {
 // Seguridad: roles, permisos y usuarios (F0-04)
 // ============================================================
 
+enum AlcanceRol {
+  empresa
+  area_subareas
+  area
+  propio
+}
+
 /// Rol de una empresa (C-11 parte 3): cada empresa tiene los suyos, con sus permisos editables. Los de partida
 /// (admin, jefe, supervisor, colaborador) son `esBase`: se editan pero no se borran.
 model Rol {
@@ -23,6 +30,8 @@ model Rol {
   nombre      String       @db.VarChar(60)
   descripcion String?      @db.VarChar(255)
   esBase      Boolean      @default(false) @map("es_base")
+  /// Hasta dónde llega el rol: a cuántas personas ve y maneja (C-11 parte 4).
+  alcance     AlcanceRol   @default(propio)
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
   permisos    RolPermiso[]

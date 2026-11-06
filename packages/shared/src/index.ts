@@ -4,6 +4,7 @@ export * from './lib/paleta';
 export * from './lib/colores';
 export * from './constants/roles';
 export * from './constants/permisos';
+export * from './constants/alcance';
 export * from './types/api';
 export * from './schemas/pagination';
 export * from './schemas/auth';

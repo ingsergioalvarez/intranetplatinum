@@ -5,12 +5,12 @@
 
 **Última actualización:** 2026-11-06
 **Fase actual:** En el servidor, `https://gestion.grupocomunicalo.mx` sigue como borrador (copia de Platinum, con el login nuevo de C-05 solo si se despliega). Lo nuevo (C-05 a C-14: marca, plataforma, empresas y módulos guardados) se trabaja **solo en local**; el usuario no ha desplegado nada de esto.
-**Última tarea terminada:** C-11 parte 3 (roles por empresa y rol colaborador), en local; las partes 1 y 2 y lo anterior ya están en GitHub.
-**Tarea en progreso:** C-11 (roles y permisos): hechas las partes 1, 2 y 3; siguen la 4 (alcance por rol) y la 5 (pantallas de Roles y permisos y permisos por persona). Nada está desplegado.
+**Última tarea terminada:** C-11 parte 4 (alcance por rol), en local; las partes 1 a 3 y lo anterior ya están en GitHub.
+**Tarea en progreso:** C-11 (roles y permisos): hechas las partes 1 a 4; falta la 5 (pantallas de Roles y permisos y permisos por persona). Después, C-21 (personas que marcan por permiso). Nada está desplegado.
 
 ## Siguiente paso
 
-0. Seguir el plan de [PLAN.md](PLAN.md), en orden. El usuario sigue revisando en local (`http://localhost:5273`); cuando pida desplegar, C-05, C-07 y C-14 van juntos (13 migraciones nuevas: `db:deploy` y luego `db:seed`; todos deben iniciar sesión de nuevo; en el servidor `almartinez` probablemente ya es super admin porque el seed marca al primer admin). Después C-10 (estructura), C-11 (roles y permisos), C-12 (checador flexible y rostro obligatorio), C-13 (planeador de horarios). Decisiones en DC-006 a DC-009.
+0. Seguir el plan de [PLAN.md](PLAN.md), en orden. El usuario sigue revisando en local (`http://localhost:5273`); cuando pida desplegar, C-05, C-07 y C-14 van juntos (14 migraciones nuevas: `db:deploy` y luego `db:seed`; todos deben iniciar sesión de nuevo; en el servidor `almartinez` probablemente ya es super admin porque el seed marca al primer admin). Después C-10 (estructura), C-11 (roles y permisos), C-12 (checador flexible y rostro obligatorio), C-13 (planeador de horarios). Decisiones en DC-006 a DC-009.
 1. El usuario define, poco a poco, lo primero que debe hacer Comunicalo; se agrega al [PLAN](PLAN.md) con su ID antes de implementarlo.
 2. C-04 (respaldos de la base y las fotos de Comunicalo) antes de usarlo con personas reales.
 
@@ -22,13 +22,13 @@
 ## Cómo levantar en local
 
 - `npm run dev` en esta carpeta: web en `http://localhost:5273` y API en `http://localhost:4100` (celular: `http://<IP de la PC>:5273`).
-- Base local `gestion_comunicalo` (58 migraciones: las 45 de Platinum más `empresas`, `empresas_color_modo`, `empresa_en_todo`, `turnos_nombre_por_empresa`, `unicos_por_empresa`, `areas`, `quitar_carteras`, `quitar_rol_cliente`, `usuario_permisos`, `quitar_reportes`, `quitar_contactos_cliente`, `area_supervisores` y `roles_por_empresa`). El `apps/api/.env` lleva `PORT=4100` y el `DATABASE_URL` hacia esa base. Detalle y reglas de las dos carpetas en [RAMAS.md](RAMAS.md).
+- Base local `gestion_comunicalo` (59 migraciones: las 45 de Platinum más `empresas`, `empresas_color_modo`, `empresa_en_todo`, `turnos_nombre_por_empresa`, `unicos_por_empresa`, `areas`, `quitar_carteras`, `quitar_rol_cliente`, `usuario_permisos`, `quitar_reportes`, `quitar_contactos_cliente`, `area_supervisores`, `roles_por_empresa` y `alcance_por_rol`). El `apps/api/.env` lleva `PORT=4100` y el `DATABASE_URL` hacia esa base. Detalle y reglas de las dos carpetas en [RAMAS.md](RAMAS.md).
 - Cuentas locales: `almartinez@comunicalo.mx` (super admin) y `admin@comunicalo.com` (admin de Comunicalo, para pruebas).
 
 ## Cómo está desplegado
 
 - Servidor de la oficina, carpeta `~/comunicalo/deploy`, proyecto Docker `comunicalo` (contenedores `comunicalo-mysql-1`, `-api-1`, `-web-1`, `-tunnel-1`).
-- Base `gestion_comunicalo` (45 migraciones aplicadas; las 13 nuevas de C-07, C-14, C-08, C-10, C-11, C-18, C-19 y C-20 están sin desplegar), puerto local 5191, túnel `gestion-comunicalo` (`14edb25a-d16d-4757-835c-2127225af245`), dominio `gestion.grupocomunicalo.mx`.
+- Base `gestion_comunicalo` (45 migraciones aplicadas; las 14 nuevas de C-07, C-14, C-08, C-10, C-11, C-18, C-19 y C-20 están sin desplegar), puerto local 5191, túnel `gestion-comunicalo` (`14edb25a-d16d-4757-835c-2127225af245`), dominio `gestion.grupocomunicalo.mx`.
 - El `.env` vive solo en el servidor (no está en git). Claves de push generadas una sola vez: no cambiarlas.
 - Actualizar: desde la rama `gestion-comunicalo` hacer `git archive` y `scp` a `~/comunicalo`, y en `~/comunicalo/deploy`: `docker compose up -d --build` (más `docker compose exec api npm run db:deploy` si hay migraciones). Ver [DESPLIEGUE.md](DESPLIEGUE.md) y las reglas de [RAMAS.md](RAMAS.md).
 

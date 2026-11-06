@@ -1,4 +1,4 @@
-import type { Permiso, Rol } from '@platinum/shared';
+import type { AlcanceRol, Permiso, Rol } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 import { sinFiltroDeEmpresa } from '../../core/empresa/contexto';
 
@@ -15,6 +15,7 @@ export interface UsuarioAuth {
   bloqueadoHasta: Date | null;
   rol: Rol;
   permisos: Permiso[];
+  alcance?: AlcanceRol;
   esSuperAdmin?: boolean;
   empresaId?: number | null;
 }
@@ -220,7 +221,7 @@ export class PrismaAuthRepository extends AuthRepository {
     deletedAt: Date | null;
     intentosFallidos: number;
     bloqueadoHasta: Date | null;
-    rol: { clave: string; permisos: { permiso: { clave: string } }[] };
+    rol: { clave: string; alcance?: string; permisos: { permiso: { clave: string } }[] };
     esSuperAdmin?: boolean;
     empresaId?: number | null;
   }): UsuarioAuth {
@@ -236,6 +237,7 @@ export class PrismaAuthRepository extends AuthRepository {
       bloqueadoHasta: u.bloqueadoHasta,
       rol: u.rol.clave as Rol,
       permisos: u.rol.permisos.map((rp) => rp.permiso.clave as Permiso),
+      alcance: u.rol.alcance as AlcanceRol | undefined,
       esSuperAdmin: u.esSuperAdmin ?? false,
       empresaId: u.empresaId ?? null,
     };

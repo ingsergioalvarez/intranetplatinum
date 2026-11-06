@@ -20,6 +20,7 @@ import {
   HttpError,
   detectarImagen,
   firmarArchivo,
+  alcanceDe,
   hoyISO,
   tienePermiso,
   type AccionCtx,
@@ -79,10 +80,10 @@ export class AusenciasService extends BaseService {
     };
   }
 
-  /** Admin: todas; supervisor: las de sus guardias; guardia: las suyas. Las pendientes primero. */
+  /** Según el alcance de su rol: todas, las de las personas de su alcance o solo las suyas. Las pendientes primero. */
   async listar(user: AuthUser, alcance: Alcance | null): Promise<AusenciasLista> {
-    const ids =
-      user.rol === ROLES.ADMIN ? null : user.rol === ROLES.SUPERVISOR || user.rol === ROLES.JEFE ? [...(alcance?.guardiaIds ?? [])] : [user.id];
+    // Quien solo ve lo suyo, las suyas; el resto, las de las personas de su alcance (toda la empresa = todas).
+    const ids = alcanceDe(user) === 'propio' ? [user.id] : alcance ? [...alcance.guardiaIds] : null;
     const filas = await this.repo.listar(ids, 100);
     return { items: filas.map((f) => this.aAusencia(f)), pendientes: filas.filter((f) => f.estado === 'pendiente').length };
   }
@@ -102,9 +103,9 @@ export class AusenciasService extends BaseService {
     ctx: AccionCtx,
     alcance: Alcance | null,
   ): Promise<Ausencia> {
-    const usuarioId = user.rol === ROLES.COLABORADOR ? user.id : data.usuarioId;
+    const usuarioId = alcanceDe(user) === 'propio' ? user.id : data.usuarioId;
     if (!usuarioId) throw campo('usuarioId', 'Elige el guardia');
-    if (user.rol === ROLES.SUPERVISOR || user.rol === ROLES.JEFE) exigirGuardia(alcance, usuarioId);
+    exigirGuardia(alcance, usuarioId);
     const guardia = await this.repo.guardia(usuarioId);
     if (!guardia || !guardia.activo || guardia.rol !== ROLES.COLABORADOR) throw campo('usuarioId', 'Elige un guardia activo');
 

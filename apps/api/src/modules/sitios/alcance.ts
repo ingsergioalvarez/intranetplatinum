@@ -1,10 +1,9 @@
-import { ROLES } from '@platinum/shared';
 import { HttpError, type AuthUser } from '../../core';
 import { personasVisiblesConPrisma } from '../areas/alcance';
 
 /**
- * Lo que cada quien puede ver (C-10): admin y super admin, todo; jefe y supervisor, las personas de su área
- * (el jefe también las de sus subáreas). `null` = sin límite.
+ * Lo que cada quien puede ver (C-10, C-11 parte 4): lo decide el alcance de su rol (toda la empresa, su área y subáreas,
+ * solo su área o solo ella o él). `null` = sin límite.
  */
 export interface Alcance {
   sitioIds: Set<number>;
@@ -16,12 +15,9 @@ export interface Alcance {
 export type AlcanceFn = (user: AuthUser) => Promise<Alcance | null>;
 
 export const alcanceConPrisma: AlcanceFn = async (user) => {
-  // Admin ve toda la empresa, el jefe su área y subáreas, el supervisor su área (C-10).
-  if (user.rol === ROLES.ADMIN || user.rol === ROLES.JEFE || user.rol === ROLES.SUPERVISOR) {
-    const personas = await personasVisiblesConPrisma(user);
-    return personas ? { sitioIds: new Set(), guardiaIds: personas, porPersonas: true } : null;
-  }
-  return null;
+  // El alcance sale del rol (C-11 parte 4): `null` = sin límite; si no, las personas que puede ver.
+  const personas = await personasVisiblesConPrisma(user);
+  return personas ? { sitioIds: new Set(), guardiaIds: personas, porPersonas: true } : null;
 };
 
 /** Para pruebas y módulos sin límite: todos ven todo. */

@@ -55,7 +55,8 @@ const ANTES: [string, string, Rol[], string?][] = [
   ['ausencias', P.AUSENCIAS_PEDIR, TODOS],
   // Acordado: antes solo el admin resolvía; ahora también el jefe y el supervisor (los avisos de ausencias les llegan).
   ['ausencias', P.AUSENCIAS_RESOLVER, MANDO, 'acordado: antes solo el admin'],
-  ['bitacora', P.BITACORA_VER, MANDO],
+  // El colaborador ve la suya: su rol tiene alcance "solo ella o él" y la bitácora respeta el alcance.
+  ['bitacora', P.BITACORA_VER, TODOS, 'ampliado: el colaborador ve la suya'],
   ['bitacora', P.BITACORA_ANOTAR, MANDO],
   ['bitacora', P.ASISTENCIA_ADMINISTRAR, []],
   ['cambios-turno', P.CAMBIOS_PEDIR, TODOS],

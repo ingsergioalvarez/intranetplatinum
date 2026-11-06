@@ -436,6 +436,37 @@ async function main() {
     check('al crear una empresa nacen sus roles de partida', nuevaEmp.status === 201 && !!idNueva && (await rolesDe(idNueva!)).length === 4, nuevaEmp.body);
     await raw2.$disconnect();
 
+    console.log('\n15. Alcance por rol (C-11 parte 4)');
+    const l1b = await login('admin1@x.mx');
+    check('el token lleva el alcance del rol (el admin ve toda la empresa)', verifyAccessToken(l1b.token!).alcance === 'empresa');
+    const raiz = await area('Raiz15');
+    const hija = await area('Hija15', raiz);
+    const otra15 = await area('Otra15');
+    const w = await persona('Wanda', 'wanda@x.mx', rolGuardia.id, raiz);
+    const x = await persona('Xavier', 'xavier@x.mx', rolGuardia.id, raiz);
+    const y = await persona('Yolanda', 'yolanda@x.mx', rolGuardia.id, hija);
+    await persona('Zoe', 'zoe@x.mx', rolGuardia.id, otra15);
+    const conAlcance = (alc: string, extra: string[] = []) =>
+      signAccessToken({ id: w.id, email: w.email, rol: 'analista', permisos: ['usuarios.ver', ...extra], alcance: alc, empresaId: E1 });
+    const quien = async (alc: string, extra: string[] = []) => (await correosDe(conAlcance(alc, extra))).filter((e: string) => ['wanda', 'xavier', 'yolanda', 'zoe'].some((n) => e.startsWith(n))).sort();
+    check('alcance "solo ella o él": solo se ve a sí misma', JSON.stringify(await quien('propio')) === JSON.stringify(['wanda@x.mx']), await quien('propio'));
+    check('alcance "solo su área": su área, sin subáreas', JSON.stringify(await quien('area')) === JSON.stringify(['wanda@x.mx', 'xavier@x.mx']), await quien('area'));
+    check('alcance "su área y sus subáreas": también las subáreas, no otras áreas', JSON.stringify(await quien('area_subareas')) === JSON.stringify(['wanda@x.mx', 'xavier@x.mx', 'yolanda@x.mx']), await quien('area_subareas'));
+    check('alcance "toda la empresa": todas', (await quien('empresa')).length === 4, await quien('empresa'));
+    check('el permiso "ver a toda la empresa" amplía a una persona con alcance propio', (await quien('propio', ['alcance.empresa'])).length === 4);
+    check('un usuario fuera de su alcance responde 404', (await como(conAlcance('propio')).get(`/usuarios/${x.id}`)).status === 404 && (await como(conAlcance('area')).get(`/usuarios/${x.id}`)).status === 200 && (await como(conAlcance('area')).get(`/usuarios/${y.id}`)).status === 404);
+    // La bitácora es un módulo opcional: se enciende para probarla.
+    const rawM = createPrismaClient(urlTemp.toString());
+    await rawM.empresaModulo.upsert({ where: { empresaId_modulo: { empresaId: E1, modulo: 'bitacora' } }, update: { encendido: true }, create: { empresaId: E1, modulo: 'bitacora', encendido: true } });
+    await rawM.$disconnect();
+    lectorModulos.invalidar(E1);
+    const TColab = signAccessToken({ id: w.id, email: w.email, rol: 'colaborador', permisos: [...PERMISOS_POR_ROL.colaborador], alcance: 'propio', empresaId: E1 });
+    check('el colaborador ve su propia bitácora', (await como(TColab).get(`/bitacora/guardias/${w.id}?mes=2026-11`)).status === 200, (await como(TColab).get(`/bitacora/guardias/${w.id}?mes=2026-11`)).body);
+    check('el colaborador no ve la bitácora de otra persona (404)', (await como(TColab).get(`/bitacora/guardias/${x.id}?mes=2026-11`)).status === 404);
+    check('el colaborador no anota en la bitácora (403)', (await como(TColab).post('/bitacora/eventos/1/justificar', { categoria: 'permiso' })).status === 403);
+    const TSup15 = signAccessToken({ id: w.id, email: w.email, rol: 'supervisor', permisos: [...PERMISOS_POR_ROL.supervisor], alcance: 'area', empresaId: E1 });
+    check('un supervisor (alcance su área) ve la bitácora de su área y no la de otra', (await como(TSup15).get(`/bitacora/guardias/${x.id}?mes=2026-11`)).status === 200 && (await como(TSup15).get(`/bitacora/guardias/${y.id}?mes=2026-11`)).status === 404);
+
     await disconnectPrisma();
     console.log(`\n${fallos === 0 ? 'TODO BIEN' : 'HAY FALLOS'}: ${total - fallos} de ${total} comprobaciones correctas.`);
   } finally {
