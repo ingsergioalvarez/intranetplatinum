@@ -7,16 +7,13 @@ import {
   BellOff,
   CheckCheck,
   CircleCheck,
-  ClipboardList,
   Clock,
   Copy,
   Hand,
   MapPin,
-  MessageSquare,
   UserCheck,
   UserX,
   UsersRound,
-  RefreshCw,
   ScanFace,
   ShieldAlert,
   Siren,
@@ -34,9 +31,6 @@ type Tono = 'rojo' | 'ambar' | 'azul' | 'verde';
 
 /** Ícono y color (gravedad) de cada tipo de aviso (AS1-13); el título lo trae cada aviso (A-22). */
 const TIPO: Record<TipoAviso, { icono: typeof Bell; tono: Tono }> = {
-  reporte_nuevo: { icono: ClipboardList, tono: 'azul' },
-  reporte_estatus: { icono: RefreshCw, tono: 'azul' },
-  reporte_comentario: { icono: MessageSquare, tono: 'azul' },
   // Asistencia (A-17)
   rostro_pendiente: { icono: ScanFace, tono: 'ambar' },
   rostro_suplantacion: { icono: ShieldAlert, tono: 'rojo' },
@@ -123,8 +117,7 @@ export function Campanita({ className, tono = 'oscuro' }: { className?: string; 
   const abrir = (a: Aviso) => {
     if (!a.leido) marcar.mutate(a.id);
     setAbierta(false);
-    if (a.reporteId) navigate(`/reportes/${a.reporteId}`);
-    else if (a.ruta) navigate(a.ruta);
+    if (a.ruta) navigate(a.ruta);
   };
 
   const noLeidos = bandeja.data?.noLeidos ?? 0;

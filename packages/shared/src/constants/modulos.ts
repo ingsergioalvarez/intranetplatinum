@@ -130,13 +130,6 @@ export const MODULOS = [
     nota: 'Hoy los lugares de trabajo dependen de un cliente; apagarlo tendrá efecto cuando se separen (C-10).',
   },
   {
-    clave: 'reportes',
-    nombre: 'Reportes de incidentes',
-    descripcion: 'Reportes con fotos y seguimiento, con sus categorías.',
-    grupo: 'seguridad',
-    dependeDe: [],
-  },
-  {
     clave: 'cobertura',
     nombre: 'Cobertura de relevos',
     descripcion: 'Buscar quién cubra un puesto cuando alguien no llega.',

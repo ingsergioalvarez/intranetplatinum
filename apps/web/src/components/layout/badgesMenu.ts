@@ -3,12 +3,11 @@ import type { Aviso, BandejaAvisos } from '@platinum/shared';
 import { api } from '../../core/api';
 
 /**
- * A qué botón del menú pertenece un aviso (A-57): los de un reporte, a "Reportes"; el resto, al botón cuya
+ * A qué botón del menú pertenece un aviso (A-57): al botón cuya
  * ruta es el comienzo de la ruta del aviso (p. ej. `/asistencia/guardias/4?...` → Asistencia). Los avisos
  * sin pantalla propia solo cuentan en la campanita.
  */
-export function seccionDeAviso(a: Pick<Aviso, 'reporteId' | 'tipo' | 'ruta'>, rutas: string[]): string | null {
-  if ((a.reporteId != null || a.tipo.startsWith('reporte_')) && rutas.includes('/reportes')) return '/reportes';
+export function seccionDeAviso(a: Pick<Aviso, 'ruta'>, rutas: string[]): string | null {
   const base = (a.ruta ?? '').split('?')[0];
   let mejor: string | null = null;
   for (const to of rutas) {

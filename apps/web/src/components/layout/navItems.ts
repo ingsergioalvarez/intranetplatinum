@@ -3,7 +3,6 @@ import {
   Boxes,
   Building2,
   ClipboardCheck,
-  ClipboardList,
   Clock,
   Home,
   CalendarOff,
@@ -11,7 +10,6 @@ import {
   Network,
 
   MapPin,
-  Tags,
   Timer,
   Users,
   UsersRound,
@@ -60,7 +58,6 @@ export const navItems: NavItem[] = [
     permiso: PERMISOS.ASISTENCIA_MARCAR,
     roles: [ROLES.GUARDIA],
   },
-  { label: 'Reportes', to: '/reportes', modulo: 'reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_VER_PROPIOS },
   { label: 'Asistencia', to: '/asistencia', icon: ClipboardCheck, permiso: PERMISOS.ASISTENCIA_VER },
   { label: 'Clientes', to: '/clientes', modulo: 'clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
   { label: 'Grupos', to: '/grupos', modulo: 'grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
@@ -75,7 +72,6 @@ export const navItems: NavItem[] = [
     permiso: PERMISOS.CATALOGOS_ADMINISTRAR,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.JEFE],
   },
-  { label: 'Catálogos', to: '/catalogos/categorias', modulo: 'reportes', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
   // Plataforma (C-07): empresas, su marca y sus módulos. Solo el super admin.
   { label: 'Empresas', to: '/plataforma/empresas', icon: Boxes, superAdmin: true, seccion: 'Plataforma' },
 ];

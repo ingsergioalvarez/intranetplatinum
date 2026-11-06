@@ -29,7 +29,6 @@ export function ContactoModal({
     celular: contacto?.celular ?? '',
     email: contacto?.email ?? '',
     esResponsable: contacto?.esResponsable ?? false,
-    recibeNotificaciones: contacto?.recibeNotificaciones ?? false,
     prioridad: String(contacto?.prioridad ?? 0),
   });
 
@@ -121,11 +120,6 @@ export function ContactoModal({
             {...bindCheck('esResponsable')}
             label="Responsable del servicio"
             description="Persona principal con quien se coordina el servicio."
-          />
-          <Checkbox
-            {...bindCheck('recibeNotificaciones')}
-            label="Recibe notificaciones de reportes"
-            description="Se le enviará por correo cada reporte de sus sitios."
           />
         </div>
       </FormModal>

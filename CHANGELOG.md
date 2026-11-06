@@ -5,6 +5,28 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-06 — Se quitan los Reportes de incidentes (C-18, DC-019)
+
+#### Quitado
+
+- **Reportes de incidentes** completo: módulo y API de reportes y de categorías, pantallas (Reportes, nuevo reporte, detalle, catálogo de Categorías), tarjetas del tablero de Inicio, el notificador de reportes y los 6 permisos `reportes.*`.
+- **Relevo de turno con checklist de consignas** (celular, llaves, teléfono del inmueble): levantaba un reporte oficial y era del modelo de sitios de Platinum. Marcar entrada y salida abre ya directo la cámara.
+- **Reglas de aviso por cliente** (a quién avisar de un reporte), la opción de contacto "recibe notificaciones de reportes" y la cola de correos al cliente.
+- Migración `20261115000000_quitar_reportes`: borra las tablas `reportes`, `categorias_reporte`, `folios_reporte`, `reporte_seguimientos`, `reporte_evidencias`, `notificaciones` y `cliente_reglas_aviso`, las columnas `avisos.reporte_id`, `cliente_contactos.recibe_notificaciones` y `clientes.aviso_por_defecto`, los avisos de reportes, el interruptor del módulo y los permisos. Probada antes en una copia de la base local con sus datos y con respaldo previo.
+
+#### Cambiado
+
+- En el borrado definitivo de usuarios, sitios y clientes ya no se cuentan ni borran reportes.
+- El permiso de catálogos queda solo para turnos.
+- El tablero de Inicio muestra solo lo de asistencia.
+
+#### Notas
+
+- **Se conservan** Clientes (sus sitios cuelgan de él hasta C-12 y C-13), Cobertura de relevos (se rehace sobre personas y turnos) y los contactos de un cliente.
+- Las fotos que pudieran haberse guardado en disco no se borran del servidor; en Comunicalo no hay reportes reales.
+- Sin desplegar. 547 pruebas (se quitaron las de reportes y avisos de reportes), tipos y lint sin errores, 108 de 108 comprobaciones de extremo a extremo.
+- En el servidor la migración se aplica con `db:deploy` junto con las demás (10 nuevas desde las 45).
+
 ### Sesión 2026-11-05 (6) — Estructura de la empresa, paso 5: avisos por la cadena de jefes (C-10, DC-017)
 
 #### Añadido

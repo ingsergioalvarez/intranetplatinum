@@ -89,9 +89,6 @@ model Usuario {
   refreshTokens        RefreshToken[]
   passwordResets       PasswordReset[]
   auditoria            Auditoria[]
-  reportes             Reporte[]
-  reporteSeguimientos  ReporteSeguimiento[]
-  reporteEvidencias    ReporteEvidencia[]
   avisos               Aviso[]
   grupoIntegrantes     GrupoIntegrante[]
   marcaciones          Marcacion[]
@@ -185,13 +182,6 @@ model Empresa {
   sitioGuardias         SitioGuardia[]
   grupoGuardiass        GrupoGuardias[]
   grupoIntegrantes      GrupoIntegrante[]
-  categoriaReportes     CategoriaReporte[]
-  folioReportes         FolioReporte[]
-  reportes              Reporte[]
-  reporteSeguimientos   ReporteSeguimiento[]
-  reporteEvidencias     ReporteEvidencia[]
-  notificacions         Notificacion[]
-  clienteReglaAvisos    ClienteReglaAviso[]
   avisos                Aviso[]
   suscripcionPushs      SuscripcionPush[]
   marcacions            Marcacion[]
@@ -308,16 +298,12 @@ model Cliente {
   logoUrl         String?             @map("logo_url") @db.VarChar(500)
   // suspendido = servicio en pausa; la baja definitiva usa deleted_at (D-006).
   estatus         EstatusCliente      @default(activo)
-  // A quién se avisa de sus reportes si no hay regla para la prioridad (D-016).
-  avisoPorDefecto DestinoAviso        @default(supervisor) @map("aviso_por_defecto")
   notas           String?             @db.Text
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   deletedAt       DateTime?           @map("deleted_at")
   contactos       ClienteContacto[]
   sitios          Sitio[]
-  reportes        Reporte[]
-  reglasAviso     ClienteReglaAviso[]
 
   empresaId         Int     @map("empresa_id")
   empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
@@ -337,15 +323,12 @@ model ClienteContacto {
   celular              String?        @db.VarChar(30)
   email                String?        @db.VarChar(160)
   esResponsable        Boolean        @default(false) @map("es_responsable")
-  recibeNotificaciones Boolean        @default(false) @map("recibe_notificaciones")
   // Orden de aparición / escalamiento (menor = primero).
   prioridad            Int            @default(0)
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
-  // Baja lógica: el historial de notificaciones (F3-08) lo sigue referenciando.
   deletedAt            DateTime?      @map("deleted_at")
   cliente              Cliente        @relation(fields: [clienteId], references: [id])
-  notificaciones       Notificacion[]
 
   empresaId         Int     @map("empresa_id")
   empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
@@ -368,12 +351,10 @@ model Sitio {
   supervisorId   Int?                @map("supervisor_id")
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
-  // Baja lógica: los reportes (F3) siguen referenciando el sitio.
   deletedAt      DateTime?           @map("deleted_at")
   cliente        Cliente             @relation(fields: [clienteId], references: [id])
   supervisor     Usuario?            @relation("SitiosSupervisados", fields: [supervisorId], references: [id], onDelete: SetNull)
   asignaciones   SitioGuardia[]
-  reportes       Reporte[]
   marcaciones    Marcacion[]
   incidencias    IncidenciaRostro[]
   bitacora       EventoBitacora[]
@@ -486,202 +467,10 @@ model GrupoIntegrante {
 }
 
 // ============================================================
-// Reportes de guardias (F3-01, F3-02)
+// Avisos en la app
 // ============================================================
-
-/// Catálogo jerárquico (2 niveles) de tipos de incidencia. Se desactiva, no se borra.
-model CategoriaReporte {
-  id        Int                @id @default(autoincrement())
-  padreId   Int?               @map("padre_id")
-  nombre    String             @db.VarChar(80)
-  // Nombre de ícono de lucide (p. ej. "lightbulb").
-  icono     String?            @db.VarChar(40)
-  orden     Int                @default(0)
-  activo    Boolean            @default(true)
-  createdAt DateTime           @default(now()) @map("created_at")
-  updatedAt DateTime           @updatedAt @map("updated_at")
-  padre     CategoriaReporte?  @relation("CategoriaHijas", fields: [padreId], references: [id])
-  hijas     CategoriaReporte[] @relation("CategoriaHijas")
-  reportes  Reporte[]
-
-  empresaId         Int     @map("empresa_id")
-  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  @@index([padreId, activo])
-  @@index([empresaId])
-  @@map("categorias_reporte")
-}
-
-enum PrioridadReporte {
-  baja
-  media
-  alta
-  critica
-}
-
-enum EstatusReporte {
-  abierto
-  notificado
-  en_proceso
-  resuelto
-  cerrado
-}
-
-/// Consecutivo de folios por año: PLT-AAAA-NNNNNN.
-model FolioReporte {
-  anio   Int
-  ultimo Int @default(0)
-
-  empresaId         Int     @map("empresa_id")
-  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  @@id([empresaId, anio])
-  @@index([empresaId])
-  @@map("folios_reporte")
-}
-
-model Reporte {
-  id               Int                  @id @default(autoincrement())
-  folio            String               @db.VarChar(20)
-  sitioId          Int                  @map("sitio_id")
-  // Copia del cliente del sitio al crear (filtros y notificaciones sin join).
-  clienteId        Int                  @map("cliente_id")
-  categoriaId      Int                  @map("categoria_id")
-  creadoPorId      Int                  @map("creado_por")
-  titulo           String               @db.VarChar(150)
-  descripcion      String               @db.Text
-  ubicacionDetalle String?              @map("ubicacion_detalle") @db.VarChar(200)
-  prioridad        PrioridadReporte
-  estatus          EstatusReporte       @default(abierto)
-  // GPS opcional del dispositivo al enviar.
-  lat              Decimal?             @db.Decimal(10, 7)
-  lng              Decimal?             @db.Decimal(10, 7)
-  // Fecha del servidor (D-007).
-  createdAt        DateTime             @default(now()) @map("created_at")
-  updatedAt        DateTime             @updatedAt @map("updated_at")
-  cerradoEn        DateTime?            @map("cerrado_en")
-  sitio            Sitio                @relation(fields: [sitioId], references: [id])
-  cliente          Cliente              @relation(fields: [clienteId], references: [id])
-  categoria        CategoriaReporte     @relation(fields: [categoriaId], references: [id])
-  creadoPor        Usuario              @relation(fields: [creadoPorId], references: [id])
-  evidencias       ReporteEvidencia[]
-  seguimientos     ReporteSeguimiento[]
-  notificaciones   Notificacion[]
-  avisos           Aviso[]
-
-  empresaId         Int     @map("empresa_id")
-  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  @@index([estatus, createdAt])
-  @@index([clienteId, createdAt])
-  @@index([sitioId, createdAt])
-  @@index([categoriaId])
-  @@index([creadoPorId, createdAt])
-  @@unique([empresaId, folio])
-  @@index([empresaId])
-  @@map("reportes")
-}
-
-model ReporteSeguimiento {
-  id              Int                @id @default(autoincrement())
-  reporteId       Int                @map("reporte_id")
-  usuarioId       Int                @map("usuario_id")
-  comentario      String?            @db.Text
-  estatusAnterior EstatusReporte?    @map("estatus_anterior")
-  estatusNuevo    EstatusReporte?    @map("estatus_nuevo")
-  createdAt       DateTime           @default(now()) @map("created_at")
-  reporte         Reporte            @relation(fields: [reporteId], references: [id])
-  usuario         Usuario            @relation(fields: [usuarioId], references: [id])
-  evidencias      ReporteEvidencia[]
-
-  empresaId         Int     @map("empresa_id")
-  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  @@index([reporteId, createdAt])
-  @@index([empresaId])
-  @@map("reporte_seguimientos")
-}
-
-/// Foto de evidencia. `archivo` es la clave en el StorageService (no una URL pública).
-model ReporteEvidencia {
-  id            Int                 @id @default(autoincrement())
-  reporteId     Int                 @map("reporte_id")
-  // null = foto del reporte original; con valor = foto de un seguimiento.
-  seguimientoId Int?                @map("seguimiento_id")
-  archivo       String              @db.VarChar(300)
-  mime          String              @db.VarChar(40)
-  tamano        Int
-  subidaPorId   Int                 @map("subida_por")
-  // Fecha del servidor al recibir la foto (D-007).
-  createdAt     DateTime            @default(now()) @map("created_at")
-  reporte       Reporte             @relation(fields: [reporteId], references: [id])
-  seguimiento   ReporteSeguimiento? @relation(fields: [seguimientoId], references: [id])
-  subidaPor     Usuario             @relation(fields: [subidaPorId], references: [id])
-
-  empresaId         Int     @map("empresa_id")
-  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  @@index([reporteId])
-  @@index([seguimientoId])
-  @@index([empresaId])
-  @@map("reporte_evidencias")
-}
-
-enum CanalNotificacion {
-  email
-  whatsapp
-}
-
-enum EstadoNotificacion {
-  pendiente
-  enviado
-  error
-}
-
-/// Bitácora de avisos a contactos del cliente (F3-07, F3-08).
-model Notificacion {
-  id         Int                @id @default(autoincrement())
-  reporteId  Int                @map("reporte_id")
-  contactoId Int                @map("contacto_id")
-  canal      CanalNotificacion  @default(email)
-  estado     EstadoNotificacion @default(pendiente)
-  enviadoEn  DateTime?          @map("enviado_en")
-  error      String?            @db.Text
-  createdAt  DateTime           @default(now()) @map("created_at")
-  reporte    Reporte            @relation(fields: [reporteId], references: [id])
-  contacto   ClienteContacto    @relation(fields: [contactoId], references: [id])
-
-  empresaId         Int     @map("empresa_id")
-  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  @@index([reporteId])
-  @@index([estado, createdAt])
-  @@index([empresaId])
-  @@map("notificaciones")
-}
-
-// ============================================================
-// Reglas de aviso y avisos en la app (F3-09, F3-10, D-016)
-// ============================================================
-
-enum DestinoAviso {
-  supervisor
-  cliente
-  ambos
-}
-
-/// Excepción por prioridad a la regla por defecto del cliente.
-model ClienteReglaAviso {
-  clienteId Int              @map("cliente_id")
-  prioridad PrioridadReporte
-  destino   DestinoAviso
-  cliente   Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
-  empresaId         Int     @map("empresa_id")
-  empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  @@id([clienteId, prioridad])
-  @@index([empresaId])
-  @@map("cliente_reglas_aviso")
-}
 
 enum TipoAviso {
-  reporte_nuevo
-  reporte_estatus
-  reporte_comentario
   // Asistencia (A-17): rostro por revisar, intento de suplantación, rostro ya registrado en otra cuenta,
   // pantalla o foto frente a la cámara, gesto (reto) no completado.
   rostro_pendiente
@@ -707,12 +496,11 @@ enum TipoAviso {
 model Aviso {
   id        Int       @id @default(autoincrement())
   usuarioId Int       @map("usuario_id")
-  reporteId Int?      @map("reporte_id")
   tipo      TipoAviso
   /// Título propio del aviso (A-22); si falta se usa el título genérico del tipo.
   titulo    String?   @db.VarChar(80)
   mensaje   String    @db.VarChar(255)
-  /// Pantalla a la que lleva el aviso (avisos que no son de un reporte).
+  /// Pantalla a la que lleva el aviso.
   ruta      String?   @db.VarChar(200)
   /// Foto de evidencia que se muestra en miniatura (incidencias de rostro).
   fotoClave String?   @map("foto_clave") @db.VarChar(255)
@@ -726,7 +514,6 @@ model Aviso {
   resultado   String?   @db.VarChar(120)
   createdAt DateTime  @default(now()) @map("created_at")
   usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  reporte   Reporte?  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
 
   empresaId         Int     @map("empresa_id")
   empresa           Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)

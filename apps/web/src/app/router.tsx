@@ -11,12 +11,8 @@ import { UsuariosPage } from '../modules/usuarios/UsuariosPage';
 import { ClienteDetallePage } from '../modules/clientes/ClienteDetallePage';
 import { AreasPage } from '../modules/areas/AreasPage';
 import { ClientesPage } from '../modules/clientes/ClientesPage';
-import { CategoriasPage } from '../modules/catalogos/CategoriasPage';
 import { TurnosPage } from '../modules/catalogos/TurnosPage';
 import { GruposPage } from '../modules/grupos/GruposPage';
-import { NuevoReportePage } from '../modules/reportes/NuevoReportePage';
-import { ReporteDetallePage } from '../modules/reportes/ReporteDetallePage';
-import { ReportesPage } from '../modules/reportes/ReportesPage';
 import { NotFoundPage } from '../modules/shared/PendientePage';
 import { AsistenciaGuardiaPage } from '../modules/asistencia/AsistenciaGuardiaPage';
 import { AsistenciaPage } from '../modules/asistencia/AsistenciaPage';
@@ -202,44 +198,12 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: 'reportes',
-        element: (
-          <ProtectedRoute modulo="reportes" permiso={PERMISOS.REPORTES_VER_PROPIOS}>
-            <ReportesPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'reportes/nuevo',
-        element: (
-          <ProtectedRoute modulo="reportes" permiso={PERMISOS.REPORTES_CREAR}>
-            <NuevoReportePage />
-          </ProtectedRoute>
-        ),
-      },
       // El servidor decide si puede verlo (todos / sus sitios).
-      {
-        path: 'reportes/:id',
-        element: (
-          <ProtectedRoute modulo="reportes">
-            <ReporteDetallePage />
-          </ProtectedRoute>
-        ),
-      },
       {
         path: 'grupos',
         element: (
           <ProtectedRoute modulo="grupos" permiso={PERMISOS.GRUPOS_ADMINISTRAR}>
             <GruposPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'catalogos/categorias',
-        element: (
-          <ProtectedRoute modulo="reportes" permiso={PERMISOS.CATALOGOS_ADMINISTRAR}>
-            <CategoriasPage />
           </ProtectedRoute>
         ),
       },

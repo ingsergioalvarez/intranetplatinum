@@ -241,7 +241,6 @@ export function SitioModal({
             void refrescar();
             void qc.invalidateQueries({ queryKey: ['sitios'] });
             void qc.invalidateQueries({ queryKey: ['asistencia'] });
-            void qc.invalidateQueries({ queryKey: ['reportes'] });
             onClose();
           }}
         />

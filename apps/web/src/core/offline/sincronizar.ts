@@ -72,7 +72,6 @@ export function useSincronizacion(usuarioId: number | undefined) {
       if (n > 0) {
         toast.success(n === 1 ? 'Se envió tu checada guardada' : `Se enviaron ${n} checadas guardadas`);
         void qc.invalidateQueries({ queryKey: ['asistencia'] });
-        void qc.invalidateQueries({ queryKey: ['reportes'] });
       }
     };
     void intentar();

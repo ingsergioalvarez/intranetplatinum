@@ -8,7 +8,6 @@ import {
   type ClienteResumen,
   type Contacto,
   type ContactoData,
-  type ReglasAviso,
   type Rol,
   type Sitio,
   type SitioData,
@@ -132,13 +131,6 @@ class MemoryClientesRepository extends ClientesRepository {
   }
   async restoreSitio(id: number) {
     (await this.findSitio(id))!.deletedAt = null;
-  }
-  reglas = new Map<number, ReglasAviso>();
-  async getReglasAviso(id: number) {
-    return this.reglas.get(id) ?? { porDefecto: 'supervisor' as const, porPrioridad: {} };
-  }
-  async setReglasAviso(id: number, r: ReglasAviso) {
-    this.reglas.set(id, r);
   }
 }
 
@@ -388,42 +380,13 @@ describe('clientes (F2-02)', () => {
   });
 });
 
-describe('reglas de aviso (F3-09)', () => {
-  it('guarda la regla por defecto y descarta excepciones iguales a ella', async () => {
-    const res = await como(ADMIN).put('/clientes/1/avisos', {
-      porDefecto: 'supervisor',
-      porPrioridad: { critica: 'ambos', baja: 'supervisor', media: null },
-    });
-    expect(res.status).toBe(200);
-    expect(res.body.data).toEqual({ porDefecto: 'supervisor', porPrioridad: { critica: 'ambos' } });
-    expect((await como(SUPERVISOR).get('/clientes/1')).body.data.reglasAviso.porPrioridad).toEqual({
-      critica: 'ambos',
-    });
-    expect(audit.acciones()).toContain('clientes.reglas_aviso');
-  });
-
-  it('valida destinos y permisos', async () => {
-    expect((await como(ADMIN).put('/clientes/1/avisos', { porDefecto: 'nadie' })).status).toBe(400);
-    expect((await como(GUARDIA).put('/clientes/1/avisos', { porDefecto: 'ambos' })).status).toBe(403);
-  });
-
-  it('el supervisor no puede cambiar a quién se avisa (A-30)', async () => {
-    const res = await como(SUPERVISOR).put('/clientes/1/avisos', { porDefecto: 'supervisor' });
-    expect(res.status).toBe(403);
-    expect(clientes.reglas.has(1)).toBe(false);
-  });
-});
-
 describe('contactos (F2-03)', () => {
-  it('varios contactos por cliente; notificaciones exigen correo', async () => {
+  it('varios contactos por cliente; el correo debe ser válido', async () => {
     expect((await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Laura' })).status).toBe(201);
     expect((await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Pedro' })).status).toBe(201);
-    const sinCorreo = await como(SUPERVISOR).post('/clientes/1/contactos', {
-      nombre: 'Ana',
-      recibeNotificaciones: true,
-    });
-    expect(sinCorreo.status).toBe(400);
-    expect(sinCorreo.body.error.details[0].path).toBe('email');
+    const malCorreo = await como(SUPERVISOR).post('/clientes/1/contactos', { nombre: 'Ana', email: 'no-es-correo' });
+    expect(malCorreo.status).toBe(400);
+    expect(malCorreo.body.error.details[0].path).toBe('email');
     expect(await clientes.listContactos(1)).toHaveLength(2);
   });
 

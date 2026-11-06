@@ -5,8 +5,6 @@ import type {
   Contacto,
   ContactoData,
   Paginated,
-  PrioridadReporte,
-  ReglasAviso,
   PaginationQuery,
   Sitio,
   SitioData,
@@ -43,10 +41,6 @@ export abstract class ClientesRepository extends BaseRepository<
   /** Baja del sitio y término (al día `hoy`) de sus asignaciones vigentes. */
   abstract softDeleteSitio(id: number, hoy: string): Promise<void>;
   abstract restoreSitio(id: number): Promise<void>;
-
-  abstract getReglasAviso(clienteId: number): Promise<ReglasAviso>;
-  /** Reemplaza la regla por defecto y todas las excepciones por prioridad. */
-  abstract setReglasAviso(clienteId: number, reglas: ReglasAviso): Promise<void>;
 }
 
 // ---------- Mapeos ----------
@@ -101,7 +95,6 @@ const contactoSelect = {
   celular: true,
   email: true,
   esResponsable: true,
-  recibeNotificaciones: true,
   prioridad: true,
 } satisfies Prisma.ClienteContactoSelect;
 
@@ -291,33 +284,5 @@ export class PrismaClientesRepository extends ClientesRepository {
 
   async restoreSitio(id: number) {
     await getPrisma().sitio.update({ where: { id }, data: { deletedAt: null } });
-  }
-
-  // ----- Reglas de aviso (F3-09) -----
-
-  async getReglasAviso(clienteId: number): Promise<ReglasAviso> {
-    const c = await getPrisma().cliente.findUniqueOrThrow({
-      where: { id: clienteId },
-      select: { avisoPorDefecto: true, reglasAviso: { select: { prioridad: true, destino: true } } },
-    });
-    return {
-      porDefecto: c.avisoPorDefecto,
-      porPrioridad: Object.fromEntries(c.reglasAviso.map((r) => [r.prioridad, r.destino])),
-    };
-  }
-
-  async setReglasAviso(clienteId: number, { porDefecto, porPrioridad }: ReglasAviso) {
-    const prisma = getPrisma();
-    const excepciones = Object.entries(porPrioridad).filter(([, d]) => d) as [
-      PrioridadReporte,
-      ReglasAviso['porDefecto'],
-    ][];
-    await prisma.$transaction([
-      prisma.cliente.update({ where: { id: clienteId }, data: { avisoPorDefecto: porDefecto } }),
-      prisma.clienteReglaAviso.deleteMany({ where: { clienteId } }),
-      prisma.clienteReglaAviso.createMany({
-        data: excepciones.map(([prioridad, destino]) => ({ empresaId: empresaActual(), clienteId, prioridad, destino })),
-      }),
-    ]);
   }
 }

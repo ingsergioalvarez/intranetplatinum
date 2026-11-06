@@ -4,7 +4,6 @@ import { EliminarDefinitivoDialog } from '../shared/EliminarDefinitivoDialog';
 const ETIQUETAS_SITIO: Record<keyof HistorialSitio, [string, string]> = {
   asignaciones: ['asignación de guardias', 'asignaciones de guardias'],
   marcas: ['checada de asistencia (con sus fotos)', 'checadas de asistencia (con sus fotos)'],
-  reportes: ['reporte (con seguimientos y fotos)', 'reportes (con seguimientos y fotos)'],
   coberturas: ['cobertura', 'coberturas'],
 };
 
@@ -38,7 +37,7 @@ const ETIQUETAS_CLIENTE: Record<keyof HistorialCliente, [string, string]> = {
   contactos: ['contacto', 'contactos'],
 };
 
-/** Eliminación definitiva de un cliente con sus sitios, reportes y contactos (solo admin, DA-50). */
+/** Eliminación definitiva de un cliente con sus sitios y contactos (solo admin, DA-50). */
 export function EliminarClienteDialog({
   cliente,
   onCancel,

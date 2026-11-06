@@ -20,7 +20,6 @@ export interface AvisoPush {
   titulo?: string;
   mensaje: string;
   ruta?: string | null;
-  reporteId?: number | null;
   urgente?: boolean;
 }
 
@@ -59,7 +58,7 @@ export class PushService extends BaseService {
       const payload: PayloadPush = {
         titulo: tituloDeAviso(aviso.tipo, aviso.titulo),
         cuerpo: aviso.mensaje.slice(0, CUERPO_MAX),
-        ruta: aviso.reporteId ? `/reportes/${aviso.reporteId}` : (aviso.ruta ?? '/'),
+        ruta: aviso.ruta ?? '/',
         tipo: aviso.tipo,
         ...(aviso.urgente ? { urgente: true } : {}),
       };

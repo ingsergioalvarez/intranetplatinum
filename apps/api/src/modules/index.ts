@@ -7,7 +7,6 @@ import { authModule } from './auth';
 import { avisosModule } from './avisos';
 import { bitacoraModule } from './bitacora';
 import { cambiosModule } from './cambios';
-import { categoriasModule } from './categorias';
 import { clientesModule } from './clientes';
 import { casosCoberturaModule } from './casos-cobertura';
 import { coberturaModule } from './cobertura';
@@ -23,7 +22,6 @@ import { emergenciasModule } from './emergencias';
 import { miEmpresaModule } from './mi-empresa';
 import { plataformaModule } from './plataforma';
 import { pushModule } from './push';
-import { reportesModule } from './reportes';
 import { sitiosModule } from './sitios';
 import { turnosModule } from './turnos';
 import { usuariosModule } from './usuarios';
@@ -42,8 +40,6 @@ export const modules: AppModule[] = [
   cambiosModule,
   turnosModule,
   gruposModule,
-  categoriasModule,
-  reportesModule,
   archivosModule,
   avisosModule,
   pushModule,

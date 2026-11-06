@@ -1,7 +1,6 @@
 import type { DiasTurno } from './turnos';
 import { z } from 'zod';
 import { coordenada, fechaSchema, textoOpcional } from './comunes';
-import type { ReglasAviso } from './avisos';
 import { paginationQuerySchema } from './pagination';
 
 const emailOpcional = z
@@ -102,13 +101,9 @@ export const contactoSchema = z
     celular: textoOpcional(30),
     email: emailOpcional,
     esResponsable: z.boolean().default(false),
-    recibeNotificaciones: z.boolean().default(false),
     prioridad: z.coerce.number().int().min(0).max(99).default(0),
   })
-  .refine((c) => !c.recibeNotificaciones || !!c.email, {
-    path: ['email'],
-    message: 'Para recibir notificaciones necesita correo',
-  });
+  ;
 
 export type ContactoInput = z.input<typeof contactoSchema>;
 export type ContactoData = z.output<typeof contactoSchema>;
@@ -122,7 +117,6 @@ export interface Contacto {
   celular: string | null;
   email: string | null;
   esResponsable: boolean;
-  recibeNotificaciones: boolean;
   prioridad: number;
 }
 
@@ -366,5 +360,4 @@ export interface Grupo {
 export interface ClienteDetalle extends Cliente {
   contactos: Contacto[];
   sitios: Sitio[];
-  reglasAviso: ReglasAviso;
 }

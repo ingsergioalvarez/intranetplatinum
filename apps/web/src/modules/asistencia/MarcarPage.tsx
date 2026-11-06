@@ -57,7 +57,6 @@ import { precargarMotor } from './rostro/motor';
 import { useModulo } from '../../core/empresa/useContextoEmpresa';
 import { HorasExtraGuardia } from './HorasExtraGuardia';
 import { PlanDelDia } from './PlanDelDia';
-import { RelevoTurnoModal } from './RelevoTurnoModal';
 import { SinUbicacionError, nuevoIdMarca, obtenerUbicacion, type Ubicacion } from './ubicacion';
 import { ApiError } from '../../core/api';
 import { quitarMarca, useCola, type MarcaPendiente } from '../../core/offline/cola';
@@ -190,8 +189,6 @@ export function MarcarPage() {
   const [resultado, setResultado] = useState<Marcacion | null>(null);
   /** Entrada o salida en curso con la cámara (AS1-08). */
   const [camara, setCamara] = useState<'entrada' | 'salida' | 'salida_extra' | null>(null);
-  /** Modal de entrega y recepción de consignas (REP-07, REP-08). */
-  const [relevo, setRelevo] = useState<'entrada' | 'salida' | null>(null);
   /** Consejos antes de abrir la cámara (quitarse lentes, buena luz...). */
   const [consejos, setConsejos] = useState<'entrada' | 'salida' | 'salida_extra' | null>(null);
   const [ahora, setAhora] = useState(() => new Date());
@@ -236,15 +233,16 @@ export function MarcarPage() {
     setCamara(tipo);
   };
 
-  // Desde la ventana "Tu turno empieza" (DA-40): abre directo la confirmación de relevo de entrada.
+  // Desde la ventana "Tu turno empieza" (DA-40): abre directo la cámara de entrada.
   const [params, setParams] = useSearchParams();
   const pideEntrada = params.get('checar') === 'entrada';
   useEffect(() => {
     if (!pideEntrada || !estadoData || ubic.estado === 'buscando') return;
     setParams({}, { replace: true });
     if (ubic.estado === 'ok' && !gpsBloquea && estadoData.permitidas.includes('entrada')) {
-      setRelevo('entrada');
+      abrirCamara('entrada');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pideEntrada, estadoData, ubic.estado, gpsBloquea, setParams]);
 
   /** Guarda en el celular una checada que no se pudo enviar (AS2-02). */
@@ -363,10 +361,7 @@ export function MarcarPage() {
                 type="button"
                 disabled={!permitido}
                 onClick={() => {
-                  if (tipo === 'entrada' || tipo === 'salida') {
-                    setRelevo(tipo);
-                  } else if (tipo === 'salida_extra') {
-                    // La salida final no lleva consignas: ya las entregó en su salida.
+                  if (tipo === 'entrada' || tipo === 'salida' || tipo === 'salida_extra') {
                     abrirCamara(tipo);
                   } else {
                     setPendiente(tipo);
@@ -510,26 +505,6 @@ export function MarcarPage() {
             setCamara(null);
             setResultado(marca);
             void queryClient.invalidateQueries({ queryKey: asistenciaService.keys.all });
-            void queryClient.invalidateQueries({ queryKey: ['reportes'] });
-          }}
-        />
-      )}
-
-      {relevo && (
-        <RelevoTurnoModal
-          tipo={relevo}
-          sitio={
-            data.jornada?.sitio ??
-            (referencia?.nombre ? data.sitios.find((s) => s.nombre === referencia.nombre) : null) ??
-            data.sitios[0] ??
-            null
-          }
-          ubicacion={ubicacion}
-          onCancelar={() => setRelevo(null)}
-          onContinuar={() => {
-            const t = relevo;
-            setRelevo(null);
-            abrirCamara(t);
           }}
         />
       )}

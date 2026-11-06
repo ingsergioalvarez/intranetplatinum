@@ -570,7 +570,6 @@ export interface AsistenciaGuardia {
 export interface HistorialSitio {
   asignaciones: number;
   marcas: number;
-  reportes: number;
   coberturas: number;
 }
 
@@ -585,7 +584,5 @@ export interface HistorialCliente extends HistorialSitio {
 export interface HistorialUsuario {
   marcas: number;
   rostros: number;
-  reportes: number;
-  seguimientos: number;
   asignaciones: number;
 }

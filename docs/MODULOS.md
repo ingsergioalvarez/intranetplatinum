@@ -65,7 +65,7 @@ La columna "Decisión" la completa el usuario.
 | Módulo | Backend | Frontend | Depende de | Lo usan | Apagarlo | Decisión |
 |---|---|---|---|---|---|---|
 | **Clientes** (ya sin portal) | clientes | clientes | usuarios, grupos | 8 módulos | Difícil: estructural hasta C-10 | — |
-| **Reportes de incidentes** | reportes, categorias | reportes, catalogos (Categorías) | clientes, avisos | tablero de Inicio | Fácil | — |
+| ~~Reportes de incidentes~~ | — | — | — | **Eliminado en C-18** (2026-11-06): módulo, categorías, folios, seguimientos, evidencias, cola de correos y reglas de aviso por cliente. | — | Quitado |
 | ~~Quejas del cliente~~ | — | — | — | **Eliminado en C-10 paso 4** (2026-11-05) junto con el rol Cliente y el portal. | — | Quitado |
 | **Cobertura de relevos** | coberturas, cobertura, casos-cobertura, solicitudes-cobertura | cobertura (Calendario), casos, solicitudes | asistencia, sitios, bitácora, avisos | cambios, horas-extra, asistencia | Difícil: Cambios de turno y Horas extra dependen de ella | — |
 
@@ -107,7 +107,6 @@ Regla: se parte de lo mínimo y se agrega lo que el usuario pida; lo que diga qu
 | Turnos y horarios, Reporte de asistencia | Encendidos (primeros agregados) |
 | Ausencias, Horas extra, Cambios de turno, Grupos | Apagados, se agregan cuando se pidan |
 | Clientes, Cobertura de relevos | Apagados, se agregan cuando se pidan |
-| Reportes de incidentes (con sus categorías) | Apagado: no se usará |
 
 Una empresa nueva arranca solo con el núcleo.
 

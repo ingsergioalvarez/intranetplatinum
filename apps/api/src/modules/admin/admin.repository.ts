@@ -61,35 +61,16 @@ export class PrismaAdminRepository extends AdminRepository {
 
   async historial(id: number): Promise<HistorialUsuario> {
     const db = getPrisma();
-    const [marcas, rostros, reportes, seguimientos, asignaciones] = await Promise.all([
+    const [marcas, rostros, asignaciones] = await Promise.all([
       db.marcacion.count({ where: { usuarioId: id } }),
       db.rostroGuardia.count({ where: { usuarioId: id } }),
-      db.reporte.count({ where: { creadoPorId: id } }),
-      db.reporteSeguimiento.count({ where: { usuarioId: id } }),
       db.sitioGuardia.count({ where: { usuarioId: id } }),
     ]);
-    return { marcas, rostros, reportes, seguimientos, asignaciones };
+    return { marcas, rostros, asignaciones };
   }
 
   eliminarUsuario(id: number) {
     return getPrisma().$transaction(async (tx) => {
-      const reportes = (await tx.reporte.findMany({ where: { creadoPorId: id }, select: { id: true } })).map(
-        (r) => r.id,
-      );
-      const evidencias = await tx.reporteEvidencia.findMany({
-        where: {
-          OR: [{ reporteId: { in: reportes } }, { subidaPorId: id }, { seguimiento: { usuarioId: id } }],
-        },
-        select: { id: true, archivo: true },
-      });
-      await tx.reporteEvidencia.deleteMany({ where: { id: { in: evidencias.map((e) => e.id) } } });
-      await tx.notificacion.deleteMany({ where: { reporteId: { in: reportes } } });
-      await tx.aviso.deleteMany({ where: { reporteId: { in: reportes } } });
-      await tx.reporteSeguimiento.deleteMany({
-        where: { OR: [{ reporteId: { in: reportes } }, { usuarioId: id }] },
-      });
-      await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
-
       const marcas = await tx.marcacion.findMany({
         where: { usuarioId: id, fotoClave: { not: null } },
         select: { fotoClave: true },
@@ -110,7 +91,6 @@ export class PrismaAdminRepository extends AdminRepository {
       await tx.usuario.delete({ where: { id } });
 
       return [
-        ...evidencias.map((e) => e.archivo),
         ...marcas.map((m) => m.fotoClave!),
         ...new Set(
           rostros.flatMap((r) => [r.fotoClave, ...(Array.isArray(r.fotos) ? (r.fotos as string[]) : [])]),
@@ -140,13 +120,12 @@ export class PrismaAdminRepository extends AdminRepository {
 
   private async contarSitios(sitioIds: number[]): Promise<HistorialSitio> {
     const db = getPrisma();
-    const [asignaciones, marcas, reportes, coberturas] = await Promise.all([
+    const [asignaciones, marcas, coberturas] = await Promise.all([
       db.sitioGuardia.count({ where: { sitioId: { in: sitioIds } } }),
       db.marcacion.count({ where: { sitioId: { in: sitioIds } } }),
-      db.reporte.count({ where: { sitioId: { in: sitioIds } } }),
       db.cobertura.count({ where: { sitioId: { in: sitioIds } } }),
     ]);
-    return { asignaciones, marcas, reportes, coberturas };
+    return { asignaciones, marcas, coberturas };
   }
 
   historialSitio(id: number) {
@@ -167,19 +146,6 @@ export class PrismaAdminRepository extends AdminRepository {
 
   /** Borra, dentro de la transacción, todo lo que cuelga de esos sitios; devuelve los archivos. */
   private async borrarSitios(tx: Prisma.TransactionClient, sitioIds: number[]) {
-    const reportes = (
-      await tx.reporte.findMany({ where: { sitioId: { in: sitioIds } }, select: { id: true } })
-    ).map((r) => r.id);
-    const evidencias = await tx.reporteEvidencia.findMany({
-      where: { reporteId: { in: reportes } },
-      select: { id: true, archivo: true },
-    });
-    await tx.reporteEvidencia.deleteMany({ where: { id: { in: evidencias.map((e) => e.id) } } });
-    await tx.notificacion.deleteMany({ where: { reporteId: { in: reportes } } });
-    await tx.aviso.deleteMany({ where: { reporteId: { in: reportes } } });
-    await tx.reporteSeguimiento.deleteMany({ where: { reporteId: { in: reportes } } });
-    await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
-
     const marcas = await tx.marcacion.findMany({
       where: { sitioId: { in: sitioIds }, fotoClave: { not: null } },
       select: { fotoClave: true },
@@ -189,7 +155,7 @@ export class PrismaAdminRepository extends AdminRepository {
     // Coberturas y turnos del día se borran en cascada; incidencias de rostro y bitácora conservan
     // su registro (el sitio queda en blanco).
     await tx.sitio.deleteMany({ where: { id: { in: sitioIds } } });
-    return [...evidencias.map((e) => e.archivo), ...marcas.map((m) => m.fotoClave!)];
+    return marcas.map((m) => m.fotoClave!);
   }
 
   eliminarSitio(id: number) {
@@ -207,25 +173,9 @@ export class PrismaAdminRepository extends AdminRepository {
         (x) => x.id,
       );
       const archivos = await this.borrarSitios(tx, sitios);
-      // Reportes que quedaran del cliente (por si alguno no apuntaba a un sitio suyo) y sus contactos.
-      const reportes = (await tx.reporte.findMany({ where: { clienteId: id }, select: { id: true } })).map(
-        (r) => r.id,
-      );
-      const evidencias = await tx.reporteEvidencia.findMany({
-        where: { reporteId: { in: reportes } },
-        select: { id: true, archivo: true },
-      });
-      await tx.reporteEvidencia.deleteMany({ where: { id: { in: evidencias.map((e) => e.id) } } });
-      await tx.notificacion.deleteMany({
-        where: { OR: [{ reporteId: { in: reportes } }, { contacto: { clienteId: id } }] },
-      });
-      await tx.aviso.deleteMany({ where: { reporteId: { in: reportes } } });
-      await tx.reporteSeguimiento.deleteMany({ where: { reporteId: { in: reportes } } });
-      await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
       await tx.clienteContacto.deleteMany({ where: { clienteId: id } });
-      // Las reglas de aviso se borran en cascada.
       await tx.cliente.delete({ where: { id } });
-      return [...archivos, ...evidencias.map((e) => e.archivo)];
+      return archivos;
     }
   }
 }

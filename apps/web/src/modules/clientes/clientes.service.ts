@@ -11,8 +11,6 @@ import type {
   GuardiaDisponible,
   ContactoInput,
   MiSitio,
-  ReglasAviso,
-  ReglasAvisoInput,
   Sitio,
   SitioInput,
   SupervisorOpcion,
@@ -23,10 +21,6 @@ class ClientesService extends CrudService<ClienteResumen, ClienteCreate, Cliente
   /** Ficha completa: datos, contactos y sitios. */
   detalle(id: number) {
     return this.api.get<ClienteDetalle>(`${this.resource}/${id}`);
-  }
-
-  reglasAviso(clienteId: number, reglas: ReglasAvisoInput) {
-    return this.api.put<ReglasAviso>(`${this.resource}/${clienteId}/avisos`, reglas);
   }
 
   crearContacto(clienteId: number, data: ContactoInput) {

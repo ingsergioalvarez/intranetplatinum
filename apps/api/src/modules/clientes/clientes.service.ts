@@ -6,7 +6,6 @@ import {
   Contacto,
   ContactoData,
   Paginated,
-  ReglasAviso,
   Sitio,
   SitioData,
 } from '@platinum/shared';
@@ -50,12 +49,11 @@ export class ClientesService extends BaseService {
   /** Ficha completa: datos, contactos y sitios (incluye sitios de baja para el historial). */
   async getDetalle(id: number): Promise<ClienteDetalle> {
     const { totalSitios: _s, totalContactos: _c, responsable: _r, ...cliente } = await this.getById(id);
-    const [contactos, sitios, reglasAviso] = await Promise.all([
+    const [contactos, sitios] = await Promise.all([
       this.repo.listContactos(id),
       this.repo.listSitios(id, this.hoy(), true),
-      this.repo.getReglasAviso(id),
     ]);
-    return { ...cliente, contactos, sitios, reglasAviso };
+    return { ...cliente, contactos, sitios };
   }
 
   async crear(data: ClienteCreateData, ctx: AccionCtx): Promise<ClienteResumen> {
@@ -97,23 +95,6 @@ export class ClientesService extends BaseService {
     await this.auditar(ctx, 'clientes.reactivar', 'clientes', id, {
       nombreComercial: cliente.nombreComercial,
     });
-  }
-
-  // ---------- Reglas de aviso (F3-09) ----------
-
-  async actualizarReglasAviso(id: number, reglas: ReglasAviso, ctx: AccionCtx): Promise<ReglasAviso> {
-    await this.clienteEditable(id);
-    const antes = await this.repo.getReglasAviso(id);
-    // Una excepción igual a la regla por defecto no aporta nada: se descarta.
-    const limpias: ReglasAviso = {
-      porDefecto: reglas.porDefecto,
-      porPrioridad: Object.fromEntries(
-        Object.entries(reglas.porPrioridad).filter(([, d]) => d && d !== reglas.porDefecto),
-      ),
-    };
-    await this.repo.setReglasAviso(id, limpias);
-    await this.auditar(ctx, 'clientes.reglas_aviso', 'clientes', id, { antes, despues: limpias });
-    return limpias;
   }
 
   // ---------- Contactos (F2-03) ----------

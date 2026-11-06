@@ -4,7 +4,6 @@ import type {
   ClienteFiltro,
   ContactoData,
   IdParam,
-  ReglasAviso,
   SitioData,
 } from '@platinum/shared';
 import { BaseController } from '../../core';
@@ -47,16 +46,6 @@ export class ClientesController extends BaseController {
     await this.service.reactivar(this.params<IdParam>(req).id, this.accionCtx(req));
     return this.noContent(res);
   };
-
-  reglasAviso = async (req: Request, res: Response) =>
-    this.ok(
-      res,
-      await this.service.actualizarReglasAviso(
-        this.params<IdParam>(req).id,
-        this.body<ReglasAviso>(req),
-        this.accionCtx(req),
-      ),
-    );
 
   // ----- Contactos -----
 

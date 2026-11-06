@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  BellRing,
   Building,
   ChevronLeft,
   MapPin,
@@ -36,7 +35,6 @@ import { ClienteModal } from './ClienteModal';
 import { ContactoModal } from './ContactoModal';
 import { EliminarClienteDialog } from './EliminarSitioClienteDialogs';
 import { EstatusClienteBadge } from './EstatusClienteBadge';
-import { ReglasAvisoCard } from './ReglasAviso';
 import { CoberturaSitioModal } from './CoberturaSitioModal';
 import { SitioModal } from './SitioModal';
 import { clientesService } from './clientes.service';
@@ -114,7 +112,6 @@ export function ClienteDetallePage() {
   const deBaja = !!c.deletedAt;
   const puedeEditar = hasPermission(yo, PERMISOS.CLIENTES_EDITAR) && !deBaja;
   const puedeBaja = hasPermission(yo, PERMISOS.CLIENTES_BAJA);
-  const esAdmin = yo?.rol === ROLES.ADMIN;
   const sitiosActivos = c.sitios.filter((s) => !s.deletedAt);
   const sitiosBaja = c.sitios.filter((s) => s.deletedAt);
 
@@ -258,11 +255,6 @@ export function ClienteDetallePage() {
                           Responsable
                         </Badge>
                       )}
-                      {ct.recibeNotificaciones && (
-                        <Badge tone="info" className="px-1.5">
-                          <BellRing className="size-3" aria-label="Recibe notificaciones" />
-                        </Badge>
-                      )}
                     </div>
                   </button>
                 </li>
@@ -271,8 +263,6 @@ export function ClienteDetallePage() {
           )}
         </Card>
 
-
-        <ReglasAvisoCard cliente={c} puedeEditar={esAdmin && !deBaja} />
 
         <Card className="md:col-span-2">
           <CardHeader
@@ -410,7 +400,6 @@ export function ClienteDetallePage() {
             void qc.invalidateQueries({ queryKey: clientesService.keys.all });
             void qc.invalidateQueries({ queryKey: ['sitios'] });
             void qc.invalidateQueries({ queryKey: ['asistencia'] });
-            void qc.invalidateQueries({ queryKey: ['reportes'] });
             navigate('/clientes', { replace: true });
           }}
         />

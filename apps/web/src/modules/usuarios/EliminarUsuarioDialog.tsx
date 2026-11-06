@@ -4,8 +4,6 @@ import { EliminarDefinitivoDialog } from '../shared/EliminarDefinitivoDialog';
 const ETIQUETAS: Record<keyof HistorialUsuario, [string, string]> = {
   marcas: ['marca de asistencia', 'marcas de asistencia'],
   rostros: ['rostro registrado', 'rostros registrados'],
-  reportes: ['reporte', 'reportes'],
-  seguimientos: ['seguimiento en reportes', 'seguimientos en reportes'],
   asignaciones: ['asignación a sitios', 'asignaciones a sitios'],
 };
 

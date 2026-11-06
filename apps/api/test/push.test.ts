@@ -80,11 +80,11 @@ describe('push: enviar avisos al celular (A-20)', () => {
     ]);
   });
 
-  it('un aviso de reporte abre el reporte; sin ruta abre el inicio; el texto se recorta', async () => {
+  it('un aviso abre su pantalla; sin ruta abre el inicio; el texto se recorta', async () => {
     await service.suscribir(10, SUB);
-    await service.enviar([10], { tipo: 'reporte_nuevo', mensaje: 'x'.repeat(300), reporteId: 42 });
+    await service.enviar([10], { tipo: 'retardo', mensaje: 'x'.repeat(300), ruta: '/asistencia/incidencias' });
     await service.enviar([10], { tipo: 'retardo', mensaje: 'Llegó tarde' });
-    expect(enviados[0].payload.ruta).toBe('/reportes/42');
+    expect(enviados[0].payload.ruta).toBe('/asistencia/incidencias');
     expect(enviados[0].payload.cuerpo).toHaveLength(160);
     expect(enviados[1].payload.ruta).toBe('/');
   });

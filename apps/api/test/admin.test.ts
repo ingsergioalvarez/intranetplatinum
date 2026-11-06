@@ -41,13 +41,12 @@ class MemoryAdminRepository extends AdminRepository {
     return this.clientes.get(id) ?? null;
   }
   async historialSitio(): Promise<HistorialSitio> {
-    return { asignaciones: 2, marcas: 40, reportes: 3, coberturas: 1 };
+    return { asignaciones: 2, marcas: 40, coberturas: 1 };
   }
   async historialCliente(): Promise<HistorialCliente> {
     return {
       asignaciones: 2,
       marcas: 40,
-      reportes: 3,
       coberturas: 1,
       sitios: 2,
       contactos: 1,
@@ -82,8 +81,6 @@ class MemoryStorage extends StorageService {
 const sinHistorial: HistorialUsuario = {
   marcas: 0,
   rostros: 0,
-  reportes: 0,
-  seguimientos: 0,
   asignaciones: 0,
 };
 
@@ -115,7 +112,7 @@ beforeEach(() => {
     });
   usuario(1, 'admin');
   usuario(2, 'supervisor');
-  usuario(10, 'guardia', { marcas: 4, rostros: 1, reportes: 2 }, ['asistencia/a.jpg', 'rostros/r.jpg']);
+  usuario(10, 'guardia', { marcas: 4, rostros: 1 }, ['asistencia/a.jpg', 'rostros/r.jpg']);
   app = createApp([createAdminModule({ repo, storage, audit })]);
 });
 
@@ -132,7 +129,7 @@ describe('admin: eliminar usuario definitivamente', () => {
     const res = await request(app)
       .get('/api/admin/usuarios/10/historial')
       .set('Authorization', token(1, 'admin'));
-    expect(res.body.data).toMatchObject({ marcas: 4, rostros: 1, reportes: 2 });
+    expect(res.body.data).toMatchObject({ marcas: 4, rostros: 1 });
   });
 
   it('elimina aunque tenga historial, borra sus archivos y lo deja en auditoría', async () => {
@@ -140,7 +137,7 @@ describe('admin: eliminar usuario definitivamente', () => {
     expect(repo.usuarios.has(10)).toBe(false);
     expect(storage.eliminados).toEqual(['asistencia/a.jpg', 'rostros/r.jpg']);
     const evento = audit.eventos.find((e) => e.accion === 'usuarios.eliminar_definitivo')!;
-    expect(evento.datos).toMatchObject({ email: 'u10@x.mx', marcas: 4, reportes: 2, archivos: 2 });
+    expect(evento.datos).toMatchObject({ email: 'u10@x.mx', marcas: 4, archivos: 2 });
     expect((await eliminar(10)).status).toBe(404);
   });
 
@@ -169,7 +166,6 @@ describe('admin: eliminar sitios y clientes definitivamente (DA-50)', () => {
     expect((await como('admin').get('/sitios/7/historial')).body.data).toEqual({
       asignaciones: 2,
       marcas: 40,
-      reportes: 3,
       coberturas: 1,
     });
     expect((await como('admin').get('/clientes/3/historial')).body.data).toMatchObject({
