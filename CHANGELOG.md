@@ -5,6 +5,24 @@ El changelog de Platinum está archivado en [docs/platinum/CHANGELOG.md](docs/pl
 
 ## [Sin publicar]
 
+### Sesión 2026-11-06 (3) — Supervisor de área (C-19, DC-019)
+
+#### Añadido
+
+- **Supervisores por área**: en la ficha de un área (pantalla Áreas) se agregan y se quitan **varios supervisores**, igual que el jefe. Están debajo del jefe y su alcance es su área. Tabla nueva `area_supervisores` (migración `20261117000000_area_supervisores`).
+- **Rol automático:** al designar a un Colaborador supervisor, su rol pasa a Supervisor y pasa a formar parte del área; al quitarlo, si se va del área, o si el área se da de baja o se elimina, vuelve a Colaborador (si ya no supervisa otra). Un admin, un jefe o un supervisor se quedan como están. Cada cambio queda en la auditoría (`areas.rol_supervisor`).
+- El jefe de un área no puede ser también su supervisor (409). Si un jefe deja de serlo y todavía supervisa otro equipo, pasa a Supervisor y no a Colaborador.
+- En la lista de personas del área se ve la insignia "Supervisor".
+- 10 comprobaciones nuevas de extremo a extremo (118 en total).
+
+#### Notas
+
+- El rol Supervisor se conserva y queda redefinido como responsable de un equipo (DC-019); no recibe avisos de asistencia (DC-017). Su primer uso será Cobertura, cuando se rehaga sobre personas y turnos.
+- **No se toca** el supervisor de sitio de Platinum: se elimina junto con los sitios en C-12 y C-13, porque sus flujos se rehacen ahí.
+- El rol Supervisor lo crea el seed (ya existía): sin él, designar supervisores avisa que falta correr `npm run db:seed`.
+- Sin desplegar. 545 pruebas, tipos y lint sin errores, 118 de 118 comprobaciones de extremo a extremo.
+- En el servidor la migración se aplica con `db:deploy` junto con las demás (12 nuevas desde las 45).
+
 ### Sesión 2026-11-06 (2) — Se quitan los contactos de un cliente (C-20)
 
 #### Quitado

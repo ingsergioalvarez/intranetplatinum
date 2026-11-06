@@ -53,6 +53,7 @@ export const MODELOS_SIN_EMPRESA: Readonly<Record<string, string>> = {
   Permiso: 'Catálogo global de permisos',
   RolPermiso: 'Relación global rol-permiso; por empresa llega con C-11',
   UsuarioPermiso: 'Cuelga de un usuario, que ya es de una empresa: se consulta siempre a través de él',
+  AreaSupervisor: 'Cuelga de un área, que ya es de una empresa: se consulta siempre a través de ella',
   Empresa: 'Es la propia empresa',
   EmpresaModulo: 'Pertenece a una empresa por su propia llave; solo la toca la plataforma',
   RefreshToken: 'Se busca por el hash del token, antes de saber la empresa',

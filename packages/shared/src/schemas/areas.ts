@@ -14,6 +14,8 @@ export const areaCreateSchema = z.object({
   padreId: id.nullish(),
   /** Si se indica, esa persona pasa a formar parte del área y queda como su jefe. */
   jefeId: id.nullish(),
+  /** Supervisores del área (varios): pasan a formar parte de ella y su rol cambia solo a Supervisor. */
+  supervisorIds: z.array(id).max(20).optional(),
 });
 export type AreaCreateInput = z.input<typeof areaCreateSchema>;
 export type AreaCreate = z.output<typeof areaCreateSchema>;
@@ -24,6 +26,8 @@ export const areaUpdateSchema = z
     nombre: nombreArea,
     padreId: id.nullable(),
     jefeId: id.nullable(),
+    /** La lista completa de supervisores: los que ya no estén dejan de serlo. */
+    supervisorIds: z.array(id).max(20),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'No hay nada que cambiar');
@@ -51,6 +55,8 @@ export interface Area {
   nombreCompleto: string;
   padreId: number | null;
   jefe: { id: number; nombre: string } | null;
+  /** Responsables del equipo, debajo del jefe (varios). */
+  supervisores: { id: number; nombre: string }[];
   /** Personas que están directamente en el área. */
   personas: number;
   /** Personas del área y de todas sus subáreas. */
@@ -66,6 +72,7 @@ export interface PersonaDeArea {
   email: string;
   rol: Rol;
   esJefe: boolean;
+  esSupervisor: boolean;
 }
 
 /** Persona que se puede agregar a un área, con el área que tiene hoy. */

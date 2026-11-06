@@ -8,6 +8,7 @@ import {
   Network,
   Pencil,
   Plus,
+  ShieldCheck,
   RotateCcw,
   Trash2,
   UserMinus,
@@ -53,6 +54,7 @@ type Modal =
   | { tipo: 'area'; area: Area | null; padreId?: number | null }
   | { tipo: 'persona' }
   | { tipo: 'jefe' }
+  | { tipo: 'supervisor' }
   | null;
 
 /** Áreas de la empresa (C-10): árbol de áreas y subáreas, sus personas y su jefe. */
@@ -281,6 +283,9 @@ export function AreasPage() {
       {modal?.tipo === 'jefe' && seleccionada && (
         <AgregarPersona area={seleccionada} modo="jefe" onClose={() => setModal(null)} onListo={refrescar} />
       )}
+      {modal?.tipo === 'supervisor' && seleccionada && (
+        <AgregarPersona area={seleccionada} modo="supervisor" onClose={() => setModal(null)} onListo={refrescar} />
+      )}
 
       <ConfirmDialog
         open={dandoDeBaja && seleccionada !== null}
@@ -364,6 +369,17 @@ function DetalleArea({
       void qc.invalidateQueries({ queryKey: areasService.keys.all });
       void qc.invalidateQueries({ queryKey: ['usuarios'] });
       toast.success('La persona quedó sin área');
+    },
+    onError: (e) => toast.error(mensajeDeError(e)),
+  });
+
+  const quitarSupervisor = useMutation({
+    mutationFn: (supervisorId: number) =>
+      areasService.actualizar(area.id, { supervisorIds: area.supervisores.map((s) => s.id).filter((id) => id !== supervisorId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: areasService.keys.all });
+      void qc.invalidateQueries({ queryKey: ['usuarios'] });
+      toast.success('Dejó de ser supervisor del área');
     },
     onError: (e) => toast.error(mensajeDeError(e)),
   });
@@ -452,6 +468,39 @@ function DetalleArea({
             </Button>
           )}
         </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <ShieldCheck className="size-4 text-brand-600" aria-hidden="true" />
+            {area.supervisores.length === 0 ? (
+              <span className="text-slate-500">Sin supervisores</span>
+            ) : (
+              <>
+                <span className="text-slate-800">Supervisores:</span>
+                {area.supervisores.map((s) => (
+                  <span key={s.id} className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1 font-medium text-slate-800">
+                    {s.nombre}
+                    {!deBaja && (
+                      <button
+                        type="button"
+                        aria-label={`Quitar a ${s.nombre} como supervisor`}
+                        disabled={quitarSupervisor.isPending}
+                        onClick={() => quitarSupervisor.mutate(s.id)}
+                        className="rounded-full p-0.5 text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+                      >
+                        <UserMinus className="size-3.5" />
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </>
+            )}
+          </div>
+          {!deBaja && (
+            <Button size="sm" variant="ghost" onClick={() => onModal({ tipo: 'supervisor' })}>
+              Agregar supervisor
+            </Button>
+          )}
+        </div>
       </Card>
 
       <Card>
@@ -485,7 +534,13 @@ function DetalleArea({
                   <p className="truncate text-xs text-slate-500">{p.email}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {p.esJefe ? <Badge tone="warning">Jefe</Badge> : <Badge>{ROL_DESCRIPCIONES[p.rol]}</Badge>}
+                  {p.esJefe ? (
+                    <Badge tone="warning">Jefe</Badge>
+                  ) : p.esSupervisor ? (
+                    <Badge tone="brand">Supervisor</Badge>
+                  ) : (
+                    <Badge>{ROL_DESCRIPCIONES[p.rol]}</Badge>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -552,13 +607,14 @@ function AgregarPersona({
   onListo,
 }: {
   area: Area;
-  modo: 'persona' | 'jefe';
+  modo: 'persona' | 'jefe' | 'supervisor';
   onClose: () => void;
   onListo: () => void;
 }) {
   const guardar = useMutation({
     mutationFn: async (p: CandidatoArea) => {
       if (modo === 'jefe') await areasService.actualizar(area.id, { jefeId: p.id });
+      else if (modo === 'supervisor') await areasService.actualizar(area.id, { supervisorIds: [...area.supervisores.map((s) => s.id), p.id] });
       else await areasService.asignar(p.id, area.id);
       return p;
     },
@@ -567,7 +623,9 @@ function AgregarPersona({
       toast.success(
         modo === 'jefe'
           ? `${p.nombre} es ahora jefe de ${area.nombre}`
-          : `${p.nombre} se agregó a ${area.nombre}`,
+          : modo === 'supervisor'
+            ? `${p.nombre} es ahora supervisor de ${area.nombre}`
+            : `${p.nombre} se agregó a ${area.nombre}`,
       );
       onClose();
     },
@@ -576,14 +634,16 @@ function AgregarPersona({
 
   return (
     <ElegirPersonaModal
-      titulo={modo === 'jefe' ? 'Elegir jefe del área' : 'Agregar persona'}
+      titulo={modo === 'jefe' ? 'Elegir jefe del área' : modo === 'supervisor' ? 'Agregar supervisor' : 'Agregar persona'}
       descripcion={
         modo === 'jefe'
           ? `La persona pasará a formar parte de ${area.nombreCompleto} y será su jefe.`
-          : `Si ya está en otra área, pasará a ${area.nombreCompleto}.`
+          : modo === 'supervisor'
+            ? `La persona pasará a formar parte de ${area.nombreCompleto} y será responsable de su equipo, debajo del jefe.`
+            : `Si ya está en otra área, pasará a ${area.nombreCompleto}.`
       }
-      accion={modo === 'jefe' ? 'Elegir' : 'Agregar'}
-      areaId={modo === 'jefe' ? -1 : area.id}
+      accion={modo === 'persona' ? 'Agregar' : 'Elegir'}
+      areaId={modo === 'persona' ? area.id : -1}
       ocupado={guardar.isPending}
       onElegir={(p) => guardar.mutate(p)}
       onClose={onClose}

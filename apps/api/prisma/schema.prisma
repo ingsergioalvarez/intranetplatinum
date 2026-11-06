@@ -104,6 +104,7 @@ model Usuario {
   area                 Area?                @relation("PersonasDeArea", fields: [areaId], references: [id], onDelete: SetNull)
   areasQueEncabeza     Area[]               @relation("JefeDeArea")
   permisosPropios      UsuarioPermiso[]
+  areasQueSupervisa    AreaSupervisor[]
   turnosDia            TurnoDia[]
   bitacoraDecidio      EventoBitacora[]     @relation("BitacoraDecidio")
   coberturas           Cobertura[]          @relation("CoberturaDe")
@@ -1300,6 +1301,7 @@ model Area {
   subareas  Area[]    @relation("Subareas")
   jefe      Usuario?  @relation("JefeDeArea", fields: [jefeId], references: [id], onDelete: SetNull)
   personas  Usuario[] @relation("PersonasDeArea")
+  supervisores AreaSupervisor[]
 
   empresaId Int       @map("empresa_id")
   empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
@@ -1307,4 +1309,16 @@ model Area {
   @@index([jefeId])
   @@index([empresaId])
   @@map("areas")
+}
+
+/// Supervisores de un área (C-19, DC-019): responsables de un equipo, entre el jefe y los colaboradores. Puede haber varios por área; cada uno pertenece al área.
+model AreaSupervisor {
+  areaId    Int     @map("area_id")
+  usuarioId Int     @map("usuario_id")
+  area      Area    @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([areaId, usuarioId])
+  @@index([usuarioId])
+  @@map("area_supervisores")
 }

@@ -9,6 +9,7 @@ export interface AreaFila {
   padreId: number | null;
   jefeId: number | null;
   jefeNombre: string | null;
+  supervisores: { id: number; nombre: string }[];
   deletedAt: Date | null;
   /** Personas que están directamente en el área. */
   personas: number;
@@ -41,6 +42,10 @@ export abstract class AreasRepository {
   /** Da de baja las áreas indicadas: quedan sin jefe y sus personas sin área. */
   abstract darDeBaja(ids: number[]): Promise<void>;
   abstract reactivar(id: number): Promise<void>;
+  /** Deja como supervisores del área exactamente a estas personas. */
+  abstract fijarSupervisores(areaId: number, usuarioIds: number[]): Promise<void>;
+  /** La persona deja de ser supervisora de esta área. */
+  abstract quitarSupervisor(areaId: number, usuarioId: number): Promise<void>;
   /** Borra para siempre estas áreas (en este orden: las subáreas antes que su superior). Sus personas quedan sin área. */
   abstract eliminar(ids: number[]): Promise<void>;
   abstract personas(areaId: number): Promise<PersonaFila[]>;
@@ -59,14 +64,16 @@ const select = {
   jefeId: true,
   deletedAt: true,
   jefe: { select: { nombre: true } },
+  supervisores: { where: { usuario: { deletedAt: null } }, select: { usuario: { select: { id: true, nombre: true } } } },
   _count: { select: { personas: { where: { deletedAt: null } } } },
 } satisfies Prisma.AreaSelect;
 
 type Fila = Prisma.AreaGetPayload<{ select: typeof select }>;
 
-const aFila = ({ jefe, _count, ...a }: Fila): AreaFila => ({
+const aFila = ({ jefe, supervisores, _count, ...a }: Fila): AreaFila => ({
   ...a,
   jefeNombre: jefe?.nombre ?? null,
+  supervisores: supervisores.map((s) => s.usuario).sort((x, y) => x.nombre.localeCompare(y.nombre, 'es')),
   personas: _count.personas,
 });
 
@@ -95,6 +102,7 @@ export class PrismaAreasRepository extends AreasRepository {
     const prisma = getPrisma();
     await prisma.$transaction([
       prisma.area.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date(), jefeId: null } }),
+      prisma.areaSupervisor.deleteMany({ where: { areaId: { in: ids } } }),
       prisma.usuario.updateMany({ where: { areaId: { in: ids } }, data: { areaId: null } }),
     ]);
   }
@@ -111,6 +119,18 @@ export class PrismaAreasRepository extends AreasRepository {
 
   async reactivar(id: number) {
     await getPrisma().area.update({ where: { id }, data: { deletedAt: null } });
+  }
+
+  async fijarSupervisores(areaId: number, usuarioIds: number[]) {
+    const prisma = getPrisma();
+    await prisma.$transaction([
+      prisma.areaSupervisor.deleteMany({ where: { areaId } }),
+      prisma.areaSupervisor.createMany({ data: usuarioIds.map((usuarioId) => ({ areaId, usuarioId })) }),
+    ]);
+  }
+
+  async quitarSupervisor(areaId: number, usuarioId: number) {
+    await getPrisma().areaSupervisor.deleteMany({ where: { areaId, usuarioId } });
   }
 
   async personas(areaId: number) {
@@ -150,6 +170,10 @@ export class PrismaAreasRepository extends AreasRepository {
       prisma.area.updateMany({
         where: { jefeId: usuarioId, ...(areaId !== null && { id: { not: areaId } }) },
         data: { jefeId: null },
+      }),
+      // Un supervisor también pertenece a su área: si la persona sale de ella, deja de supervisarla.
+      prisma.areaSupervisor.deleteMany({
+        where: { usuarioId, ...(areaId !== null && { areaId: { not: areaId } }) },
       }),
     ]);
   }

@@ -378,6 +378,33 @@ async function main() {
     await como(T1).patch(`/areas/${soporte2}`, { jefeId: null });
     check('si el jefe más cercano deja de serlo, el aviso sube al siguiente (Marta)', JSON.stringify(await enE1(() => responsablesDe({ guardiaId: ana.id }))) === JSON.stringify([marta.id]));
 
+    console.log('\n13. Supervisor de área (C-19, DC-019)');
+    const ops = await area('Operaciones');
+    const otra = await area('Logística');
+    const jefeOps = await persona('Jefe Ops', 'jefe.ops@x.mx', rolGuardia.id, ops);
+    const sup1 = await persona('Sup Uno', 'sup.uno@x.mx', rolGuardia.id, otra);
+    const sup2 = await persona('Sup Dos', 'sup.dos@x.mx', rolGuardia.id, ops);
+    await como(T1).patch(`/areas/${ops}`, { jefeId: jefeOps.id });
+    const sup = async (id: number) => ((await como(T1).get(`/areas/${id}`)).body?.data?.supervisores ?? []).map((x: any) => x.id);
+    const rSup = await como(T1).patch(`/areas/${ops}`, { supervisorIds: [sup1.id, sup2.id] });
+    check('se pueden designar varios supervisores en un área', rSup.status === 200 && JSON.stringify((await sup(ops)).sort()) === JSON.stringify([sup1.id, sup2.id].sort()), rSup.body);
+    check('al designarlos su rol pasa a Supervisor', (await rolDe(sup1.id)) === 'supervisor' && (await rolDe(sup2.id)) === 'supervisor');
+    const uno = await sinFiltroDeEmpresa(() => prisma.usuario.findUnique({ where: { id: sup1.id }, select: { areaId: true } }));
+    check('el supervisor pasa a formar parte del área (de otra área se mueve)', uno?.areaId === ops);
+    check('el jefe sigue siendo jefe', (await rolDe(jefeOps.id)) === 'jefe');
+    const conflicto = await como(T1).patch(`/areas/${ops}`, { supervisorIds: [sup1.id, jefeOps.id] });
+    check('el jefe no puede ser también supervisor de su área (409)', conflicto.status === 409);
+    await como(T1).patch(`/areas/${ops}`, { supervisorIds: [sup2.id] });
+    check('al quitarlo de la lista vuelve a Colaborador', (await rolDe(sup1.id)) === 'guardia' && JSON.stringify(await sup(ops)) === JSON.stringify([sup2.id]));
+    await como(T1).put(`/areas/personas/${sup2.id}`, { areaId: otra });
+    check('si el supervisor se va del área deja de serlo y vuelve a Colaborador', (await rolDe(sup2.id)) === 'guardia' && (await sup(ops)).length === 0);
+    await como(T1).patch(`/areas/${ops}`, { supervisorIds: [sup1.id] });
+    await como(T1).patch(`/areas/${ops}/baja`);
+    check('al dar de baja el área sus supervisores vuelven a Colaborador', (await rolDe(sup1.id)) === 'guardia');
+    const vis = await correosDe(tokenDe(sup2, [...PERMISOS_POR_ROL.supervisor]));
+    check('el alcance de un supervisor sigue siendo su área', vis.includes('sup.dos@x.mx') && !vis.includes('g.rh@x.mx'), vis);
+    check('los cambios de rol de supervisor quedan en la auditoría', (await sinFiltroDeEmpresa(() => prisma.auditoria.count({ where: { accion: 'areas.rol_supervisor', empresaId: E1 } }))) >= 4);
+
     await disconnectPrisma();
     console.log(`\n${fallos === 0 ? 'TODO BIEN' : 'HAY FALLOS'}: ${total - fallos} de ${total} comprobaciones correctas.`);
   } finally {

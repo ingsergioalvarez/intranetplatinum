@@ -43,6 +43,7 @@ export class AreasService extends BaseService {
           nombreCompleto: ruta(f),
           padreId: f.padreId,
           jefe: f.jefeId === null ? null : { id: f.jefeId, nombre: f.jefeNombre ?? '' },
+          supervisores: f.supervisores,
           personas: f.personas,
           personasTotal: total(f),
           subareas: (hijos.get(f.id) ?? []).filter((h) => !h.deletedAt).length,
@@ -85,14 +86,19 @@ export class AreasService extends BaseService {
     if (repetida) throw HttpError.conflict('Ya existe un área con ese nombre en ese lugar', [{ path: 'nombre', message: 'Ya existe un área con ese nombre en ese lugar' }]);
   }
 
-  async crear({ nombre, padreId, jefeId }: AreaCreate, ctx: AccionCtx): Promise<Area> {
+  async crear({ nombre, padreId, jefeId, supervisorIds }: AreaCreate, ctx: AccionCtx): Promise<Area> {
     const { filas, areas } = await this.cargar();
     if (padreId) this.activa(areas, padreId);
     this.sinRepetir(filas, nombre, padreId ?? null);
     if (jefeId) await this.personaActiva(jefeId);
+    for (const sid of supervisorIds ?? []) {
+      await this.personaActiva(sid);
+      if (sid === jefeId) throw this.jefeYSupervisor();
+    }
     const nueva = await this.repo.crear({ nombre: nombre.trim(), padreId: padreId ?? null });
     if (jefeId) await this.hacerJefe(nueva.id, jefeId, ctx);
-    await this.registrar(ctx, 'areas.crear', nueva.id, { nombre: nueva.nombre, padreId: padreId ?? null, jefeId: jefeId ?? null });
+    if (supervisorIds?.length) await this.fijarSupervisores(nueva.id, [], supervisorIds, ctx);
+    await this.registrar(ctx, 'areas.crear', nueva.id, { nombre: nueva.nombre, padreId: padreId ?? null, jefeId: jefeId ?? null, supervisorIds: supervisorIds ?? [] });
     return this.getById(nueva.id);
   }
 
@@ -143,6 +149,17 @@ export class AreasService extends BaseService {
       // El jefe anterior deja de serlo: si ya no encabeza ninguna área vuelve a Colaborador.
       if (actual.jefe) await this.soltarJefes([actual.jefe.id], ctx);
     }
+    if (cambios.supervisorIds !== undefined) {
+      const antesIds = actual.supervisores.map((x) => x.id);
+      const nuevos = [...new Set(cambios.supervisorIds)];
+      const jefeActual = cambios.jefeId === undefined ? (actual.jefe?.id ?? null) : cambios.jefeId;
+      if (jefeActual !== null && nuevos.includes(jefeActual)) throw this.jefeYSupervisor();
+      if (nuevos.length !== antesIds.length || nuevos.some((n) => !antesIds.includes(n))) {
+        antes.supervisorIds = antesIds;
+        despues.supervisorIds = nuevos;
+        await this.fijarSupervisores(id, antesIds, nuevos, ctx);
+      }
+    }
     if (Object.keys(despues).length > 0) await this.registrar(ctx, 'areas.editar', id, { antes, despues });
     return this.getById(id);
   }
@@ -151,6 +168,8 @@ export class AreasService extends BaseService {
   private async hacerJefe(areaId: number, usuarioId: number, ctx: AccionCtx) {
     await this.repo.asignar(usuarioId, areaId);
     await this.repo.actualizar(areaId, { jefeId: usuarioId });
+    // El jefe no es a la vez supervisor del mismo equipo.
+    await this.repo.quitarSupervisor(areaId, usuarioId);
     // Un admin se queda como admin: no se le baja de nivel.
     const u = await this.personaActiva(usuarioId);
     if (u.rol !== ROLES.ADMIN && u.rol !== ROLES.JEFE && (await this.repo.ponerRol(usuarioId, ROLES.JEFE))) {
@@ -163,8 +182,44 @@ export class AreasService extends BaseService {
     const { filas } = await this.cargar();
     for (const id of new Set(usuarioIds)) {
       if (filas.some((f) => !f.deletedAt && f.jefeId === id)) continue;
-      if (await this.repo.ponerRol(id, ROLES.GUARDIA, ROLES.JEFE)) {
-        await this.registrar(ctx, 'areas.rol_jefe', id, { de: ROLES.JEFE, a: ROLES.GUARDIA });
+      // Si todavía supervisa algún equipo, pasa a Supervisor; si no, vuelve a Colaborador.
+      const destino = filas.some((f) => !f.deletedAt && f.supervisores.some((x) => x.id === id)) ? ROLES.SUPERVISOR : ROLES.GUARDIA;
+      if (await this.repo.ponerRol(id, destino, ROLES.JEFE)) {
+        await this.registrar(ctx, 'areas.rol_jefe', id, { de: ROLES.JEFE, a: destino });
+      }
+    }
+  }
+
+  private jefeYSupervisor() {
+    return HttpError.conflict('El jefe del área no puede ser también su supervisor', [{ path: 'supervisorIds', message: 'El jefe del área no puede ser también su supervisor' }]);
+  }
+
+  /**
+   * Deja como supervisores del área exactamente a `nuevos`: los que entran pasan a formar parte del área y a tener el
+   * rol Supervisor (si eran Colaboradores; un admin, un jefe o un supervisor se quedan como están); los que salen
+   * vuelven a Colaborador si ya no supervisan ningún equipo.
+   */
+  private async fijarSupervisores(areaId: number, antes: number[], nuevos: number[], ctx: AccionCtx) {
+    for (const uid of nuevos.filter((n) => !antes.includes(n))) {
+      await this.repo.asignar(uid, areaId);
+    }
+    await this.repo.fijarSupervisores(areaId, nuevos);
+    for (const uid of nuevos.filter((n) => !antes.includes(n))) {
+      const u = await this.personaActiva(uid);
+      if (u.rol === ROLES.GUARDIA && (await this.repo.ponerRol(uid, ROLES.SUPERVISOR, ROLES.GUARDIA))) {
+        await this.registrar(ctx, 'areas.rol_supervisor', uid, { nombre: u.nombre, de: u.rol, a: ROLES.SUPERVISOR });
+      }
+    }
+    await this.soltarSupervisores(antes.filter((a) => !nuevos.includes(a)), ctx);
+  }
+
+  /** Quien dejó de ser supervisor y ya no supervisa ningún equipo vuelve a Colaborador (si su rol era Supervisor). */
+  private async soltarSupervisores(usuarioIds: number[], ctx: AccionCtx) {
+    const { filas } = await this.cargar();
+    for (const id of new Set(usuarioIds)) {
+      if (filas.some((f) => !f.deletedAt && f.supervisores.some((x) => x.id === id))) continue;
+      if (await this.repo.ponerRol(id, ROLES.GUARDIA, ROLES.SUPERVISOR)) {
+        await this.registrar(ctx, 'areas.rol_supervisor', id, { de: ROLES.SUPERVISOR, a: ROLES.GUARDIA });
       }
     }
   }
@@ -183,7 +238,9 @@ export class AreasService extends BaseService {
     if (area.deletedAt) return;
     const ids = this.descendientes(filas, id).filter((i) => !areas.get(i)?.deletedAt);
     const jefes = ids.flatMap((i) => (areas.get(i)?.jefe ? [areas.get(i)!.jefe!.id] : []));
+    const supervisores = ids.flatMap((i) => areas.get(i)?.supervisores.map((x) => x.id) ?? []);
     await this.repo.darDeBaja(ids);
+    await this.soltarSupervisores(supervisores, ctx);
     await this.soltarJefes(jefes, ctx);
     await this.registrar(ctx, 'areas.baja', id, {
       nombre: area.nombreCompleto,
@@ -200,7 +257,9 @@ export class AreasService extends BaseService {
     // Del área hacia sus subáreas; al revés para borrar primero las de más abajo.
     const ids = this.descendientes(filas, id);
     const jefes = ids.flatMap((i) => (areas.get(i)?.jefe ? [areas.get(i)!.jefe!.id] : []));
+    const supervisores = ids.flatMap((i) => areas.get(i)?.supervisores.map((x) => x.id) ?? []);
     await this.repo.eliminar([...ids].reverse());
+    await this.soltarSupervisores(supervisores, ctx);
     await this.soltarJefes(jefes, ctx);
     await this.registrar(ctx, 'areas.eliminar', id, {
       nombre: area.nombreCompleto,
@@ -226,7 +285,8 @@ export class AreasService extends BaseService {
     const area = areas.get(areaId);
     if (!area) throw HttpError.notFound('Área no encontrada');
     const jefeId = area.jefe?.id ?? null;
-    return (await this.repo.personas(areaId)).map((p) => ({ ...p, esJefe: p.id === jefeId }));
+    const supervisores = new Set(area.supervisores.map((x) => x.id));
+    return (await this.repo.personas(areaId)).map((p) => ({ ...p, esJefe: p.id === jefeId, esSupervisor: supervisores.has(p.id) }));
   }
 
   /** Mover a una persona a un área (null = sin área). */
@@ -236,8 +296,9 @@ export class AreasService extends BaseService {
     if (areaId !== null) this.activa(areas, areaId);
     if (usuario.areaId === areaId) return;
     await this.repo.asignar(usuarioId, areaId);
-    // Si era jefe de otra área, deja de serlo al irse de ella.
+    // Si era jefe o supervisor de otra área, deja de serlo al irse de ella.
     await this.soltarJefes([usuarioId], ctx);
+    await this.soltarSupervisores([usuarioId], ctx);
     await this.registrar(ctx, 'areas.asignar_persona', usuarioId, {
       nombre: usuario.nombre,
       de: usuario.areaId === null ? null : (areas.get(usuario.areaId)?.nombreCompleto ?? null),
@@ -255,6 +316,6 @@ export class AreasService extends BaseService {
 
   private registrar(ctx: AccionCtx, accion: string, id: number, datos: Record<string, unknown>) {
     this.log(accion, { actorId: ctx.actorId, areas: id });
-    return this.audit.registrarAccion(ctx, accion, accion === 'areas.asignar_persona' || accion === 'areas.rol_jefe' ? 'usuarios' : 'areas', id, datos);
+    return this.audit.registrarAccion(ctx, accion, accion === 'areas.asignar_persona' || accion === 'areas.rol_jefe' || accion === 'areas.rol_supervisor' ? 'usuarios' : 'areas', id, datos);
   }
 }
