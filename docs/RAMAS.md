@@ -61,3 +61,18 @@ Cada instalación se actualiza **solo cuando el usuario lo indica**, desde **su*
 - Menús visibles en Comunicalo (por ejemplo, empezar solo con Asistencia) sin afectar a Platinum.
 - Correo (SMTP): se aborda cuando se fusionen ambos conceptos; ERPModular ya envía correos desde `smtp.uservers.net`.
 - Posible conexión con ERPModular (empresas, áreas, centros de costos).
+
+## Carpetas de trabajo (worktree), desde 2026-11-04
+
+Una carpeta de Git solo puede mostrar una rama a la vez. Como hay un chat de Claude para cada rama, cada una trabaja en **su propia carpeta** (mismo repositorio y mismas ramas, sin estorbarse):
+
+| Carpeta | Rama | Chat |
+|---|---|---|
+| `C:\Users\DEVOPS\Videos\intranetplatinum` | `gestion-comunicalo` | Comunicalo |
+| `C:\Users\DEVOPS\Videos\intranetplatinum-platinum` | `Alexis-Cambios` (Platinum) | Platinum |
+
+- Se creó con `git worktree add ../intranetplatinum-platinum Alexis-Cambios` (la carpeta original no se tocó).
+- **No cambiar de rama dentro de una carpeta** (`git checkout` / `git switch`): cada una se queda en la suya. Así no se pierde ni se mezcla el trabajo sin commit de la otra.
+- El chat de Platinum no commitea, stashea ni modifica nada de `gestion-comunicalo`; si ve trabajo de esa rama, solo avisa al usuario. Lo mismo al revés.
+- La carpeta nueva no trae `apps/api/.env` (no se versiona) ni `node_modules`: copiar el `.env` y correr `npm install` antes de probar en local.
+- Para quitarla cuando ya no haga falta: `git worktree remove ../intranetplatinum-platinum` (la rama y sus commits se conservan).

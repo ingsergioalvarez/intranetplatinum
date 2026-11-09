@@ -2,41 +2,50 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-11-05 (reportes del cliente sobre el servicio o un guardia, A-59: el cliente reporta, le llega al supervisor del sitio y al admin dueño, el guardia no se entera; hecho, ya en el servidor (migración 20261105000000 aplicada) y probado por el usuario con un cliente; antes super admin y carteras de los admin completas: fase 2, A-66, filtra asistencia, reportes, informes y demás por cartera, sin migración nueva, hecha y probada en local, sin subir; la fase 1, A-64 y A-65, ya está en el servidor; antes teléfonos obligatorios, marcador y sirena de la alerta, A-63, migración 20261103040000, sin subir; antes botón de pánico SOS con alerta urgente y escalado, A-60, hecho y probado en local, migración 20261103030000, sin subir; antes ausencias justificadas por adelantado, A-43; antes solicitudes de cobertura, A-39, y avisos que se actualizan completos, A-54; antes portal del cliente con sus guardias, A-38; antes decisión definitiva y revertir solo admin, fotos del guardia, avisos que se actualizan, burbujas y PDF de horarios, A-52 a A-55, A-57 y A-58; antes perfiles rápidos para todos los roles, A-40; antes perfiles rápidos y PIN, A-40; antes faltas por revisar con recordatorios y lentes menos estrictos, A-50 y A-51; antes óvalo punteado, confirmar falta y salida sin marcar con medida disciplinaria, A-47 a A-49; antes cámara de asistencia: centrado, óvalo y gesto de 15 s, A-36 y A-37; antes etiqueta de Asistencia, fines de semana, motivo obligatorio y cambiar o cancelar plan, A-33 a A-35, A-45, A-46)
-**Fase actual:** Asistencia completa en lo funcional: reporte oficial, modo sin conexión, cambios de turno y horas extra.
-**Última tarea terminada:** F4-04 casi completa: Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel propio de Cloudflare); se pudo entrar desde el dominio. Falta respaldo automático y SMTP. Antes: A-19 (hora límite del plan de cobertura).
-**Tarea en progreso:** ninguna. Hechas y probadas en local, sin subir al servidor: A-52 a A-55, A-57 y A-58 (migraciones nuevas 20261103000000, 20261103010000 y 20261103020000) y, de antes, A-47 a A-51 y A-40 (migraciones 20261030020000, 20261030030000 y 20261030040000). A-40 (perfiles rápidos y PIN) hecha y probada en local, sin subir (migración 20261030040000). Hechas y probadas en local, sin subir: A-50 y A-51 (sin migración nueva). A-47 a A-49 también esperan subirse (migración 20261030020000). Hechas y probadas en local, sin subir al servidor (con migración nueva 20261030020000): A-47 (óvalo punteado en checador y registro), A-48 (confirmar falta, motivo al justificar y "No se presentó" que se cierra solo) y A-49 (salida sin marcar con motivo de lista, medida disciplinaria e historial formal). Ya en el servidor: A-33 a A-35, A-45 y A-46. Antes: A-27 (rostro atendible), A-28 (calendario con turnos de 24 h), A-29 (el admin crea el acceso del cliente, máx. 2) A-30 (avisos bloqueados para el supervisor), A-31 (confirmación al marcar incidencias de rostro), A-32 (cada aviso lleva a lo que indica) y el recordatorio de 30 min de A-26, todas sin migración; además A-23 (celular sin zoom y sin ensanchar), A-24 (retardo justificado), A-25 (aceptar con retardo / mandar a casa) y A-26 parcial (solicitud al admin como aviso; faltan recordatorio a los 30 min y lista formal). Sin migración nueva. A-20 (push) funciona en el celular del usuario; A-21 (push obligatorio) y A-22 (título propio en cada aviso, con migración nueva) están hechas y probadas en local, faltan subirlas al servidor (`docker compose exec api npm run db:deploy`).
+**Última actualización:** 2026-11-09
+**Fase actual:** Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel de Cloudflare, en `platinum.grupocomunicalo.mx`) con asistencia completa, reportes, portal del cliente, botón SOS, carteras de admin y reportes del cliente. Estado: terminado y en mantenimiento; se hacen mejoras que el usuario pide.
+**Última tarea terminada:** A-59 (reportes del cliente sobre el servicio o un guardia): en el servidor (migración 20261105000000) y probada por el usuario con un cliente. Todo lo anterior (hasta A-66, carteras fase 2) también está en el servidor y probado.
+**Tarea en progreso:** ninguna. Esta sesión (2026-11-09) fue de revisión y de ordenar decisiones; no se tocó código.
 
 ## Siguiente paso
 
-A-36 y A-37 (cámara) están en el servidor; el usuario las está probando. A-47 a A-49 están hechas en local, sin subir (hay migración: `db:deploy` después del build). Seguir el "Orden de ejecución" de [PLAN.md](PLAN.md): A-38 (portal del cliente con guardias), A-39 (lista de solicitudes de cobertura), A-40 (perfiles rápidos y PIN), A-41 (SMTP), A-42 (respaldos), A-43 y A-44 (manual).
+El usuario traerá cambios pendientes. Ya registrados en el [PLAN](PLAN.md) y por definir con él antes de construir:
 
-Antes: subir A-47 a A-49 (con migración) y probar la cámara y las nuevas ventanas.
+1. **A-68 Aviso de privacidad y consentimiento por el uso del rostro:** debe salirle a todos los guardias que van a checar y aceptarlo antes de registrar el rostro o checar. Falta que el usuario dé: texto legal, responsable (Platinum Agency o Grupo Comunicalo) y qué pasa si el guardia no acepta.
+2. **A-67 Fotos en los reportes del cliente:** hasta 5 fotos (solo imágenes). Ya aprobada la idea; con migración.
+3. Otras cosas que el usuario fue notando al probar la app: las va a pasar para ordenarlas y compararlas con el código antes de tocar nada.
 
-0. **Respaldos** automáticos de MySQL y de las fotos (volumen `uploads`) con copia fuera del servidor; sin eso no usar con guardias reales. Después, SMTP (correos y recuperar contraseña). Ver [DESPLIEGUE.md](DESPLIEGUE.md).
-1. Probar AS6 con datos reales en el piloto: caso de cobertura (relevo que no llega), plan de descanso y calendario. AS6 (DA-56) está terminada y probada con datos simulados y pruebas automáticas.
-2. AS4-03: ausencias justificadas (vacaciones, incapacidad, permiso) para que no cuenten como falta en el reporte.
-3. Probar la PWA y el modo sin conexión en el celular (necesita HTTPS de confianza: dominio o túnel) y publicar en el dominio (F4-04).
-4. Piloto con 2 o 3 guardias reales; probar el reporte de asistencia y horas extra con datos reales.
-5. Después: correo (SMTP) y recuperación de contraseña, notificaciones push (TC-21), respaldos y revisión de seguridad.
+Se registrarán también como tareas nuevas (con ID, en el PLAN) antes de implementarlas.
 
-## Por revisar
+## Decisiones tomadas el 2026-11-09
 
-- Si los guardias con lentes deben seguir quitándoselos para el checador (hoy lo exige y a quien los usa a diario le estorba).
+- **A-42 Respaldos:** pospuesta. Todo se queda en el servidor; se le recuerda al usuario cuando lleguemos a esa parte.
+- **D-001 Señal:** prioridad al checador (entrada, comida y salida) sin señal. DA-53 ya está construido; el usuario lo prueba en modo avión y avisa. Después, reportes del guardia con la misma cola (F4-02). Supervisor y admin no.
+- **Lentes (D-025):** se dejan puestos, funciona bien.
+- **Bcrypt (D-024):** se deja como está.
+- **D-022 Simulacro SOS:** cerrada; el botón ya se probó.
+- **A-61 C2 (D-023):** cambia a una pantalla de monitoreo propia para el C2; sin definir ni fecha.
+- **D-020 Notificaciones por cuenta en el celular:** reabierta, pendiente por resolver.
+- Pruebas de carga extra (ráfaga de cambio de turno, base con meses de datos): pendientes, sin prioridad.
 
-## Bloqueos / pendientes del usuario
+## Pendientes
 
-- Dominio y VPS para publicar; certificado de confianza para instalar la PWA en el celular.
-- SMTP para correos salientes (F3-07).
+- A-41 Correo SMTP y recuperar contraseña (cierra A-06 y A-15): necesita host, puerto, usuario, remitente y SPF/DKIM; la contraseña la pone el usuario en el `.env` del servidor.
+- A-44 Manual de usuario: al final, con capturas definitivas.
+- A-42 Respaldos (pospuesta), A-61 monitoreo del C2 y D-020 (por definir).
+- F4-02 Cola offline de reportes del guardia (después de probar el checador sin señal).
+- Opcionales sin hacer: F4-03 (CI y pruebas de flujos críticos) y Fase 5 (WhatsApp, dashboard de métricas, PDF de reportes, SLA).
 
 ## Cómo levantar
 
 - `npm install`; `npm run db:deploy -w @platinum/api` y `npm run db:seed -w @platinum/api` (sincroniza roles y permisos).
 - `npm run dev:https` para checador biométrico y pruebas en red local.
-- Calidad: `npm test` (todas pasando), `npm run lint`, `npm run typecheck`.
+- Calidad: `npm test` (548 pasando), `npm run lint`, `npm run typecheck`.
+- La carpeta de Platinum (`intranetplatinum-platinum`) aún no tiene `node_modules` ni `apps/api/.env`: hay que hacer `npm install` y crear el `.env` antes de probar en local.
 
 ## Notas de contexto
 
-- Rama de trabajo: `Alexis-Cambios`.
-- Roles activos: `admin`, `supervisor`, `guardia` y `cliente`.
+- Rama de trabajo: `Alexis-Cambios`, en su propia carpeta (`C:\Users\DEVOPS\Videos\intranetplatinum-platinum`, git worktree). La carpeta `intranetplatinum` es de la rama `gestion-comunicalo`, que trabaja el otro chat. Ver [RAMAS.md](RAMAS.md).
+- Roles activos: `admin`, `supervisor`, `guardia` y `cliente`; el super admin es una marca en la cuenta (D-021).
 - Horas extra: solo las ven admin y supervisor; el guardia recibe avisos de sus solicitudes.
+- Platinum se despliega directo a producción, solo cuando el usuario lo pide.
