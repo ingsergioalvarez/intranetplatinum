@@ -41,7 +41,9 @@ function Sidebar() {
   const badges = useBadgesMenu(items.map((i) => i.to));
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col bg-brand-900 text-white md:sticky md:top-0 md:flex md:h-dvh md:self-start">
+    // Fija (no `sticky`): al abrir un modal el `body` queda con `overflow: hidden` y una barra `sticky` se despegaba
+    // de la pantalla dejando un hueco en blanco abajo. El contenido compensa con `md:pl-64` en `AppShell`.
+    <aside className="hidden w-64 shrink-0 flex-col bg-brand-900 text-white md:fixed md:inset-y-0 md:left-0 md:flex">
       <div className="flex h-16 items-center justify-between pl-5 pr-3">
         <Brand />
         <Campanita />
@@ -256,7 +258,7 @@ export function AppShell() {
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col md:pl-64">
         <Topbar />
         <main className="flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-8 md:pt-8">
           <div className="mx-auto max-w-6xl">

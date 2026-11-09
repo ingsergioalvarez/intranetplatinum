@@ -5,6 +5,16 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-09 #47 — Barra lateral estable y ordenar pendientes
+
+#### Corregido
+
+- **Barra lateral de escritorio**: al abrir un modal con la página bajada, la barra se despegaba y dejaba un hueco en blanco abajo. Ahora va fija a la pantalla (`fixed`) y el contenido deja su espacio; en celular no cambia nada.
+
+#### Cambiado
+
+- Decisiones y pendientes ordenados: A-42 pospuesta, A-61 pasa a pantalla de monitoreo del C2 (por definir), D-020 reabierta, D-022 cerrada, D-001, D-024 y D-025 aceptadas; nuevas A-67 (fotos en reportes del cliente) y A-68 (aviso de privacidad del rostro), pendientes.
+
 ### Sesión 2026-11-05 #46 — Reportes del cliente (A-59)
 
 #### Añadido
