@@ -92,7 +92,9 @@ function aviso(html) {
   const m = html.match(/^<p><strong>(IMPORTANTE|NOTA|EMERGENCIA|SI ALGO SALE MAL):<\/strong>\s*/);
   if (m) {
     const [clase, etiqueta] = ETIQUETAS[m[1]];
-    return { clase, etiqueta, html: html.replace(m[0], '<p>') };
+    // Sin la etiqueta, el texto debe seguir empezando con mayúscula.
+    const resto = html.replace(m[0], '<p>').replace(/^(<p>(?:<strong>|<em>)?)(\p{Ll})/u, (_, a, b) => a + b.toUpperCase());
+    return { clase, etiqueta, html: resto };
   }
   const [clase, etiqueta] = tipoDeAviso(html.replace(/<[^>]+>/g, ' '));
   return { clase, etiqueta, html };
