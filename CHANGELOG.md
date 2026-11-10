@@ -16,9 +16,12 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Menú de la cuenta (A-72)**: el encabezado ahora es un perfil: círculo con las iniciales a la izquierda; nombre, rol y estado alineados a la derecha; punto verde y "En línea" (gris y "Sin conexión" sin internet, con el aviso del navegador). Fondo suave de la marca.
 - **Índice de Ayuda (A-72)**: tocar una sección dejaba la pantalla más abajo del título porque el índice se cerraba mientras se calculaba el desplazamiento. Ahora se cierra primero y luego se desplaza. Comprobado con 111 secciones de los manuales (guardia y supervisor en celular, administrador en escritorio).
 
+- **Manual del Administrador (A-44)**: 22 secciones con lo que solo hace el administrador (usuarios, contraseñas y bloqueos, celulares guardados, eliminar definitivamente vs dar de baja, eliminar asignación, rostros, acceso del cliente, avisos de reportes, ausencias, solicitudes de cobertura, revertir decisiones, avisos y emergencias que le llegan, super administrador y carteras, y lo que la app todavía no tiene). Textos sacados del código por tres lecturas. 8 capturas nuevas pendientes (A01-A08).
+- **Recuadros del manual**: una etiqueta en negritas al inicio (`> **IMPORTANTE:** texto`) ahora decide el tipo y se quita del texto, así no sale repetida. Igual en la pantalla de Ayuda y en el PDF.
+
 #### Plan
 
-- **A-71** hecha, en el servidor. **A-72** hecha en local. **A-44** en progreso: faltan Administrador y Cliente.
+- **A-71** hecha, en el servidor. **A-72** hecha en local. **A-44** en progreso: falta Cliente.
 
 ### Sesión 2026-11-10 #48 — Manual de usuario (A-44) y tareas nuevas
 

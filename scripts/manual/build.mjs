@@ -44,6 +44,17 @@ const MANUALES = [
       { archivo: 'supervisor.md', titulo: 'Tu trabajo como supervisor' },
     ],
   },
+  {
+    id: 'admin',
+    titulo: 'Manual del Administrador',
+    subtitulo: 'Cómo administrar usuarios, clientes, cobertura y decisiones',
+    para: 'Administradores',
+    partes: [
+      { archivo: 'comun.md', titulo: 'Parte común: instalar, entrar y usar tu cuenta' },
+      { archivo: 'supervisor.md', titulo: 'Lo que haces igual que un supervisor' },
+      { archivo: 'admin.md', titulo: 'Lo que solo hace el administrador' },
+    ],
+  },
 ];
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -69,14 +80,31 @@ function tipoDeAviso(texto) {
   return ['nota', 'NOTA'];
 }
 
+const ETIQUETAS = {
+  IMPORTANTE: ['importante', 'IMPORTANTE'],
+  NOTA: ['nota', 'NOTA'],
+  EMERGENCIA: ['emergencia', 'EMERGENCIA'],
+  'SI ALGO SALE MAL': ['ayuda', 'SI ALGO SALE MAL'],
+};
+
+/** Una etiqueta en negritas al inicio del recuadro (`> **IMPORTANTE:** texto`) decide el tipo y se quita del texto. */
+function aviso(html) {
+  const m = html.match(/^<p><strong>(IMPORTANTE|NOTA|EMERGENCIA|SI ALGO SALE MAL):<\/strong>\s*/);
+  if (m) {
+    const [clase, etiqueta] = ETIQUETAS[m[1]];
+    return { clase, etiqueta, html: html.replace(m[0], '<p>') };
+  }
+  const [clase, etiqueta] = tipoDeAviso(html.replace(/<[^>]+>/g, ' '));
+  return { clase, etiqueta, html };
+}
+
 function crearConversor() {
   let figura = 0;
   const marked = new Marked({
     gfm: true,
     renderer: {
       blockquote({ tokens }) {
-        const html = this.parser.parse(tokens);
-        const [clase, etiqueta] = tipoDeAviso(html.replace(/<[^>]+>/g, ' '));
+        const { clase, etiqueta, html } = aviso(this.parser.parse(tokens));
         return `<div class="aviso aviso-${clase}" data-etiqueta="${etiqueta}">${html}</div>\n`;
       },
     },

@@ -39,5 +39,13 @@ Cada captura se guarda en esta carpeta con **el nombre exacto** de la columna "A
 | [ ] | `S04-retardo-decision.png` | Bloque "¿Qué haces con este retardo?" en la bitácora | Manual del Supervisor |
 | [ ] | `S05-ficha-guardia.png` | Ficha del guardia con el resumen del mes y la bitácora | Manual del Supervisor |
 | [ ] | `S06-detalle-reporte.png` | Detalle de un reporte con el seguimiento y "Agregar seguimiento" | Manual del Supervisor |
+| [ ] | `A01-usuarios.png` | Lista de Usuarios con filtros y estados | Manual del Administrador |
+| [ ] | `A02-nuevo-usuario.png` | Ventana "Nuevo usuario" | Manual del Administrador |
+| [ ] | `A03-contrasena-temporal.png` | Ventana "Usuario creado" con la contraseña temporal | Manual del Administrador |
+| [ ] | `A04-eliminar-definitivo.png` | Ventana "Eliminar definitivamente" | Manual del Administrador |
+| [ ] | `A05-acceso-cliente.png` | Tarjeta "Acceso a la intranet" y ventana "Crear acceso del cliente" | Manual del Administrador |
+| [ ] | `A06-avisos-reportes.png` | Ventana "Avisos de reportes" | Manual del Administrador |
+| [ ] | `A07-ausencia-aprobar.png` | Solicitud de ausencia con "Aprobar" y "Rechazar" | Manual del Administrador |
+| [ ] | `A08-revertir.png` | Ventana "Revertir decisión" | Manual del Administrador |
 
-Total: 33 capturas.
+Total: 41 capturas.

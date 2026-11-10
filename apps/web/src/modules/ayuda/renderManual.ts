@@ -22,6 +22,27 @@ function tipoDeAviso(texto: string): [string, string] {
   return ['nota', 'NOTA'];
 }
 
+const ETIQUETAS: Record<string, [string, string]> = {
+  IMPORTANTE: ['importante', 'IMPORTANTE'],
+  NOTA: ['nota', 'NOTA'],
+  EMERGENCIA: ['emergencia', 'EMERGENCIA'],
+  'SI ALGO SALE MAL': ['ayuda', 'SI ALGO SALE MAL'],
+};
+
+/**
+ * Un recuadro puede empezar con su etiqueta en negritas (`> **IMPORTANTE:** texto`): esa etiqueta decide el tipo y se
+ * quita del texto, porque el recuadro ya la muestra arriba. Sin etiqueta, el tipo sale de las palabras del texto.
+ */
+function aviso(html: string): { clase: string; etiqueta: string; html: string } {
+  const m = html.match(/^<p><strong>(IMPORTANTE|NOTA|EMERGENCIA|SI ALGO SALE MAL):<\/strong>\s*/);
+  if (m) {
+    const [clase, etiqueta] = ETIQUETAS[m[1]];
+    return { clase, etiqueta, html: html.replace(m[0], '<p>') };
+  }
+  const [clase, etiqueta] = tipoDeAviso(html.replace(/<[^>]+>/g, ' '));
+  return { clase, etiqueta, html };
+}
+
 export interface ManualRenderizado {
   html: string;
   /** Secciones (títulos de nivel 2) para el índice. */
@@ -45,8 +66,7 @@ export function renderizarManual(texto: string, prefijo: string): ManualRenderiz
           : `<h${depth}>${contenido}</h${depth}>\n`;
       },
       blockquote({ tokens }) {
-        const html = this.parser.parse(tokens);
-        const [clase, etiqueta] = tipoDeAviso(html.replace(/<[^>]+>/g, ' '));
+        const { clase, etiqueta, html } = aviso(this.parser.parse(tokens));
         return `<div class="manual-aviso manual-aviso-${clase}" data-etiqueta="${etiqueta}">${html}</div>\n`;
       },
       // Las tablas anchas se deslizan de lado en el celular en vez de ensanchar la página.
