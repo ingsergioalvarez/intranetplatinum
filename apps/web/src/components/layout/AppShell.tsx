@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { CircleHelp, Ellipsis, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
+import { CircleHelp, CircleUser, Ellipsis, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
 import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
@@ -31,6 +31,74 @@ function BotonAyuda() {
     <Link to="/ayuda" className="rounded-lg p-2 text-brand-100 active:bg-brand-800" aria-label="Ayuda: manual de uso">
       <CircleHelp className="size-5" />
     </Link>
+  );
+}
+
+/**
+ * Menú de la cuenta en el celular (A-71): un solo icono de usuario que despliega el nombre, el acceso rápido con PIN,
+ * el cambio de contraseña y, aparte y en rojo, cerrar sesión. Sustituye a tres iconos sueltos en la barra de arriba.
+ */
+function MenuCuenta() {
+  const user = useAuthStore((s) => s.user)!;
+  const [abierto, setAbierto] = useState(false);
+  const raiz = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+
+  // Se cierra al cambiar de pantalla, al tocar fuera o con Escape.
+  useEffect(() => setAbierto(false), [pathname]);
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = (e: PointerEvent) => {
+      if (!raiz.current?.contains(e.target as Node)) setAbierto(false);
+    };
+    const escape = (e: KeyboardEvent) => e.key === 'Escape' && setAbierto(false);
+    document.addEventListener('pointerdown', fuera);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', fuera);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [abierto]);
+
+  const opcion = 'flex h-12 w-full items-center gap-3 px-4 text-left text-sm font-medium active:bg-slate-100';
+  return (
+    <div ref={raiz} className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((a) => !a)}
+        aria-label="Mi cuenta"
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+        className={cn('rounded-lg p-2 text-brand-100 active:bg-brand-800', abierto && 'bg-brand-800')}
+      >
+        <CircleUser className="size-5" />
+      </button>
+      {abierto && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-40 mt-2 w-64 overflow-hidden rounded-2xl bg-white text-slate-800 shadow-xl ring-1 ring-slate-200"
+        >
+          <div className="border-b border-slate-100 px-4 py-3">
+            <p className="truncate text-sm font-semibold">{user.nombre}</p>
+            <p className="truncate text-xs text-slate-500">{ROL_DESCRIPCIONES[user.rol]}</p>
+          </div>
+          <Link to="/acceso-rapido" role="menuitem" className={opcion}>
+            <LockKeyhole className="size-5 text-slate-500" /> Acceso rápido (PIN)
+          </Link>
+          <Link to="/cambiar-password" role="menuitem" className={opcion}>
+            <KeyRound className="size-5 text-slate-500" /> Cambiar contraseña
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => void authService.logout()}
+            className={cn(opcion, 'border-t border-slate-100 text-red-700')}
+          >
+            <LogOut className="size-5" /> Cerrar sesión
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -125,27 +193,7 @@ function Topbar() {
           <div className="flex items-center gap-1">
             <Campanita />
             <BotonAyuda />
-            <Link
-              to="/acceso-rapido"
-              className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
-              aria-label="Acceso rápido con PIN"
-            >
-              <LockKeyhole className="size-5" />
-            </Link>
-            <Link
-              to="/cambiar-password"
-              className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
-              aria-label="Cambiar contraseña"
-            >
-              <KeyRound className="size-5" />
-            </Link>
-            <button
-              onClick={() => void authService.logout()}
-              className="rounded-lg p-2 text-brand-100 active:bg-brand-800"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut className="size-5" />
-            </button>
+            <MenuCuenta />
           </div>
         )}
       </div>

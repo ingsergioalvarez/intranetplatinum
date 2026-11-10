@@ -13,7 +13,7 @@ Cuando abres la app entras directo al **Checador**. Abajo tienes cuatro pestaña
 | **Ausencias** | Pedir una ausencia por adelantado. |
 | **Reportes** | Reportar un problema en tu sitio y ver su seguimiento. |
 
-Arriba están la **campanita** (avisos), el **candado** (acceso rápido con PIN), la **llave** (cambiar contraseña) y la flecha de **salir**. Y siempre a la vista, abajo a la derecha, el botón rojo **SOS**.
+Arriba están la **campanita** (avisos), el **signo de interrogación** (ayuda: este manual) y el icono de **usuario**, que abre un menú con tu nombre, **"Acceso rápido (PIN)"**, **"Cambiar contraseña"** y **"Cerrar sesión"**. Y siempre a la vista, abajo a la derecha, el botón rojo **SOS**.
 
 **El orden de tu día es siempre el mismo:**
 

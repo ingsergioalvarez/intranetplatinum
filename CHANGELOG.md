@@ -5,6 +5,17 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-10 #49 — Menú de la cuenta en el celular (A-71)
+
+#### Cambiado
+
+- **Barra de arriba del celular (A-71)**: el candado (PIN), la llave (cambiar contraseña) y la flecha de salir pasan a un menú que sale del icono de usuario: nombre y rol, "Acceso rápido (PIN)", "Cambiar contraseña" y, aparte y en rojo, "Cerrar sesión". Se cierra al tocar fuera, con Escape o al cambiar de pantalla. Campanita y "?" siguen afuera; escritorio no cambia.
+- **Manual**: la parte común y la de Guardia describen el nuevo menú.
+
+#### Plan
+
+- **A-71** hecha en local.
+
 ### Sesión 2026-11-10 #48 — Manual de usuario (A-44) y tareas nuevas
 
 #### Añadido

@@ -72,7 +72,7 @@ Hasta que cambies la contraseña temporal no podrás usar el resto de la app.
 El PIN te deja entrar con tu nombre y **4 números**, sin escribir correo ni contraseña. **Solo funciona en ese celular.**
 
 **Crear tu PIN**
-1. Toca el icono del **candado** en la parte de arriba (o el botón **"Crear PIN"** del aviso "Entra más rápido").
+1. Toca el icono de **usuario** (el muñequito) en la parte de arriba y elige **"Acceso rápido (PIN)"** (o toca el botón **"Crear PIN"** del aviso "Entra más rápido").
 2. En **"PIN de este celular"** toca **"Crear PIN"**.
 3. Escribe el **"PIN nuevo"**, repítelo en **"Repite el PIN"** y escribe **"Tu contraseña"** para confirmar que eres tú.
 4. Toca **"Guardar PIN"**. Verás "PIN creado: ya puedes entrar con él".
@@ -105,7 +105,7 @@ Cuando alguien atiende algo de lo que te avisaron, el aviso se pone **verde** y 
 
 ## 7. Cambiar tu contraseña
 
-1. Toca el icono de la **llave** en la parte de arriba.
+1. Toca el icono de **usuario** (el muñequito) en la parte de arriba y elige **"Cambiar contraseña"**.
 2. Escribe tu **"Contraseña actual"**, la **nueva** y su confirmación (con las mismas reglas: 10 caracteres, una letra y un número).
 3. Toca **"Guardar contraseña"**.
 
@@ -113,7 +113,7 @@ Al cambiarla se cierra tu sesión en tus otros dispositivos.
 
 ## 8. Cerrar sesión
 
-Toca el icono de **salir** (la flecha) en la parte de arriba. **Cierra tu sesión al instante, sin preguntar.**
+Toca el icono de **usuario** (el muñequito) en la parte de arriba y, al final del menú, **"Cerrar sesión"** (en rojo). **Cierra tu sesión al instante, sin preguntar.**
 
 Cerrar sesión **no borra** tu perfil del celular: en tu siguiente entrada seguirás viendo tu nombre.
 
