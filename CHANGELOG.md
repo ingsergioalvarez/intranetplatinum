@@ -13,6 +13,7 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 #### Corregido
 
+- **Checador sin aceptar el aviso de privacidad (A-68)**: el botón "Registrar mi rostro" sale deshabilitado hasta que acepte (antes no hacía nada) y el aviso dice "Lo necesitas para poder registrarte o checar".
 - **Barra lateral de escritorio**: al abrir un modal con la página bajada, la barra se despegaba y dejaba un hueco en blanco abajo. Ahora va fija a la pantalla (`fixed`) y el contenido deja su espacio; en celular no cambia nada.
 
 #### Cambiado

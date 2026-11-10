@@ -423,7 +423,7 @@ export function MarcarPage() {
         {sinAviso && (
           <Aviso tono="warning" icon={ShieldCheck}>
             <p className="font-medium">Falta aceptar el aviso de privacidad</p>
-            <p>Lo necesitas para poder checar: explica cómo usamos tu rostro.</p>
+            <p>Lo necesitas para poder registrarte o checar: explica cómo usamos tu rostro.</p>
             <button
               type="button"
               onClick={pedirAvisoPrivacidad}
@@ -446,7 +446,8 @@ export function MarcarPage() {
             <button
               type="button"
               onClick={pedirBienvenidaRostro}
-              className="mt-2 inline-flex h-10 items-center rounded-lg bg-amber-700 px-4 font-medium text-white active:bg-amber-800"
+              disabled={sinAviso}
+              className="mt-2 inline-flex h-10 items-center rounded-lg bg-amber-700 px-4 font-medium text-white active:bg-amber-800 disabled:bg-slate-300 disabled:text-slate-500"
             >
               Registrar mi rostro
             </button>
@@ -462,7 +463,8 @@ export function MarcarPage() {
             <button
               type="button"
               onClick={pedirBienvenidaRostro}
-              className="mt-2 inline-flex h-10 items-center rounded-lg bg-amber-700 px-4 font-medium text-white active:bg-amber-800"
+              disabled={sinAviso}
+              className="mt-2 inline-flex h-10 items-center rounded-lg bg-amber-700 px-4 font-medium text-white active:bg-amber-800 disabled:bg-slate-300 disabled:text-slate-500"
             >
               Registrar mi rostro
             </button>
