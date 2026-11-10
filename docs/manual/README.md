@@ -1,0 +1,37 @@
+# Manual de usuario de Platinum Intranet (A-44)
+
+Esta carpeta es la **fuente única** del manual. Se edita aquí, en texto (`.md`); de estos mismos archivos salen la pantalla de Ayuda de la app (A-69) y el PDF descargable. **No se edita el PDF a mano.**
+
+## Archivos
+
+| Archivo | Contenido |
+|---|---|
+| `comun.md` | Lo que todos hacen igual: instalar, notificaciones, entrar, PIN, campanita, aviso de privacidad. Se incluye en cada manual. |
+| `guardia.md` | Manual del Guardia (checador, SOS, sitios, reportes, ausencias, cambios de turno). |
+| `supervisor.md`, `admin.md`, `cliente.md` | Por escribir. |
+| `capturas/` | Imágenes del manual y `PENDIENTES.md` con la lista de las que faltan. |
+
+**Cómo se arma cada manual:** Guardia = `comun.md` + `guardia.md`. Supervisor = `comun.md` + `supervisor.md`. Y así con cada rol. El **Manual completo** (para el administrador) junta todo.
+
+## Cómo se escribe
+
+- Español sencillo, frases cortas, tuteo, pasos numerados. Una sección por **tarea**, no por pantalla.
+- Los textos de botones y mensajes van **tal cual aparecen en la app**, entre comillas o en negritas.
+- Un dato que no se pudo confirmar en el código no se inventa: se pregunta o se marca.
+
+## Capturas
+
+Donde va una imagen se escribe un marcador en una línea sola:
+
+```
+{{captura:G01-checador|Pantalla del Checador con sus botones}}
+```
+
+- `G01-checador` es el nombre del archivo (`capturas/G01-checador.png`); la parte después de `|` describe qué debe verse.
+- Si el archivo existe, se muestra la imagen. Si no, se muestra un recuadro gris **"Captura pendiente: …"**.
+- Prefijos: `C` = parte común, `G` = guardia (después `S` = supervisor, `A` = administrador, `K` = cliente).
+- La lista de pendientes está en [capturas/PENDIENTES.md](capturas/PENDIENTES.md).
+
+## Cuando cambia la app
+
+Si un cambio altera una pantalla o un texto, se corrige el párrafo y la captura afectada en el `.md` y se regenera. Así el manual no se desactualiza.

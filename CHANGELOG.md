@@ -5,6 +5,21 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-10 #48 — Manual de usuario (A-44) y tareas nuevas
+
+#### Añadido
+
+- **Manual del Guardia en PDF (A-44)**: parte común (instalar, notificaciones, entrar, PIN, campanita, aviso de privacidad) y todo lo del guardia por tareas (checador, comida, salida, horas extra, sin señal, SOS, sitios, reportes, ausencias, cambios de turno), con los textos exactos de la app. El texto vive en `docs/manual/*.md` (fuente única) y `npm run manual` lo convierte a PDF con el estilo de los reportes (portada, índice, encabezado y pie, recuadros y tablas) usando Edge sin ventana. Sale en `apps/web/public/manual/manual-guardia.pdf` (`/manual/manual-guardia.pdf` en la web). Las capturas faltantes aparecen como recuadros de "Captura pendiente"; lista en `docs/manual/capturas/PENDIENTES.md` (27).
+- Herramienta de desarrollo `marked` (convierte el texto a página web); no entra a la app ni al servidor.
+
+#### Cambiado
+
+- El service worker ya no tapa `/manual/*` con la pantalla principal (sin esto, quien tiene la app instalada no podría abrir el PDF).
+
+#### Plan
+
+- Nuevas tareas pendientes: **A-69** (pantalla de Ayuda con el icono "?" dentro de la app, con el manual del rol y "Descargar PDF") y **A-70** (instalación obligatoria de la app en celular, con ventana de instalación en Android y pasos en iPhone). A-44 en progreso: faltan Supervisor, Administrador y Cliente.
+
 ### Sesión 2026-11-09 #47 — Barra lateral estable y ordenar pendientes
 
 #### Añadido

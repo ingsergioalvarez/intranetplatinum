@@ -1,0 +1,421 @@
+/*
+ * Estilo del manual en PDF (A-44). Misma identidad que los reportes e informes: azul marino y azul de marca,
+ * cajas en gris azulado, filas alternadas y títulos de sección en mayúsculas con barra de color.
+ * `__TITULO__` y `__VERSION__` los reemplaza build.mjs.
+ */
+:root {
+  --navy: #121d38;
+  --brand: #253b70;
+  --texto: #0f172a;
+  --suave: #64748b;
+  --linea: #d5dbe8;
+  --zebra: #f5f7fb;
+  --caja: #eef1f8;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@page {
+  size: Letter;
+  margin: 24mm 18mm 22mm 18mm;
+  @top-left {
+    content: 'PLATINUM INTRANET';
+    font: bold 7.5pt Arial, Helvetica, sans-serif;
+    letter-spacing: 0.08em;
+    color: var(--brand);
+    border-bottom: 0.6pt solid var(--linea);
+    padding-bottom: 3mm;
+  }
+  @top-center {
+    content: '';
+    border-bottom: 0.6pt solid var(--linea);
+  }
+  @top-right {
+    content: '__TITULO__';
+    font: 7.5pt Arial, Helvetica, sans-serif;
+    color: var(--suave);
+    border-bottom: 0.6pt solid var(--linea);
+    padding-bottom: 3mm;
+  }
+  @bottom-left {
+    content: 'Versión __VERSION__';
+    font: 7.5pt Arial, Helvetica, sans-serif;
+    color: var(--suave);
+  }
+  @bottom-right {
+    content: 'Página ' counter(page) ' de ' counter(pages);
+    font: 7.5pt Arial, Helvetica, sans-serif;
+    color: var(--suave);
+  }
+}
+
+/* La portada ocupa toda la hoja, sin encabezado ni pie. */
+@page portada {
+  margin: 0;
+  @top-left { content: none; border: 0; }
+  @top-center { content: none; border: 0; }
+  @top-right { content: none; border: 0; }
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+html {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+body {
+  margin: 0;
+}
+
+/* ---------- Portada ---------- */
+.portada {
+  page: portada;
+  width: 215.9mm;
+  height: 279.4mm;
+  position: relative;
+  break-after: page;
+  overflow: hidden;
+}
+
+.portada .banda {
+  background: var(--navy);
+  height: 62mm;
+  padding: 0 22mm;
+  display: flex;
+  align-items: center;
+  gap: 6mm;
+  color: #fff;
+}
+
+.portada .escudo {
+  width: 20mm;
+  height: 20mm;
+  background: #fff;
+  border-radius: 4mm;
+  display: grid;
+  place-items: center;
+}
+
+.portada .escudo img {
+  width: 13mm;
+  height: 13mm;
+}
+
+.portada .marca {
+  font-size: 20pt;
+  font-weight: bold;
+  letter-spacing: 0.01em;
+}
+
+.portada .marca span {
+  display: block;
+  font-size: 9pt;
+  font-weight: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c3c9d9;
+  margin-top: 1mm;
+}
+
+.portada .titulo {
+  padding: 40mm 22mm 0;
+}
+
+.portada h1 {
+  margin: 0;
+  font-size: 34pt;
+  line-height: 1.1;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.portada .barra {
+  width: 38mm;
+  height: 2.6mm;
+  background: var(--brand);
+  margin: 7mm 0 6mm;
+}
+
+.portada .subtitulo {
+  font-size: 14pt;
+  color: var(--suave);
+  max-width: 130mm;
+}
+
+.portada .datos {
+  position: absolute;
+  left: 22mm;
+  right: 22mm;
+  bottom: 48mm;
+  border: 0.6pt solid var(--linea);
+  background: var(--caja);
+  border-radius: 2mm;
+  padding: 6mm 8mm;
+}
+
+.portada .datos div {
+  display: flex;
+  gap: 6mm;
+  padding: 1.4mm 0;
+}
+
+.portada .datos b {
+  width: 28mm;
+  flex: none;
+  font-size: 7.5pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--suave);
+  padding-top: 0.6mm;
+}
+
+.portada .datos span {
+  font-weight: bold;
+  color: var(--navy);
+}
+
+.portada .pie {
+  position: absolute;
+  left: 22mm;
+  right: 22mm;
+  bottom: 18mm;
+  font-size: 8.5pt;
+  color: var(--suave);
+  border-top: 0.6pt solid var(--linea);
+  padding-top: 4mm;
+}
+
+/* ---------- Contenido (índice) ---------- */
+.indice {
+  break-after: page;
+}
+
+.indice h2 {
+  margin-top: 0;
+}
+
+.indice h3 {
+  font-size: 9pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin: 7mm 0 2mm;
+}
+
+.indice ol {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  column-count: 2;
+  column-gap: 10mm;
+}
+
+.indice li {
+  padding: 1.2mm 0;
+  border-bottom: 0.4pt solid var(--linea);
+  break-inside: avoid;
+}
+
+/* ---------- Partes ---------- */
+.parte {
+  break-before: page;
+}
+
+.parte > h1 {
+  font-size: 22pt;
+  line-height: 1.15;
+  color: var(--navy);
+  margin: 0 0 6mm;
+  padding-bottom: 4mm;
+  border-bottom: 2pt solid var(--brand);
+}
+
+/* Título de sección: mayúsculas con barra de color, como en los reportes. */
+h2 {
+  font-size: 12.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--navy);
+  margin: 9mm 0 3.5mm;
+  padding: 1.2mm 0 1.2mm 3.5mm;
+  border-left: 1.6mm solid var(--brand);
+  break-after: avoid;
+}
+
+h3 {
+  font-size: 10.5pt;
+  color: var(--brand);
+  margin: 6mm 0 2mm;
+  break-after: avoid;
+}
+
+p {
+  margin: 0 0 2.6mm;
+  orphans: 3;
+  widows: 3;
+}
+
+ul,
+ol {
+  margin: 0 0 3mm;
+  padding-left: 6.5mm;
+}
+
+li {
+  margin-bottom: 1.2mm;
+}
+
+li > ul,
+li > ol {
+  margin-top: 1.2mm;
+  margin-bottom: 0;
+}
+
+strong {
+  color: var(--navy);
+}
+
+em {
+  color: #334155;
+}
+
+hr {
+  border: 0;
+  border-top: 0.6pt solid var(--linea);
+  margin: 6mm 0;
+}
+
+/* ---------- Tablas ---------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 3mm 0 5mm;
+  font-size: 9pt;
+}
+
+thead th {
+  background: var(--navy);
+  color: #fff;
+  text-align: left;
+  font-size: 7.5pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2.2mm 3mm;
+}
+
+tbody td {
+  padding: 2.2mm 3mm;
+  vertical-align: top;
+  border-bottom: 0.5pt solid var(--linea);
+}
+
+tbody tr:nth-child(even) td {
+  background: var(--zebra);
+}
+
+tr {
+  break-inside: avoid;
+}
+
+/* ---------- Recuadros ---------- */
+.aviso {
+  position: relative;
+  margin: 4mm 0 5mm;
+  padding: 7mm 5mm 3mm 5mm;
+  border-radius: 1.5mm;
+  background: #e8eefb;
+  border: 0.6pt solid #b9c8ec;
+  break-inside: avoid;
+}
+
+.aviso::before {
+  content: attr(data-etiqueta);
+  position: absolute;
+  top: 2.2mm;
+  left: 5mm;
+  font-size: 7pt;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  color: var(--brand);
+}
+
+.aviso p:last-child {
+  margin-bottom: 1.5mm;
+}
+
+.aviso-ayuda {
+  background: #fef3c7;
+  border-color: #f2d98a;
+}
+
+.aviso-ayuda::before {
+  color: #92400e;
+}
+
+.aviso-emergencia {
+  background: #fee2e2;
+  border-color: #f3b4b4;
+}
+
+.aviso-emergencia::before {
+  color: #991b1b;
+}
+
+.aviso-nota {
+  background: var(--caja);
+  border-color: var(--linea);
+}
+
+.aviso-nota::before {
+  color: var(--suave);
+}
+
+/* ---------- Capturas ---------- */
+.captura {
+  margin: 4mm auto 6mm;
+  text-align: center;
+  break-inside: avoid;
+}
+
+.captura img {
+  width: 56mm;
+  border: 0.6pt solid var(--linea);
+  border-radius: 3mm;
+  box-shadow: 0 0.6mm 2mm rgba(15, 23, 42, 0.18);
+}
+
+.captura figcaption {
+  margin-top: 2.5mm;
+  font-size: 8pt;
+  color: var(--suave);
+}
+
+.pendiente {
+  margin: 4mm 0 6mm;
+  padding: 7mm 5mm;
+  border: 0.8pt dashed #b3bccd;
+  border-radius: 2mm;
+  background: var(--zebra);
+  text-align: center;
+  color: var(--suave);
+  break-inside: avoid;
+}
+
+.pendiente b {
+  display: block;
+  font-size: 7.5pt;
+  letter-spacing: 0.12em;
+  margin-bottom: 1mm;
+}
+
+.pendiente span {
+  font-size: 8.5pt;
+}
