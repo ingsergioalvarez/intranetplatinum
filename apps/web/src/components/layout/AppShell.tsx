@@ -5,6 +5,7 @@ import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
 import { Modal, cn } from '../ui';
+import { useEnLinea } from '../../core/offline/enLinea';
 import { useSincronizacion } from '../../core/offline/sincronizar';
 import { AvisoPin } from '../../modules/auth/AvisoPin';
 import { OfertaPerfil } from '../../modules/auth/OfertaPerfil';
@@ -38,8 +39,17 @@ function BotonAyuda() {
  * Menú de la cuenta en el celular (A-71): un solo icono de usuario que despliega el nombre, el acceso rápido con PIN,
  * el cambio de contraseña y, aparte y en rojo, cerrar sesión. Sustituye a tres iconos sueltos en la barra de arriba.
  */
+/** Dos letras para el círculo de la cuenta: inicial del primer nombre y del último apellido. */
+function iniciales(nombre: string) {
+  const palabras = nombre.trim().split(/\s+/).filter(Boolean);
+  if (palabras.length === 0) return '?';
+  const dos = palabras.length === 1 ? palabras[0].slice(0, 2) : palabras[0][0] + palabras[palabras.length - 1][0];
+  return dos.toUpperCase();
+}
+
 function MenuCuenta() {
   const user = useAuthStore((s) => s.user)!;
+  const enLinea = useEnLinea();
   const [abierto, setAbierto] = useState(false);
   const raiz = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
@@ -78,9 +88,34 @@ function MenuCuenta() {
           role="menu"
           className="absolute right-0 top-full z-40 mt-2 w-64 overflow-hidden rounded-2xl bg-white text-slate-800 shadow-xl ring-1 ring-slate-200"
         >
-          <div className="border-b border-slate-100 px-4 py-3">
-            <p className="truncate text-sm font-semibold">{user.nombre}</p>
-            <p className="truncate text-xs text-slate-500">{ROL_DESCRIPCIONES[user.rol]}</p>
+          <div className="flex items-center gap-3 border-b border-slate-100 bg-brand-50 px-4 py-3.5">
+            <div className="relative shrink-0">
+              <span
+                aria-hidden="true"
+                className="flex size-12 items-center justify-center rounded-full bg-brand-700 text-base font-semibold text-white"
+              >
+                {iniciales(user.nombre)}
+              </span>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'absolute bottom-0 right-0 size-3.5 rounded-full ring-2 ring-brand-50',
+                  enLinea ? 'bg-emerald-500' : 'bg-slate-400',
+                )}
+              />
+            </div>
+            <div className="min-w-0 flex-1 text-right">
+              <p className="truncate text-base font-semibold text-slate-900">
+                {user.nombre}
+              </p>
+              <p className="truncate text-sm text-slate-600">{ROL_DESCRIPCIONES[user.rol]}</p>
+              <p
+                role="status"
+                className={cn('truncate text-xs font-medium', enLinea ? 'text-emerald-700' : 'text-slate-500')}
+              >
+                {enLinea ? 'En línea' : 'Sin conexión'}
+              </p>
+            </div>
           </div>
           <Link to="/acceso-rapido" role="menuitem" className={opcion}>
             <LockKeyhole className="size-5 text-slate-500" /> Acceso rápido (PIN)

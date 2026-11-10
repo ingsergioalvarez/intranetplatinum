@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { BookOpen, ChevronDown } from 'lucide-react';
 import { PageHeader } from '../../components/layout/AppShell';
 import { EmptyState, cn } from '../../components/ui';
@@ -33,7 +34,9 @@ export function AyudaPage() {
   }
 
   const irA = (id: string) => {
-    setIndiceAbierto(false);
+    // Primero se cierra el índice (y se pinta ya cerrado) y después se calcula a dónde ir: si no, el desplazamiento
+    // se mide con el índice abierto y, al encogerse, se llega más abajo del título.
+    flushSync(() => setIndiceAbierto(false));
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 

@@ -13,9 +13,12 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Manual**: la parte común y la de Guardia describen el nuevo menú.
 - **Manual del Supervisor (A-44)**: 24 secciones por tarea (tablero, asistencia del día, enviar a cubrir, retardo y falta, ficha del guardia, rostros e incidencias, cambios de turno, casos de cobertura, calendario y solicitudes, horas extra, ausencias, emergencias, reportes, quejas, reportes de asistencia y horarios, clientes y sitios, turnos, grupos, usuarios y privacidad, qué no puede hacer y a quién pedirlo). Los textos salen de leer el código, no de suposiciones. El PDF `npm run manual` ahora genera también el del Supervisor. 6 capturas nuevas pendientes (S01-S06).
 
+- **Menú de la cuenta (A-72)**: el encabezado ahora es un perfil: círculo con las iniciales a la izquierda; nombre, rol y estado alineados a la derecha; punto verde y "En línea" (gris y "Sin conexión" sin internet, con el aviso del navegador). Fondo suave de la marca.
+- **Índice de Ayuda (A-72)**: tocar una sección dejaba la pantalla más abajo del título porque el índice se cerraba mientras se calculaba el desplazamiento. Ahora se cierra primero y luego se desplaza. Comprobado con las 76 secciones de los manuales, en celular y escritorio.
+
 #### Plan
 
-- **A-71** hecha, en el servidor. **A-44** en progreso: faltan Administrador y Cliente.
+- **A-71** hecha, en el servidor. **A-72** hecha en local. **A-44** en progreso: faltan Administrador y Cliente.
 
 ### Sesión 2026-11-10 #48 — Manual de usuario (A-44) y tareas nuevas
 
