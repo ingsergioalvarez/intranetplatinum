@@ -14,9 +14,13 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **PDF solo en local**: `npm run manual` genera `docs/manual/pdf/manual-guardia.pdf` con el estilo de los reportes (portada, índice, encabezado y pie) usando Edge sin ventana. No se sube a git ni se publica en el dominio.
 - `marked` (convierte el texto del manual a página) como dependencia de la web.
 
+#### Corregido
+
+- **Ayuda salía vacía en el servidor (A-69)**: la imagen Docker de la web ignoraba `docs/` y no copiaba `docs/manual`, así que la compilación no encontraba el manual. `.dockerignore` deja pasar `docs/manual` (y excluye `docs/manual/pdf`) y `deploy/Dockerfile.web` lo copia. Commit `64cfa08`.
+
 #### Plan
 
-- **A-69** hecha en local; nueva tarea pendiente **A-70** (instalación obligatoria de la app en celular, con ventana de instalación en Android y pasos en iPhone). A-44 en progreso: faltan Supervisor, Administrador y Cliente.
+- **A-69** hecha, en el servidor y probada por el usuario; nueva tarea pendiente **A-70** (instalación obligatoria de la app en celular, con ventana de instalación en Android y pasos en iPhone). A-44 en progreso: faltan Supervisor, Administrador y Cliente.
 
 ### Sesión 2026-11-09 #47 — Barra lateral estable y ordenar pendientes
 
