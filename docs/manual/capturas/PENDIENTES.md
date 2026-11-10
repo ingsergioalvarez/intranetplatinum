@@ -33,5 +33,11 @@ Cada captura se guarda en esta carpeta con **el nombre exacto** de la columna "A
 | [ ] | `G16-comprobante-reporte.png` | Comprobante "Reporte registrado" con el folio | Manual del Guardia |
 | [ ] | `G17-detalle-reporte.png` | Detalle de un reporte con el seguimiento oficial | Manual del Guardia |
 | [ ] | `G18-pedir-ausencia.png` | Ventana "Pedir una ausencia" | Manual del Guardia |
+| [ ] | `S01-inicio.png` | Inicio del supervisor con las cinco tarjetas y "Requiere tu atención" | Manual del Supervisor |
+| [ ] | `S02-asistencia.png` | Asistencia: filtros, botonera con globos y lista de guardias | Manual del Supervisor |
+| [ ] | `S03-enviar-cubrir.png` | Ventana "Enviar a cubrir" con la lista de quién cubre | Manual del Supervisor |
+| [ ] | `S04-retardo-decision.png` | Bloque "¿Qué haces con este retardo?" en la bitácora | Manual del Supervisor |
+| [ ] | `S05-ficha-guardia.png` | Ficha del guardia con el resumen del mes y la bitácora | Manual del Supervisor |
+| [ ] | `S06-detalle-reporte.png` | Detalle de un reporte con el seguimiento y "Agregar seguimiento" | Manual del Supervisor |
 
-Total: 27 capturas.
+Total: 33 capturas.

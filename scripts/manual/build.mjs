@@ -34,6 +34,16 @@ const MANUALES = [
       { archivo: 'guardia.md', titulo: 'Tu trabajo como guardia' },
     ],
   },
+  {
+    id: 'supervisor',
+    titulo: 'Manual del Supervisor',
+    subtitulo: 'Cómo vigilar la asistencia, decidir y cubrir turnos',
+    para: 'Supervisores',
+    partes: [
+      { archivo: 'comun.md', titulo: 'Parte común: instalar, entrar y usar tu cuenta' },
+      { archivo: 'supervisor.md', titulo: 'Tu trabajo como supervisor' },
+    ],
+  },
 ];
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

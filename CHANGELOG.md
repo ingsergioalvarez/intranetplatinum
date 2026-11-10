@@ -11,10 +11,11 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 - **Barra de arriba del celular (A-71)**: el candado (PIN), la llave (cambiar contraseña) y la flecha de salir pasan a un menú que sale del icono de usuario: nombre y rol, "Acceso rápido (PIN)", "Cambiar contraseña" y, aparte y en rojo, "Cerrar sesión". Se cierra al tocar fuera, con Escape o al cambiar de pantalla. Campanita y "?" siguen afuera; escritorio no cambia.
 - **Manual**: la parte común y la de Guardia describen el nuevo menú.
+- **Manual del Supervisor (A-44)**: 24 secciones por tarea (tablero, asistencia del día, enviar a cubrir, retardo y falta, ficha del guardia, rostros e incidencias, cambios de turno, casos de cobertura, calendario y solicitudes, horas extra, ausencias, emergencias, reportes, quejas, reportes de asistencia y horarios, clientes y sitios, turnos, grupos, usuarios y privacidad, qué no puede hacer y a quién pedirlo). Los textos salen de leer el código, no de suposiciones. El PDF `npm run manual` ahora genera también el del Supervisor. 6 capturas nuevas pendientes (S01-S06).
 
 #### Plan
 
-- **A-71** hecha en local.
+- **A-71** hecha, en el servidor. **A-44** en progreso: faltan Administrador y Cliente.
 
 ### Sesión 2026-11-10 #48 — Manual de usuario (A-44) y tareas nuevas
 
