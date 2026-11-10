@@ -12,6 +12,7 @@ import {
   MapPinOff,
   RefreshCw,
   ScanFace,
+  ShieldCheck,
   TriangleAlert,
   Utensils,
   type LucideIcon,
@@ -48,6 +49,8 @@ import { asistenciaService } from './asistencia.service';
 import { CamaraMarca } from './CamaraMarca';
 import { ConsejosCamara } from './rostro/ConsejosCamara';
 import { pedirBienvenidaRostro } from './bienvenidaRostroEvento';
+import { pedirAvisoPrivacidad } from '../privacidad/avisoPrivacidadEvento';
+import { useAvisoPrivacidad } from '../privacidad/useAvisoPrivacidad';
 import { debeMostrarConsejos } from './rostro/consejos';
 import { pedirSensorInclinacion } from './rostro/inclinacion';
 import { TurnoGuardiaCard } from './TurnoGuardia';
@@ -163,6 +166,8 @@ function bloqueoGps(referencia: ReturnType<typeof sitioDeReferencia>, ubicacion:
 export function MarcarPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  // Sin aceptar el aviso de privacidad (A-68) no se puede checar; el servidor también lo rechaza.
+  const { sinAceptar: sinAviso } = useAvisoPrivacidad();
   const estado = useQuery({
     queryKey: asistenciaService.keys.estado,
     queryFn: asistenciaService.estado,
@@ -314,7 +319,7 @@ export function MarcarPage() {
   const ubicacion = ubic.estado === 'ok' ? ubic.ubicacion : null;
   const referencia = sitioDeReferencia(data, ubicacion);
   const sinSitio = data.permitidas.includes('entrada') && data.sitios.length === 0;
-  const bloqueado = sinSitio || ubic.estado === 'error';
+  const bloqueado = sinSitio || ubic.estado === 'error' || sinAviso;
   const gps = bloqueoGps(referencia, ubicacion);
 
   return (
@@ -415,6 +420,19 @@ export function MarcarPage() {
           })}
         </div>
 
+        {sinAviso && (
+          <Aviso tono="warning" icon={ShieldCheck}>
+            <p className="font-medium">Falta aceptar el aviso de privacidad</p>
+            <p>Lo necesitas para poder checar: explica cómo usamos tu rostro.</p>
+            <button
+              type="button"
+              onClick={pedirAvisoPrivacidad}
+              className="mt-2 inline-flex h-10 items-center rounded-lg bg-amber-700 px-4 font-medium text-white active:bg-amber-800"
+            >
+              Leer y aceptar
+            </button>
+          </Aviso>
+        )}
         {data.rostro.estado === 'pendiente' && (
           <Aviso tono="ok" icon={ScanFace}>
             <p className="font-medium">Tu rostro está en revisión</p>

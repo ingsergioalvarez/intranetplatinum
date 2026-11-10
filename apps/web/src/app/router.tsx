@@ -17,6 +17,7 @@ import { GruposPage } from '../modules/grupos/GruposPage';
 import { NuevoReportePage } from '../modules/reportes/NuevoReportePage';
 import { ReporteDetallePage } from '../modules/reportes/ReporteDetallePage';
 import { ReportesPage } from '../modules/reportes/ReportesPage';
+import { PrivacidadPage } from '../modules/privacidad/PrivacidadPage';
 import { ReportesClientePage } from '../modules/reportes-cliente/ReportesClientePage';
 import { NotFoundPage } from '../modules/shared/PendientePage';
 import { AsistenciaGuardiaPage } from '../modules/asistencia/AsistenciaGuardiaPage';
@@ -228,6 +229,14 @@ export const router = createBrowserRouter([
       },
       // El servidor decide si puede verlo (todos / sus sitios).
       { path: 'reportes/:id', element: <ReporteDetallePage /> },
+      {
+        path: 'privacidad',
+        element: (
+          <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SUPERVISOR]}>
+            <PrivacidadPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'reportes-cliente',
         element: (

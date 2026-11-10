@@ -6,6 +6,7 @@ import { Button, Modal, toast } from '../../components/ui';
 import { ApiError } from '../../core/api';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { asistenciaService } from './asistencia.service';
+import { useAvisoPrivacidad } from '../privacidad/useAvisoPrivacidad';
 import { alPedirBienvenidaRostro } from './bienvenidaRostroEvento';
 import { CapturaRegistro } from './rostro/CapturaRegistro';
 import { GuiaTelefono } from './rostro/GuiaTelefono';
@@ -43,7 +44,9 @@ export function BienvenidaRostro() {
   });
   const rostro = estado.data?.rostro;
   const falta = !!rostro && (rostro.estado === 'sin_registro' || rostro.estado === 'rechazado');
-  const visible = esGuardia && falta && !cerrada;
+  // Primero el aviso de privacidad (A-68): sin aceptarlo no se registra el rostro.
+  const { sinAceptar: sinAviso } = useAvisoPrivacidad();
+  const visible = esGuardia && falta && !cerrada && !sinAviso;
 
   // Al intentar checar o tocar el aviso del Checador.
   useEffect(() => alPedirBienvenidaRostro(() => setCerrada(false)), []);

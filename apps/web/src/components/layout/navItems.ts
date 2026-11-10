@@ -8,6 +8,7 @@ import {
   Home,
   CalendarOff,
   MessageSquareWarning,
+  ScrollText,
   ShieldCheck,
   MapPin,
   Tags,
@@ -66,6 +67,8 @@ export const navItems: NavItem[] = [
   // Lo que el cliente reporta del servicio o de un guardia (A-59).
   { label: 'Reportar', to: '/reportes-cliente', icon: MessageSquareWarning, roles: [ROLES.CLIENTE] },
   { label: 'Quejas', to: '/reportes-cliente', icon: MessageSquareWarning, roles: [ROLES.ADMIN, ROLES.SUPERVISOR] },
+  // Quién aceptó el aviso de privacidad por el uso del rostro (A-68).
+  { label: 'Privacidad', to: '/privacidad', icon: ScrollText, roles: [ROLES.ADMIN, ROLES.SUPERVISOR] },
   { label: 'Asistencia', to: '/asistencia', icon: ClipboardCheck, permiso: PERMISOS.ASISTENCIA_VER },
   { label: 'Clientes', to: '/clientes', icon: Building2, permiso: PERMISOS.CLIENTES_VER },
   { label: 'Grupos', to: '/grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },

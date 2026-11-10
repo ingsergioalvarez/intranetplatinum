@@ -9,6 +9,7 @@ import { useSincronizacion } from '../../core/offline/sincronizar';
 import { AvisoPin } from '../../modules/auth/AvisoPin';
 import { OfertaPerfil } from '../../modules/auth/OfertaPerfil';
 import { BienvenidaRostro } from '../../modules/asistencia/BienvenidaRostro';
+import { AvisoPrivacidad } from '../../modules/privacidad/AvisoPrivacidad';
 import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuardia';
 import { AlertaEmergencia } from '../../modules/emergencias/AlertaEmergencia';
 import { BotonSOS } from '../../modules/emergencias/BotonSOS';
@@ -269,6 +270,7 @@ export function AppShell() {
       </div>
       <BottomNav />
       <ExigirPush />
+      <AvisoPrivacidad />
       <BienvenidaRostro />
       <VentanaTurno />
       <VentanaComida />

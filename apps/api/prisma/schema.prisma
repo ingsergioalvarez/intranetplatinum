@@ -65,6 +65,7 @@ model Usuario {
   gruposPropios        GrupoGuardias[]      @relation("GruposDe")
   reportesClienteHechos ReporteCliente[]    @relation("ReporteClienteDe")
   reportesClienteSobreMi ReporteCliente[]   @relation("ReporteClienteSobre")
+  aceptacionesAviso    AceptacionAvisoPrivacidad[]
   passwordHash         String               @map("password_hash") @db.VarChar(255)
   rolId                Int                  @map("rol_id")
   // Usuario de rol cliente: a qué cliente pertenece (portal F5-01).
@@ -1369,4 +1370,20 @@ model Emergencia {
   @@index([estado, createdAt])
   @@index([usuarioId, createdAt])
   @@map("emergencias")
+}
+
+/// Aceptación del aviso de privacidad por el uso del rostro (A-68). Una fila por guardia y versión del texto;
+/// la fecha es la del servidor (D-007). Sin ninguna aceptación el guardia no puede checar.
+model AceptacionAvisoPrivacidad {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int      @map("usuario_id")
+  /// Versión del texto que aceptó (`AVISO_PRIVACIDAD_VERSION` de `@platinum/shared`).
+  version    String   @db.VarChar(40)
+  aceptadaEn DateTime @default(now()) @map("aceptada_en")
+  ip         String?  @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.VarChar(255)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, version])
+  @@map("aceptaciones_aviso_privacidad")
 }

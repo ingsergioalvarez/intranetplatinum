@@ -25,3 +25,5 @@ export * from './schemas/casosCobertura';
 export * from './schemas/emergencias';
 export * from './schemas/carteras';
 export * from './schemas/reportesCliente';
+export * from './constants/avisoPrivacidad';
+export * from './schemas/privacidad';

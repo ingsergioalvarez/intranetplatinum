@@ -20,6 +20,7 @@ import { solicitudesCoberturaModule } from './solicitudes-cobertura';
 import { ausenciasModule } from './ausencias';
 import { carterasModule } from './carteras';
 import { emergenciasModule } from './emergencias';
+import { privacidadModule } from './privacidad';
 import { pushModule } from './push';
 import { reportesModule } from './reportes';
 import { reportesClienteModule } from './reportes-cliente';
@@ -43,6 +44,7 @@ export const modules: AppModule[] = [
   categoriasModule,
   reportesModule,
   reportesClienteModule,
+  privacidadModule,
   archivosModule,
   avisosModule,
   pushModule,

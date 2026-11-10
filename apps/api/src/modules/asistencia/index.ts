@@ -32,6 +32,7 @@ import { bitacoraConPrisma, type RegistrarBitacora } from '../bitacora/registrar
 import { avisarConPrisma } from '../avisos/avisar';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { crearServicioEmergencias } from '../emergencias';
+import { avisoAceptadoConPrisma, requireAvisoAceptado, type AvisoAceptado } from '../privacidad/aceptado';
 import { crearServicioSolicitudes } from '../solicitudes-cobertura';
 import type { SolicitudesPuerto } from '../solicitudes-cobertura/solicitudes.service';
 import { medidasConPrisma, type MedidasPuerto } from '../medidas/medidas';
@@ -72,6 +73,8 @@ interface AsistenciaModuleDeps {
   atencion?: AvisosAtencion;
   /** Solicitudes de cobertura (A-39); en pruebas, sin ellas. */
   solicitudes?: SolicitudesPuerto;
+  /** ¿Aceptó el aviso de privacidad? Sin aceptarlo no puede checar ni registrar su rostro (A-68); en pruebas, siempre. */
+  avisoAceptado?: AvisoAceptado;
 }
 
 /**
@@ -97,12 +100,15 @@ export function createAsistenciaModule({
   medidas = medidasConPrisma,
   atencion = atencionConPrisma,
   solicitudes = crearServicioSolicitudes(),
+  avisoAceptado = avisoAceptadoConPrisma,
 }: AsistenciaModuleDeps = {}): AppModule {
   const c = new AsistenciaController(
     new AsistenciaService(repo, misSitios, storage, audit, ahora, hoy, bitacora, llegada, extras, medidas, atencion, solicitudes),
     alcance,
   );
   const marcar = requirePermission(PERMISOS.ASISTENCIA_MARCAR);
+  // Además de poder marcar, debe haber aceptado el aviso de privacidad por el uso del rostro (A-68).
+  const conAviso = requireAvisoAceptado(avisoAceptado);
   const ver = requirePermission(PERMISOS.ASISTENCIA_VER);
   const rostros = requirePermission(PERMISOS.ASISTENCIA_ROSTROS);
   // Una sola foto; en peticiones JSON (comida) multer no hace nada.
@@ -114,15 +120,16 @@ export function createAsistenciaModule({
   router.use(authenticate);
   // Guardia
   router.get('/estado', marcar, c.estado);
-  router.post('/marcas', marcar, foto, validate({ body: marcacionCreateSchema }), c.marcar);
+  router.post('/marcas', marcar, conAviso, foto, validate({ body: marcacionCreateSchema }), c.marcar);
   // Verificación en vivo del titular con la cámara abierta (DA-28) e intentos rechazados (DA-31).
-  router.post('/verificar-rostro', marcar, validate({ body: verificacionRostroSchema }), c.verificarRostro);
+  router.post('/verificar-rostro', marcar, conAviso, validate({ body: verificacionRostroSchema }), c.verificarRostro);
   router.post('/incidencias', marcar, foto, validate({ body: incidenciaCreateSchema }), c.reportarIncidencia);
   router.get('/mias', marcar, validate({ query: misMarcasQuerySchema }), c.mias);
   // Primer registro de su rostro, una sola vez (queda pendiente de revisión).
   router.post(
     '/mi-rostro',
     marcar,
+    conAviso,
     fotosRostro,
     validate({ body: rostroRegistroSchema }),
     c.autoregistrarRostro,

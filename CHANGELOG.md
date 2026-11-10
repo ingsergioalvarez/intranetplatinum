@@ -7,6 +7,10 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ### Sesión 2026-11-09 #47 — Barra lateral estable y ordenar pendientes
 
+#### Añadido
+
+- **Aviso de privacidad por el uso del rostro (A-68, D-026)**: a todo guardia que checa le sale una ventana con un resumen y el aviso completo; marca una casilla y acepta. Sin aceptar, el Checador queda bloqueado y el servidor rechaza checar, verificar el rostro y registrarlo. Se guarda la versión, la fecha del servidor, la IP y el dispositivo, y queda en auditoría. Si el texto cambia, se le muestra de nuevo sin bloquearle el checador. Al guardia y a su admin les llega un aviso mientras falte (se marca atendido al aceptar). Admin y supervisor tienen la pantalla **Privacidad** con quién aceptó y quién falta (por cartera), y el texto vigente. Texto en borrador, con los datos pendientes entre corchetes, en `docs/AVISO_PRIVACIDAD_BORRADOR.md` para el abogado. Migración 20261109000000 (tabla `aceptaciones_aviso_privacidad`). 20 pruebas nuevas (568 en total).
+
 #### Corregido
 
 - **Barra lateral de escritorio**: al abrir un modal con la página bajada, la barra se despegaba y dejaba un hueco en blanco abajo. Ahora va fija a la pantalla (`fixed`) y el contenido deja su espacio; en celular no cambia nada.

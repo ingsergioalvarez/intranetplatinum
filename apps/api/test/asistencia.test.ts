@@ -15,6 +15,7 @@ import {
 import { createApp } from '../src/app';
 import { StorageService, signAccessToken } from '../src/core';
 import { createAsistenciaModule } from '../src/modules/asistencia';
+import { avisoSiempreAceptado } from '../src/modules/privacidad/aceptado';
 import { sinHorasExtra } from '../src/modules/horas-extra/puerto';
 import { sinMedidas, type MedidaNueva } from '../src/modules/medidas/medidas';
 import { sinAtencion } from '../src/modules/avisos/atencion';
@@ -463,6 +464,7 @@ beforeEach(() => {
       bitacora: async (e) => void bitacora.push(e),
       alcance: sinAlcance,
       llegada: async () => undefined,
+      avisoAceptado: avisoSiempreAceptado,
       solicitudes: { ...sinSolicitudes, crear: async (d) => void solicitudesCreadas.push(d) },
       atencion: { ...sinAtencion, atender: async (entidad, a) => void atendidos.push({ entidad, resultado: a.resultado }) },
       medidas: {
