@@ -14,7 +14,7 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Manual del Supervisor (A-44)**: 24 secciones por tarea (tablero, asistencia del día, enviar a cubrir, retardo y falta, ficha del guardia, rostros e incidencias, cambios de turno, casos de cobertura, calendario y solicitudes, horas extra, ausencias, emergencias, reportes, quejas, reportes de asistencia y horarios, clientes y sitios, turnos, grupos, usuarios y privacidad, qué no puede hacer y a quién pedirlo). Los textos salen de leer el código, no de suposiciones. El PDF `npm run manual` ahora genera también el del Supervisor. 6 capturas nuevas pendientes (S01-S06).
 
 - **Menú de la cuenta (A-72)**: el encabezado ahora es un perfil: círculo con las iniciales a la izquierda; nombre, rol y estado alineados a la derecha; punto verde y "En línea" (gris y "Sin conexión" sin internet, con el aviso del navegador). Fondo suave de la marca.
-- **Índice de Ayuda (A-72)**: tocar una sección dejaba la pantalla más abajo del título porque el índice se cerraba mientras se calculaba el desplazamiento. Ahora se cierra primero y luego se desplaza. Comprobado con las 76 secciones de los manuales, en celular y escritorio.
+- **Índice de Ayuda (A-72)**: tocar una sección dejaba la pantalla más abajo del título porque el índice se cerraba mientras se calculaba el desplazamiento. Ahora se cierra primero y luego se desplaza. Comprobado con 111 secciones de los manuales (guardia y supervisor en celular, administrador en escritorio).
 
 #### Plan
 
