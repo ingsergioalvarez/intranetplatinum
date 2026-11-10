@@ -40,8 +40,7 @@ export default defineConfig(({ mode }) => ({
         globIgnores: ['modelos/**'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: '/index.html',
-        // /manual/*.pdf son archivos reales (A-44): sin esto el service worker los taparía con la pantalla principal.
-        navigateFallbackDenylist: [/^\/api\//, /^\/manual\//],
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             // Modelos de reconocimiento y antispoof: se guardan la primera vez que se abre el Checador.

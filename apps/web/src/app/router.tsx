@@ -59,6 +59,8 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <InicioPage /> },
+      // Ayuda (A-69): el manual viaja con la app, pero se carga solo al abrirla.
+      { path: 'ayuda', lazy: async () => ({ Component: (await import('../modules/ayuda/AyudaPage')).AyudaPage }) },
       {
         path: 'acceso-rapido',
         element: (

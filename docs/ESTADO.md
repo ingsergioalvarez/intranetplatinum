@@ -2,7 +2,7 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-11-10 (manual del guardia en PDF, A-44, en progreso: parte común y Guardia en borrador, sin capturas; nuevas tareas A-69 pantalla de Ayuda con "?" y A-70 instalación obligatoria de la app, pendientes) · antes: 2026-11-09 (aviso de privacidad del rostro, A-68: hecho y probado en local, con migración 20261109000000, sin subir al servidor)
+**Última actualización:** 2026-11-10 (manual de usuario, A-44, en progreso: parte común y Guardia en borrador, sin capturas; Ayuda con "?" dentro de la app, A-69, hecha y probada en local, sin subir; PDF solo en local; A-70 instalación obligatoria de la app, pendiente) · antes: 2026-11-09 (aviso de privacidad del rostro, A-68: hecho y probado en local, con migración 20261109000000, sin subir al servidor)
 **Fase actual:** Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel de Cloudflare, en `platinum.grupocomunicalo.mx`) con asistencia completa, reportes, portal del cliente, botón SOS, carteras de admin y reportes del cliente. Estado: terminado y en mantenimiento; se hacen mejoras que el usuario pide.
 **Última tarea terminada:** A-59 (reportes del cliente sobre el servicio o un guardia): en el servidor (migración 20261105000000) y probada por el usuario con un cliente. Todo lo anterior (hasta A-66, carteras fase 2) también está en el servidor y probado.
 **Tarea en progreso:** ninguna. Hecha el 2026-11-09 y probada en local: A-68 (aviso de privacidad por el uso del rostro; 568 pruebas pasando, tipado y lint limpios). Falta subirla al servidor (migración nueva: `docker compose exec api npx prisma migrate deploy`) y que el abogado revise el texto.

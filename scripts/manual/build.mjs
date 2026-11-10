@@ -2,7 +2,8 @@
  * Arma el manual de usuario en PDF (A-44). Lee los `.md` de `docs/manual/`, los convierte a una página HTML con el
  * estilo de `manual.css` y la imprime a PDF con Microsoft Edge sin ventana (modo "headless").
  *
- * Uso: `npm run manual` desde la raíz. Salida: `apps/web/public/manual/manual-<rol>.pdf`.
+ * Uso: `npm run manual` desde la raíz. Salida: `docs/manual/pdf/manual-<rol>.pdf` (solo local: no se sube a git ni
+ * se publica; el manual se lee dentro de la app, en Ayuda).
  * Con `--html` solo deja la página HTML en la carpeta temporal y muestra su ruta (para revisar el diseño).
  */
 import { execFileSync } from 'node:child_process';
@@ -15,7 +16,7 @@ import { Marked } from 'marked';
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MANUAL = join(RAIZ, 'docs', 'manual');
 const CAPTURAS = join(MANUAL, 'capturas');
-const SALIDA = join(RAIZ, 'apps', 'web', 'public', 'manual');
+const SALIDA = join(MANUAL, 'pdf');
 const CSS = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'manual.css'), 'utf8');
 const ICONO = pathToFileURL(join(RAIZ, 'apps', 'web', 'public', 'favicon.svg')).href;
 

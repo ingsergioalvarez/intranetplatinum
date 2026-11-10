@@ -1,6 +1,8 @@
 # Manual de usuario de Platinum Intranet (A-44)
 
-Esta carpeta es la **fuente única** del manual. Se edita aquí, en texto (`.md`); de estos mismos archivos salen la pantalla de Ayuda de la app (A-69) y el PDF descargable. **No se edita el PDF a mano.**
+Esta carpeta es la **fuente única** del manual. Se edita aquí, en texto (`.md`). De estos mismos archivos sale la pantalla de **Ayuda** de la app (icono "?"), que se empaqueta con la app: se lee sin conexión y solo entrando con cuenta. Cada rol ve su manual; el administrador ve todos.
+
+El **PDF** (`npm run manual`) se genera solo en local, en `docs/manual/pdf/` (no se sube a git ni se publica en el dominio). **No se edita a mano.**
 
 ## Archivos
 

@@ -17,3 +17,6 @@ dev-dist/
 
 # Paquete para subir al servidor (git archive)
 *.tar.gz
+
+# PDF del manual generado con `npm run manual` (solo local)
+docs/manual/pdf/

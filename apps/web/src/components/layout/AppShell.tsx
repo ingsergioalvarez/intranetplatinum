@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Ellipsis, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
+import { CircleHelp, Ellipsis, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
 import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
@@ -22,6 +22,15 @@ function useVisibleNav() {
   const user = useAuthStore((s) => s.user);
   return navItems.filter(
     (i) => hasPermission(user, i.permiso) && hasRole(user, i.roles) && (!i.superAdmin || !!user?.esSuperAdmin),
+  );
+}
+
+/** Icono "?" del celular (A-69): lleva a la Ayuda, el manual de usuario dentro de la app. En escritorio es un enlace abajo de la barra lateral. */
+function BotonAyuda() {
+  return (
+    <Link to="/ayuda" className="rounded-lg p-2 text-brand-100 active:bg-brand-800" aria-label="Ayuda: manual de uso">
+      <CircleHelp className="size-5" />
+    </Link>
   );
 }
 
@@ -82,7 +91,10 @@ function Sidebar() {
         <div className="border-t border-brand-800 p-4">
           <p className="truncate text-sm font-medium">{user.nombre}</p>
           <p className="truncate text-xs text-brand-200">{ROL_DESCRIPCIONES[user.rol]}</p>
-          <Link to="/acceso-rapido" className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white">
+          <Link to="/ayuda" className="mt-3 flex items-center gap-2 text-sm text-brand-200 hover:text-white">
+            <CircleHelp className="size-4" /> Ayuda
+          </Link>
+          <Link to="/acceso-rapido" className="mt-2 flex items-center gap-2 text-sm text-brand-200 hover:text-white">
             <LockKeyhole className="size-4" /> Acceso rápido (PIN)
           </Link>
           <Link
@@ -112,6 +124,7 @@ function Topbar() {
         {user && (
           <div className="flex items-center gap-1">
             <Campanita />
+            <BotonAyuda />
             <Link
               to="/acceso-rapido"
               className="rounded-lg p-2 text-brand-100 active:bg-brand-800"

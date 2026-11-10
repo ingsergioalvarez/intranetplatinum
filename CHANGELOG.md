@@ -9,16 +9,14 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 #### Añadido
 
-- **Manual del Guardia en PDF (A-44)**: parte común (instalar, notificaciones, entrar, PIN, campanita, aviso de privacidad) y todo lo del guardia por tareas (checador, comida, salida, horas extra, sin señal, SOS, sitios, reportes, ausencias, cambios de turno), con los textos exactos de la app. El texto vive en `docs/manual/*.md` (fuente única) y `npm run manual` lo convierte a PDF con el estilo de los reportes (portada, índice, encabezado y pie, recuadros y tablas) usando Edge sin ventana. Sale en `apps/web/public/manual/manual-guardia.pdf` (`/manual/manual-guardia.pdf` en la web). Las capturas faltantes aparecen como recuadros de "Captura pendiente"; lista en `docs/manual/capturas/PENDIENTES.md` (27).
-- Herramienta de desarrollo `marked` (convierte el texto a página web); no entra a la app ni al servidor.
-
-#### Cambiado
-
-- El service worker ya no tapa `/manual/*` con la pantalla principal (sin esto, quien tiene la app instalada no podría abrir el PDF).
+- **Manual del Guardia (A-44)**: parte común (instalar, notificaciones, entrar, PIN, campanita, aviso de privacidad) y todo lo del guardia por tareas (checador, comida, salida, horas extra, sin señal, SOS, sitios, reportes, ausencias, cambios de turno), con los textos exactos de la app. El texto vive en `docs/manual/*.md` (fuente única). Las capturas faltantes aparecen como recuadros de "Captura pendiente"; lista en `docs/manual/capturas/PENDIENTES.md` (27).
+- **Ayuda dentro de la app (A-69)**: icono "?" junto a la campanita en el celular (y enlace "Ayuda" en la barra lateral en escritorio) que abre el manual del rol: Parte común y el suyo; el administrador ve todos. Índice plegable, tablas como tarjetas en el celular, recuadros de color. Se empaqueta con la app (se lee sin conexión) y se carga solo al abrirla (83 KB). Si el manual del rol aún no existe, lo avisa y muestra la parte común.
+- **PDF solo en local**: `npm run manual` genera `docs/manual/pdf/manual-guardia.pdf` con el estilo de los reportes (portada, índice, encabezado y pie) usando Edge sin ventana. No se sube a git ni se publica en el dominio.
+- `marked` (convierte el texto del manual a página) como dependencia de la web.
 
 #### Plan
 
-- Nuevas tareas pendientes: **A-69** (pantalla de Ayuda con el icono "?" dentro de la app, con el manual del rol y "Descargar PDF") y **A-70** (instalación obligatoria de la app en celular, con ventana de instalación en Android y pasos en iPhone). A-44 en progreso: faltan Supervisor, Administrador y Cliente.
+- **A-69** hecha en local; nueva tarea pendiente **A-70** (instalación obligatoria de la app en celular, con ventana de instalación en Android y pasos en iPhone). A-44 en progreso: faltan Supervisor, Administrador y Cliente.
 
 ### Sesión 2026-11-09 #47 — Barra lateral estable y ordenar pendientes
 
