@@ -1,17 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LockKeyhole } from 'lucide-react';
 import { Button } from '../../components/ui';
 import { useAuthStore } from '../../core/auth/authStore';
-import { avisoPinOculto, ocultarAvisoPin, perfilDeUsuario } from '../../core/auth/perfiles';
+import { alCambiarPerfiles, avisoPinOculto, ocultarAvisoPin, perfilDeUsuario } from '../../core/auth/perfiles';
 
 /**
  * "Entra más rápido" (A-40): a quien tiene su perfil guardado en este celular y no tiene PIN le ofrece
- * crearlo. "Ahora no" lo oculta; siempre se puede crear después en Acceso rápido.
+ * crearlo. "Ahora no" lo oculta hasta que cierre su sesión; siempre se puede crear después en Acceso rápido.
+ * Se actualiza solo al crear o quitar el PIN.
  */
 export function AvisoPin() {
   const user = useAuthStore((s) => s.user);
   const [, rerender] = useState(0);
+  useEffect(() => alCambiarPerfiles(() => rerender((n) => n + 1)), []);
   if (!user || user.debeCambiarPassword) return null;
   const perfil = perfilDeUsuario(user.id);
   if (!perfil || perfil.tienePin || avisoPinOculto(user.id)) return null;
@@ -30,10 +32,7 @@ export function AvisoPin() {
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => {
-            ocultarAvisoPin(user.id);
-            rerender((n) => n + 1);
-          }}
+          onClick={() => ocultarAvisoPin(user.id)}
         >
           Ahora no
         </Button>

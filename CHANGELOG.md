@@ -13,6 +13,8 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 #### Corregido
 
+- **Aviso "Entra más rápido" (A-40)**: desaparece en cuanto se crea el PIN (antes se quedaba hasta recargar). "Ahora no" ahora solo dura hasta cerrar sesión (antes se recordaba para siempre): quien siga sin PIN lo vuelve a ver al entrar.
+- **Botón SOS (A-60)**: la ventana "Alerta enviada" ya se puede cerrar, con una X o tocando fuera; cerrar no cancela la alerta. Mientras siga activa queda una franja roja "Alerta activa · Ver estado" para volver a abrirla. La ventana se abre sola al enviar y cuando alguien recibe la alerta; al recargar con una alerta activa no se abre a pantalla completa.
 - **Checador sin aceptar el aviso de privacidad (A-68)**: el botón "Registrar mi rostro" sale deshabilitado hasta que acepte (antes no hacía nada) y el aviso dice "Lo necesitas para poder registrarte o checar".
 - **Barra lateral de escritorio**: al abrir un modal con la página bajada, la barra se despegaba y dejaba un hueco en blanco abajo. Ahora va fija a la pantalla (`fixed`) y el contenido deja su espacio; en celular no cambia nada.
 

@@ -21,6 +21,15 @@ export interface PerfilRapido {
 
 const CLAVE = 'auth.perfiles';
 const AVISO_PIN = 'auth.avisoPinOculto';
+const EVENTO = 'auth:perfiles';
+
+/** Las pantallas que muestran algo de las tarjetas (como el aviso "Crea un PIN") se actualizan al cambiar. */
+const notificar = () => window.dispatchEvent(new Event(EVENTO));
+
+export const alCambiarPerfiles = (fn: () => void) => {
+  window.addEventListener(EVENTO, fn);
+  return () => window.removeEventListener(EVENTO, fn);
+};
 
 function leer(): PerfilRapido[] {
   try {
@@ -37,6 +46,7 @@ function escribir(lista: PerfilRapido[]) {
   } catch {
     // Sin almacenamiento (modo privado): no hay tarjetas, se entra con contraseña.
   }
+  notificar();
 }
 
 /** Tarjetas de este celular, la más reciente primero. */
@@ -60,7 +70,7 @@ export function quitarPerfil(usuarioId: number) {
   escribir(leer().filter((p) => p.usuarioId !== usuarioId));
 }
 
-/** El aviso "Crea un PIN" se oculta por guardia con "Ahora no". */
+/** El aviso "Crea un PIN" se oculta con "Ahora no" hasta que la persona cierre su sesión. */
 export function avisoPinOculto(usuarioId: number) {
   try {
     return (JSON.parse(localStorage.getItem(AVISO_PIN) ?? '[]') as number[]).includes(usuarioId);
@@ -76,5 +86,15 @@ export function ocultarAvisoPin(usuarioId: number) {
     localStorage.setItem(AVISO_PIN, JSON.stringify([...ids]));
   } catch {
     // Sin almacenamiento: el aviso volverá a salir.
+  }
+  notificar();
+}
+
+/** Al cerrar sesión, "Ahora no" se olvida: quien siga sin PIN lo vuelve a ver al entrar. */
+export function reiniciarAvisoPin() {
+  try {
+    localStorage.removeItem(AVISO_PIN);
+  } catch {
+    // Sin almacenamiento: nada que reiniciar.
   }
 }

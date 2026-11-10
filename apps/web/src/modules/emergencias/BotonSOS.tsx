@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, MapPin, Phone, Siren } from 'lucide-react';
+import { CircleCheck, MapPin, Phone, Siren, X } from 'lucide-react';
 import {
   SEGUNDOS_PRESIONAR_SOS,
   TIPOS_EMERGENCIA,
@@ -43,6 +43,8 @@ async function bateria(): Promise<number | undefined> {
 /**
  * Botón de pánico (A-60): flotante, en todas las pantallas. Se mantiene presionado 2 segundos (con un anillo que
  * se llena) para que no se active por accidente; al completarse la alerta sale de inmediato, sin preguntar nada.
+ * La ventana "Alerta enviada" se abre sola al enviar y cuando alguien la recibe; se puede cerrar (la alerta sigue
+ * activa) y queda una franja roja para volver a abrirla.
  */
 export function BotonSOS() {
   const qc = useQueryClient();
@@ -58,6 +60,8 @@ export function BotonSOS() {
   const inicio = useRef<number | null>(null);
   const raf = useRef(0);
   const ubicacion = useRef<Promise<Posicion> | null>(null);
+  // Ventana "Alerta enviada" abierta o minimizada en la franja.
+  const [abierta, setAbierta] = useState(false);
 
   const enviar = useCallback(async () => {
     setEnviando(true);
@@ -70,6 +74,7 @@ export function BotonSOS() {
       ]);
       const e = await emergenciasService.crear({ ...pos, bateria: await bateria() });
       qc.setQueryData(emergenciasService.keys.mia, e);
+      setAbierta(true);
       navigator.vibrate?.([300, 100, 300]);
     } catch (err) {
       setFalloEnvio(true);
@@ -106,6 +111,19 @@ export function BotonSOS() {
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
   const activa = mia.data;
+  // Quién la recibió la última vez que se vio: si pasa de nadie a alguien, la ventana se abre sola. Al recargar con una
+  // alerta ya activa no se abre a pantalla completa: queda la franja.
+  const acusadaAntes = useRef<string | null | undefined>(undefined);
+  const acusadaAhora = activa ? (activa.acusadaPor ?? null) : undefined;
+  useEffect(() => {
+    if (acusadaAhora === undefined) {
+      setAbierta(false);
+    } else if (acusadaAntes.current === null && acusadaAhora !== null) {
+      setAbierta(true);
+    }
+    acusadaAntes.current = acusadaAhora;
+  }, [acusadaAhora]);
+
   return (
     <>
       <button
@@ -147,14 +165,37 @@ export function BotonSOS() {
       {falloEnvio && !activa && (
         <FalloEnvio onReintentar={() => void enviar()} onCerrar={() => setFalloEnvio(false)} />
       )}
-      {activa && <EstadoAlerta emergencia={activa} />}
+      {activa && abierta && <EstadoAlerta emergencia={activa} onCerrar={() => setAbierta(false)} />}
+      {activa && !abierta && (
+        <button
+          type="button"
+          onClick={() => setAbierta(true)}
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 right-20 z-40 flex h-10 items-center justify-center gap-2 rounded-full bg-red-600 px-4 text-sm font-semibold text-white shadow-lg ring-2 ring-white md:right-24 md:left-auto md:bottom-8"
+        >
+          <Siren className="size-4 shrink-0" /> Alerta activa · Ver estado
+        </button>
+      )}
     </>
   );
 }
 
-function Capa({ children }: { children: React.ReactNode }) {
+/** Capa a pantalla completa. Con `onCerrar` se cierra al tocar fuera o con Escape. */
+function Capa({ children, onCerrar }: { children: React.ReactNode; onCerrar?: () => void }) {
+  useEffect(() => {
+    if (!onCerrar) return;
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCerrar();
+    };
+    document.addEventListener('keydown', alTeclear);
+    return () => document.removeEventListener('keydown', alTeclear);
+  }, [onCerrar]);
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/60 p-0 md:items-center md:p-4">
+    <div
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/60 p-0 md:items-center md:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCerrar?.();
+      }}
+    >
       <div className="pb-safe max-h-dvh w-full overflow-y-auto rounded-t-2xl bg-white shadow-xl md:max-w-md md:rounded-2xl">
         {children}
       </div>
@@ -194,7 +235,7 @@ function Marcador({ supervisor }: { supervisor?: Emergencia['supervisor'] }) {
 
 function FalloEnvio({ onReintentar, onCerrar }: { onReintentar: () => void; onCerrar: () => void }) {
   return (
-    <Capa>
+    <Capa onCerrar={onCerrar}>
       <div className="space-y-3 p-5">
         <h2 className="text-lg font-bold text-red-700">No se pudo enviar la alerta</h2>
         <p className="text-sm text-slate-700">
@@ -215,7 +256,7 @@ function FalloEnvio({ onReintentar, onCerrar }: { onReintentar: () => void; onCe
 }
 
 /** Lo que ve quien lanzó la alerta: si ya la recibieron, qué tipo es y la salida "fue sin querer". */
-function EstadoAlerta({ emergencia: e }: { emergencia: Emergencia }) {
+function EstadoAlerta({ emergencia: e, onCerrar }: { emergencia: Emergencia; onCerrar: () => void }) {
   const qc = useQueryClient();
   const refrescar = (nueva: Emergencia | null) => {
     qc.setQueryData(emergenciasService.keys.mia, nueva);
@@ -238,16 +279,25 @@ function EstadoAlerta({ emergencia: e }: { emergencia: Emergencia }) {
   const [confirmando, setConfirmando] = useState(false);
 
   return (
-    <Capa>
+    <Capa onCerrar={onCerrar}>
       <div className="space-y-4 p-5">
         <div className="flex items-center gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-full bg-red-100 text-red-700">
             <Siren className="size-6" />
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold text-slate-900">Alerta enviada</h2>
             <p className="text-sm text-slate-500">{formatFechaHora(e.createdAt)}</p>
           </div>
+          <button
+            type="button"
+            onClick={onCerrar}
+            aria-label="Cerrar: la alerta sigue activa"
+            title="Cerrar (la alerta sigue activa)"
+            className="grid size-10 shrink-0 place-items-center rounded-full text-slate-500 active:bg-slate-100"
+          >
+            <X className="size-5" />
+          </button>
         </div>
 
         {e.acusadaPor ? (

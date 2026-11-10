@@ -2,7 +2,13 @@ import type { AuthSession, CambiarPasswordInput, LoginInput } from '@platinum/sh
 import { ApiError, api, queryClient, type ApiClient } from '../api';
 import { useAuthStore } from './authStore';
 import { useOfertaPerfil } from './ofertaPerfil';
-import { actualizarPerfil, guardarPerfil as guardarTarjeta, perfilPorCorreo, type PerfilRapido } from './perfiles';
+import {
+  actualizarPerfil,
+  guardarPerfil as guardarTarjeta,
+  perfilPorCorreo,
+  reiniciarAvisoPin,
+  type PerfilRapido,
+} from './perfiles';
 
 const PERFIL = 'offline.perfil';
 
@@ -152,6 +158,7 @@ export class AuthService {
     } catch {
       // Nada que limpiar.
     }
+    reiniciarAvisoPin();
     useAuthStore.getState().logout();
     queryClient.clear();
   }
