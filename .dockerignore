@@ -9,4 +9,6 @@
 apps/api/uploads
 apps/api/src/generated
 **/*.log
-docs
+docs/*
+!docs/manual
+docs/manual/pdf

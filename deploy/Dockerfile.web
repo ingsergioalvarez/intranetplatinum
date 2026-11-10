@@ -4,6 +4,8 @@ WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
+# El manual de Ayuda (A-69) se empaqueta con la app desde docs/manual.
+COPY docs/manual ./docs/manual
 RUN npm ci --workspace=@platinum/web --workspace=@platinum/shared --include-workspace-root
 RUN npm run build -w @platinum/web
 
