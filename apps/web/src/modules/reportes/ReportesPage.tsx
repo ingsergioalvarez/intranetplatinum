@@ -178,7 +178,9 @@ export function ReportesPage() {
   };
 
   const q = useDebounced(busqueda.trim());
-  const esMio = soloPropios ? tabGuardia === 'mios' : mios;
+  // "Solo los míos" es la pestaña del guardia. El cliente tampoco ve todos los reportes, pero no crea reportes de
+  // guardia: pedirle "los que yo creé" le dejaba la lista vacía. Al cliente el servidor ya lo limita a su empresa.
+  const esMio = soloPropios ? yo?.rol === ROLES.GUARDIA && tabGuardia === 'mios' : mios;
 
   const filtros = {
     q: q || undefined,

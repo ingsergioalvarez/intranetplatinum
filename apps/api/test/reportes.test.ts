@@ -305,6 +305,19 @@ describe('visibilidad y seguimiento', () => {
     expect(capturado).toMatchObject({ creadoPorId: 5 });
   });
 
+  it('el cliente, sin pedir "solo los míos", ve la lista de los reportes de su empresa y de ninguna otra', async () => {
+    let filtroCapturado: ReporteFiltroData | null = null;
+    let visibilidadCapturada: unknown = null;
+    repo.findPaged = async (f: ReporteFiltroData, v: unknown) => {
+      filtroCapturado = f;
+      visibilidadCapturada = v;
+      return { items: [], total: 0, page: 1, limit: 20 };
+    };
+    await service.list(CLIENTE, { page: 1, limit: 20 });
+    expect(visibilidadCapturada).toEqual({ tipo: 'cliente', clienteId: 1 });
+    expect(filtroCapturado).not.toHaveProperty('creadoPorId');
+  });
+
   it('el cliente puede ver los reportes de su empresa y comentar en seguimiento', async () => {
     // El cliente puede consultar el detalle de su reporte
     const detalle = await service.detalle(CLIENTE, 1);

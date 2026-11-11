@@ -21,6 +21,10 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Capturas por carpeta (A-74)**: las imágenes del manual van en `docs/manual/capturas/<manual>/` (la letra del ID dice la carpeta). Nuevo `npm run manual:capturas`: muestra hechas, faltantes, pesadas, mal nombradas o en carpeta equivocada. En Ayuda, el administrador ve el nombre del archivo en cada recuadro pendiente. Probado con imágenes de prueba (ya borradas) en la app y en el PDF. Plan completo en el PLAN (A-74); **A-73** guarda los detalles de la app que el usuario irá pasando.
 - **Recuadros del manual**: una etiqueta en negritas al inicio (`> **IMPORTANTE:** texto`) ahora decide el tipo y se quita del texto, así no sale repetida. Igual en la pantalla de Ayuda y en el PDF.
 
+#### Corregido
+
+- **Lista "Reportes" del cliente (A-73a)**: salía vacía porque la pantalla le pedía al servidor "solo los que yo creé" y el cliente no crea reportes de guardia. Ahora ese filtro es solo de la pestaña "Mis reportes" del guardia; al cliente el servidor ya lo limita a su empresa. Prueba nueva en `reportes.test.ts`.
+
 #### Plan
 
 - **A-71** hecha, en el servidor. **A-72** hecha en local. **A-44** en progreso: falta Cliente.
