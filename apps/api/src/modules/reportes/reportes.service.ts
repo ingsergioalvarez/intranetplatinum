@@ -1,5 +1,6 @@
 import {
   MAX_FOTOS_REPORTE,
+  MAX_FOTOS_REPORTE_CLIENTE,
   PERMISOS,
   ROLES,
   TRANSICIONES_ESTATUS,
@@ -157,7 +158,8 @@ export class ReportesService extends BaseService {
       }
     }
     const cambia = estatus && estatus !== actual.estatus ? estatus : null;
-    const fotos = this.validarFotos(archivos);
+    // El cliente adjunta hasta 5 fotos por comentario (A-67); el personal, hasta 10.
+    const fotos = this.validarFotos(archivos, user.rol === ROLES.CLIENTE ? MAX_FOTOS_REPORTE_CLIENTE : MAX_FOTOS_REPORTE);
 
     const guardadas = await this.guardarFotos(fotos);
     try {
@@ -216,8 +218,8 @@ export class ReportesService extends BaseService {
   }
 
   /** Máximo de fotos y tipo real por firma de bytes (no por la extensión). */
-  private validarFotos(archivos: ArchivoSubido[]) {
-    if (archivos.length > MAX_FOTOS_REPORTE) throw errorFotos(`Máximo ${MAX_FOTOS_REPORTE} fotos`);
+  private validarFotos(archivos: ArchivoSubido[], max = MAX_FOTOS_REPORTE) {
+    if (archivos.length > max) throw errorFotos(`Máximo ${max} fotos`);
     return archivos.map((a, i) => {
       const mime = detectarImagen(a.buffer);
       if (!mime) throw errorFotos(`La foto ${i + 1} no es una imagen válida (JPG, PNG, WEBP o HEIC)`);

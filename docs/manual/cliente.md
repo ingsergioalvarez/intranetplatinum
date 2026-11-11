@@ -145,7 +145,7 @@ Toca un reporte. Verás:
 Tú también puedes escribir en un reporte, por ejemplo para dar un dato adicional o mandar una foto como evidencia:
 
 1. Abre el reporte y baja a **"Agregar un comentario"**.
-2. Escribe tu comentario en el cuadro (hasta 2,000 letras). Puedes agregar **fotos como evidencia** (hasta 10); son opcionales.
+2. Escribe tu comentario en el cuadro (hasta 2,000 letras). Puedes agregar **fotos como evidencia** (hasta 5); son opcionales.
 3. Toca **"Enviar comentario"**. Verás **"Comentario enviado"**.
 
 Tu comentario aparece en la línea del tiempo del reporte con tu nombre y la etiqueta **(Cliente)**, para que quien atiende el reporte sepa que lo escribiste tú.

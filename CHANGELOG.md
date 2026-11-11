@@ -17,7 +17,8 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 #### Añadido
 
 - **Fotos en los reportes del cliente (A-67)**: el cliente puede adjuntar hasta 5 fotos (solo imágenes) al levantar su reporte; las ven él, el supervisor del sitio y el administrador dueño, en miniaturas que se abren en grande. Tabla nueva `reporte_cliente_fotos` (migración `20261111000000_reportes_cliente_fotos`); los reportes anteriores quedan sin fotos. El servidor revisa que sean imágenes de verdad, limita a 5, guarda las fotos en `reportes-cliente/` y las borra si la base falla; al eliminar un cliente, sitio o usuario también se borran sus archivos. El "urgente" ya se entiende cuando el reporte viaja como formulario.
-- **Manuales**: Cliente (cómo adjuntar fotos y que no se agregan después), Supervisor y Administrador (ven las fotos).
+- **Comentarios del cliente en un reporte (A-67)**: también con tope de 5 fotos por comentario (antes 10), en la pantalla y en el servidor; guardia, supervisor y administrador siguen con 10.
+- **Manuales**: Cliente (cómo adjuntar fotos y que no se agregan después; comentarios con hasta 5), Supervisor y Administrador (ven las fotos).
 - **PLAN**: A-76 pantalla de auditoría (solo lectura; sin fecha).
 
 #### Corregido

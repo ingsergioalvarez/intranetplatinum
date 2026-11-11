@@ -5,6 +5,7 @@ import { ArrowRight, ChevronLeft, FilePlus2, MessageSquare, Navigation, Send } f
 import {
   ESTATUS_REPORTE_LABEL,
   MAX_FOTOS_REPORTE,
+  MAX_FOTOS_REPORTE_CLIENTE,
   ROLES,
   ROL_DESCRIPCIONES,
   type BandejaAvisos,
@@ -318,8 +319,12 @@ function FormSeguimiento({ reporte }: { reporte: ReporteDetalle }) {
       </FormField>
       {reporte.acciones.comentar && (
         <div className="space-y-1.5">
-          {esCliente && <p className="text-sm font-medium text-slate-700">Agregar fotos como evidencia (opcional)</p>}
-          <PhotoUploader value={fotos} onChange={setFotos} max={MAX_FOTOS_REPORTE} />
+          {esCliente && (
+            <p className="text-sm font-medium text-slate-700">
+              Agregar fotos como evidencia (opcional, hasta {MAX_FOTOS_REPORTE_CLIENTE})
+            </p>
+          )}
+          <PhotoUploader value={fotos} onChange={setFotos} max={esCliente ? MAX_FOTOS_REPORTE_CLIENTE : MAX_FOTOS_REPORTE} />
         </div>
       )}
       <div className="flex flex-col gap-3 md:flex-row md:items-end">

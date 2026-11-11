@@ -293,6 +293,15 @@ describe('visibilidad y seguimiento', () => {
     });
   });
 
+  it('el cliente comenta con hasta 5 fotos; guardia y supervisor, hasta 10 (A-67)', async () => {
+    const fotos = (n: number) => Array.from({ length: n }, () => foto());
+    expect(await codigo(service.agregarSeguimiento(CLIENTE, 1, { comentario: 'Más evidencia' }, fotos(5)))).toBe('OK');
+    expect(await codigo(service.agregarSeguimiento(CLIENTE, 1, { comentario: 'Demasiadas' }, fotos(6)))).toBe('400');
+    expect(await codigo(service.agregarSeguimiento(GUARDIA, 1, { comentario: 'Diez' }, fotos(10)))).toBe('OK');
+    expect(await codigo(service.agregarSeguimiento(GUARDIA, 1, { comentario: 'Once' }, fotos(11)))).toBe('400');
+    expect(await codigo(service.agregarSeguimiento(SUPERVISOR, 1, { comentario: 'Diez' }, fotos(10)))).toBe('OK');
+  });
+
   it('mismo estatus actual no cuenta como cambio', async () => {
     await service.agregarSeguimiento(SUPERVISOR, 1, { estatus: 'abierto', comentario: 'Revisado' }, []);
     expect(repo.seguimientos.at(-1)).toMatchObject({ estatusAnterior: null, estatusNuevo: null });
