@@ -2,6 +2,7 @@ import { BellRing, LogOut } from 'lucide-react';
 import { ROLES } from '@platinum/shared';
 import { authService } from '../../core/auth/AuthService';
 import { useAuthStore } from '../../core/auth/authStore';
+import { useRequisitoInstalacion } from '../../core/pwa/instalacion';
 import { usePush } from '../../core/push/usePush';
 import { Button, Modal, toast } from '../ui';
 
@@ -14,7 +15,9 @@ export function ExigirPush() {
   const { estado, trabajando, activar, revisar } = usePush();
   // El cliente no tiene turno: sus avisos son de reportes y novedades de sus sitios.
   const esCliente = useAuthStore((s) => s.user?.rol === ROLES.CLIENTE);
-  const pendiente = estado === 'apagado' || estado === 'bloqueado';
+  // Primero se pide instalar la app (en iPhone sin instalar las notificaciones ni se pueden activar): una ventana a la vez.
+  const { modo: instalacion } = useRequisitoInstalacion();
+  const pendiente = (estado === 'apagado' || estado === 'bloqueado') && instalacion === 'nada';
 
   return (
     <Modal

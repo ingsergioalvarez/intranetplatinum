@@ -4,15 +4,15 @@
 
 **Última actualización:** 2026-11-11 (detalles de la app, A-73, todos subidos y probados: reportes del cliente, rol en la línea del tiempo, ausencias y cambios de turno por cartera, foto de referencia en Asistencia, textos del cliente y aviso de privacidad; A-67 fotos en los reportes del cliente hecha en local, con migración, sin subir; manuales de los cinco roles con texto y sin capturas) · antes: 2026-11-10
 **Fase actual:** Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel de Cloudflare, en `platinum.grupocomunicalo.mx`) con asistencia completa, reportes, portal del cliente, botón SOS, carteras de admin y reportes del cliente. Estado: terminado y en mantenimiento; se hacen mejoras que el usuario pide.
-**Última tarea terminada:** A-67 (hasta 5 fotos en los reportes del cliente): las quejas con fotos ya están en el servidor (migración `20261111000000_reportes_cliente_fotos`) y probadas por el usuario; falta subir el tope de 5 fotos en los comentarios del cliente (581 pruebas pasando, tipado y lint limpios). Antes: A-75, ya en el servidor y probada por el usuario.
-**Tarea en progreso:** ninguna. Siguiente que el usuario pidió: A-70 (instalación obligatoria de la app en celular), "dependiendo de cómo se vea". A-73 queda cerrada salvo (g): auditoría sin pantalla (ahora es A-76) y correos (A-41).
+**Última tarea terminada:** A-70 (instalación obligatoria de la app en celular y tableta): hecha el 2026-11-11 en local, con tipado y lint limpios y probada con navegadores simulados; falta subirla y que el usuario pruebe la instalación real en Android e iPhone. Antes: A-67 completa (quejas con fotos y tope de 5 en comentarios del cliente), ya en el servidor.
+**Tarea en progreso:** ninguna. El usuario prueba A-70 y avisa. Pendientes: A-76 pantalla de auditoría (sin fecha), A-41 correos (faltan los datos del servidor de correo), A-61 pantalla del C2 (por definir) y A-74 capturas de los manuales.
 
 ## Siguiente paso
 
 El usuario traerá cambios pendientes. Ya registrados en el [PLAN](PLAN.md) y por definir con él antes de construir:
 
 1. **A-68 Aviso de privacidad:** construido (ver [AVISO_PRIVACIDAD_BORRADOR.md](AVISO_PRIVACIDAD_BORRADOR.md)). Falta: subirlo al servidor, que el abogado apruebe el texto y llenar sus datos entre corchetes (razón social y domicilio de Platinum, correo para derechos ARCO, plazos, transferencias y qué hace el guardia que no acepta) cambiando `packages/shared/src/constants/avisoPrivacidad.ts` y subiendo `AVISO_PRIVACIDAD_VERSION`; después regenerar el documento. Quitar `AVISO_PRIVACIDAD_ES_BORRADOR` cuando esté aprobado.
-2. **A-70 Instalación obligatoria de la app en celular:** el usuario pidió verla después de A-67; probar en Android e iPhone.
+2. **A-70 Instalación obligatoria de la app en celular:** construida; falta que el usuario pruebe la instalación real en Android e iPhone y avise.
 3. **A-76 Pantalla de auditoría** (solo lectura): el usuario la quiere, sin fecha. **A-41 Correos:** falta que el usuario dé host, puerto, usuario y remitente del servidor de correo. **A-61 Pantalla del C2:** sigue por definir.
 4. Otras cosas que el usuario fue notando al probar la app: las va a pasar para ordenarlas y compararlas con el código antes de tocar nada.
 

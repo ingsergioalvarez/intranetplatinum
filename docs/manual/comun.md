@@ -8,18 +8,21 @@ Es la aplicación de Platinum Agency para el trabajo diario: checar tu entrada y
 
 ## 2. Instalar la app en tu celular
 
-Puedes usar la app desde el navegador, pero instalada es más cómoda: se abre a pantalla completa, como cualquier otra app.
+**En el celular y la tableta la app se instala: es obligatorio.** Instalada se abre a pantalla completa, los avisos te llegan aunque esté cerrada y puedes checar aunque se vaya la señal. Por eso, **al abrir la página en el navegador del celular, la propia app te lo pide** con una ventana que no se puede cerrar. En computadora no se pide nada.
 
 **Android (Chrome)**
 1. Abre la dirección de Platinum en Chrome.
-2. Entra con tu cuenta (ver la sección 4).
-3. Cuando Chrome te ofrezca **"Instalar app"** o **"Agregar a pantalla de inicio"**, acepta. Si no te lo ofrece, abre el menú de Chrome (los tres puntos) y busca esa opción.
-4. Busca el icono **Platinum** en tu pantalla de inicio.
+2. Verás la ventana **"Instala la app"**. Toca **"Instalar"** y acepta.
+3. Cuando diga **"Listo, ya está instalada"**, busca el icono **Platinum** en tu pantalla de inicio y abre la app desde ahí.
 
 **iPhone (Safari)**
 1. Abre la dirección de Platinum en **Safari** (no en otro navegador).
-2. Toca **Compartir** y luego **"Agregar a pantalla de inicio"**.
-3. Abre la app desde el icono nuevo.
+2. La ventana **"Instala la app en tu iPhone"** te da los pasos: toca **Compartir** y luego **"Agregar a pantalla de inicio"**.
+3. Toca **Agregar** y abre la app desde el icono nuevo.
+
+**Si ya la instalaste** y abres la página en el navegador, la ventana dice **"Ya tienes la app instalada"**: ciérrala y ábrela desde el icono **Platinum**. Desde el navegador no se puede abrir sola. Si ya la borraste, toca **"Ya no la tengo instalada"** para volver a instalarla.
+
+**Si tu navegador no puede instalarla** (Chrome en iPhone, Firefox, o el navegador que se abre dentro de WhatsApp), la ventana dice **"Instala la app si puedes"**: ábrela en **Chrome** (Android) o **Safari** (iPhone) e instálala. Puedes tocar **"Continuar"** (se activa a los 5 segundos) para no quedarte sin trabajar, pero **la ventana sale cada vez que abres la página** mientras no la instales.
 
 > **Importante en iPhone:** los avisos solo llegan con la app instalada en la pantalla de inicio y con iOS 16.4 o más nuevo.
 

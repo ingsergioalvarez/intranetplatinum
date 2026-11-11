@@ -21,6 +21,9 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Manuales**: Cliente (cómo adjuntar fotos y que no se agregan después; comentarios con hasta 5), Supervisor y Administrador (ven las fotos).
 - **PLAN**: A-76 pantalla de auditoría (solo lectura; sin fecha).
 
+- **Instalación obligatoria de la app en celular y tableta (A-70)**: al abrir la página en el navegador de un celular o tableta (cualquier rol, nunca en computadora ni con la app ya abierta como instalada) sale una ventana que no se puede cerrar. Android: botón "Instalar" con la instalación nativa; iPhone (Safari): los pasos de "Compartir → Agregar a pantalla de inicio"; si ya está instalada, "ábrela desde su icono" (con "Ya no la tengo instalada" por si la borró); si el navegador no puede instalar (Chrome en iPhone, Firefox, navegador de WhatsApp, o Android sin el aviso de instalación), instrucciones y "Continuar", que se activa a los 5 segundos y deja la ventana de vuelta cada vez que se abre la página. Va antes de la ventana de notificaciones (una a la vez). Probada con navegadores simulados; falta probar la instalación real en Android e iPhone.
+- **Manual (parte común)**: sección "Instalar la app" reescrita con los casos.
+
 #### Corregido
 
 - **Cambios de turno (A-73c)**: la lista "Quién lo cubrirá" solo trae guardias del alcance del supervisor o administrador.
