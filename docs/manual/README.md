@@ -12,7 +12,7 @@ El **PDF** (`npm run manual`) se genera solo en local, en `docs/manual/pdf/` (no
 | `guardia.md` | Manual del Guardia (checador, SOS, sitios, reportes, ausencias, cambios de turno). |
 | `supervisor.md` | Manual del Supervisor (asistencia, decisiones, cobertura, reportes, quejas, clientes y sitios, turnos). |
 | `admin.md` | Manual del Administrador (usuarios, eliminar, acceso del cliente, ausencias, solicitudes, revertir, avisos, super administrador). Complementa al del Supervisor. |
-| `cliente.md` | Por escribir. |
+| `cliente.md` | Manual del Cliente (guardias, asistencia, reportes, reportar algo del servicio, avisos). |
 | `capturas/` | Imágenes del manual, una carpeta por manual (`comun`, `guardia`, `supervisor`, `admin`, `cliente`), y `PENDIENTES.md` con la lista de las que faltan. |
 
 **Cómo se arma cada manual:** Guardia = `comun.md` + `guardia.md`. Supervisor = `comun.md` + `supervisor.md`. Y así con cada rol. El **Manual completo** (para el administrador) junta todo.

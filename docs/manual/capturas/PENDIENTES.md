@@ -57,5 +57,11 @@ Mientras la imagen no exista, el manual muestra un recuadro gris de "Captura pen
 | [ ] | `A06-avisos-reportes.png` | Ventana "Avisos de reportes" | Manual del Administrador |
 | [ ] | `A07-ausencia-aprobar.png` | Solicitud de ausencia con "Aprobar" y "Rechazar" | Manual del Administrador |
 | [ ] | `A08-revertir.png` | Ventana "Revertir decisión" | Manual del Administrador |
+| [ ] | `K01-inicio.png` | Inicio del cliente con "Reportes abiertos" y "Guardias hoy" | Manual del Cliente |
+| [ ] | `K02-mis-guardias.png` | "Mis guardias" con una tarjeta por sitio y el estado de cada guardia | Manual del Cliente |
+| [ ] | `K03-asistencia.png` | Asistencia del cliente con el estado de cada guardia | Manual del Cliente |
+| [ ] | `K04-reporte-detalle.png` | Detalle de un reporte con seguimiento y "Agregar seguimiento" | Manual del Cliente |
+| [ ] | `K05-nuevo-reporte.png` | Ventana "Nuevo reporte" del cliente | Manual del Cliente |
+| [ ] | `K06-mis-reportes.png` | "Mis reportes" con estado y respuesta | Manual del Cliente |
 
-Total: 41 capturas.
+Total: 47 capturas.

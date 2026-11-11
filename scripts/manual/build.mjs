@@ -61,6 +61,16 @@ const MANUALES = [
       { archivo: 'admin.md', titulo: 'Lo que solo hace el administrador' },
     ],
   },
+  {
+    id: 'cliente',
+    titulo: 'Manual del Cliente',
+    subtitulo: 'Cómo ver tus guardias, tus reportes y avisarnos del servicio',
+    para: 'Clientes',
+    partes: [
+      { archivo: 'comun.md', titulo: 'Parte común: instalar, entrar y usar tu cuenta' },
+      { archivo: 'cliente.md', titulo: 'Tu cuenta de cliente' },
+    ],
+  },
 ];
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
