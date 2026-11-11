@@ -27,6 +27,7 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 #### Corregido
 
+- **Cambios de turno: "quién lo cubrirá" solo con guardias del alcance (A-73c)**: la lista traía a todos los guardias activos del sistema (el servidor ya rechazaba al elegir uno ajeno, pero la lista mostraba sus nombres y daba error). Ahora supervisor y administrador eligen al guardia y a quien lo cubre solo entre los de su alcance; el super administrador ve a todos. Para un guardia de otro supervisor, se manda una solicitud de cobertura. Prueba nueva en `cambios.test.ts` (comprobado que falla sin el arreglo).
 - **Ausencias: cada administrador solo ve y toca lo de su cartera (A-73b, A-66)**: la lista del administrador traía las ausencias de todo el sistema (con motivo y comprobante médico) y registrar, aprobar, rechazar o cancelar no validaban de quién era el guardia. Ahora la lista, registrar, la vista previa, aprobar, rechazar y cancelar se limitan a los guardias de su cartera; fuera de ella responden "no encontrada". El super administrador sigue viendo todo. Prueba nueva en `ausencias.test.ts` (comprobado que falla sin el arreglo).
 - **Lista "Reportes" del cliente (A-73a)**: salía vacía porque la pantalla le pedía al servidor "solo los que yo creé" y el cliente no crea reportes de guardia. Ahora ese filtro es solo de la pestaña "Mis reportes" del guardia; al cliente el servidor ya lo limita a su empresa. Prueba nueva en `reportes.test.ts`.
 

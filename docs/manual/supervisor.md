@@ -256,6 +256,8 @@ Si la fecha del cambio ya pasó, queda **"Vencido"** y ya no se puede aprobar.
 
 > **IMPORTANTE:** lo que haces tú **queda aprobado al momento**, sin esperar a nadie.
 
+> **NOTA:** en **"Guardia"** y en **"Quién lo cubrirá"** solo salen **los guardias de tus sitios**. Si necesitas a alguien de otro supervisor, no lo eliges aquí: manda una **solicitud de cobertura** al administrador (sección 11).
+
 Para **cancelar** un cambio toca **"Cancelar"** (si está pendiente) o **"Cancelar cambio"** (si ya estaba aprobado y aún no ocurre). Se deshace la cobertura, el guardia vuelve a su turno normal y se avisa a los involucrados.
 
 Solo se pueden hacer cambios de **hoy a 60 días** hacia adelante.

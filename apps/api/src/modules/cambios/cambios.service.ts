@@ -153,8 +153,10 @@ export class CambiosService extends BaseService {
         misTurnos,
       };
     }
+    // Supervisor y admin eligen al guardia y a quien lo cubre solo entre los de su alcance (el servidor rechaza a los
+    // demás): si necesitan a alguien de otro supervisor, mandan una solicitud de cobertura. El super admin ve a todos.
     const lista = todos.filter((g) => !alcance || alcance.guardiaIds.has(g.id));
-    return { companeros: todos, guardias: lista, misTurnos: [] };
+    return { companeros: lista, guardias: lista, misTurnos: [] };
   }
 
   /** Pide o hace un cambio de turno. */

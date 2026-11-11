@@ -303,6 +303,19 @@ describe('cambios de turno (TC-22)', () => {
     expect(res.body.data.misTurnos.map((t: { fecha: string }) => t.fecha)).not.toContain('2026-10-31');
   });
 
+  it('opciones: supervisor y admin eligen al guardia y a quien lo cubre solo entre los de su alcance', async () => {
+    // Sin límite (super admin): todos los guardias activos.
+    const todos = (await sup().get('/opciones')).body.data;
+    expect(todos.guardias.map((g: { id: number }) => g.id)).toEqual([10, 11, 12]);
+    expect(todos.companeros.map((g: { id: number }) => g.id)).toEqual([10, 11, 12]);
+
+    // Con alcance: ni el guardia ni el cubridor salen de él (antes el cubridor traía a todos).
+    alcance = { sitioIds: new Set([1]), guardiaIds: new Set([10, 11]) };
+    const suyos = (await sup().get('/opciones')).body.data;
+    expect(suyos.guardias.map((g: { id: number }) => g.id)).toEqual([10, 11]);
+    expect(suyos.companeros.map((g: { id: number }) => g.id)).toEqual([10, 11]);
+  });
+
   it('el guardia ve solo lo suyo y el supervisor cuenta los pendientes', async () => {
     await guardia().post('', cubrir);
     const ajeno = await como(12, ROLES.GUARDIA).get('');
