@@ -316,7 +316,7 @@ Si **nadie la recibe en 60 segundos**, la alerta se repite cada minuto con el av
 
 ## 18. Quejas, reportes y privacidad: lo que ves distinto
 
-- **Quejas** (reportes de clientes): ves **todas las de tu cartera**, no solo las de un sitio. Puedes **"Tomar a revisión"** y **"Resolver"** cualquiera, igual que el supervisor. Te llega el aviso de las **urgentes** siempre, y el de las demás **solo si el sitio no tiene supervisor**.
+- **Quejas** (reportes de clientes): ves **todas las de tu cartera**, no solo las de un sitio. Puedes **"Tomar a revisión"** y **"Resolver"** cualquiera, igual que el supervisor. Ves también las **fotos** que el cliente adjuntó (hasta 5). Si eliminas un cliente, un sitio o un usuario, también se borran las fotos de sus quejas. Te llega el aviso de las **urgentes** siempre, y el de las demás **solo si el sitio no tiene supervisor**.
 - **Reportes** (de los guardias): ves los de tu cartera. No hay diferencia con el supervisor.
 - **Privacidad:** ves la misma lista que el supervisor, pero **el aviso de que un guardia no aceptó solo te llega a ti**, no al supervisor.
 - **Catálogos y Turnos:** son los mismos para todos. Para **borrar un turno** que usan sitios de otro supervisor (o de otra cartera) hace falta que lo borre quien tenga ese alcance.

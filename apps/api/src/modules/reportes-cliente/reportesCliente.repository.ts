@@ -19,9 +19,22 @@ export type VisibilidadReporteCliente =
   /** Cliente: los de su empresa. */
   | { tipo: 'cliente'; clienteId: number };
 
-export type ReporteClienteRow = Omit<ReporteCliente, 'createdAt' | 'atendidoEn'> & {
+/** Foto tal como está en BD (el servicio la convierte a URL firmada). */
+export interface FotoReporteClienteRow {
+  id: number;
+  archivo: string;
+}
+
+export interface FotoNueva {
+  archivo: string;
+  mime: string;
+  tamano: number;
+}
+
+export type ReporteClienteRow = Omit<ReporteCliente, 'createdAt' | 'atendidoEn' | 'fotos'> & {
   createdAt: Date;
   atendidoEn: Date | null;
+  fotos: FotoReporteClienteRow[];
 };
 
 export interface NuevoReporteCliente {
@@ -33,6 +46,8 @@ export interface NuevoReporteCliente {
   urgente: boolean;
   asunto: string;
   descripcion: string;
+  /** Fotos ya guardadas en el almacenamiento (A-67). */
+  fotos: FotoNueva[];
 }
 
 export interface AtencionReporteCliente {
@@ -85,6 +100,7 @@ const select = {
   cliente: { select: { id: true, nombreComercial: true } },
   guardia: { select: { id: true, nombre: true } },
   creadoPor: { select: { id: true, nombre: true } },
+  fotos: { select: { id: true, archivo: true }, orderBy: { id: 'asc' } },
 } as const;
 
 const dondeVisible = (v: VisibilidadReporteCliente) => {
@@ -106,8 +122,8 @@ const personaSelect = { id: true, nombre: true, activo: true, deletedAt: true } 
 const vigente = (p: Persona | null) => (p && p.activo && !p.deletedAt ? { id: p.id, nombre: p.nombre } : null);
 
 export class PrismaReportesClienteRepository extends ReportesClienteRepository {
-  async crear(d: NuevoReporteCliente) {
-    return getPrisma().reporteCliente.create({ data: d, select });
+  async crear({ fotos, ...d }: NuevoReporteCliente) {
+    return getPrisma().reporteCliente.create({ data: { ...d, fotos: { create: fotos } }, select });
   }
 
   findById(id: number, v: VisibilidadReporteCliente) {

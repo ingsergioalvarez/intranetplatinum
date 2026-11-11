@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import {
+  MAX_FOTOS_REPORTE,
   ROLES,
   atenderReporteClienteSchema,
   idParamSchema,
@@ -11,16 +12,21 @@ import {
 import {
   AuditLogger,
   BaseController,
+  LocalStorageService,
   PrismaAuditLogger,
+  StorageService,
   authenticate,
   requireRoles,
+  uploadImages,
   validate,
   type AppModule,
 } from '../../core';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
 import { PrismaReportesClienteRepository, ReportesClienteRepository } from './reportesCliente.repository';
-import { ReportesClienteService } from './reportesCliente.service';
+import { ReportesClienteService, type ArchivoSubido } from './reportesCliente.service';
+
+const archivos = (req: Request) => (req.files as ArchivoSubido[] | undefined) ?? [];
 
 class ReportesClienteController extends BaseController {
   constructor(private readonly service: ReportesClienteService) {
@@ -32,7 +38,10 @@ class ReportesClienteController extends BaseController {
   opciones = async (req: Request, res: Response) => this.ok(res, await this.service.opciones(this.currentUser(req)));
 
   crear = async (req: Request, res: Response) =>
-    this.created(res, await this.service.crear(this.currentUser(req), this.body<ReporteClienteCreateData>(req), this.accionCtx(req)));
+    this.created(
+      res,
+      await this.service.crear(this.currentUser(req), this.body<ReporteClienteCreateData>(req), this.accionCtx(req), archivos(req)),
+    );
 
   atender = async (req: Request, res: Response) =>
     this.ok(
@@ -48,6 +57,7 @@ class ReportesClienteController extends BaseController {
 
 export interface ReportesClienteDeps {
   repo?: ReportesClienteRepository;
+  storage?: StorageService;
   audit?: AuditLogger;
   avisar?: AvisarUsuarios;
   atencion?: AvisosAtencion;
@@ -61,18 +71,26 @@ export interface ReportesClienteDeps {
  */
 export function createReportesClienteModule({
   repo = new PrismaReportesClienteRepository(),
+  storage = new LocalStorageService(),
   audit = new PrismaAuditLogger(),
   avisar = avisarConPrisma,
   atencion = atencionConPrisma,
   hoy,
   ahora,
 }: ReportesClienteDeps = {}): AppModule {
-  const c = new ReportesClienteController(new ReportesClienteService(repo, audit, avisar, atencion, hoy, ahora));
+  const c = new ReportesClienteController(new ReportesClienteService(repo, storage, audit, avisar, atencion, hoy, ahora));
   const router = Router();
   router.use(authenticate);
   router.get('/', requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.CLIENTE), c.listar);
   router.get('/opciones', requireRoles(ROLES.CLIENTE), c.opciones);
-  router.post('/', requireRoles(ROLES.CLIENTE), validate({ body: reporteClienteCreateSchema }), c.crear);
+  // Las fotos llegan en el mismo formulario; el servicio limita a 5 (el tope de 10 es del lector de archivos).
+  router.post(
+    '/',
+    requireRoles(ROLES.CLIENTE),
+    uploadImages.array('fotos', MAX_FOTOS_REPORTE),
+    validate({ body: reporteClienteCreateSchema }),
+    c.crear,
+  );
   router.post(
     '/:id/atender',
     requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR),

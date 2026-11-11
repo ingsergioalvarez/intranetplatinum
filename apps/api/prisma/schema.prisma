@@ -534,11 +534,27 @@ model ReporteCliente {
   sitio       Sitio                 @relation(fields: [sitioId], references: [id])
   guardia     Usuario?              @relation("ReporteClienteSobre", fields: [guardiaId], references: [id], onDelete: SetNull)
   creadoPor   Usuario               @relation("ReporteClienteDe", fields: [creadoPorId], references: [id])
+  fotos       ReporteClienteFoto[]
 
   @@index([clienteId, estatus, createdAt])
   @@index([sitioId, estatus])
   @@index([creadoPorId])
   @@map("reportes_cliente")
+}
+
+/// Foto que el cliente adjunta a su reporte (A-67, máximo 5). `archivo` es la clave en el StorageService.
+model ReporteClienteFoto {
+  id        Int            @id @default(autoincrement())
+  reporteId Int            @map("reporte_id")
+  archivo   String         @db.VarChar(300)
+  mime      String         @db.VarChar(40)
+  tamano    Int
+  // Fecha del servidor al recibir la foto (D-007).
+  createdAt DateTime       @default(now()) @map("created_at")
+  reporte   ReporteCliente @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+
+  @@index([reporteId])
+  @@map("reporte_cliente_fotos")
 }
 
 enum CanalNotificacion {

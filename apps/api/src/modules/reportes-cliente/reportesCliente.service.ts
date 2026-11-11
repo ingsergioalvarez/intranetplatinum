@@ -1,5 +1,6 @@
 import {
   ESTATUS_REPORTE_CLIENTE_LABEL,
+  MAX_FOTOS_REPORTE_CLIENTE,
   ROLES,
   type AtenderReporteClienteData,
   type OpcionesReporteCliente,
@@ -7,10 +8,22 @@ import {
   type ReporteClienteCreateData,
   type ReportesClienteLista,
 } from '@platinum/shared';
-import { BaseService, AuditLogger, HttpError, carteraDe, hoyISO, type AccionCtx, type AuthUser } from '../../core';
+import {
+  BaseService,
+  AuditLogger,
+  HttpError,
+  StorageService,
+  carteraDe,
+  detectarImagen,
+  firmarArchivo,
+  hoyISO,
+  type AccionCtx,
+  type AuthUser,
+} from '../../core';
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type {
+  FotoNueva,
   ReporteClienteRow,
   ReportesClienteRepository,
   VisibilidadReporteCliente,
@@ -22,6 +35,12 @@ const LIMITE = 100;
 const campo = (path: string, message: string) =>
   new HttpError(400, 'VALIDATION_ERROR', 'Datos inválidos', [{ path, message }]);
 
+/** Foto recibida del formulario (en memoria), antes de guardarla. */
+export interface ArchivoSubido {
+  buffer: Buffer;
+  size: number;
+}
+
 /**
  * Reportes que levanta el cliente sobre el servicio o sobre un guardia concreto (A-59). Le llegan al supervisor
  * del sitio (o al admin dueño si el sitio no tiene supervisor); si son urgentes, a ambos al momento. El guardia
@@ -31,6 +50,7 @@ const campo = (path: string, message: string) =>
 export class ReportesClienteService extends BaseService {
   constructor(
     private readonly repo: ReportesClienteRepository,
+    private readonly storage: StorageService,
     private readonly audit: AuditLogger,
     private readonly avisar: AvisarUsuarios = sinAvisos,
     private readonly atencion: AvisosAtencion = sinAtencion,
@@ -40,8 +60,44 @@ export class ReportesClienteService extends BaseService {
     super();
   }
 
-  private aReporte({ createdAt, atendidoEn, ...r }: ReporteClienteRow): ReporteCliente {
-    return { ...r, createdAt: createdAt.toISOString(), atendidoEn: atendidoEn?.toISOString() ?? null };
+  private aReporte({ createdAt, atendidoEn, fotos, ...r }: ReporteClienteRow): ReporteCliente {
+    return {
+      ...r,
+      createdAt: createdAt.toISOString(),
+      atendidoEn: atendidoEn?.toISOString() ?? null,
+      fotos: fotos.map((f) => ({ id: f.id, url: firmarArchivo(f.archivo) })),
+    };
+  }
+
+  /** Máximo de fotos y tipo real por firma de bytes (no por la extensión). */
+  private validarFotos(archivos: ArchivoSubido[]) {
+    if (archivos.length > MAX_FOTOS_REPORTE_CLIENTE) throw campo('fotos', `Máximo ${MAX_FOTOS_REPORTE_CLIENTE} fotos`);
+    return archivos.map((a, i) => {
+      const mime = detectarImagen(a.buffer);
+      if (!mime) throw campo('fotos', `La foto ${i + 1} no es una imagen válida (JPG, PNG, WEBP o HEIC)`);
+      return { ...a, mime };
+    });
+  }
+
+  private async guardarFotos(fotos: (ArchivoSubido & { mime: string })[]): Promise<FotoNueva[]> {
+    const guardadas: FotoNueva[] = [];
+    try {
+      for (const f of fotos) {
+        guardadas.push({
+          archivo: await this.storage.guardar(f.buffer, f.mime, 'reportes-cliente'),
+          mime: f.mime,
+          tamano: f.size,
+        });
+      }
+      return guardadas;
+    } catch (err) {
+      await this.borrarFotos(guardadas);
+      throw err;
+    }
+  }
+
+  private async borrarFotos(fotos: FotoNueva[]) {
+    await Promise.all(fotos.map((f) => this.storage.eliminar(f.archivo).catch(() => undefined)));
   }
 
   /** Cliente: los de su empresa; supervisor: los de sus sitios; admin: los de sus clientes; super admin: todos. */
@@ -72,8 +128,14 @@ export class ReportesClienteService extends BaseService {
     return this.repo.opciones(user.clienteId, this.hoy());
   }
 
-  async crear(user: AuthUser, data: ReporteClienteCreateData, ctx: AccionCtx): Promise<ReporteCliente> {
+  async crear(
+    user: AuthUser,
+    data: ReporteClienteCreateData,
+    ctx: AccionCtx,
+    archivos: ArchivoSubido[] = [],
+  ): Promise<ReporteCliente> {
     if (!user.clienteId) throw HttpError.forbidden();
+    const validas = this.validarFotos(archivos);
     const sitio = await this.repo.sitioDelCliente(data.sitioId, user.clienteId);
     if (!sitio) throw campo('sitioId', 'Elige un sitio de tu empresa');
     let guardia: { id: number; nombre: string } | null = null;
@@ -82,21 +144,31 @@ export class ReportesClienteService extends BaseService {
       if (!guardia) throw campo('guardiaId', 'Elige un guardia de este sitio');
     }
 
-    const fila = await this.repo.crear({
-      clienteId: user.clienteId,
-      sitioId: sitio.id,
-      guardiaId: guardia?.id ?? null,
-      creadoPorId: user.id,
-      tipo: data.tipo,
-      urgente: data.urgente,
-      asunto: data.asunto,
-      descripcion: data.descripcion,
-    });
+    // Las fotos se guardan al final de las validaciones; si la base falla, se borran para no dejar archivos sueltos.
+    const fotos = await this.guardarFotos(validas);
+    let fila: ReporteClienteRow;
+    try {
+      fila = await this.repo.crear({
+        clienteId: user.clienteId,
+        sitioId: sitio.id,
+        guardiaId: guardia?.id ?? null,
+        creadoPorId: user.id,
+        tipo: data.tipo,
+        urgente: data.urgente,
+        asunto: data.asunto,
+        descripcion: data.descripcion,
+        fotos,
+      });
+    } catch (err) {
+      await this.borrarFotos(fotos);
+      throw err;
+    }
     await this.audit.registrarAccion(ctx, 'reportes_cliente.crear', 'reportes_cliente', fila.id, {
       sitioId: sitio.id,
       tipo: data.tipo,
       guardiaId: guardia?.id ?? null,
       urgente: data.urgente,
+      fotos: fotos.length,
     });
 
     // Supervisor del sitio; el admin dueño del cliente lo recibe si no hay supervisor o si es urgente. Si no hay

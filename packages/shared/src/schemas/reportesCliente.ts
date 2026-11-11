@@ -11,6 +11,9 @@ export const TIPO_REPORTE_CLIENTE_LABEL: Record<TipoReporteCliente, string> = {
   guardia: 'Sobre un guardia',
 };
 
+/** Fotos que el cliente puede adjuntar a un reporte (A-67). Solo imágenes. */
+export const MAX_FOTOS_REPORTE_CLIENTE = 5;
+
 export const ESTATUS_REPORTE_CLIENTE = ['abierto', 'en_revision', 'resuelto'] as const;
 export type EstatusReporteCliente = (typeof ESTATUS_REPORTE_CLIENTE)[number];
 
@@ -26,7 +29,8 @@ export const reporteClienteCreateSchema = z
     tipo: z.enum(TIPOS_REPORTE_CLIENTE, 'Elige de qué trata el reporte'),
     sitioId: idCoerce('Elige el sitio'),
     guardiaId: z.coerce.number().int().positive().nullish(),
-    urgente: z.boolean().default(false),
+    // Con fotos el reporte llega como formulario (multipart) y el booleano viaja como texto.
+    urgente: z.preprocess((v) => (typeof v === 'string' ? v === 'true' : v), z.boolean().default(false)),
     asunto: z.string().trim().min(5, 'Escribe un asunto (mín. 5 caracteres)').max(150),
     descripcion: z.string().trim().min(10, 'Cuéntanos más (mín. 10 caracteres)').max(2000),
   })
@@ -69,6 +73,8 @@ export interface ReporteCliente {
   atendidoPor: string | null;
   /** Lo que se le contesta al cliente. */
   respuesta: string | null;
+  /** Fotos que adjuntó el cliente (URL firmada, de la más vieja a la más nueva). */
+  fotos: { id: number; url: string }[];
 }
 
 export interface ReportesClienteLista {

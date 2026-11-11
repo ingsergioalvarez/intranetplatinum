@@ -411,7 +411,7 @@ Los clientes pueden reportar algo del **servicio** o de **un guardia**. A ti te 
 El guardia **nunca** se entera: no ve estas quejas ni recibe avisos de ellas.
 
 1. Entra a **Quejas** (la pantalla se llama **"Reportes de clientes"**). Por omisión ves las **"Pendientes"**, con las urgentes primero; **"Todos"** muestra también las ya resueltas.
-2. Cada tarjeta trae el asunto, si es **"Sobre el servicio"** o **"Sobre un guardia: NOMBRE"**, el sitio, el cliente, lo que escribió y quién lo envió. Una insignia roja **"Urgente"** marca las que el cliente señaló como urgentes.
+2. Cada tarjeta trae el asunto, si es **"Sobre el servicio"** o **"Sobre un guardia: NOMBRE"**, el sitio, el cliente, lo que escribió, las **fotos** que adjuntó (hasta 5; tócalas para verlas en grande) y quién lo envió. Una insignia roja **"Urgente"** marca las que el cliente señaló como urgentes.
 3. Toca **"Tomar a revisión"** (solo en las **"Abierto"**). El cliente recibe un aviso de que lo estás revisando.
 4. Cuando lo hayas atendido, toca **"Resolver"**, escribe **"¿Qué se hizo?"** (obligatorio, mínimo 5 letras; **es lo que lee el cliente**) y toca **"Resolver"**. Verás **"Reporte resuelto: se le avisó al cliente"**.
 

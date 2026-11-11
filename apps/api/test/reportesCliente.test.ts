@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { PERMISOS_POR_ROL, ROLES, type OpcionesReporteCliente, type Rol } from '@platinum/shared';
 import { createApp } from '../src/app';
-import { signAccessToken, type AuthUser } from '../src/core';
+import { StorageService, signAccessToken, type AuthUser } from '../src/core';
 import { createReportesClienteModule } from '../src/modules/reportes-cliente';
 import {
   ReportesClienteRepository,
@@ -29,9 +29,29 @@ const CLIENTES: Record<number, string> = { 1: 'Acme', 2: 'Beta', 3: 'Sin Dueño 
 /** Guardias de cada sitio. */
 const GUARDIAS: Record<number, number[]> = { 100: [10], 101: [11], 102: [11], 103: [], 104: [] };
 
+const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(20)]);
+
+class MemoryStorage extends StorageService {
+  guardados: string[] = [];
+  eliminados: string[] = [];
+  async guardar() {
+    const clave = `reportes-cliente/2026/11/00000000-0000-4000-8000-${String(this.guardados.length + 1).padStart(12, '0')}.jpg`;
+    this.guardados.push(clave);
+    return clave;
+  }
+  async leer() {
+    return null;
+  }
+  async eliminar(clave: string) {
+    this.eliminados.push(clave);
+  }
+}
+
 class Memoria extends ReportesClienteRepository {
+  falla = false;
   filas: (ReporteClienteRow & { propietarioId: number | null; supervisorId: number | null })[] = [];
   async crear(d: NuevoReporteCliente) {
+    if (this.falla) throw new Error('base caída');
     const s = SITIOS[d.sitioId];
     const f = {
       id: this.filas.length + 1,
@@ -48,6 +68,7 @@ class Memoria extends ReportesClienteRepository {
       atendidoEn: null,
       atendidoPor: null,
       respuesta: null,
+      fotos: d.fotos.map((f, i) => ({ id: i + 1, archivo: f.archivo })),
       propietarioId: s.propietarioId,
       supervisorId: s.supervisorId,
     };
@@ -111,6 +132,7 @@ interface AvisoRegistrado {
 }
 
 let repo: Memoria;
+let storage: MemoryStorage;
 let audit: MemoryAuditLogger;
 let avisos: AvisoRegistrado[];
 let atendidos: string[];
@@ -137,12 +159,14 @@ const deGuardia = { ...delServicio, tipo: 'guardia', guardiaId: 10, asunto: 'Tra
 
 beforeEach(() => {
   repo = new Memoria();
+  storage = new MemoryStorage();
   audit = new MemoryAuditLogger();
   avisos = [];
   atendidos = [];
   app = createApp([
     createReportesClienteModule({
       repo,
+      storage,
       audit,
       avisar: async (usuarioIds, a) =>
         void avisos.push({
@@ -188,6 +212,79 @@ describe('reportes del cliente (A-59)', () => {
       expect(res.body.data.guardia).toEqual({ id: 10, nombre: 'Juan Pérez' });
       expect(avisos[0].mensaje).toContain('sobre Juan Pérez');
       expect(avisos.flatMap((a) => a.usuarioIds)).not.toContain(10);
+    });
+
+    describe('fotos (A-67)', () => {
+      /** Reporte como formulario con fotos, igual que lo manda la pantalla. */
+      const conFotos = (n: number, campos: Record<string, string> = { tipo: 'servicio', sitioId: '100', urgente: 'false', asunto: delServicio.asunto, descripcion: delServicio.descripcion }, quien = 20) => {
+        const req = request(app)
+          .post('/api/reportes-cliente')
+          .set('Authorization', token({ id: quien, rol: ROLES.CLIENTE, clienteId: 1 }));
+        for (const [k, v] of Object.entries(campos)) req.field(k, v);
+        for (let i = 0; i < n; i++) req.attach('fotos', JPEG, { filename: `f${i}.jpg`, contentType: 'image/jpeg' });
+        return req;
+      };
+
+      it('el cliente adjunta hasta 5 fotos y salen en el reporte con URL firmada', async () => {
+        const res = await conFotos(5);
+        expect(res.status).toBe(201);
+        expect(res.body.data.fotos).toHaveLength(5);
+        expect(res.body.data.fotos[0].url).toMatch(/^\/api\/archivos\/reportes-cliente\/.+\?exp=\d+&sig=/);
+        expect(storage.guardados).toHaveLength(5);
+        expect(audit.acciones()).toContain('reportes_cliente.crear');
+      });
+
+      it('con fotos el "urgente" llega como texto y se entiende igual', async () => {
+        const res = await conFotos(1, { tipo: 'servicio', sitioId: '100', urgente: 'true', asunto: delServicio.asunto, descripcion: delServicio.descripcion });
+        expect(res.status).toBe(201);
+        expect(res.body.data.urgente).toBe(true);
+        expect(avisos[0]).toMatchObject({ titulo: 'Reporte URGENTE de un cliente', urgente: true });
+      });
+
+      it('sin fotos sigue funcionando y trae la lista vacía', async () => {
+        const res = await cliente().post('', delServicio);
+        expect(res.status).toBe(201);
+        expect(res.body.data.fotos).toEqual([]);
+      });
+
+      it('rechaza más de 5 fotos y no guarda ninguna', async () => {
+        const res = await conFotos(6);
+        expect(res.status).toBe(400);
+        expect(res.body.error.details[0]).toMatchObject({ path: 'fotos', message: 'Máximo 5 fotos' });
+        expect(storage.guardados).toHaveLength(0);
+        expect(repo.filas).toHaveLength(0);
+        expect(avisos).toHaveLength(0);
+      });
+
+      it('rechaza un archivo que dice ser imagen pero no lo es', async () => {
+        const res = await request(app)
+          .post('/api/reportes-cliente')
+          .set('Authorization', token({ id: 20, rol: ROLES.CLIENTE, clienteId: 1 }))
+          .field('tipo', 'servicio')
+          .field('sitioId', '100')
+          .field('asunto', delServicio.asunto)
+          .field('descripcion', delServicio.descripcion)
+          .attach('fotos', Buffer.from('esto no es una imagen, es texto'), { filename: 'f.jpg', contentType: 'image/jpeg' });
+        expect(res.status).toBe(400);
+        expect(res.body.error.details[0].path).toBe('fotos');
+        expect(storage.guardados).toHaveLength(0);
+        expect(repo.filas).toHaveLength(0);
+      });
+
+      it('si la base falla, las fotos ya guardadas se borran del almacenamiento', async () => {
+        repo.falla = true;
+        const res = await conFotos(2);
+        expect(res.status).toBe(500);
+        expect(storage.guardados).toHaveLength(2);
+        expect(storage.eliminados.sort()).toEqual([...storage.guardados].sort());
+      });
+
+      it('supervisor del sitio y admin dueño ven las fotos en su lista; otro cliente no ve el reporte', async () => {
+        await conFotos(2);
+        expect((await sup(5).get()).body.data.items[0].fotos).toHaveLength(2);
+        expect((await adminAda().get()).body.data.items[0].fotos).toHaveLength(2);
+        expect((await clienteBeta().get()).body.data.items).toHaveLength(0);
+      });
     });
 
     it('sobre un guardia exige elegir cuál, y que sea de ese sitio', async () => {

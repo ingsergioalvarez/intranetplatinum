@@ -2,18 +2,19 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-11-11 (detalles de la app, A-73: subidos reportes del cliente, rol en la línea del tiempo, ausencias por cartera y cambios de turno; hecho en local y sin subir: A-75 foto de referencia y miniatura de la checada en la lista de Asistencia, y texto de notificaciones del cliente; manuales de los cinco roles con texto y sin capturas) · antes: 2026-11-10
+**Última actualización:** 2026-11-11 (detalles de la app, A-73, todos subidos y probados: reportes del cliente, rol en la línea del tiempo, ausencias y cambios de turno por cartera, foto de referencia en Asistencia, textos del cliente y aviso de privacidad; A-67 fotos en los reportes del cliente hecha en local, con migración, sin subir; manuales de los cinco roles con texto y sin capturas) · antes: 2026-11-10
 **Fase actual:** Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel de Cloudflare, en `platinum.grupocomunicalo.mx`) con asistencia completa, reportes, portal del cliente, botón SOS, carteras de admin y reportes del cliente. Estado: terminado y en mantenimiento; se hacen mejoras que el usuario pide.
-**Última tarea terminada:** A-75 (Asistencia: foto de referencia siempre en el círculo y miniatura de la checada junto a la entrada; texto de notificaciones para el cliente): hecha el 2026-11-11 en local, 573 pruebas pasando, tipado y lint limpios, revisada a 360 px; falta subirla.
-**Tarea en progreso:** ninguna. A-73 (lista de detalles) queda con dos pendientes menores: (f) el SOS lanzado por un supervisor no está verificado en pantalla y (g) la auditoría no tiene pantalla y los correos no salen (A-41). A-68 (aviso de privacidad) sigue en local y con el abogado.
+**Última tarea terminada:** A-67 (hasta 5 fotos en los reportes del cliente): hecha el 2026-11-11 en local con la migración `20261111000000_reportes_cliente_fotos`, 580 pruebas pasando, tipado y lint limpios, revisada a 360 px; falta subirla (con migración). Antes: A-75, ya en el servidor y probada por el usuario.
+**Tarea en progreso:** ninguna. Siguiente que el usuario pidió: A-70 (instalación obligatoria de la app en celular), "dependiendo de cómo se vea". A-73 queda cerrada salvo (g): auditoría sin pantalla (ahora es A-76) y correos (A-41).
 
 ## Siguiente paso
 
 El usuario traerá cambios pendientes. Ya registrados en el [PLAN](PLAN.md) y por definir con él antes de construir:
 
 1. **A-68 Aviso de privacidad:** construido (ver [AVISO_PRIVACIDAD_BORRADOR.md](AVISO_PRIVACIDAD_BORRADOR.md)). Falta: subirlo al servidor, que el abogado apruebe el texto y llenar sus datos entre corchetes (razón social y domicilio de Platinum, correo para derechos ARCO, plazos, transferencias y qué hace el guardia que no acepta) cambiando `packages/shared/src/constants/avisoPrivacidad.ts` y subiendo `AVISO_PRIVACIDAD_VERSION`; después regenerar el documento. Quitar `AVISO_PRIVACIDAD_ES_BORRADOR` cuando esté aprobado.
-2. **A-67 Fotos en los reportes del cliente:** hasta 5 fotos (solo imágenes). Ya aprobada la idea; con migración.
-3. Otras cosas que el usuario fue notando al probar la app: las va a pasar para ordenarlas y compararlas con el código antes de tocar nada.
+2. **A-70 Instalación obligatoria de la app en celular:** el usuario pidió verla después de A-67; probar en Android e iPhone.
+3. **A-76 Pantalla de auditoría** (solo lectura): el usuario la quiere, sin fecha. **A-41 Correos:** falta que el usuario dé host, puerto, usuario y remitente del servidor de correo. **A-61 Pantalla del C2:** sigue por definir.
+4. Otras cosas que el usuario fue notando al probar la app: las va a pasar para ordenarlas y compararlas con el código antes de tocar nada.
 
 Se registrarán también como tareas nuevas (con ID, en el PLAN) antes de implementarlas.
 
@@ -40,7 +41,7 @@ Se registrarán también como tareas nuevas (con ID, en el PLAN) antes de implem
 
 - `npm install`; `npm run db:deploy -w @platinum/api` y `npm run db:seed -w @platinum/api` (sincroniza roles y permisos).
 - `npm run dev:https` para checador biométrico y pruebas en red local.
-- Calidad: `npm test` (573 pasando), `npm run lint`, `npm run typecheck`.
+- Calidad: `npm test` (580 pasando), `npm run lint`, `npm run typecheck`.
 - La carpeta de Platinum (`intranetplatinum-platinum`) aún no tiene `node_modules` ni `apps/api/.env`: hay que hacer `npm install` y crear el `.env` antes de probar en local.
 
 ## Notas de contexto

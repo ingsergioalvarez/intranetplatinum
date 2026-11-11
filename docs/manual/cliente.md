@@ -163,8 +163,9 @@ Si algo del servicio no está bien, o tienes una queja de un guardia, avísanos 
 3. Elige el **"Sitio"** (si tu empresa solo tiene uno, se elige solo).
 4. Si es sobre un guardia, elige al **"Guardia"** de la lista. Salen los guardias asignados hoy a ese sitio.
 5. Escribe el **"Asunto"** (mínimo 5 letras) y **"¿Qué pasó?"** (mínimo 10 letras). Cuéntalo con calma y con datos: día, hora, qué ocurrió.
-6. Marca **"Es urgente"** **solo** si necesita atención de inmediato. Se avisa al momento al administrador.
-7. Toca **"Enviar reporte"**. Verás **"Reporte enviado: lo revisan el supervisor y el administrador"**.
+6. Si ayuda a entender lo que pasó, agrega **fotos** (opcional, **hasta 5**; solo imágenes). En el celular puedes **tomarlas** con la cámara o **elegirlas** de tu galería, y quitar una con la **✕**.
+7. Marca **"Es urgente"** **solo** si necesita atención de inmediato. Se avisa al momento al administrador.
+8. Toca **"Enviar reporte"**. Verás **"Reporte enviado: lo revisan el supervisor y el administrador"**.
 
 > **IMPORTANTE:** usa **"Es urgente"** solo cuando de verdad lo sea, para que podamos atender primero lo que más lo necesita.
 
@@ -180,7 +181,7 @@ Si algo del servicio no está bien, o tienes una queja de un guardia, avísanos 
 - Cuando cambia el estado, te llega un aviso en la campanita: **"Tu reporte está en revisión"** o **"Tu reporte fue resuelto"**.
 - Un reporte resuelto no se vuelve a abrir. Si el problema sigue, haz un reporte nuevo.
 
-> **NOTA:** por ahora estos reportes **no llevan fotos**. Describe bien lo ocurrido en el texto.
+> **NOTA:** las fotos se adjuntan **al enviar** el reporte y **no se pueden agregar después**. Si te faltó una, haz un reporte nuevo. Tus fotos las ven el supervisor del sitio y el administrador, nunca el guardia.
 
 {{captura:K05-nuevo-reporte|Ventana "Nuevo reporte" con "¿De qué trata?", el sitio, el asunto y "Es urgente"}}
 {{captura:K06-mis-reportes|Pantalla "Mis reportes" con el estado y la respuesta}}

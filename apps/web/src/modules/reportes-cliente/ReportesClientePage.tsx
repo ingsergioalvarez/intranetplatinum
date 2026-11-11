@@ -10,7 +10,7 @@ import {
   type ReporteCliente,
 } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
-import { Badge, Button, Card, EmptyState, FormField, FormModal, Spinner, Textarea, toast, type BadgeTone } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, FormField, FormModal, Spinner, Textarea, VisorFotos, toast, type BadgeTone } from '../../components/ui';
 import { mensajeDeError } from '../../core/api';
 import { useAuthStore } from '../../core/auth/authStore';
 import { erroresDeCampos } from '../../core/forms/fieldErrors';
@@ -146,6 +146,7 @@ function Tarjeta({
         {!esCliente && ` · ${r.cliente.nombreComercial}`}
       </p>
       <p className="whitespace-pre-line text-sm text-slate-800">{r.descripcion}</p>
+      <FotosDelReporte reporte={r} />
       <p className="text-xs text-slate-500">
         {esCliente ? 'Enviado' : `Lo envió ${r.creadoPor.nombre}`} · {formatFechaHora(r.createdAt)}
       </p>
@@ -167,6 +168,35 @@ function Tarjeta({
         </div>
       )}
     </Card>
+  );
+}
+
+/** Fotos que adjuntó el cliente (A-67): miniaturas que se abren en grande, sin salir de la pantalla. */
+function FotosDelReporte({ reporte }: { reporte: ReporteCliente }) {
+  const [viendo, setViendo] = useState<number | null>(null);
+  if (reporte.fotos.length === 0) return null;
+  return (
+    <>
+      <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        {reporte.fotos.map((f, i) => (
+          <li key={f.id}>
+            <button
+              type="button"
+              onClick={() => setViendo(i)}
+              aria-label={`Ver la foto ${i + 1} de ${reporte.fotos.length}`}
+              className="block aspect-square w-full overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200 hover:ring-brand-400"
+            >
+              <img src={f.url} alt="" loading="lazy" className="size-full object-cover" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <VisorFotos
+        fotos={reporte.fotos.map((f, i) => ({ url: f.url, titulo: `Foto ${i + 1} de ${reporte.fotos.length}` }))}
+        indice={viendo}
+        onClose={() => setViendo(null)}
+      />
+    </>
   );
 }
 

@@ -77,6 +77,16 @@ export class PrismaAdminRepository extends AdminRepository {
     return { marcas, rostros, reportes, seguimientos, asignaciones };
   }
 
+  /**
+   * Borra los reportes del cliente que cumplan `donde` y devuelve las claves de sus fotos (A-67) para borrarlas del
+   * almacenamiento; las filas de las fotos se borran en cascada con el reporte.
+   */
+  private async borrarReportesCliente(tx: Prisma.TransactionClient, donde: Prisma.ReporteClienteWhereInput) {
+    const fotos = await tx.reporteClienteFoto.findMany({ where: { reporte: donde }, select: { archivo: true } });
+    await tx.reporteCliente.deleteMany({ where: donde });
+    return fotos.map((f) => f.archivo);
+  }
+
   eliminarUsuario(id: number) {
     return getPrisma().$transaction(async (tx) => {
       const reportes = (await tx.reporte.findMany({ where: { creadoPorId: id }, select: { id: true } })).map(
@@ -95,7 +105,7 @@ export class PrismaAdminRepository extends AdminRepository {
         where: { OR: [{ reporteId: { in: reportes } }, { usuarioId: id }] },
       });
       await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
-      await tx.reporteCliente.deleteMany({ where: { creadoPorId: id } });
+      const fotosCliente = await this.borrarReportesCliente(tx, { creadoPorId: id });
 
       const marcas = await tx.marcacion.findMany({
         where: { usuarioId: id, fotoClave: { not: null } },
@@ -118,6 +128,7 @@ export class PrismaAdminRepository extends AdminRepository {
 
       return [
         ...evidencias.map((e) => e.archivo),
+        ...fotosCliente,
         ...marcas.map((m) => m.fotoClave!),
         ...new Set(
           rostros.flatMap((r) => [r.fotoClave, ...(Array.isArray(r.fotos) ? (r.fotos as string[]) : [])]),
@@ -187,7 +198,7 @@ export class PrismaAdminRepository extends AdminRepository {
     await tx.aviso.deleteMany({ where: { reporteId: { in: reportes } } });
     await tx.reporteSeguimiento.deleteMany({ where: { reporteId: { in: reportes } } });
     await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
-    await tx.reporteCliente.deleteMany({ where: { sitioId: { in: sitioIds } } });
+    const fotosCliente = await this.borrarReportesCliente(tx, { sitioId: { in: sitioIds } });
 
     const marcas = await tx.marcacion.findMany({
       where: { sitioId: { in: sitioIds }, fotoClave: { not: null } },
@@ -198,7 +209,7 @@ export class PrismaAdminRepository extends AdminRepository {
     // Coberturas y turnos del día se borran en cascada; incidencias de rostro y bitácora conservan
     // su registro (el sitio queda en blanco).
     await tx.sitio.deleteMany({ where: { id: { in: sitioIds } } });
-    return [...evidencias.map((e) => e.archivo), ...marcas.map((m) => m.fotoClave!)];
+    return [...evidencias.map((e) => e.archivo), ...fotosCliente, ...marcas.map((m) => m.fotoClave!)];
   }
 
   eliminarSitio(id: number) {
@@ -231,11 +242,11 @@ export class PrismaAdminRepository extends AdminRepository {
       await tx.aviso.deleteMany({ where: { reporteId: { in: reportes } } });
       await tx.reporteSeguimiento.deleteMany({ where: { reporteId: { in: reportes } } });
       await tx.reporte.deleteMany({ where: { id: { in: reportes } } });
-      await tx.reporteCliente.deleteMany({ where: { clienteId: id } });
+      const fotosCliente = await this.borrarReportesCliente(tx, { clienteId: id });
       await tx.clienteContacto.deleteMany({ where: { clienteId: id } });
       // Los usuarios del portal quedan sin cliente (onDelete SetNull); las reglas de aviso se borran en cascada.
       await tx.cliente.delete({ where: { id } });
-      return [...archivos, ...evidencias.map((e) => e.archivo)];
+      return [...archivos, ...evidencias.map((e) => e.archivo), ...fotosCliente];
     }
   }
 }

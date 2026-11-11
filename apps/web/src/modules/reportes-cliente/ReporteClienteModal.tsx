@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  MAX_FOTOS_REPORTE_CLIENTE,
   TIPOS_REPORTE_CLIENTE,
   TIPO_REPORTE_CLIENTE_LABEL,
   reporteClienteCreateSchema,
   type TipoReporteCliente,
 } from '@platinum/shared';
-import { Checkbox, FormField, FormModal, Input, Select, Textarea, toast } from '../../components/ui';
+import { Checkbox, FormField, FormModal, Input, PhotoUploader, Select, Textarea, toast } from '../../components/ui';
 import { ApiError, mensajeDeError } from '../../core/api';
 import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import { reportesClienteService } from './reportesCliente.service';
@@ -23,6 +24,7 @@ export function ReporteClienteModal({ onClose }: { onClose: () => void }) {
   const [urgente, setUrgente] = useState(false);
   const [asunto, setAsunto] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [fotos, setFotos] = useState<File[]>([]);
   const [errores, setErrores] = useState<Partial<Record<string, string>>>({});
 
   const opciones = useQuery({ queryKey: reportesClienteService.keys.opciones, queryFn: reportesClienteService.opciones });
@@ -34,14 +36,17 @@ export function ReporteClienteModal({ onClose }: { onClose: () => void }) {
 
   const guardar = useMutation({
     mutationFn: () =>
-      reportesClienteService.crear({
-        tipo: tipo as TipoReporteCliente,
-        sitioId,
-        guardiaId: tipo === 'guardia' ? guardiaId : undefined,
-        urgente,
-        asunto,
-        descripcion,
-      }),
+      reportesClienteService.crear(
+        {
+          tipo: tipo as TipoReporteCliente,
+          sitioId,
+          guardiaId: tipo === 'guardia' ? guardiaId : undefined,
+          urgente,
+          asunto,
+          descripcion,
+        },
+        fotos,
+      ),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: reportesClienteService.keys.all });
       toast.success('Reporte enviado: lo revisan el supervisor y el administrador');
@@ -76,7 +81,7 @@ export function ReporteClienteModal({ onClose }: { onClose: () => void }) {
       onSubmit={onSubmit}
       submitLabel="Enviar reporte"
       loading={guardar.isPending}
-      dirty={!!tipo || !!asunto || !!descripcion}
+      dirty={!!tipo || !!asunto || !!descripcion || fotos.length > 0}
       size="md"
     >
       <FormField label="¿De qué trata?" required error={errores.tipo}>
@@ -124,6 +129,13 @@ export function ReporteClienteModal({ onClose }: { onClose: () => void }) {
       </FormField>
       <FormField label="¿Qué pasó?" required error={errores.descripcion}>
         <Textarea rows={4} maxLength={2000} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+      </FormField>
+      <FormField
+        label="Fotos"
+        error={errores.fotos}
+        hint={`Opcional: hasta ${MAX_FOTOS_REPORTE_CLIENTE} fotos que ayuden a entender lo que pasó.`}
+      >
+        <PhotoUploader value={fotos} onChange={setFotos} max={MAX_FOTOS_REPORTE_CLIENTE} error={errores.fotos} />
       </FormField>
       <Checkbox
         checked={urgente}

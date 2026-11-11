@@ -14,12 +14,18 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Manuales**: Cliente y Supervisor explican las dos fotos de la lista; el Cliente ya no dice que no ve la foto de registro (la ve si está aprobada; lo oculto es el resultado del reconocimiento); la parte común distingue el aviso por rol.
 - **Aviso de privacidad (A-68/A-75)**: la sección 6 del texto que ven los guardias en la app (`avisoPrivacidad.ts`) decía que los clientes nunca ven ubicación, retardos ni faltas; ahora dice lo que realmente ven (nombre y correo, foto de referencia, horario, horas de checada con retardos y faltas confirmadas, foto y ubicación de cada checada; no teléfono ni reconocimiento facial). La versión sigue en `borrador-0` (no se pide aceptar de nuevo); el borrador .md y el .docx se regeneraron de ese texto.
 
+#### Añadido
+
+- **Fotos en los reportes del cliente (A-67)**: el cliente puede adjuntar hasta 5 fotos (solo imágenes) al levantar su reporte; las ven él, el supervisor del sitio y el administrador dueño, en miniaturas que se abren en grande. Tabla nueva `reporte_cliente_fotos` (migración `20261111000000_reportes_cliente_fotos`); los reportes anteriores quedan sin fotos. El servidor revisa que sean imágenes de verdad, limita a 5, guarda las fotos en `reportes-cliente/` y las borra si la base falla; al eliminar un cliente, sitio o usuario también se borran sus archivos. El "urgente" ya se entiende cuando el reporte viaja como formulario.
+- **Manuales**: Cliente (cómo adjuntar fotos y que no se agregan después), Supervisor y Administrador (ven las fotos).
+- **PLAN**: A-76 pantalla de auditoría (solo lectura; sin fecha).
+
 #### Corregido
 
 - **Cambios de turno (A-73c)**: la lista "Quién lo cubrirá" solo trae guardias del alcance del supervisor o administrador.
 - **Ausencias (A-73b)**, **reportes del cliente (A-73a)** y **rol en la línea del tiempo (A-73)**: ya subidos en la sesión anterior.
 
-Pruebas: nueva "la foto de la fila es la de referencia..." (falla sin el arreglo).
+Pruebas: nueva "la foto de la fila es la de referencia..." (falla sin el arreglo) y 7 de fotos en reportes del cliente (A-67).
 
 ### Sesión 2026-11-10 #49 — Menú de la cuenta en el celular (A-71)
 
