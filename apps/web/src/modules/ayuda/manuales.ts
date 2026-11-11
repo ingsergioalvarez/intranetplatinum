@@ -15,8 +15,8 @@ const textos = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 
-/** Capturas de pantalla del manual por nombre de archivo sin extensión (`G01-checador`). */
-const imagenes = import.meta.glob('../../../../../docs/manual/capturas/*.png', {
+/** Capturas de pantalla del manual por nombre de archivo sin extensión (`G01-checador`), en la carpeta de su manual. */
+const imagenes = import.meta.glob('../../../../../docs/manual/capturas/**/*.png', {
   query: '?url',
   import: 'default',
   eager: true,

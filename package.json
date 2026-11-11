@@ -20,6 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "manual": "node scripts/manual/build.mjs",
+    "manual:capturas": "node scripts/manual/capturas.mjs",
     "test": "npm run test --workspaces --if-present"
   },
   "engines": {

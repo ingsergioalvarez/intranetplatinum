@@ -16,6 +16,12 @@ import { Marked } from 'marked';
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MANUAL = join(RAIZ, 'docs', 'manual');
 const CAPTURAS = join(MANUAL, 'capturas');
+/** Carpeta de cada manual dentro de `capturas/`, según la letra con que empieza el ID (`G01-checador` va en `guardia/`). */
+const CARPETAS = { C: 'comun', G: 'guardia', S: 'supervisor', A: 'admin', K: 'cliente' };
+const rutaCaptura = (id) => {
+  const enCarpeta = join(CAPTURAS, CARPETAS[id[0]] ?? '', `${id}.png`);
+  return existsSync(enCarpeta) ? enCarpeta : join(CAPTURAS, `${id}.png`);
+};
 const SALIDA = join(MANUAL, 'pdf');
 const CSS = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'manual.css'), 'utf8');
 const ICONO = pathToFileURL(join(RAIZ, 'apps', 'web', 'public', 'favicon.svg')).href;
@@ -115,7 +121,7 @@ function crearConversor() {
   /** Los marcadores `{{captura:ID|descripción}}` se vuelven imagen, o un recuadro de pendiente si no existe. */
   const conCapturas = (md) =>
     md.replace(/^\{\{captura:([^|}]+)\|([^}]+)\}\}\s*$/gm, (_, id, desc) => {
-      const archivo = join(CAPTURAS, `${id}.png`);
+      const archivo = rutaCaptura(id);
       if (existsSync(archivo)) {
         figura += 1;
         return `\n\n<figure class="captura"><img src="${pathToFileURL(archivo).href}" alt="${esc(desc)}"><figcaption>Figura ${figura}. ${esc(desc)}.</figcaption></figure>\n\n`;

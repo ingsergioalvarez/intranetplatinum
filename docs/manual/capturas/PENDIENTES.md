@@ -1,6 +1,16 @@
 # Capturas del manual: pendientes
 
-Cada captura se guarda en esta carpeta con **el nombre exacto** de la columna "Archivo" (formato `.png`). Mientras no exista, el manual muestra un recuadro gris de "Captura pendiente".
+Cada captura se guarda con **el nombre exacto** de la columna "Archivo" (formato `.png`) **en la carpeta de su manual**: la letra del nombre dice cuál es.
+
+| Letra | Carpeta | Manual |
+|---|---|---|
+| `C` | `capturas/comun/` | Parte común |
+| `G` | `capturas/guardia/` | Guardia |
+| `S` | `capturas/supervisor/` | Supervisor |
+| `A` | `capturas/admin/` | Administrador |
+| `K` | `capturas/cliente/` | Cliente |
+
+Mientras la imagen no exista, el manual muestra un recuadro gris de "Captura pendiente" (en Ayuda, el administrador ve ahí el nombre del archivo que falta). **`npm run manual:capturas`** muestra cuáles están hechas, cuáles faltan, cuáles pesan de más y cuáles tienen el nombre mal escrito o están en la carpeta equivocada. Plan completo: A-74 en el [PLAN](../../PLAN.md).
 
 **Cómo tomarlas:** en celular a 360 px de ancho (captura de pantalla normal), y con **datos de prueba** (no nombres reales de guardias ni clientes). Una captura por pantalla, sin recortar la barra de abajo.
 

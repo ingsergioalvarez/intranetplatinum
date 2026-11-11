@@ -56,7 +56,7 @@ export interface ManualRenderizado {
  * ningún usuario), por eso no se filtra. Los marcadores `{{captura:ID|descripción}}` se vuelven imagen, o un
  * recuadro de "pendiente" si todavía no existe.
  */
-export function renderizarManual(texto: string, prefijo: string): ManualRenderizado {
+export function renderizarManual(texto: string, prefijo: string, mostrarIds = false): ManualRenderizado {
   const marked = new Marked({
     gfm: true,
     renderer: {
@@ -91,7 +91,7 @@ export function renderizarManual(texto: string, prefijo: string): ManualRenderiz
     const url = capturaPorId(id);
     return url
       ? `\n\n<figure class="manual-captura"><img src="${url}" alt="${esc(desc)}" loading="lazy"><figcaption>${esc(desc)}</figcaption></figure>\n\n`
-      : `\n\n<div class="manual-pendiente"><b>Captura pendiente</b><span>${esc(desc)}</span></div>\n\n`;
+      : `\n\n<div class="manual-pendiente"><b>Captura pendiente</b>${mostrarIds ? `<span><code>${esc(id)}.png</code></span>` : ''}<span>${esc(desc)}</span></div>\n\n`;
   });
 
   const tokens = marked.lexer(conCapturas);

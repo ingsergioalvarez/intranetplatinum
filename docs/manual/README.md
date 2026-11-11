@@ -13,7 +13,7 @@ El **PDF** (`npm run manual`) se genera solo en local, en `docs/manual/pdf/` (no
 | `supervisor.md` | Manual del Supervisor (asistencia, decisiones, cobertura, reportes, quejas, clientes y sitios, turnos). |
 | `admin.md` | Manual del Administrador (usuarios, eliminar, acceso del cliente, ausencias, solicitudes, revertir, avisos, super administrador). Complementa al del Supervisor. |
 | `cliente.md` | Por escribir. |
-| `capturas/` | Imágenes del manual y `PENDIENTES.md` con la lista de las que faltan. |
+| `capturas/` | Imágenes del manual, una carpeta por manual (`comun`, `guardia`, `supervisor`, `admin`, `cliente`), y `PENDIENTES.md` con la lista de las que faltan. |
 
 **Cómo se arma cada manual:** Guardia = `comun.md` + `guardia.md`. Supervisor = `comun.md` + `supervisor.md`. Y así con cada rol. El **Manual completo** (para el administrador) junta todo.
 
@@ -31,7 +31,7 @@ Donde va una imagen se escribe un marcador en una línea sola:
 {{captura:G01-checador|Pantalla del Checador con sus botones}}
 ```
 
-- `G01-checador` es el nombre del archivo (`capturas/G01-checador.png`); la parte después de `|` describe qué debe verse.
+- `G01-checador` es el nombre del archivo (`capturas/guardia/G01-checador.png`, en la carpeta que dice su letra); la parte después de `|` describe qué debe verse.
 - Si el archivo existe, se muestra la imagen. Si no, se muestra un recuadro gris **"Captura pendiente: …"**.
 - Prefijos: `C` = parte común, `G` = guardia (después `S` = supervisor, `A` = administrador, `K` = cliente).
 - La lista de pendientes está en [capturas/PENDIENTES.md](capturas/PENDIENTES.md).

@@ -18,7 +18,7 @@ export function AyudaPage() {
   const [clave, setClave] = useState(() => manuales.find((m) => m.clave === user.rol)?.clave ?? manuales[0]?.clave);
   const [indiceAbierto, setIndiceAbierto] = useState(false);
   const activo = manuales.find((m) => m.clave === clave) ?? manuales[0];
-  const contenido = useMemo(() => (activo ? renderizarManual(activo.texto, activo.clave) : null), [activo]);
+  const contenido = useMemo(() => (activo ? renderizarManual(activo.texto, activo.clave, user.rol === 'admin') : null), [activo, user.rol]);
 
   if (!activo || !contenido) {
     return (

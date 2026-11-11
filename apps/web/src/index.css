@@ -233,6 +233,14 @@
     font-size: 0.8rem;
     color: var(--color-slate-500);
   }
+  .manual-pendiente span {
+    display: block;
+  }
+  .manual-pendiente code {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-brand-700);
+  }
   .manual-pendiente b {
     display: block;
     margin-bottom: 0.15rem;
