@@ -216,7 +216,7 @@ La tarjeta te muestra una advertencia amarilla si avisas al cliente pero **ning�
 
 Las ausencias del personal (vacaciones, incapacidades, permisos) las **aprueba el administrador**. El supervisor las pide.
 
-Entra a **Asistencia → "Ausencias"**. Por omisión ves las **"Por aprobar"**; el filtro **"Todas"** muestra el resto.
+Entra a **Asistencia → "Ausencias"**. Ves las ausencias de **los guardias de tu cartera** (el super administrador ve todas). Por omisión salen las **"Por aprobar"**; el filtro **"Todas"** muestra el resto.
 
 ### Aprobar o rechazar
 

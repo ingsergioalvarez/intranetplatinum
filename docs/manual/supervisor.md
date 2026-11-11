@@ -384,7 +384,7 @@ Los guardias reportan problemas de los sitios (una lámpara fundida, una cámara
 
 **Dar seguimiento.**
 
-1. Toca el reporte para abrirlo. Ves los datos del sitio, la descripción, las fotos (tócalas para ampliarlas) y el **"Seguimiento Oficial"**, la línea del tiempo con todo lo que se ha hecho.
+1. Toca el reporte para abrirlo. Ves los datos del sitio, la descripción, las fotos (tócalas para ampliarlas) y el **"Seguimiento Oficial"**, la línea del tiempo con todo lo que se ha hecho. Cada línea dice **quién la escribió y su rol**: *"(Guardia)"*, *"(Supervisor)"*, *"(Administrador)"* o *"(Cliente)"*. Así distingues de un vistazo cuándo **el cliente** agregó un comentario o una foto.
 2. Abajo, en **"Agregar seguimiento"**, escribe **"¿Qué se hizo o qué cambió?"**, agrega fotos si quieres (hasta 10) y, si hace falta, elige un valor en **"Cambiar estatus"**.
 3. Toca **"Enviar"**. Verás **"Seguimiento agregado"**.
 

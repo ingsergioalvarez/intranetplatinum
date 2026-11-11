@@ -5,11 +5,14 @@ import { ArrowRight, ChevronLeft, FilePlus2, MessageSquare, Navigation, Send } f
 import {
   ESTATUS_REPORTE_LABEL,
   MAX_FOTOS_REPORTE,
+  ROLES,
+  ROL_DESCRIPCIONES,
   type BandejaAvisos,
   type EstatusReporte,
   type ReporteDetalle,
 } from '@platinum/shared';
 import { ApiError, api, mensajeDeError } from '../../core/api';
+import { useAuthStore } from '../../core/auth/authStore';
 import { formatFechaHora } from '../../core/format/fechas';
 import { mapsUrl } from '../../core/format/mapas';
 import {
@@ -186,7 +189,7 @@ export function ReporteDetallePage() {
             <div className="p-4 pt-2">
               <ol className="space-y-0">
                 <EventoLinea
-                  titulo={`${r.creadoPor.nombre} (Guardia)`}
+                  titulo={`${r.creadoPor.nombre} (${ROL_DESCRIPCIONES[r.creadoPorRol]})`}
                   fecha={r.createdAt}
                   icono={<FilePlus2 className="size-4" />}
                 >
@@ -195,7 +198,7 @@ export function ReporteDetallePage() {
                 {r.seguimientos.map((s) => (
                   <EventoLinea
                     key={s.id}
-                    titulo={s.usuario.nombre}
+                    titulo={`${s.usuario.nombre} (${ROL_DESCRIPCIONES[s.usuario.rol]})`}
                     fecha={s.createdAt}
                     icono={<MessageSquare className="size-4" />}
                   >
@@ -266,6 +269,8 @@ function FormSeguimiento({ reporte }: { reporte: ReporteDetalle }) {
   const [fotos, setFotos] = useState<File[]>([]);
   const [error, setError] = useState<string | undefined>();
   const permitidos = reporte.acciones.estatusPermitidos;
+  // El cliente no da seguimiento al reporte: aporta un comentario o una foto como evidencia adicional.
+  const esCliente = useAuthStore((s) => s.user?.rol) === ROLES.CLIENTE;
 
   const enviar = useMutation({
     mutationFn: () =>
@@ -277,7 +282,7 @@ function FormSeguimiento({ reporte }: { reporte: ReporteDetalle }) {
       setComentario('');
       setEstatus('');
       setFotos([]);
-      toast.success('Seguimiento agregado');
+      toast.success(esCliente ? 'Comentario enviado' : 'Seguimiento agregado');
     },
     onError: (e) => {
       const campos = e instanceof ApiError ? e.fieldErrors : {};
@@ -289,7 +294,9 @@ function FormSeguimiento({ reporte }: { reporte: ReporteDetalle }) {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!comentario.trim() && !estatus && fotos.length === 0) {
-      return setError('Escribe un comentario, agrega fotos o cambia el estatus');
+      return setError(
+        esCliente ? 'Escribe un comentario o agrega una foto' : 'Escribe un comentario, agrega fotos o cambia el estatus',
+      );
     }
     setError(undefined);
     enviar.mutate();
@@ -297,12 +304,12 @@ function FormSeguimiento({ reporte }: { reporte: ReporteDetalle }) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-3 border-t border-slate-100 p-4">
-      <FormField label="Agregar seguimiento" error={error}>
+      <FormField label={esCliente ? 'Agregar un comentario' : 'Agregar seguimiento'} error={error}>
         <Textarea
           rows={3}
           value={comentario}
           maxLength={2000}
-          placeholder="¿Qué se hizo o qué cambió?"
+          placeholder={esCliente ? 'Escribe tu comentario o un dato adicional' : '¿Qué se hizo o qué cambió?'}
           onChange={(e) => {
             setComentario(e.target.value);
             setError(undefined);
@@ -310,7 +317,10 @@ function FormSeguimiento({ reporte }: { reporte: ReporteDetalle }) {
         />
       </FormField>
       {reporte.acciones.comentar && (
-        <PhotoUploader value={fotos} onChange={setFotos} max={MAX_FOTOS_REPORTE} />
+        <div className="space-y-1.5">
+          {esCliente && <p className="text-sm font-medium text-slate-700">Agregar fotos como evidencia (opcional)</p>}
+          <PhotoUploader value={fotos} onChange={setFotos} max={MAX_FOTOS_REPORTE} />
+        </div>
       )}
       <div className="flex flex-col gap-3 md:flex-row md:items-end">
         {permitidos.length > 0 && (
@@ -329,7 +339,7 @@ function FormSeguimiento({ reporte }: { reporte: ReporteDetalle }) {
           loading={enviar.isPending}
           className="md:ml-auto"
         >
-          Enviar
+          {esCliente ? 'Enviar comentario' : 'Enviar'}
         </Button>
       </div>
     </form>

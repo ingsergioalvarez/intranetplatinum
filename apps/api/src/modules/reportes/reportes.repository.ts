@@ -3,9 +3,11 @@ import type {
   Paginated,
   PaginationQuery,
   Persona,
+  PersonaConRol,
   ReporteCreateData,
   ReporteFiltro,
   ReporteResumen,
+  Rol,
   SitioReportable,
 } from '@platinum/shared';
 import { fechaADate } from '../../core';
@@ -52,6 +54,7 @@ export interface EvidenciaRow {
 }
 
 export interface ReporteDetalleRow extends ReporteResumen {
+  creadoPorRol: Rol;
   descripcion: string;
   ubicacionDetalle: string | null;
   lat: number | null;
@@ -59,7 +62,7 @@ export interface ReporteDetalleRow extends ReporteResumen {
   evidencias: EvidenciaRow[];
   seguimientos: {
     id: number;
-    usuario: Persona;
+    usuario: PersonaConRol;
     comentario: string | null;
     estatusAnterior: EstatusReporte | null;
     estatusNuevo: EstatusReporte | null;
@@ -106,6 +109,8 @@ export abstract class ReportesRepository {
 // ---------- Mapeos ----------
 
 const personaSelect = { select: { id: true, nombre: true } } as const;
+/** Persona con su rol (clave), para decir en la línea del tiempo quién escribió cada cosa. */
+const personaConRolSelect = { select: { id: true, nombre: true, rol: { select: { clave: true } } } } as const;
 
 const resumenSelect = {
   id: true,
@@ -282,6 +287,7 @@ export class PrismaReportesRepository extends ReportesRepository {
       where: { id },
       select: {
         ...resumenSelect,
+        creadoPor: personaConRolSelect,
         descripcion: true,
         ubicacionDetalle: true,
         lat: true,
@@ -291,7 +297,7 @@ export class PrismaReportesRepository extends ReportesRepository {
           orderBy: { createdAt: 'asc' },
           select: {
             id: true,
-            usuario: personaSelect,
+            usuario: personaConRolSelect,
             comentario: true,
             estatusAnterior: true,
             estatusNuevo: true,
@@ -302,15 +308,21 @@ export class PrismaReportesRepository extends ReportesRepository {
       },
     });
     if (!r) return null;
-    const { descripcion, ubicacionDetalle, lat, lng, evidencias, seguimientos, ...resumen } = r;
+    const { descripcion, ubicacionDetalle, lat, lng, evidencias, seguimientos, ...resto } = r;
+    const { rol: creadoPorRol, ...creadoPor } = resto.creadoPor;
+    const resumen = { ...resto, creadoPor: { id: creadoPor.id, nombre: creadoPor.nombre } };
     return {
       ...toResumen(resumen),
+      creadoPorRol: creadoPorRol.clave as Rol,
       descripcion,
       ubicacionDetalle,
       lat: lat === null ? null : Number(lat),
       lng: lng === null ? null : Number(lng),
       evidencias,
-      seguimientos,
+      seguimientos: seguimientos.map((s) => ({
+        ...s,
+        usuario: { id: s.usuario.id, nombre: s.usuario.nombre, rol: s.usuario.rol.clave as Rol },
+      })),
     };
   }
 

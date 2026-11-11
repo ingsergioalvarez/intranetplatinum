@@ -34,7 +34,7 @@ import { AusenciasService, type ArchivoComprobante } from './ausencias.service';
 class AusenciasController extends BaseController {
   constructor(
     private readonly service: AusenciasService,
-    /** Supervisor: solo sus guardias. */
+    /** Supervisor: solo sus guardias; admin: los de su cartera; super admin: sin límite. */
     private readonly alcanceDe: AlcanceFn,
   ) {
     super();
@@ -65,7 +65,15 @@ class AusenciasController extends BaseController {
     );
 
   resolver = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.resolver(this.params<IdParam>(req).id, this.body<ResolverAusenciaInput>(req), this.accionCtx(req)));
+    this.ok(
+      res,
+      await this.service.resolver(
+        this.params<IdParam>(req).id,
+        this.body<ResolverAusenciaInput>(req),
+        this.accionCtx(req),
+        await this.alcance(req),
+      ),
+    );
 
   cancelar = async (req: Request, res: Response) =>
     this.ok(
@@ -75,6 +83,7 @@ class AusenciasController extends BaseController {
         this.body<CancelarAusenciaInput>(req),
         this.currentUser(req),
         this.accionCtx(req),
+        await this.alcance(req),
       ),
     );
 }

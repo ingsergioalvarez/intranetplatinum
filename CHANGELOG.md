@@ -21,8 +21,13 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Capturas por carpeta (A-74)**: las imágenes del manual van en `docs/manual/capturas/<manual>/` (la letra del ID dice la carpeta). Nuevo `npm run manual:capturas`: muestra hechas, faltantes, pesadas, mal nombradas o en carpeta equivocada. En Ayuda, el administrador ve el nombre del archivo en cada recuadro pendiente. Probado con imágenes de prueba (ya borradas) en la app y en el PDF. Plan completo en el PLAN (A-74); **A-73** guarda los detalles de la app que el usuario irá pasando.
 - **Recuadros del manual**: una etiqueta en negritas al inicio (`> **IMPORTANTE:** texto`) ahora decide el tipo y se quita del texto, así no sale repetida. Igual en la pantalla de Ayuda y en el PDF.
 
+#### Cambiado
+
+- **Línea del tiempo del reporte (A-73a2)**: cada entrada dice el rol de quien la escribió, "Nombre (Cliente)", "(Supervisor)", "(Guardia)" o "(Administrador)". Antes el primer evento decía siempre "(Guardia)", aunque lo hubiera levantado un supervisor. El servidor ahora manda el rol de quien levantó el reporte y de cada seguimiento. Al **cliente** el formulario le sale como comentario ("Agregar un comentario", "Escribe tu comentario o un dato adicional", "Agregar fotos como evidencia (opcional)", "Enviar comentario", "Comentario enviado"); guardia, supervisor y administrador siguen con "Agregar seguimiento". Manuales de Cliente, Supervisor y Guardia al día. Prueba nueva en `reportes.test.ts`.
+
 #### Corregido
 
+- **Ausencias: cada administrador solo ve y toca lo de su cartera (A-73b, A-66)**: la lista del administrador traía las ausencias de todo el sistema (con motivo y comprobante médico) y registrar, aprobar, rechazar o cancelar no validaban de quién era el guardia. Ahora la lista, registrar, la vista previa, aprobar, rechazar y cancelar se limitan a los guardias de su cartera; fuera de ella responden "no encontrada". El super administrador sigue viendo todo. Prueba nueva en `ausencias.test.ts` (comprobado que falla sin el arreglo).
 - **Lista "Reportes" del cliente (A-73a)**: salía vacía porque la pantalla le pedía al servidor "solo los que yo creé" y el cliente no crea reportes de guardia. Ahora ese filtro es solo de la pestaña "Mis reportes" del guardia; al cliente el servidor ya lo limita a su empresa. Prueba nueva en `reportes.test.ts`.
 
 #### Plan

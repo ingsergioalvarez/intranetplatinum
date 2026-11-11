@@ -27,7 +27,7 @@ import {
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import { sinBitacora, type RegistrarBitacora } from '../bitacora/registrar';
-import { exigirGuardia, type Alcance } from '../sitios/alcance';
+import { exigirGuardia, guardiaEnAlcance, type Alcance } from '../sitios/alcance';
 import type { AusenciaRow, AusenciasRepository } from './ausencias.repository';
 
 const RUTA_ADMIN = '/asistencia/ausencias';
@@ -77,10 +77,19 @@ export class AusenciasService extends BaseService {
     };
   }
 
-  /** Admin: todas; supervisor: las de sus guardias; guardia: las suyas. Las pendientes primero. */
+  /**
+   * Guardia: las suyas; supervisor: las de sus guardias; admin: las de los guardias de su cartera (A-66); super
+   * admin: todas (su alcance es `null`). Las pendientes primero.
+   */
   async listar(user: AuthUser, alcance: Alcance | null): Promise<AusenciasLista> {
     const ids =
-      user.rol === ROLES.ADMIN ? null : user.rol === ROLES.SUPERVISOR ? [...(alcance?.guardiaIds ?? [])] : [user.id];
+      user.rol === ROLES.GUARDIA
+        ? [user.id]
+        : user.rol === ROLES.SUPERVISOR
+          ? [...(alcance?.guardiaIds ?? [])]
+          : alcance
+            ? [...alcance.guardiaIds]
+            : null;
     const filas = await this.repo.listar(ids, 100);
     return { items: filas.map((f) => this.aAusencia(f)), pendientes: filas.filter((f) => f.estado === 'pendiente').length };
   }
@@ -102,7 +111,8 @@ export class AusenciasService extends BaseService {
   ): Promise<Ausencia> {
     const usuarioId = user.rol === ROLES.GUARDIA ? user.id : data.usuarioId;
     if (!usuarioId) throw campo('usuarioId', 'Elige el guardia');
-    if (user.rol === ROLES.SUPERVISOR) exigirGuardia(alcance, usuarioId);
+    // Supervisor y admin solo piden o registran ausencias de guardias de su alcance (el super admin no tiene límite).
+    if (user.rol !== ROLES.GUARDIA) exigirGuardia(alcance, usuarioId);
     const guardia = await this.repo.guardia(usuarioId);
     if (!guardia || !guardia.activo || guardia.rol !== ROLES.GUARDIA) throw campo('usuarioId', 'Elige un guardia activo');
 
@@ -239,10 +249,10 @@ export class AusenciasService extends BaseService {
     return (await this.repo.findById(fila.id))!;
   }
 
-  /** El admin aprueba o rechaza una solicitud pendiente. */
-  async resolver(id: number, input: ResolverAusenciaInput, ctx: AccionCtx): Promise<Ausencia> {
+  /** El admin aprueba o rechaza una solicitud pendiente de un guardia de su cartera. */
+  async resolver(id: number, input: ResolverAusenciaInput, ctx: AccionCtx, alcance: Alcance | null): Promise<Ausencia> {
     const fila = await this.repo.findById(id);
-    if (!fila) throw HttpError.notFound('Ausencia no encontrada');
+    if (!fila || !guardiaEnAlcance(alcance, fila.guardia.id)) throw HttpError.notFound('Ausencia no encontrada');
     if (fila.estado !== 'pendiente') throw HttpError.conflict('Esta solicitud ya se resolvió');
     if (input.decision === 'aprobar') {
       return this.aAusencia(await this.aplicar(fila, ctx.actorId, ctx, 'ausencias.aprobar'));
@@ -266,12 +276,19 @@ export class AusenciasService extends BaseService {
    * Cancelar: una pendiente, quien la pidió o el admin; una aprobada que aún no empieza, solo el admin. Una ya
    * empezada no se cancela (sus faltas ya se justificaron).
    */
-  async cancelar(id: number, { categoria, nota }: CancelarAusenciaInput, user: AuthUser, ctx: AccionCtx): Promise<Ausencia> {
+  async cancelar(
+    id: number,
+    { categoria, nota }: CancelarAusenciaInput,
+    user: AuthUser,
+    ctx: AccionCtx,
+    alcance: Alcance | null,
+  ): Promise<Ausencia> {
     const fila = await this.repo.findById(id);
     const esAdmin = user.rol === ROLES.ADMIN;
-    if (!fila || (!esAdmin && fila.solicitante.id !== user.id && fila.guardia.id !== user.id)) {
-      throw HttpError.notFound('Ausencia no encontrada');
-    }
+    // Un admin solo cancela las de su cartera; el resto, las que pidió o son suyas.
+    const visible =
+      fila && (esAdmin ? guardiaEnAlcance(alcance, fila.guardia.id) : fila.solicitante.id === user.id || fila.guardia.id === user.id);
+    if (!fila || !visible) throw HttpError.notFound('Ausencia no encontrada');
     if (fila.estado === 'pendiente') {
       if (!esAdmin && fila.solicitante.id !== user.id) throw HttpError.forbidden('Solo quien la pidió puede cancelarla');
     } else if (fila.estado === 'aprobada') {

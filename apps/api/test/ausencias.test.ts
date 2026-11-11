@@ -111,6 +111,8 @@ let avisos: { usuarioIds: number[]; titulo?: string; mensaje: string; ruta?: str
 let atendidos: string[];
 let bitacora: EventoNuevo[];
 let alcance: Alcance | null;
+/** Alcance del admin (su cartera); `null` = super admin, sin límite. */
+let alcanceAdmin: Alcance | null;
 let app: ReturnType<typeof createApp>;
 
 const token = (id: number, rol: Rol) =>
@@ -140,6 +142,7 @@ beforeEach(() => {
   atendidos = [];
   bitacora = [];
   alcance = null;
+  alcanceAdmin = null;
   app = createApp([
     createAusenciasModule({
       repo,
@@ -158,7 +161,7 @@ beforeEach(() => {
         atender: async (e, a) => void atendidos.push(`${e.tipo}:${e.id}:${a.resultado}`),
         reabrir: async () => undefined,
       },
-      alcance: async (u) => (u.rol === ROLES.SUPERVISOR ? alcance : null),
+      alcance: async (u) => (u.rol === ROLES.SUPERVISOR ? alcance : u.rol === ROLES.ADMIN ? alcanceAdmin : null),
       hoy: () => HOY,
       ahora: () => new Date('2026-11-03T16:00:00.000Z'),
     }),
@@ -283,6 +286,30 @@ describe('ausencias justificadas por adelantado (A-43)', () => {
     expect((await sup().get()).body.data.items.map((a: { guardia: { id: number } }) => a.guardia.id)).toEqual([11]);
     expect((await admin().get()).body.data.items).toHaveLength(2);
     expect((await como(20, ROLES.CLIENTE).get()).status).toBe(403);
+  });
+
+  it('cada admin solo ve y toca las ausencias de los guardias de su cartera; el super admin, todas (A-66)', async () => {
+    // Dos ausencias: una de un guardia de este admin (10, registrada por él) y una pendiente del guardia 11, de otra cartera.
+    await admin().pedir(vacaciones);
+    await como(11, ROLES.GUARDIA).pedir({ ...vacaciones, desde: '2026-11-20', hasta: '2026-11-22' });
+
+    alcanceAdmin = { sitioIds: new Set([1]), guardiaIds: new Set([10]) };
+    const ids = (await admin().get()).body.data.items.map((a: { guardia: { id: number } }) => a.guardia.id);
+    expect(ids).toEqual([10]);
+
+    // El servidor no se fía de la pantalla: pedir, aprobar, rechazar o cancelar lo de otra cartera es "no encontrado".
+    expect((await admin().pedir({ ...vacaciones, usuarioId: '11', desde: '2026-12-01', hasta: '2026-12-02' })).status).toBe(404);
+    expect((await admin().post('/2/resolver', { decision: 'aprobar' })).status).toBe(404);
+    expect((await admin().post('/2/resolver', { decision: 'rechazar', categoria: 'no_procede' })).status).toBe(404);
+    expect((await admin().post('/2/cancelar', { categoria: 'ya_no_se_necesita' })).status).toBe(404);
+    expect((await admin().get('/vista-previa?usuarioId=11&desde=2026-11-04&hasta=2026-11-08')).status).toBe(404);
+    // Lo suyo sí.
+    expect((await admin().pedir({ ...vacaciones, desde: '2026-12-01', hasta: '2026-12-02' })).status).toBe(201);
+
+    // La ausencia ajena sigue intacta y el super admin (sin límite) la ve y la puede atender.
+    alcanceAdmin = null;
+    expect((await admin().get()).body.data.items).toHaveLength(3);
+    expect((await admin().post('/2/resolver', { decision: 'aprobar' })).status).toBe(200);
   });
 
   it('la vista previa cuenta las faltas que se justificarían solas', async () => {

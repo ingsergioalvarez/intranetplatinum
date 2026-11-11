@@ -134,19 +134,21 @@ Toca un reporte. Verás:
 
 - **"Datos del Inmueble y Turno"**: el sitio, la categoría, quién lo reportó y, si lo trae, la ubicación exacta y **"Abrir en Google Maps"**.
 - **"Descripción e Incidencia"**: lo que pasó, con las **fotos** (tócalas para verlas en grande).
-- **"Seguimiento Oficial"**: la línea del tiempo de todo lo que se ha hecho, con fecha, quién lo hizo, los cambios de estatus y las fotos.
+- **"Seguimiento Oficial"**: la línea del tiempo de todo lo que se ha hecho, con la fecha, **quién lo escribió y su rol** (por ejemplo *"Sara (Supervisor)"*, *"Gabriel (Guardia)"* o *"Carlos (Cliente)"*), los cambios de estatus y las fotos.
 
 ### Comentar un reporte
 
-Tú también puedes escribir en un reporte, por ejemplo para dar un dato o preguntar algo:
+Tú también puedes escribir en un reporte, por ejemplo para dar un dato adicional o mandar una foto como evidencia:
 
-1. Abre el reporte y baja a **"Agregar seguimiento"**.
-2. Escribe en **"¿Qué se hizo o qué cambió?"** (hasta 2,000 letras). Puedes agregar **fotos** (hasta 10).
-3. Toca **"Enviar"**. Verás **"Seguimiento agregado"**.
+1. Abre el reporte y baja a **"Agregar un comentario"**.
+2. Escribe tu comentario en el cuadro (hasta 2,000 letras). Puedes agregar **fotos como evidencia** (hasta 10); son opcionales.
+3. Toca **"Enviar comentario"**. Verás **"Comentario enviado"**.
+
+Tu comentario aparece en la línea del tiempo del reporte con tu nombre y la etiqueta **(Cliente)**, para que quien atiende el reporte sepa que lo escribiste tú.
 
 > **NOTA:** tú **puedes comentar, pero no cambiar el estatus**. El estatus lo cambian el supervisor o el administrador.
 
-{{captura:K04-reporte-detalle|Detalle de un reporte con el seguimiento oficial y "Agregar seguimiento"}}
+{{captura:K04-reporte-detalle|Detalle de un reporte con el seguimiento oficial y "Agregar un comentario"}}
 
 ## 8. Reportarnos algo del servicio
 

@@ -60,7 +60,7 @@ Mientras la imagen no exista, el manual muestra un recuadro gris de "Captura pen
 | [ ] | `K01-inicio.png` | Inicio del cliente con "Reportes abiertos" y "Guardias hoy" | Manual del Cliente |
 | [ ] | `K02-mis-guardias.png` | "Mis guardias" con una tarjeta por sitio y el estado de cada guardia | Manual del Cliente |
 | [ ] | `K03-asistencia.png` | Asistencia del cliente con el estado de cada guardia | Manual del Cliente |
-| [ ] | `K04-reporte-detalle.png` | Detalle de un reporte con seguimiento y "Agregar seguimiento" | Manual del Cliente |
+| [ ] | `K04-reporte-detalle.png` | Detalle de un reporte con seguimiento y "Agregar un comentario" | Manual del Cliente |
 | [ ] | `K05-nuevo-reporte.png` | Ventana "Nuevo reporte" del cliente | Manual del Cliente |
 | [ ] | `K06-mis-reportes.png` | "Mis reportes" con estado y respuesta | Manual del Cliente |
 

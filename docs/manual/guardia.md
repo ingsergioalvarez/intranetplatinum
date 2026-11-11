@@ -265,7 +265,7 @@ Al terminar ves el **comprobante**: **"Reporte registrado"**, con el **folio ofi
 
 ### Seguimiento
 
-Toca un reporte para ver su detalle. En **"Seguimiento Oficial"** ves, en orden, todo lo que ha pasado: quién lo registró, los cambios de estatus y los comentarios con sus fotos. Los estatus son **Abierto, Notificado, En proceso, Resuelto y Cerrado**. Puedes tocar una foto para verla en grande.
+Toca un reporte para ver su detalle. En **"Seguimiento Oficial"** ves, en orden, todo lo que ha pasado: quién lo registró, los cambios de estatus y los comentarios con sus fotos. Cada línea trae el nombre de quien la escribió y su rol (por ejemplo *"(Supervisor)"* o *"(Cliente)"*). Los estatus son **Abierto, Notificado, En proceso, Resuelto y Cerrado**. Puedes tocar una foto para verla en grande.
 
 Recibirás avisos en la campanita cuando alguien comente o cambie el estatus de un reporte tuyo. También te llega un aviso cuando un compañero registra un reporte nuevo en tu sitio.
 

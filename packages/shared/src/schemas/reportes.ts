@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Rol } from '../constants/roles';
 import {
   ESTATUS_REPORTE,
   PRIORIDAD_REPORTE,
@@ -100,6 +101,11 @@ export interface Persona {
   nombre: string;
 }
 
+/** Quien escribió algo en un reporte, con su rol: la línea del tiempo dice si fue guardia, supervisor, cliente… */
+export interface PersonaConRol extends Persona {
+  rol: Rol;
+}
+
 export interface ReporteResumen {
   id: number;
   folio: string;
@@ -127,7 +133,7 @@ export interface Evidencia {
 
 export interface Seguimiento {
   id: number;
-  usuario: Persona;
+  usuario: PersonaConRol;
   comentario: string | null;
   estatusAnterior: EstatusReporte | null;
   estatusNuevo: EstatusReporte | null;
@@ -136,6 +142,8 @@ export interface Seguimiento {
 }
 
 export interface ReporteDetalle extends ReporteResumen {
+  /** Rol de quien levantó el reporte (un guardia, pero también puede ser un supervisor o un administrador). */
+  creadoPorRol: Rol;
   descripcion: string;
   ubicacionDetalle: string | null;
   lat: number | null;

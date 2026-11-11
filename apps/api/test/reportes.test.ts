@@ -123,6 +123,8 @@ class MemoryReportesRepository extends ReportesRepository {
   visibleParaGuardia = true;
   /** Admin dueño del cliente del reporte (A-66). */
   duenoDelCliente = 7;
+  /** Seguimientos que devuelve el detalle (con el rol de quien escribió cada uno). */
+  seguimientosDetalle: ReporteDetalleRow['seguimientos'] = [];
 
   async crear(_d: unknown, fotos: FotoNueva[]) {
     if (this.falla) throw new Error('BD caída');
@@ -149,6 +151,7 @@ class MemoryReportesRepository extends ReportesRepository {
       cliente: { id: 1, nombreComercial: 'Plaza' },
       categoria: { id: 2, nombre: 'Lámpara fundida', padre: 'Iluminación' },
       creadoPor: { id: 3, nombre: 'Gabriel' },
+      creadoPorRol: ROLES.SUPERVISOR,
       totalFotos: 1,
       descripcion: 'No enciende',
       ubicacionDetalle: null,
@@ -164,7 +167,7 @@ class MemoryReportesRepository extends ReportesRepository {
           subidaPor: { id: 3, nombre: 'G' },
         },
       ],
-      seguimientos: [],
+      seguimientos: this.seguimientosDetalle,
     };
   }
   async puedeVer(_id: number, v: Visibilidad) {
@@ -303,6 +306,32 @@ describe('visibilidad y seguimiento', () => {
     };
     await service.list(SUPERVISOR, { page: 1, limit: 20, creadoPorId: 5 });
     expect(capturado).toMatchObject({ creadoPorId: 5 });
+  });
+
+  it('el detalle dice el rol de quien levantó el reporte y de quien escribió cada comentario', async () => {
+    repo.seguimientosDetalle = [
+      {
+        id: 1,
+        usuario: { id: 5, nombre: 'Cliente Uno', rol: ROLES.CLIENTE },
+        comentario: 'Se ve peor en la noche',
+        estatusAnterior: null,
+        estatusNuevo: null,
+        createdAt: new Date('2026-10-13T10:00:00Z'),
+        evidencias: [],
+      },
+      {
+        id: 2,
+        usuario: { id: 2, nombre: 'Sara', rol: ROLES.SUPERVISOR },
+        comentario: 'Ya lo atiendo',
+        estatusAnterior: 'abierto',
+        estatusNuevo: 'en_proceso',
+        createdAt: new Date('2026-10-13T11:00:00Z'),
+        evidencias: [],
+      },
+    ];
+    const d = await service.detalle(CLIENTE, 1);
+    expect(d.creadoPorRol).toBe(ROLES.SUPERVISOR);
+    expect(d.seguimientos.map((s) => s.usuario.rol)).toEqual([ROLES.CLIENTE, ROLES.SUPERVISOR]);
   });
 
   it('el cliente, sin pedir "solo los míos", ve la lista de los reportes de su empresa y de ninguna otra', async () => {
