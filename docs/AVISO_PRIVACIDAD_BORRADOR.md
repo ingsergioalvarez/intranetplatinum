@@ -69,7 +69,7 @@ Si este aviso cambia, te lo mostraremos de nuevo en la aplicación. Puedes retir
 
 #### 6. Quién puede ver tus datos
 
-Dentro de la empresa: tu supervisor, los administradores y el personal que autorice el Responsable. Cada persona ve solo lo que su cargo requiere. Tu rostro, tus fotografías y tu ubicación no se publican ni se muestran a otros guardias. Los clientes de seguridad solo ven tu nombre, foto de perfil y horario en el sitio donde estás asignado, nunca tu ubicación, retardos ni faltas.
+Dentro de la empresa: tu supervisor, los administradores y el personal que autorice el Responsable. Cada persona ve solo lo que su cargo requiere. Tu rostro, tus fotografías y tu ubicación no se publican ni se muestran a otros guardias. Los clientes de seguridad, solo en los sitios donde estás asignado, ven tu nombre y correo, tu foto de referencia, tu horario, la hora a la que checas (con tus retardos y faltas confirmadas) y la foto y la ubicación de cada checada. No ven tu teléfono ni el resultado del reconocimiento facial.
 
 Las fotografías se muestran mediante enlaces temporales firmados, no públicos.
 
@@ -115,7 +115,7 @@ Si este aviso cambia, te lo mostraremos de nuevo en la aplicación y te pediremo
 2. **Marco legal vigente.** Confirmar qué ley y autoridad aplican hoy (la ley de protección de datos personales en posesión de particulares fue reformada en 2025) y si el consentimiento por casilla y botón en la aplicación basta para datos sensibles, o se requiere firma o formato adicional.
 3. **Relación laboral.** Si el uso del rostro para checar debe constar también en el contrato o reglamento interior, y si negarse tiene consecuencias laborales. Hoy, sin aceptar, el guardia no puede checar con rostro y "su supervisor le indica cómo proceder": falta definir esa alternativa.
 4. **Plazos.** Conservación del rostro, de las fotos de checadas, de las fotos de intentos rechazados, de bitácoras y auditoría; plazo para responder derechos ARCO.
-5. **Transferencias.** Platinum Agency, clientes de seguridad, el centro de monitoreo (C2) y autoridades. Hoy los clientes ven nombre, foto de perfil y horario de los guardias de su sitio.
+5. **Transferencias.** Platinum Agency, clientes de seguridad, el centro de monitoreo (C2) y autoridades. Hoy los clientes ven, de los guardias de su sitio, nombre y correo, foto de referencia, horario, horas de checada con sus retardos y faltas confirmadas, y la foto y ubicación de cada checada; no ven teléfono ni el resultado del reconocimiento facial.
 6. **Finalidades secundarias.** Hoy no hay ninguna; confirmar que no se necesita separarlas.
 7. **Aviso corto.** La ventana de la aplicación muestra un resumen de cinco puntos con el texto completo desplegable. Revisar también ese resumen.
 8. **Terceros y menores.** No aplica a menores; las fotos de intentos rechazados pueden captar a terceros accidentalmente.

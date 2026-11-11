@@ -27,7 +27,7 @@ Puedes usar la app desde el navegador, pero instalada es más cómoda: se abre a
 
 ## 3. Activar las notificaciones
 
-Para usar la app **es obligatorio** permitir las notificaciones. Así te llegan los avisos de tu turno aunque la app esté cerrada o el teléfono bloqueado.
+Para usar la app **es obligatorio** permitir las notificaciones. Así te llegan los avisos (de tu turno si eres guardia o supervisor; de tus reportes y novedades si eres cliente) aunque la app esté cerrada o el teléfono bloqueado.
 
 Al entrar verás la ventana **"Activa las notificaciones"**. Toca **"Activar notificaciones"** y, cuando el celular pregunte, elige **Permitir**.
 

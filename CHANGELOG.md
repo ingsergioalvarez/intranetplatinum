@@ -5,6 +5,22 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-11 #50 — Detalles de la app (A-73) y fotos en Asistencia (A-75)
+
+#### Cambiado
+
+- **Asistencia, lista del día (A-75)**: la foto de cada fila es siempre la de referencia del guardia (quién debe estar); ya no se cambia por la de la checada cuando el guardia checa. La foto de la checada aparece como miniatura junto a la hora de entrada y se amplía al tocarla (sin abrir el detalle). Sin foto de referencia se usa la de la checada. Aplica a todos los roles.
+- **Notificaciones obligatorias (A-73e)**: al cliente le dice "avisos de tus reportes y novedades" en vez de "avisos de tu turno".
+- **Manuales**: Cliente y Supervisor explican las dos fotos de la lista; el Cliente ya no dice que no ve la foto de registro (la ve si está aprobada; lo oculto es el resultado del reconocimiento); la parte común distingue el aviso por rol.
+- **Aviso de privacidad (A-68/A-75)**: la sección 6 del texto que ven los guardias en la app (`avisoPrivacidad.ts`) decía que los clientes nunca ven ubicación, retardos ni faltas; ahora dice lo que realmente ven (nombre y correo, foto de referencia, horario, horas de checada con retardos y faltas confirmadas, foto y ubicación de cada checada; no teléfono ni reconocimiento facial). La versión sigue en `borrador-0` (no se pide aceptar de nuevo); el borrador .md y el .docx se regeneraron de ese texto.
+
+#### Corregido
+
+- **Cambios de turno (A-73c)**: la lista "Quién lo cubrirá" solo trae guardias del alcance del supervisor o administrador.
+- **Ausencias (A-73b)**, **reportes del cliente (A-73a)** y **rol en la línea del tiempo (A-73)**: ya subidos en la sesión anterior.
+
+Pruebas: nueva "la foto de la fila es la de referencia..." (falla sin el arreglo).
+
 ### Sesión 2026-11-10 #49 — Menú de la cuenta en el celular (A-71)
 
 #### Cambiado

@@ -87,7 +87,11 @@ Entra a **Asistencia** para ver, día por día, cómo checó cada guardia de tus
 - **Buscar:** escribe en **"Guardia o sitio"**.
 - **Solo problemas:** marca **"Solo con alerta"**.
 
-Cada fila (en el celular, cada tarjeta) trae el guardia, el **sitio**, la **entrada**, las **comidas**, la **salida**, las **horas** y el **estado**. Debajo de la hora hay una etiqueta con la hora que le tocaba:
+Cada fila (en el celular, cada tarjeta) trae el guardia, el **sitio**, la **entrada**, las **comidas**, la **salida**, las **horas** y el **estado**.
+
+**Las dos fotos de cada fila.** El círculo junto al nombre es la **foto de referencia** del guardia: **quién debe estar** en tu sitio, siempre la misma. Junto a la hora de **entrada** aparece una **miniatura** con la foto de esa checada: **quién checó**. Tócala para verla en grande y compárala con la de referencia. Si un guardia todavía no tiene su foto de referencia aprobada, en el círculo ves la foto de su checada o sus iniciales.
+
+Debajo de la hora hay una etiqueta con la hora que le tocaba:
 
 - **Verde:** llegó a tiempo.
 - **Rojo (entrada) o naranja (salida):** llegó tarde o salió antes, con los minutos.
@@ -107,7 +111,7 @@ Toca la fila de un guardia. Ves:
 
 Al final dice: *"Las marcas no se pueden modificar ni borrar."*
 
-**Lo que no ves:** el reconocimiento del rostro del guardia (su foto de registro y el porcentaje de parecido) ni sus datos personales como el teléfono.
+**Lo que no ves:** el resultado del reconocimiento del rostro (el porcentaje de parecido y sus alertas) ni sus datos personales como el teléfono.
 
 {{captura:K03-asistencia|Pantalla Asistencia del cliente con el estado de cada guardia}}
 

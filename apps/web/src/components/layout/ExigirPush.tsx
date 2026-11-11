@@ -1,5 +1,7 @@
 import { BellRing, LogOut } from 'lucide-react';
+import { ROLES } from '@platinum/shared';
 import { authService } from '../../core/auth/AuthService';
+import { useAuthStore } from '../../core/auth/authStore';
 import { usePush } from '../../core/push/usePush';
 import { Button, Modal, toast } from '../ui';
 
@@ -10,6 +12,8 @@ import { Button, Modal, toast } from '../ui';
  */
 export function ExigirPush() {
   const { estado, trabajando, activar, revisar } = usePush();
+  // El cliente no tiene turno: sus avisos son de reportes y novedades de sus sitios.
+  const esCliente = useAuthStore((s) => s.user?.rol === ROLES.CLIENTE);
   const pendiente = estado === 'apagado' || estado === 'bloqueado';
 
   return (
@@ -44,8 +48,9 @@ export function ExigirPush() {
       }
     >
       <p className="text-sm text-slate-700">
-        Es obligatorio para usar la app: así te llegan los avisos de tu turno, aunque la app esté cerrada o el
-        teléfono bloqueado.
+        {esCliente
+          ? 'Es obligatorio para usar la app: así te llegan los avisos de tus reportes y novedades, aunque la app esté cerrada o el teléfono bloqueado.'
+          : 'Es obligatorio para usar la app: así te llegan los avisos de tu turno, aunque la app esté cerrada o el teléfono bloqueado.'}
       </p>
       {estado === 'bloqueado' && (
         <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">

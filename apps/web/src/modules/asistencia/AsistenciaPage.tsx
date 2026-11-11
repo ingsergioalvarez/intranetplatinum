@@ -32,6 +32,7 @@ import { formatDuracion, formatHora, horasEsperadas } from './formato';
 import { DescargarHorarioModal } from '../horarios/DescargarHorarioModal';
 import { CerrarJornadaModal } from './CerrarJornadaModal';
 import { EstadoJornada } from './EstadoJornada';
+import { FotoChecada } from './FotoChecada';
 import { HoraMarca } from './HoraMarca';
 import { EnviarCubrirModal } from '../clientes/EnviarCubrirModal';
 
@@ -99,7 +100,15 @@ const columns: Column<FilaAsistencia>[] = [
     key: 'entrada',
     header: 'Entrada',
     className: 'tabular-nums',
-    render: ({ jornada: j }) => (j ? <HoraMarca jornada={j} tipo="entrada" /> : '—'),
+    render: ({ jornada: j, guardia }) =>
+      j ? (
+        <span className="flex items-start gap-2">
+          <FotoChecada url={j.entrada.foto} nombre={guardia.nombre} />
+          <HoraMarca jornada={j} tipo="entrada" />
+        </span>
+      ) : (
+        '—'
+      ),
   },
   {
     key: 'comidas',

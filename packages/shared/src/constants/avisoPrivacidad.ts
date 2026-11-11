@@ -98,7 +98,7 @@ export const AVISO_PRIVACIDAD: AvisoPrivacidadTexto = {
     {
       titulo: '6. Quién puede ver tus datos',
       parrafos: [
-        'Dentro de la empresa: tu supervisor, los administradores y el personal que autorice el Responsable. Cada persona ve solo lo que su cargo requiere. Tu rostro, tus fotografías y tu ubicación no se publican ni se muestran a otros guardias. Los clientes de seguridad solo ven tu nombre, foto de perfil y horario en el sitio donde estás asignado, nunca tu ubicación, retardos ni faltas.',
+        'Dentro de la empresa: tu supervisor, los administradores y el personal que autorice el Responsable. Cada persona ve solo lo que su cargo requiere. Tu rostro, tus fotografías y tu ubicación no se publican ni se muestran a otros guardias. Los clientes de seguridad, solo en los sitios donde estás asignado, ven tu nombre y correo, tu foto de referencia, tu horario, la hora a la que checas (con tus retardos y faltas confirmadas) y la foto y la ubicación de cada checada. No ven tu teléfono ni el resultado del reconocimiento facial.',
         'Las fotografías se muestran mediante enlaces temporales firmados, no públicos.',
       ],
     },

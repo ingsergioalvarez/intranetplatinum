@@ -53,7 +53,11 @@ Entra a **Asistencia**. Es una lista con **una fila por guardia** del día que e
 - **Buscar:** escribe en **"Guardia o sitio"**.
 - **Solo problemas:** marca **"Solo con alerta"**.
 
-Cada fila muestra el **Sitio** (con la etiqueta "Cobertura" si ese día va cubriendo), la **Entrada**, las **Comidas**, la **Salida**, las **Horas** y el **Estado**. Debajo de la hora de entrada o salida hay una etiqueta con la hora que le tocaba:
+Cada fila muestra el **Sitio** (con la etiqueta "Cobertura" si ese día va cubriendo), la **Entrada**, las **Comidas**, la **Salida**, las **Horas** y el **Estado**.
+
+**Las dos fotos de cada fila.** El círculo junto al nombre es la **foto de referencia** del guardia (quién debe estar); no cambia aunque ya haya checado. Junto a la hora de **Entrada** aparece una **miniatura** con la foto de esa checada (quién checó): tócala para verla en grande y compararla. Si el guardia aún no tiene rostro registrado, el círculo muestra la foto de su checada.
+
+Debajo de la hora de entrada o salida hay una etiqueta con la hora que le tocaba:
 
 - **Verde:** llegó a tiempo.
 - **Rojo (entrada) o naranja (salida):** llegó tarde o salió antes, con los minutos.

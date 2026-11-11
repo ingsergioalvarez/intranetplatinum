@@ -2,10 +2,10 @@
 
 > Se sobrescribe al final de cada sesión. El historial completo está en [CHANGELOG.md](../CHANGELOG.md).
 
-**Última actualización:** 2026-11-10 (manual de usuario, A-44, en progreso: los cinco manuales con su texto (parte común, Guardia, Supervisor, Administrador y Cliente), sin capturas; menú de la cuenta en el celular, A-71, en el servidor; Ayuda con "?" dentro de la app, A-69, hecha, en el servidor y probada por el usuario; PDF solo en local; A-70 instalación obligatoria de la app, pendiente) · antes: 2026-11-09 (aviso de privacidad del rostro, A-68: hecho y probado en local, con migración 20261109000000, sin subir al servidor)
+**Última actualización:** 2026-11-11 (detalles de la app, A-73: subidos reportes del cliente, rol en la línea del tiempo, ausencias por cartera y cambios de turno; hecho en local y sin subir: A-75 foto de referencia y miniatura de la checada en la lista de Asistencia, y texto de notificaciones del cliente; manuales de los cinco roles con texto y sin capturas) · antes: 2026-11-10
 **Fase actual:** Platinum corre en el servidor de la oficina (Docker: MySQL, API, web y túnel de Cloudflare, en `platinum.grupocomunicalo.mx`) con asistencia completa, reportes, portal del cliente, botón SOS, carteras de admin y reportes del cliente. Estado: terminado y en mantenimiento; se hacen mejoras que el usuario pide.
-**Última tarea terminada:** A-59 (reportes del cliente sobre el servicio o un guardia): en el servidor (migración 20261105000000) y probada por el usuario con un cliente. Todo lo anterior (hasta A-66, carteras fase 2) también está en el servidor y probado.
-**Tarea en progreso:** ninguna. Hecha el 2026-11-09 y probada en local: A-68 (aviso de privacidad por el uso del rostro; 568 pruebas pasando, tipado y lint limpios). Falta subirla al servidor (migración nueva: `docker compose exec api npx prisma migrate deploy`) y que el abogado revise el texto.
+**Última tarea terminada:** A-75 (Asistencia: foto de referencia siempre en el círculo y miniatura de la checada junto a la entrada; texto de notificaciones para el cliente): hecha el 2026-11-11 en local, 573 pruebas pasando, tipado y lint limpios, revisada a 360 px; falta subirla.
+**Tarea en progreso:** ninguna. A-73 (lista de detalles) queda con dos pendientes menores: (f) el SOS lanzado por un supervisor no está verificado en pantalla y (g) la auditoría no tiene pantalla y los correos no salen (A-41). A-68 (aviso de privacidad) sigue en local y con el abogado.
 
 ## Siguiente paso
 
@@ -40,7 +40,7 @@ Se registrarán también como tareas nuevas (con ID, en el PLAN) antes de implem
 
 - `npm install`; `npm run db:deploy -w @platinum/api` y `npm run db:seed -w @platinum/api` (sincroniza roles y permisos).
 - `npm run dev:https` para checador biométrico y pruebas en red local.
-- Calidad: `npm test` (548 pasando), `npm run lint`, `npm run typecheck`.
+- Calidad: `npm test` (573 pasando), `npm run lint`, `npm run typecheck`.
 - La carpeta de Platinum (`intranetplatinum-platinum`) aún no tiene `node_modules` ni `apps/api/.env`: hay que hacer `npm install` y crear el `.env` antes de probar en local.
 
 ## Notas de contexto

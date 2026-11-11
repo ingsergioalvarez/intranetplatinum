@@ -848,6 +848,16 @@ describe('asistencia: vista de admin / supervisor (AS1-07)', () => {
     expect(rosa).toMatchObject({ sitio: { nombre: 'Bodega' }, jornada: { salida: null } });
   });
 
+  it('la foto de la fila es la de referencia del guardia aunque ya haya checado; la de la checada va aparte (A-75)', async () => {
+    const [, juan, rosa] = (await ver('dia?fecha=2026-10-20')).body.data.items;
+    // Juan tiene rostro registrado: la fila muestra quién debe estar, no a quien checó.
+    expect(juan.guardia.foto).toMatch(/^\/api\/archivos\/rostros\//);
+    expect(juan.jornada.entrada.foto).toMatch(/^\/api\/archivos\/asistencia\//);
+    // Rosa no tiene rostro registrado: la fila no inventa una foto (la pantalla usa la de su checada).
+    expect(rosa.guardia.foto ?? null).toBeNull();
+    expect(rosa.jornada.entrada.foto).toMatch(/^\/api\/archivos\/asistencia\//);
+  });
+
   it('la jornada cuenta en el día de su entrada (zona del negocio)', async () => {
     const res = await ver('dia?fecha=2026-10-21');
     // Nadie entró el 21: solo aparecen los asignados, sin marcas.

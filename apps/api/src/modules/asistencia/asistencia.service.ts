@@ -1656,10 +1656,9 @@ export class AsistenciaService extends BaseService {
     const conJornada: FilaAsistencia[] = (await this.jornadas(rows)).map((jornada) => {
       const guardia = guardiaDe.get(jornada.entrada.id)!;
       return {
-        guardia: {
-          ...guardia,
-          foto: jornada.entrada.foto ?? guardia.foto ?? null,
-        },
+        // La foto de la lista es la de referencia del guardia (la completa `conFotosDeReferencia`): quién
+        // debe estar. La de la checada del día va aparte, en `jornada.entrada.foto` (A-75).
+        guardia: { ...guardia, foto: guardia.foto ?? null },
         sitio: jornada.sitio,
         jornada,
         cobertura: !!jornada.sitio && cubre.get(guardia.id) === jornada.sitio.id,
@@ -1677,7 +1676,7 @@ export class AsistenciaService extends BaseService {
       for (const j of await this.jornadas(recientes)) {
         const g = deQuien.get(j.entrada.id);
         if (!g || j.salida || marcaron.has(g.id) || enCurso.some((f) => f.guardia.id === g.id)) continue;
-        enCurso.push({ guardia: { ...g, foto: j.entrada.foto ?? g.foto ?? null }, sitio: j.sitio, jornada: j });
+        enCurso.push({ guardia: { ...g, foto: g.foto ?? null }, sitio: j.sitio, jornada: j });
       }
     }
     const sigueTrabajando = new Set(enCurso.map((f) => f.guardia.id));
