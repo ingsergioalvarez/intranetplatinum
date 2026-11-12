@@ -4,7 +4,7 @@
 
 ## 1. Tu papel como administrador
 
-Tienes **todos los permisos**. Lo que te distingue del supervisor:
+Tienes **todos los permisos**. En el celular, la barra de abajo trae **Inicio, Asistencia, Reportes y Clientes**; lo demás está en **"Más"**, con títulos: **Seguimiento** (C2, Quejas), **Operación** (Grupos, Turnos), **Administración** (Usuarios, Catálogos y, si eres super administrador, Carteras) y **Consulta** (Privacidad). En tu Inicio, la tarjeta **"Hoy en el C2"** cuenta lo que hizo el C2 hoy en tu cartera y te lleva a su bitácora. Lo que te distingue del supervisor:
 
 | Solo tú puedes… | Dónde |
 |---|---|

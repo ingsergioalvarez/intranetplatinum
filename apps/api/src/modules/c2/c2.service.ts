@@ -237,7 +237,7 @@ export class C2Service extends BaseService {
     const desde = inicioDelDia(hoyISO(undefined, this.ahora()));
     const filas = await this.repo.eventos(desde, new Date(desde.getTime() + DIA_MS), { tipos: TIPOS_ACTIVIDAD_C2 });
     const visibles = alcance ? filas.filter((f) => f.sitioId !== null && alcance.sitioIds.has(f.sitioId)) : filas;
-    return { items: visibles.slice(0, limite).map(aEvento) };
+    return { items: visibles.slice(0, limite).map(aEvento), total: visibles.length };
   }
 
   /** La última nota del C2 de hoy en cada sitio de quien consulta: se ve en la asistencia del día. */

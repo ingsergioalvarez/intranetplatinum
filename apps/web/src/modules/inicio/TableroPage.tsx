@@ -11,7 +11,8 @@ import { asistenciaService } from '../asistencia/asistencia.service';
 import { CerrarJornadaModal } from '../asistencia/CerrarJornadaModal';
 import { formatDiaLargo, formatHora } from '../asistencia/formato';
 import { EnviarCubrirModal } from '../clientes/EnviarCubrirModal';
-import { ActividadC2 } from '../c2/ActividadC2';
+import { ActividadC2, TarjetaHoyC2 } from '../c2/ActividadC2';
+import { useActividadC2 } from '../c2/hookActividadC2';
 import { reportesService } from '../reportes/reportes.service';
 
 /** `1 h 05 min` / `25 min` */
@@ -101,6 +102,7 @@ export function TableroPage() {
     refetchInterval: 60_000,
   });
 
+  const conC2 = useActividadC2().permitido;
   const items = tablero.data?.items;
   const cuenta = (clase: TableroItem['clase']) => items?.filter((i) => i.clase === clase).length;
   const sinAtender = incidencias.data?.reduce((t, f) => t + f.pendientes, 0);
@@ -109,16 +111,17 @@ export function TableroPage() {
     <>
       <PageHeader title={`Hola, ${user?.nombre ?? ''}`} subtitle={formatDiaLargo(new Date())} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3', conC2 ? 'lg:grid-cols-6' : 'lg:grid-cols-5')}>
         <Numero to="/asistencia" valor={cuenta('sin_llegar')} etiqueta="Sin llegar" urgente />
         <Numero to="/asistencia" valor={cuenta('sin_salida')} etiqueta="Sin salida" />
         <Numero to="/asistencia" valor={cuenta('comida_abierta')} etiqueta="Comidas sin cierre" />
         <Numero to="/asistencia/incidencias" valor={sinAtender} etiqueta="Incidencias sin atender" />
         <Numero to="/reportes?estatus=abierto" valor={reportes.data?.total} etiqueta="Reportes abiertos" />
+        <TarjetaHoyC2 />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
+        <Card className="order-1 lg:col-span-3">
           <CardHeader title="Requiere tu atención" subtitle="Se actualiza cada minuto" />
           {tablero.isPending ? (
             <div className="flex justify-center py-10 text-brand-600">
@@ -197,7 +200,7 @@ export function TableroPage() {
           )}
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="order-3 lg:order-2 lg:col-span-2">
           <CardHeader
             title="Reportes abiertos"
             actions={

@@ -19,13 +19,15 @@ import { AvisoDeOtraCuenta } from './AvisoDeOtraCuenta';
 import { ExigirPush } from './ExigirPush';
 import { useBarraLateral } from './barraLateral';
 import { useBadgesMenu } from './badgesMenu';
-import { navItems } from './navItems';
+import { navItems, ordenarMenu, type MenuOrdenado } from './navItems';
 
-function useVisibleNav() {
+/** El menú del rol en sesión, ya ordenado (A-83): barra de abajo, "Más" con títulos y orden de la barra de escritorio. */
+function useMenu(): MenuOrdenado {
   const user = useAuthStore((s) => s.user);
-  return navItems.filter(
+  const visibles = navItems.filter(
     (i) => hasPermission(user, i.permiso) && hasRole(user, i.roles) && (!i.superAdmin || !!user?.esSuperAdmin),
   );
+  return user ? ordenarMenu(user.rol, visibles) : { barra: [], grupos: [], todos: [] };
 }
 
 /** Icono "?" del celular (A-69): lleva a la Ayuda, el manual de usuario dentro de la app. En escritorio es un enlace abajo de la barra lateral. */
@@ -245,7 +247,7 @@ function CuentaBarra({ reducida }: { reducida: boolean }) {
 }
 
 function Sidebar() {
-  const items = useVisibleNav();
+  const items = useMenu().todos;
   const user = useAuthStore((s) => s.user);
   const badges = useBadgesMenu(items.map((i) => i.to));
   const { reducida, alternar } = useBarraLateral();
@@ -310,9 +312,9 @@ function Sidebar() {
         aria-expanded={!reducida}
         aria-label={reducida ? 'Mostrar la barra lateral' : 'Ocultar la barra lateral'}
         title={reducida ? 'Mostrar la barra lateral' : 'Ocultar la barra lateral'}
-        className="absolute top-1/2 -right-3 z-10 flex h-14 w-6 -translate-y-1/2 items-center justify-center rounded-r-lg bg-brand-800 text-brand-100 shadow-md ring-1 ring-brand-700 hover:bg-brand-700 hover:text-white focus-visible:outline-2 focus-visible:outline-brand-300"
+        className="absolute top-1/2 left-full z-10 flex h-12 w-5 -translate-y-1/2 items-center justify-center rounded-r-lg bg-brand-900 text-brand-200 shadow-md hover:bg-brand-800 hover:text-white focus-visible:outline-2 focus-visible:outline-brand-300"
       >
-        {reducida ? <ChevronRight className="size-4" aria-hidden /> : <ChevronLeft className="size-4" aria-hidden />}
+        {reducida ? <ChevronRight className="size-3.5" aria-hidden /> : <ChevronLeft className="size-3.5" aria-hidden />}
       </button>
     </aside>
   );
@@ -351,14 +353,16 @@ function BurbujaNumero({ n }: { n: number }) {
 }
 
 function BottomNav() {
-  const todos = useVisibleNav();
+  const { grupos, todos } = useMenu();
   const badges = useBadgesMenu(todos.map((i) => i.to));
   const { pathname } = useLocation();
   const [masAbierto, setMasAbierto] = useState(false);
-  // Si no caben todos, la barra lleva los primeros y el resto va en la hoja "Más".
+  // Si no caben todos, la barra lleva los primeros (los de uso diario del rol) y el resto va en la hoja "Más", con títulos.
   const desborda = todos.length > MAX_BARRA;
   const items = desborda ? todos.slice(0, MAX_BARRA - 1) : todos;
   const resto = desborda ? todos.slice(MAX_BARRA - 1) : [];
+  const enMas = new Set(resto.map((i) => i.to));
+  const gruposMas = grupos.map((g) => ({ titulo: g.titulo, items: g.items.filter((i) => enMas.has(i.to)) })).filter((g) => g.items.length > 0);
   const pendientesResto = resto.reduce((n, i) => n + (badges.get(i.to) ?? 0), 0);
   const enResto = resto.some((i) => (i.to === '/' ? pathname === '/' : pathname.startsWith(i.to)));
 
@@ -418,30 +422,37 @@ function BottomNav() {
         )}
       </ul>
       <Modal open={masAbierto} onClose={() => setMasAbierto(false)} title="Más módulos" size="sm">
-        <ul className="-mx-2 space-y-1">
-          {resto.map(({ to, label, icon: Icon }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                onClick={() => setMasAbierto(false)}
-                className={({ isActive }) =>
-                  cn(
-                    'flex h-12 items-center gap-3 rounded-lg px-3 text-base font-medium',
-                    isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 active:bg-slate-100',
-                  )
-                }
-              >
-                <Icon className="size-5" />
-                <span className="flex-1">{label}</span>
-                {(badges.get(to) ?? 0) > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
-                    {(badges.get(to) ?? 0) > 99 ? '99+' : badges.get(to)}
-                  </span>
-                )}
-              </NavLink>
-            </li>
+        <div className="-mx-2 space-y-3">
+          {gruposMas.map((g) => (
+            <section key={g.titulo || 'otros'} aria-label={g.titulo || undefined}>
+              {g.titulo && <h3 className="px-3 pb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">{g.titulo}</h3>}
+              <ul className="space-y-1">
+                {g.items.map(({ to, label, icon: Icon }) => (
+                  <li key={to}>
+                    <NavLink
+                      to={to}
+                      onClick={() => setMasAbierto(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex h-12 items-center gap-3 rounded-lg px-3 text-base font-medium',
+                          isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 active:bg-slate-100',
+                        )
+                      }
+                    >
+                      <Icon className="size-5" />
+                      <span className="flex-1">{label}</span>
+                      {(badges.get(to) ?? 0) > 0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+                          {(badges.get(to) ?? 0) > 99 ? '99+' : badges.get(to)}
+                        </span>
+                      )}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       </Modal>
     </nav>
   );

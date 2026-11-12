@@ -4,7 +4,7 @@
 
 ## 1. Tu día en la app
 
-Al entrar ves el **Inicio**, que es tu tablero. En el celular, la barra de abajo trae las opciones más usadas; si no ves una, toca **"Más"** (los tres puntos) y ahí están las demás. En la computadora todas están en la barra de la izquierda.
+Al entrar ves el **Inicio**, que es tu tablero. En el celular, la barra de abajo trae lo de uso diario: **Inicio, Asistencia, Reportes y Quejas**. Lo demás está en **"Más"** (los tres puntos), ordenado con títulos: **Operación** (Clientes, Grupos, Turnos), **Administración** (Usuarios, Catálogos) y **Consulta** (Bitácora C2, Privacidad). En la computadora todo está en la barra de la izquierda, en ese mismo orden; la puedes ocultar con la flecha de su borde.
 
 | Opción | Para qué sirve |
 |---|---|
@@ -27,7 +27,7 @@ Arriba están la **campanita** (avisos), el **signo de interrogación** (ayuda: 
 
 ## 2. Inicio: tu tablero
 
-Arriba dice **"Hola, tu nombre"** y el día de hoy. Debajo hay cinco tarjetas con un número. Cada una es un botón que te lleva a donde se atiende:
+Arriba dice **"Hola, tu nombre"** y el día de hoy. Debajo hay seis tarjetas con un número. Cada una es un botón que te lleva a donde se atiende:
 
 | Tarjeta | Qué cuenta |
 |---|---|
@@ -36,6 +36,7 @@ Arriba dice **"Hola, tu nombre"** y el día de hoy. Debajo hay cinco tarjetas co
 | **Comidas sin cierre** | Guardias que salieron a comer y no regresan. |
 | **Incidencias sin atender** | Retardos, faltas y alertas de rostro del mes que aún no decides. |
 | **Reportes abiertos** | Reportes que siguen abiertos. |
+| **Hoy en el C2** | Cuántas cosas registró el C2 hoy sobre tus sitios (notas, avisos, reportes y respuestas a SOS). Toca la tarjeta para abrir la **Bitácora C2**. |
 
 Más abajo está **"Requiere tu atención"**, que se actualiza sola cada minuto. Cada fila es una persona (toca su nombre para abrir su ficha) con una frase que dice qué pasa, por ejemplo:
 

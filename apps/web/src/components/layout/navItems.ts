@@ -18,7 +18,7 @@ import {
   Users,
   UsersRound,
 } from 'lucide-react';
-import { PERMISOS, ROLES, type Permiso, type Rol } from '@platinum/shared';
+import { MENU_POR_ROL, PERMISOS, ROLES, type Permiso, type Rol } from '@platinum/shared';
 
 export interface NavItem {
   label: string;
@@ -32,7 +32,7 @@ export interface NavItem {
   superAdmin?: boolean;
 }
 
-/** Menú principal. El orden es el de la navegación inferior en celular (máx. 5). */
+/** Todas las opciones del menú. El orden por rol (barra de abajo, "Más" y barra de escritorio) está en `MENU_POR_ROL`. */
 export const navItems: NavItem[] = [
   // El guardia entra directo al Checador, así que no tiene Inicio (DA-51).
   { label: 'Inicio', to: '/', icon: Home, roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.CLIENTE] },
@@ -89,3 +89,31 @@ export const navItems: NavItem[] = [
   },
   { label: 'Catálogos', to: '/catalogos/categorias', icon: Tags, permiso: PERMISOS.CATALOGOS_ADMINISTRAR },
 ];
+
+export interface MenuOrdenado {
+  /** Las que van en la barra de abajo del celular. */
+  barra: NavItem[];
+  /** Lo demás, ordenado y con título (sin título: opciones nuevas que aún no tienen lugar). */
+  grupos: { titulo: string; items: NavItem[] }[];
+  /** Todas, en el orden en que se muestran (barra de escritorio). */
+  todos: NavItem[];
+}
+
+/** Ordena las opciones que puede ver el rol según su plan (`MENU_POR_ROL`). Lo que el plan no menciona va al final. */
+export function ordenarMenu(rol: Rol, visibles: NavItem[]): MenuOrdenado {
+  const plan = MENU_POR_ROL[rol];
+  const porRuta = new Map(visibles.map((i) => [i.to, i]));
+  const usadas = new Set<string>();
+  const tomar = (rutas: readonly string[]) =>
+    rutas.flatMap((r) => {
+      const item = porRuta.get(r);
+      if (!item || usadas.has(r)) return [];
+      usadas.add(r);
+      return [item];
+    });
+  const barra = tomar(plan.barra);
+  const grupos = plan.mas.map((g) => ({ titulo: g.titulo, items: tomar(g.rutas) })).filter((g) => g.items.length > 0);
+  const sueltas = visibles.filter((i) => !usadas.has(i.to));
+  if (sueltas.length > 0) grupos.push({ titulo: '', items: sueltas });
+  return { barra, grupos, todos: [...barra, ...grupos.flatMap((g) => g.items)] };
+}

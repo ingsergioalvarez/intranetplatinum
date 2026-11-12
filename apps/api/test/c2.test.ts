@@ -440,8 +440,12 @@ describe('lo que hace el C2, a la vista de supervisor y admin (A-82)', () => {
     ];
     const a = await servicio(repo, []).actividad();
     expect(a.items.map((i) => i.id)).toEqual([6, 4, 3, 2]);
+    expect(a.total).toBe(4);
     expect(a.items[0].entidad).toEqual({ tipo: 'reporte', id: 9 });
-    expect((await servicio(repo, []).actividad(null, 2)).items.map((i) => i.id)).toEqual([6, 4]);
+    const corta = await servicio(repo, []).actividad(null, 2);
+    expect(corta.items.map((i) => i.id)).toEqual([6, 4]);
+    // El total cuenta todo lo de hoy aunque la lista traiga solo lo último.
+    expect(corta.total).toBe(4);
   });
 
   it('un supervisor solo ve la actividad y las notas de sus sitios', async () => {
@@ -450,7 +454,9 @@ describe('lo que hace el C2, a la vista de supervisor y admin (A-82)', () => {
     repo.notas.set(1, { texto: 'del sitio 1', autor: 'Carla', en: new Date(min(-5)) });
     repo.notas.set(2, { texto: 'del sitio 2', autor: 'Carla', en: new Date(min(-3)) });
     const suyo = { sitioIds: new Set([2]), guardiaIds: new Set<number>() };
-    expect((await servicio(repo, []).actividad(suyo)).items.map((i) => i.id)).toEqual([2]);
+    const deSupervisor = await servicio(repo, []).actividad(suyo);
+    expect(deSupervisor.items.map((i) => i.id)).toEqual([2]);
+    expect(deSupervisor.total).toBe(1);
     expect(await servicio(repo, []).notasDelDia(suyo)).toEqual([{ sitioId: 2, texto: 'del sitio 2', autor: 'Carla', en: min(-3) }]);
     expect((await servicio(repo, []).notasDelDia(null)).map((n) => n.sitioId)).toEqual([1, 2]);
   });

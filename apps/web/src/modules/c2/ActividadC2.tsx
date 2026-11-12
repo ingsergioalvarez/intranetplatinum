@@ -1,32 +1,22 @@
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { TIPO_EVENTO_C2_LABEL, PERMISOS } from '@platinum/shared';
+import { TIPO_EVENTO_C2_LABEL } from '@platinum/shared';
 import { Card, CardHeader, EmptyState, Spinner, cn } from '../../components/ui';
-import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { formatHora } from '../asistencia/formato';
 import { COLOR_EVENTO } from './c2.estilos';
-import { c2Service } from './c2.service';
+import { useActividadC2 } from './hookActividadC2';
 
 /**
  * Lo último que hizo el C2 hoy sobre los sitios de quien mira (A-82): notas, avisos, reportes y respuestas a SOS. El
  * supervisor y el admin se enteran sin entrar a la pantalla del C2; "Ver la bitácora" lleva al día completo.
  */
 export function ActividadC2() {
-  const user = useAuthStore((s) => s.user);
-  const permitido = hasPermission(user, PERMISOS.C2_BITACORA);
-  const actividad = useQuery({
-    queryKey: c2Service.keys.actividad,
-    queryFn: c2Service.actividad,
-    enabled: permitido,
-    refetchInterval: 60_000,
-  });
+  const { permitido, actividad, bitacora } = useActividadC2();
   if (!permitido) return null;
-  // El admin lee la bitácora dentro de la pantalla del C2; el supervisor, en su propia opción de menú.
-  const bitacora = hasPermission(user, PERMISOS.C2_VER) ? '/c2?vista=bitacora' : '/bitacora-c2';
   const items = actividad.data?.items ?? [];
 
   return (
-    <Card className="lg:col-span-5">
+    // En el celular sube justo después de "Requiere tu atención"; en escritorio queda abajo, a lo ancho.
+    <Card className="order-2 lg:order-3 lg:col-span-5">
       <CardHeader
         title="Lo que hizo el C2 hoy"
         subtitle="Notas, avisos, reportes y respuestas a SOS sobre tus sitios"
@@ -71,5 +61,28 @@ export function ActividadC2() {
         </ul>
       )}
     </Card>
+  );
+}
+
+/**
+ * Tarjeta de acceso rápido de arriba (A-83): cuántas cosas registró el C2 hoy sobre los sitios de quien mira, y un
+ * toque lleva a la bitácora. Usa la misma consulta que la lista de abajo.
+ */
+export function TarjetaHoyC2() {
+  const { permitido, actividad, bitacora } = useActividadC2();
+  if (!permitido) return null;
+  const total = actividad.data?.total;
+  const hay = !!total;
+  return (
+    <Link
+      to={bitacora}
+      className={cn(
+        'rounded-xl p-4 ring-1 ring-inset transition-colors',
+        hay ? 'bg-brand-50 text-brand-900 ring-brand-200 hover:bg-brand-100' : 'bg-white text-slate-900 ring-slate-200 hover:bg-slate-50',
+      )}
+    >
+      <span className="block text-3xl font-bold tabular-nums">{total ?? '…'}</span>
+      <span className={cn('block text-sm', hay ? 'text-brand-800' : 'text-slate-600')}>Hoy en el C2</span>
+    </Link>
   );
 }

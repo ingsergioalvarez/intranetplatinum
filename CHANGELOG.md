@@ -5,6 +5,22 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-13 #53 — Menú por rol y acceso rápido al C2 (A-83)
+
+#### Cambiado
+
+- **Orden del menú por rol (A-83)**: la barra de abajo del celular lleva lo de uso diario de cada rol (supervisor: Inicio, Asistencia, Reportes y Quejas; admin: Inicio, Asistencia, Reportes y Clientes; C2: C2 y Reportes; guardia y cliente, como antes) y **"Más"** se ordena de más a menos frecuente, con títulos: Seguimiento, Operación, Administración y Consulta (los que no tengan opciones para ese rol no salen). La barra de escritorio sigue el mismo orden. El plan de cada rol vive en `MENU_POR_ROL` (compartido); una opción nueva que no esté ahí va al final de "Más", y una prueba avisa si alguna opción no tiene lugar.
+
+#### Corregido
+
+- **Pestaña de la barra lateral**: iba montada sobre el borde y, a media altura, tapaba las burbujas de las opciones (el "1" de Usuarios). Sigue en medio, pero ahora sale **toda por fuera** de la barra, del mismo azul oscuro, como un asa que se asoma; ya no toca ninguna opción ni burbuja, con la barra abierta ni reducida.
+
+#### Añadido
+
+- **Tarjeta "Hoy en el C2" en el Inicio de supervisor y admin (A-83)**: arriba, junto a los otros números, con cuántas cosas registró el C2 hoy en sus sitios y acceso directo a la bitácora (el admin, a C2 → Bitácora; el supervisor, a su Bitácora C2). Usa la misma consulta que la lista de abajo (sin cálculo nuevo en el servidor). En el celular, la lista "Lo que hizo el C2 hoy" sube justo después de "Requiere tu atención".
+- La actividad del C2 trae el **total** del día (`total`), aparte de las últimas entradas.
+- Manuales de supervisor y administrador con el nuevo menú y la tarjeta.
+
 ### Sesión 2026-11-13 #52 — Respuestas del C2 al SOS, manual y barra de contenido (A-81, A-82)
 
 #### Añadido

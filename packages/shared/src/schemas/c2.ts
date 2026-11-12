@@ -221,6 +221,8 @@ export const sitioC2ParamSchema = z.object({ sitioId: z.coerce.number().int().po
 /** Lo último que hizo el C2 hoy sobre los sitios de quien consulta: notas, avisos, reportes y respuestas a SOS. */
 export interface ActividadC2 {
   items: EventoC2[];
+  /** Cuántas cosas registró el C2 hoy sobre los sitios de quien consulta (la lista trae solo las últimas). */
+  total: number;
 }
 
 /** Última nota del C2 de hoy sobre un sitio (para verla en la asistencia del día). */
