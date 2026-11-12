@@ -193,6 +193,20 @@ export const TIPS: readonly Tip[] = [
       'Cuando tu reporte pasa a revisión o se resuelve te llega un aviso, y en Reportar ves la respuesta. Si el problema sigue, haz un reporte nuevo.',
     roles: [CLIENTE],
   },
+  {
+    id: 'supervisor-c2',
+    titulo: 'Mira lo que hizo el C2 sobre tus sitios',
+    texto:
+      'En Inicio, la tarjeta "Lo que hizo el C2 hoy" te muestra sus notas, avisos, reportes y respuestas a SOS. En el menú, "Bitácora C2" tiene el día completo, y bajo cada sitio de la asistencia del día ves su última nota. Solo lees: no escribes ahí.',
+    roles: [SUPERVISOR],
+  },
+  {
+    id: 'admin-c2',
+    titulo: 'Mira lo que hizo el C2 en tu cartera',
+    texto:
+      'En Inicio, la tarjeta "Lo que hizo el C2 hoy" resume sus notas, avisos, reportes y respuestas a SOS. La bitácora completa está en C2, pestaña Bitácora. Sus reportes llevan la etiqueta C2 y solo los ven tú y el supervisor.',
+    roles: [ADMIN],
+  },
   // ---------- Operador C2 ----------
   {
     id: 'c2-sonido',

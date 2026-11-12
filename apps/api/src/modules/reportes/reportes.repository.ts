@@ -126,15 +126,17 @@ const resumenSelect = {
   sitio: { select: { id: true, nombre: true } },
   cliente: { select: { id: true, nombreComercial: true } },
   categoria: { select: { id: true, nombre: true, padre: { select: { nombre: true } } } },
-  creadoPor: personaSelect,
+  creadoPor: personaConRolSelect,
   _count: { select: { evidencias: true } },
 } satisfies Prisma.ReporteSelect;
 
 type ResumenRow = Prisma.ReporteGetPayload<{ select: typeof resumenSelect }>;
 
-function toResumen({ _count, categoria, createdAt, cerradoEn, ...r }: ResumenRow): ReporteResumen {
+function toResumen({ _count, categoria, createdAt, cerradoEn, creadoPor, ...r }: ResumenRow): ReporteResumen {
   return {
     ...r,
+    creadoPor: { id: creadoPor.id, nombre: creadoPor.nombre },
+    creadoPorRol: creadoPor.rol.clave as Rol,
     createdAt: createdAt.toISOString(),
     cerradoEn: cerradoEn?.toISOString() ?? null,
     categoria: { id: categoria.id, nombre: categoria.nombre, padre: categoria.padre?.nombre ?? null },
@@ -319,11 +321,9 @@ export class PrismaReportesRepository extends ReportesRepository {
     });
     if (!r) return null;
     const { descripcion, ubicacionDetalle, lat, lng, evidencias, seguimientos, ...resto } = r;
-    const { rol: creadoPorRol, ...creadoPor } = resto.creadoPor;
-    const resumen = { ...resto, creadoPor: { id: creadoPor.id, nombre: creadoPor.nombre } };
     return {
-      ...toResumen(resumen),
-      creadoPorRol: creadoPorRol.clave as Rol,
+      ...toResumen(resto),
+      creadoPorRol: resto.creadoPor.rol.clave as Rol,
       descripcion,
       ubicacionDetalle,
       lat: lat === null ? null : Number(lat),

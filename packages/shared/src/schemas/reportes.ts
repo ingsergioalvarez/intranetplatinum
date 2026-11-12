@@ -118,6 +118,8 @@ export interface ReporteResumen {
   cliente: { id: number; nombreComercial: string };
   categoria: { id: number; nombre: string; padre: string | null };
   creadoPor: Persona;
+  /** Rol de quien lo levantó: la lista marca los del C2 (A-82). */
+  creadoPorRol?: Rol;
   totalFotos: number;
 }
 

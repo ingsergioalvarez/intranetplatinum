@@ -37,6 +37,7 @@ import { InformeVerPage } from '../modules/informes/InformeVerPage';
 import { ReportesEmitidosPage } from '../modules/informes/ReportesEmitidosPage';
 import { VerificarInformePage } from '../modules/informes/VerificarInformePage';
 import { MisMarcasPage } from '../modules/asistencia/MisMarcasPage';
+import { BitacoraC2Page } from '../modules/c2/BitacoraC2Page';
 import { C2Page } from '../modules/c2/C2Page';
 
 export const router = createBrowserRouter([
@@ -238,6 +239,15 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permiso={PERMISOS.C2_VER}>
             <C2Page />
+          </ProtectedRoute>
+        ),
+      },
+      // El supervisor lee lo que hace el C2 sobre sus sitios (A-82).
+      {
+        path: 'bitacora-c2',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.C2_BITACORA} roles={[ROLES.SUPERVISOR]}>
+            <BitacoraC2Page />
           </ProtectedRoute>
         ),
       },

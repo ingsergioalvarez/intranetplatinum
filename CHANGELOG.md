@@ -5,16 +5,21 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
-### Sesión 2026-11-13 #52 — Respuestas del C2 al SOS, manual y barra de contenido (A-81)
+### Sesión 2026-11-13 #52 — Respuestas del C2 al SOS, manual y barra de contenido (A-81, A-82)
 
 #### Añadido
 
 - **Respuestas del C2 al SOS (A-81)**: mientras un SOS sigue activo, el C2 (o el admin) toca **Registrar respuesta** y elige qué hizo: *llamamos al guardia (contesta y está bien)*, *llamamos al guardia (no contesta)*, *avisamos al supervisor*, *pedimos apoyo externo* (institución obligatoria y número opcional, como evidencia) u *otro* (con texto). Se pueden registrar varias, **no cierran** la emergencia. Quedan en la bitácora (tipo `sos_respuesta`, con quién y la hora) y se ven debajo del SOS en "Lo que ya se hizo" (pantalla del C2 y Emergencias). Les llega aviso a supervisor, admin y a quienes recibieron el SOS; a quien lo lanzó solo "Estamos atendiendo" y el apoyo externo. Ruta `POST /emergencias/:id/respuesta` con el permiso `c2.actuar`; sin migración (usa `c2_eventos`).
 - **PDF del manual del Operador C2** (`npm run manual`) y los otros cuatro regenerados con la parte común actualizada. La captura pendiente del C2 pasa a `O01-pantalla` (el sistema de capturas confundía `C2-…` con la parte común).
 
+- **Lo que hace el C2 se ve en los demás roles (A-82)**: permiso nuevo `c2.bitacora` (supervisor, C2 y admin; solo lectura). El supervisor tiene la opción **Bitácora C2** en su menú, con lo que pasó en **sus** sitios. En el **Inicio** de supervisor y admin, la tarjeta **"Lo que hizo el C2 hoy"** (notas, avisos, reportes y respuestas a SOS, con enlace a la bitácora). En la **asistencia del día**, bajo el sitio, la **última nota del C2** de hoy. Rutas `GET /c2/actividad` y `GET /c2/notas`; `GET /c2/bitacora` pasa a pedir `c2.bitacora` (el filtro por cartera o por sitios del supervisor ya existía).
+
 #### Cambiado
 
-- **Tablas del manual del C2**: sin emojis. Dos columnas, con el mismo punto de color de la pantalla y los mismos iconos (marcas `{{punto:rojo}}` y `{{icono:llamar}}`), también en el PDF. Así no rompen el estilo de los demás manuales y ocupan menos en el celular.
+- **Tablas del manual del C2**- **El "Aviso del C2" al supervisor** lleva el ícono propio del C2 y abre el Inicio (donde se ve la actividad), en vez del ícono genérico de alerta de marca.
+- **Alerta de SOS a pantalla completa** y lista de Reportes: la alerta muestra "Lo que ya se hizo" y los reportes que levantó el C2 llevan la etiqueta **C2**.
+- **Manuales** de supervisor y administrador (sección "Lo que hace el C2") y dos tips nuevos (supervisor y admin); PDF regenerados.
+: sin emojis. Dos columnas, con el mismo punto de color de la pantalla y los mismos iconos (marcas `{{punto:rojo}}` y `{{icono:llamar}}`), también en el PDF. Así no rompen el estilo de los demás manuales y ocupan menos en el celular.
 - **Barra "Contenido" de Ayuda**: queda fija debajo de la barra superior mientras se lee, el índice flota sobre el texto (con scroll propio) y la barra dice en qué sección vas; el título de la sección ya no queda tapado al saltar.
 - La generación de PDF ya no se cae si Edge tarda en soltar su carpeta temporal.
 

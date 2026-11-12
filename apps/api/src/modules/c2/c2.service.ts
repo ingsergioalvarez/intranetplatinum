@@ -1,7 +1,9 @@
 import {
   ESTADOS_CON_PROBLEMA,
   GRAVEDAD_SITIO_C2,
+  TIPOS_ACTIVIDAD_C2,
   TIPOS_DEL_GRUPO,
+  type ActividadC2,
   type AvisoSupervisorC2Input,
   type BitacoraC2,
   type C2BitacoraQuery,
@@ -9,7 +11,9 @@ import {
   type EmergenciasLista,
   type EstadoSitioC2,
   type FilaAsistencia,
+  type EventoC2,
   type NotaC2Input,
+  type NotaSitioC2,
   type SitioC2,
   type TableroC2,
   type TipoEventoC2,
@@ -18,7 +22,7 @@ import { BaseService, HttpError, hoyISO, inicioDelDia, type AuthUser } from '../
 import { env } from '../../config/env';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type { Alcance } from '../sitios/alcance';
-import type { C2Repository } from './c2.repository';
+import type { C2Repository, EventoRow } from './c2.repository';
 import { agruparPorCliente, calcularSitio, type SitioBase } from './estado';
 
 const RUTA = '/c2';
@@ -37,6 +41,18 @@ function detalleFalta(s: SitioC2) {
   const faltan = s.guardias.filter((g) => !g.presente);
   return faltan.length ? `Falta: ${faltan.map((g) => `${g.nombre} (debía entrar ${hora(g.horario!.entrada)})`).join(', ')}` : null;
 }
+
+/** Una línea de la bitácora tal como la ve quien consulta. */
+const aEvento = (f: EventoRow): EventoC2 => ({
+  id: f.id,
+  tipo: f.tipo,
+  sitio: f.sitioNombre ? { id: f.sitioId, nombre: f.sitioNombre, cliente: f.clienteNombre ?? '' } : null,
+  detalle: f.detalle,
+  usuario: f.usuarioNombre,
+  minutos: f.minutos,
+  entidad: f.entidad === 'emergencia' || f.entidad === 'reporte' ? { tipo: f.entidad, id: f.entidadId ?? 0 } : null,
+  createdAt: f.createdAt.toISOString(),
+});
 
 /** Cómo está el sitio, en una frase, para el aviso al supervisor. */
 const SITUACION: Partial<Record<EstadoSitioC2, string>> = {
@@ -210,19 +226,26 @@ export class C2Service extends BaseService {
     });
     // Un admin de cartera solo ve lo de sus sitios.
     const visibles = alcance ? filas.filter((f) => f.sitioId !== null && alcance.sitioIds.has(f.sitioId)) : filas;
-    return {
-      fecha: dia,
-      items: visibles.map((f) => ({
-        id: f.id,
-        tipo: f.tipo,
-        sitio: f.sitioNombre ? { id: f.sitioId, nombre: f.sitioNombre, cliente: f.clienteNombre ?? '' } : null,
-        detalle: f.detalle,
-        usuario: f.usuarioNombre,
-        minutos: f.minutos,
-        entidad: f.entidad === 'emergencia' || f.entidad === 'reporte' ? { tipo: f.entidad, id: f.entidadId ?? 0 } : null,
-        createdAt: f.createdAt.toISOString(),
-      })),
-    };
+    return { fecha: dia, items: visibles.map(aEvento) };
+  }
+
+  /**
+   * Lo último que hizo el C2 hoy (notas, avisos, reportes y respuestas a SOS) sobre los sitios de quien consulta: así
+   * supervisor y admin ven al C2 sin entrar a su pantalla (A-82). Los más nuevos primero.
+   */
+  async actividad(alcance: Alcance | null = null, limite = 12): Promise<ActividadC2> {
+    const desde = inicioDelDia(hoyISO(undefined, this.ahora()));
+    const filas = await this.repo.eventos(desde, new Date(desde.getTime() + DIA_MS), { tipos: TIPOS_ACTIVIDAD_C2 });
+    const visibles = alcance ? filas.filter((f) => f.sitioId !== null && alcance.sitioIds.has(f.sitioId)) : filas;
+    return { items: visibles.slice(0, limite).map(aEvento) };
+  }
+
+  /** La última nota del C2 de hoy en cada sitio de quien consulta: se ve en la asistencia del día. */
+  async notasDelDia(alcance: Alcance | null = null): Promise<NotaSitioC2[]> {
+    const notas = await this.repo.ultimasNotas(inicioDelDia(hoyISO(undefined, this.ahora())));
+    return [...notas]
+      .filter(([sitioId]) => !alcance || alcance.sitioIds.has(sitioId))
+      .map(([sitioId, n]) => ({ sitioId, texto: n.texto, autor: n.autor, en: n.en.toISOString() }));
   }
 
   // ---------- Acciones del C2 sobre un sitio ----------
@@ -250,7 +273,7 @@ export class C2Service extends BaseService {
     const destinatarios = (await this.repo.destinatariosDeSitio(sitioId)).filter((id) => id !== user.id);
     if (destinatarios.length === 0) throw HttpError.conflict('Este sitio no tiene supervisor ni administrador a quien avisar');
     const texto = `El C2 reporta que ${sitio.nombre} (${sitio.cliente.nombre}) ${situacion}${mensaje ? `. ${mensaje}` : ''}`;
-    await this.avisar(destinatarios, { tipo: 'marca_alerta', titulo: 'Aviso del C2', mensaje: texto, ruta: '/asistencia', urgente: true });
+    await this.avisar(destinatarios, { tipo: 'c2_sitio', titulo: 'Aviso del C2', mensaje: texto, ruta: '/', urgente: true });
     await this.repo.registrarEvento({ tipo: 'aviso_supervisor', sitioId, detalle: texto, usuarioId: user.id });
     return { avisados: destinatarios.length };
   }

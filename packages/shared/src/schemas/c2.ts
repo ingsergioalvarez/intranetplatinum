@@ -215,3 +215,21 @@ export const avisoSupervisorC2Schema = z.object({
 export type AvisoSupervisorC2Input = z.infer<typeof avisoSupervisorC2Schema>;
 
 export const sitioC2ParamSchema = z.object({ sitioId: z.coerce.number().int().positive() });
+
+// ---------- Lo que hace el C2, a la vista de supervisor y admin (A-82) ----------
+
+/** Lo último que hizo el C2 hoy sobre los sitios de quien consulta: notas, avisos, reportes y respuestas a SOS. */
+export interface ActividadC2 {
+  items: EventoC2[];
+}
+
+/** Última nota del C2 de hoy sobre un sitio (para verla en la asistencia del día). */
+export interface NotaSitioC2 {
+  sitioId: number;
+  texto: string;
+  autor: string;
+  en: string;
+}
+
+/** Qué eventos cuentan como "actividad del C2". */
+export const TIPOS_ACTIVIDAD_C2: readonly TipoEventoC2[] = ['nota', 'aviso_supervisor', 'reporte', 'sos_respuesta'];

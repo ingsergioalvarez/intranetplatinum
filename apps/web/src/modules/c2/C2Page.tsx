@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, CircleHelp, Search, Volume2, VolumeX } from 'lucide-react';
 import {
@@ -482,7 +483,8 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
 
 /** Monitoreo del C2 (A-61): qué sitios tienen guardia ahora y el historial de los que se quedaron solos. */
 export function C2Page() {
-  const [vista, setVista] = useState<'vivo' | 'bitacora'>('vivo');
+  const [buscar] = useSearchParams();
+  const [vista, setVista] = useState<'vivo' | 'bitacora'>(() => (buscar.get('vista') === 'bitacora' ? 'bitacora' : 'vivo'));
   // La ayuda se abre sola la primera vez que se entra.
   const [ayuda, setAyuda] = useState(() => !ayudaYaVista());
   const cerrarAyuda = () => {

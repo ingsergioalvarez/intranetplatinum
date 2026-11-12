@@ -374,6 +374,18 @@ La pantalla **Emergencias** tiene dos filtros, **"Activas"** y **"Todas"**, y gu
 
 **Tu propio botón SOS.** También tienes el botón rojo **SOS** abajo a la derecha. Funciona igual que para el guardia: se mantiene presionado dos segundos y avisa a tu administrador.
 
+### Lo que hace el C2 sobre tus sitios
+
+El **C2** (centro de monitoreo) vigila con cámaras que los sitios tengan guardia y atiende los SOS. Todo lo que hace sobre **tus sitios** lo ves tú, sin entrar a su pantalla:
+
+- **En Inicio**, la tarjeta **"Lo que hizo el C2 hoy"**: sus notas, avisos, reportes y respuestas a SOS, con la hora y quién lo hizo. **"Ver la bitácora"** abre el día completo.
+- **En el menú, "Bitácora C2"** (solo lectura): por día, con filtros Sitios / SOS / Acciones del C2 y buscador. Ahí también ves cuándo un sitio tuyo se quedó solo o parcial y cuánto duró.
+- **En Asistencia del día**, bajo el sitio, la **última nota del C2** de hoy ("Nota del C2 · Carla 2:24 p.m.: Llamé a Pedro…").
+- **En la campanita**, "**Aviso del C2**" cuando te avisa de un sitio, "**Respuesta del C2**" cuando registra algo sobre un SOS y "**Reporte del C2**" cuando levanta un reporte. Los reportes del C2 llevan la etiqueta **C2** en la lista; los ven tú y el administrador, no el cliente ni los guardias.
+- **En un SOS**, debajo de la emergencia, **"Lo que ya se hizo"**: quién la atiende y lo que registró el C2 (llamó al guardia, avisó al supervisor, pidió apoyo externo…), con la hora.
+
+Tú solo **lees** esto; no escribes en la bitácora. Las notas del C2 **no te llegan como aviso** (solo se ven en los lugares de arriba); para lo urgente el C2 usa **"Avisar al supervisor"**, que sí te llega.
+
 ## 15. Reportes de los guardias
 
 Los guardias reportan problemas de los sitios (una lámpara fundida, una cámara que no sirve…). Tú los ves y les das seguimiento.

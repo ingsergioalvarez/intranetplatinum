@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import request from 'supertest';
+import { PERMISOS_POR_ROL, ROLES, type Rol } from '@platinum/shared';
 import type { FilaAsistencia, Emergencia, EstadoTurno, Jornada, TipoEventoC2 } from '@platinum/shared';
 import type { NuevoEventoC2 } from '../src/modules/c2/bitacora';
 import { C2Repository, type EventoRow, type SitioInfo } from '../src/modules/c2/c2.repository';
 import { C2Service } from '../src/modules/c2/c2.service';
 import { agruparPorCliente, calcularSitio, type SitioBase } from '../src/modules/c2/estado';
 import type { AvisoUsuario } from '../src/modules/avisos/avisar';
-import type { AuthUser } from '../src/core';
+import { signAccessToken, type AuthUser } from '../src/core';
+import { createApp } from '../src/app';
+import { createC2Module } from '../src/modules/c2';
 
 const AHORA = new Date('2026-11-12T18:00:00.000Z');
 const min = (n: number) => new Date(AHORA.getTime() + n * 60_000).toISOString();
@@ -402,7 +406,7 @@ describe('acciones del C2 (A-80)', () => {
     const r = await servicio(repo, [sinChecar(1, 1, 40, 'no_se_presento')], avisos).avisarSupervisor(1, { mensaje: 'Sin respuesta en el celular' }, usuario);
     expect(r).toEqual({ avisados: 2 });
     expect(avisos[0].ids).toEqual([5, 10]);
-    expect(avisos[0].aviso).toMatchObject({ tipo: 'marca_alerta', titulo: 'Aviso del C2', urgente: true });
+    expect(avisos[0].aviso).toMatchObject({ tipo: 'c2_sitio', titulo: 'Aviso del C2', urgente: true });
     expect(avisos[0].aviso.mensaje).toBe('El C2 reporta que poetas 7 (Comunicalo) no tiene guardia. Sin respuesta en el celular');
     expect(repo.eventos_[0]).toMatchObject({ tipo: 'aviso_supervisor', sitioId: 1, usuarioId: 900 });
   });
@@ -418,5 +422,72 @@ describe('acciones del C2 (A-80)', () => {
     repo.notas.set(1, { texto: 'Llamé a Pedro', autor: 'Carla', en: new Date(min(-10)) });
     const t = await servicio(repo, []).tablero(Q, usuario);
     expect(t.sitios[0].sitio.ultimaNota).toEqual({ texto: 'Llamé a Pedro', autor: 'Carla', en: min(-10) });
+  });
+});
+
+describe('lo que hace el C2, a la vista de supervisor y admin (A-82)', () => {
+  const nota = (id: number, sitioId: number, texto: string) => ({ id, tipo: 'nota' as const, sitioId, detalle: texto, usuarioId: 90 });
+
+  it('la actividad junta notas, avisos, reportes y respuestas a SOS de hoy; lo demás no, y limita a los más nuevos', async () => {
+    const repo = new MemoriaC2([sitio(1), sitio(2)]);
+    repo.eventos_ = [
+      { id: 1, tipo: 'sitio_solo', sitioId: 1 },
+      nota(2, 1, 'Llamé a Pedro'),
+      { id: 3, tipo: 'aviso_supervisor', sitioId: 2, detalle: 'El C2 reporta…', usuarioId: 90 },
+      { id: 4, tipo: 'sos_respuesta', sitioId: 1, detalle: 'Avisamos al supervisor', entidad: { tipo: 'emergencia', id: 7 } },
+      { id: 5, tipo: 'sos_lanzado', sitioId: 1 },
+      { id: 6, tipo: 'reporte', sitioId: 1, detalle: 'PLT-1 · Sin guardia', entidad: { tipo: 'reporte', id: 9 } },
+    ];
+    const a = await servicio(repo, []).actividad();
+    expect(a.items.map((i) => i.id)).toEqual([6, 4, 3, 2]);
+    expect(a.items[0].entidad).toEqual({ tipo: 'reporte', id: 9 });
+    expect((await servicio(repo, []).actividad(null, 2)).items.map((i) => i.id)).toEqual([6, 4]);
+  });
+
+  it('un supervisor solo ve la actividad y las notas de sus sitios', async () => {
+    const repo = new MemoriaC2([sitio(1), sitio(2)]);
+    repo.eventos_ = [nota(1, 1, 'del sitio 1'), nota(2, 2, 'del sitio 2'), { id: 3, tipo: 'sos_respuesta', sitioId: null, detalle: 'sin sitio' }];
+    repo.notas.set(1, { texto: 'del sitio 1', autor: 'Carla', en: new Date(min(-5)) });
+    repo.notas.set(2, { texto: 'del sitio 2', autor: 'Carla', en: new Date(min(-3)) });
+    const suyo = { sitioIds: new Set([2]), guardiaIds: new Set<number>() };
+    expect((await servicio(repo, []).actividad(suyo)).items.map((i) => i.id)).toEqual([2]);
+    expect(await servicio(repo, []).notasDelDia(suyo)).toEqual([{ sitioId: 2, texto: 'del sitio 2', autor: 'Carla', en: min(-3) }]);
+    expect((await servicio(repo, []).notasDelDia(null)).map((n) => n.sitioId)).toEqual([1, 2]);
+  });
+
+  it('permisos: el supervisor solo lee la bitácora (no ve el monitoreo ni actúa); el C2 y el admin, todo', () => {
+    expect(PERMISOS_POR_ROL[ROLES.SUPERVISOR]).toContain('c2.bitacora');
+    expect(PERMISOS_POR_ROL[ROLES.SUPERVISOR]).not.toContain('c2.ver');
+    expect(PERMISOS_POR_ROL[ROLES.SUPERVISOR]).not.toContain('c2.actuar');
+    expect(PERMISOS_POR_ROL[ROLES.C2]).toEqual(expect.arrayContaining(['c2.ver', 'c2.actuar', 'c2.bitacora']));
+    expect(PERMISOS_POR_ROL[ROLES.ADMIN]).toEqual(expect.arrayContaining(['c2.ver', 'c2.actuar', 'c2.bitacora']));
+    for (const rol of [ROLES.GUARDIA, ROLES.CLIENTE]) expect(PERMISOS_POR_ROL[rol]).not.toContain('c2.bitacora');
+  });
+
+  describe('rutas', () => {
+    const repo = new MemoriaC2([sitio(1), sitio(2)]);
+    repo.eventos_ = [nota(1, 1, 'Nota del sitio 1'), nota(2, 2, 'Nota del sitio 2')];
+    const app = createApp([createC2Module({ repo, dia: async () => [], emergencias: sinEmergencias, avisar: async () => undefined, alcance: async (u) => (u.rol === ROLES.SUPERVISOR ? { sitioIds: new Set([2]), guardiaIds: new Set() } : null), ahora: () => AHORA })]);
+    const con = (rol: Rol, id = 7) => `Bearer ${signAccessToken({ id, email: 'x@x.mx', rol, permisos: PERMISOS_POR_ROL[rol] })}`;
+    const get = (ruta: string, rol: Rol) => request(app).get(`/api/c2${ruta}`).set('Authorization', con(rol));
+
+    it('el supervisor lee la bitácora, la actividad y las notas de sus sitios; el monitoreo en vivo no', async () => {
+      const b = await get('/bitacora?fecha=2026-11-12', ROLES.SUPERVISOR);
+      expect(b.status).toBe(200);
+      expect(b.body.data.items.map((i: { id: number }) => i.id)).toEqual([2]);
+      expect((await get('/actividad', ROLES.SUPERVISOR)).body.data.items.map((i: { id: number }) => i.id)).toEqual([2]);
+      expect((await get('/tablero', ROLES.SUPERVISOR)).status).toBe(403);
+      expect((await request(app).post('/api/c2/sitios/2/nota').set('Authorization', con(ROLES.SUPERVISOR)).send({ texto: 'hola mundo' })).status).toBe(403);
+    });
+
+    it('el C2 y el admin ven todo; guardia y cliente, nada', async () => {
+      expect((await get('/actividad', ROLES.C2)).body.data.items).toHaveLength(2);
+      expect((await get('/actividad', ROLES.ADMIN)).status).toBe(200);
+      for (const rol of [ROLES.GUARDIA, ROLES.CLIENTE]) {
+        expect((await get('/bitacora', rol)).status).toBe(403);
+        expect((await get('/actividad', rol)).status).toBe(403);
+        expect((await get('/notas', rol)).status).toBe(403);
+      }
+    });
   });
 });

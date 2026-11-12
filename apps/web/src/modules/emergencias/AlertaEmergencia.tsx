@@ -8,6 +8,7 @@ import { Button, toast } from '../../components/ui';
 import { mensajeDeError } from '../../core/api';
 import { formatFechaHora } from '../../core/format/fechas';
 import { Llamadas } from './Llamadas';
+import { RespuestasSos } from './RespuestasSos';
 import { emergenciasService, enlaceMapa } from './emergencias.service';
 import { detenerSirena, iniciarSirena } from './sirena';
 
@@ -96,6 +97,7 @@ function Tarjeta({
           Voy en camino
         </Button>
         <Llamadas contactos={e.contactos} />
+        <RespuestasSos respuestas={e.respuestas} />
         <div className="grid grid-cols-2 gap-2">
           {e.contactos?.length ? null : e.usuario.telefono ? (
             <a

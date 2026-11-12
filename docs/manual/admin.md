@@ -316,6 +316,10 @@ Lo que haces es lo mismo que en el manual del Supervisor, sección 14: **"Voy en
 
 Si **nadie la recibe en 60 segundos**, la alerta se repite cada minuto con el aviso **"SIN RESPUESTA"**, y se suma a los super administradores. También tienes tu propio botón **SOS** (mantenlo presionado 2 segundos).
 
+### Lo que hace el C2
+
+Ves lo mismo que el supervisor, pero de **toda tu cartera**: la tarjeta **"Lo que hizo el C2 hoy"** en Inicio, la **bitácora** completa dentro de **C2 → Bitácora**, la **última nota** bajo cada sitio en Asistencia, la **campanita** ("Aviso del C2", "Respuesta del C2", "Reporte del C2") y, en cada SOS, **"Lo que ya se hizo"**. Los reportes del C2 llevan la etiqueta **C2** y son **internos**: los ven tú y el supervisor, no el cliente ni los guardias. Los avisos no se mandan a quien hizo la acción: si pruebas con tu propia cuenta, no te llegarán a ti.
+
 ## 18. Quejas, reportes y privacidad: lo que ves distinto
 
 - **Quejas** (reportes de clientes): ves **todas las de tu cartera**, no solo las de un sitio. Puedes **"Tomar a revisión"** y **"Resolver"** cualquiera, igual que el supervisor. Ves también las **fotos** que el cliente adjuntó (hasta 5). Si eliminas un cliente, un sitio o un usuario, también se borran las fotos de sus quejas. Te llega el aviso de las **urgentes** siempre, y el de las demás **solo si el sitio no tiene supervisor**.

@@ -18,6 +18,7 @@ import { formatFechaHora } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
+  Badge,
   Button,
   Card,
   Checkbox,
@@ -72,7 +73,16 @@ const columns: Column<ReporteResumen>[] = [
   {
     key: 'reporto',
     header: 'Reportó',
-    render: (r) => <span className="font-medium text-slate-800">{r.creadoPor.nombre}</span>,
+    render: (r) => (
+      <span className="font-medium text-slate-800">
+        {r.creadoPor.nombre}
+        {r.creadoPorRol === 'c2' && (
+          <Badge tone="info" className="ml-1.5 align-middle">
+            C2
+          </Badge>
+        )}
+      </span>
+    ),
   },
   { key: 'categoria', header: 'Categoría', mobile: 'hidden', render: (r) => nombreCategoria(r.categoria) },
   { key: 'prioridad', header: 'Prioridad', render: (r) => <PrioridadBadge prioridad={r.prioridad} /> },

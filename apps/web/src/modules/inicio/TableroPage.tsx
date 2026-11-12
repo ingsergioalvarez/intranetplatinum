@@ -11,6 +11,7 @@ import { asistenciaService } from '../asistencia/asistencia.service';
 import { CerrarJornadaModal } from '../asistencia/CerrarJornadaModal';
 import { formatDiaLargo, formatHora } from '../asistencia/formato';
 import { EnviarCubrirModal } from '../clientes/EnviarCubrirModal';
+import { ActividadC2 } from '../c2/ActividadC2';
 import { reportesService } from '../reportes/reportes.service';
 
 /** `1 h 05 min` / `25 min` */
@@ -226,6 +227,8 @@ export function TableroPage() {
             </ul>
           )}
         </Card>
+
+        <ActividadC2 />
       </div>
 
       {cubrir?.fila.sitio && cubrir.fila.turno && (

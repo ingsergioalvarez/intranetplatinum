@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Clock,
+  History,
   Home,
   CalendarOff,
   MessageSquareWarning,
@@ -66,6 +67,8 @@ export const navItems: NavItem[] = [
   },
   // Monitoreo de sitios para el C2 (A-61).
   { label: 'C2', to: '/c2', icon: MonitorDot, permiso: PERMISOS.C2_VER },
+  // El supervisor lee lo que hace el C2 sobre sus sitios (A-82); el admin lo ve dentro de C2.
+  { label: 'Bitácora C2', to: '/bitacora-c2', icon: History, permiso: PERMISOS.C2_BITACORA, roles: [ROLES.SUPERVISOR] },
   { label: 'Reportes', to: '/reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_VER_PROPIOS },
   // Lo que el cliente reporta del servicio o de un guardia (A-59).
   { label: 'Reportar', to: '/reportes-cliente', icon: MessageSquareWarning, roles: [ROLES.CLIENTE] },

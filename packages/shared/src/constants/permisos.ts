@@ -24,6 +24,7 @@ export const PERMISOS = {
   ASISTENCIA_ROSTROS: 'asistencia.rostros',
   C2_VER: 'c2.ver',
   C2_ACTUAR: 'c2.actuar',
+  C2_BITACORA: 'c2.bitacora',
 } as const;
 
 export type Permiso = (typeof PERMISOS)[keyof typeof PERMISOS];
@@ -51,6 +52,7 @@ export const PERMISO_DESCRIPCIONES: Record<Permiso, string> = {
   'asistencia.rostros': 'Registrar el rostro de los guardias',
   'c2.ver': 'Ver la pantalla de monitoreo del C2',
   'c2.actuar': 'Anotar, avisar al supervisor y reportar desde la pantalla del C2',
+  'c2.bitacora': 'Ver la bitácora y la actividad del C2 (de sus sitios)',
 };
 
 const P = PERMISOS;
@@ -74,11 +76,13 @@ export const PERMISOS_POR_ROL: Record<Rol, Permiso[]> = {
     P.GRUPOS_ADMINISTRAR,
     P.ASISTENCIA_VER,
     P.ASISTENCIA_ROSTROS,
+    // Ve lo que hace el C2 sobre sus sitios, solo lectura (A-82).
+    P.C2_BITACORA,
   ],
   [ROLES.GUARDIA]: [P.REPORTES_VER_PROPIOS, P.REPORTES_CREAR, P.REPORTES_SEGUIMIENTO, P.ASISTENCIA_MARCAR],
   [ROLES.CLIENTE]: [P.REPORTES_VER_PROPIOS, P.REPORTES_SEGUIMIENTO, P.ASISTENCIA_VER],
   // El C2 levanta reportes (internos: solo los ven supervisor y admin) y ve los que levantó (A-80).
-  [ROLES.C2]: [P.C2_VER, P.C2_ACTUAR, P.REPORTES_VER_PROPIOS, P.REPORTES_CREAR, P.REPORTES_SEGUIMIENTO],
+  [ROLES.C2]: [P.C2_VER, P.C2_ACTUAR, P.C2_BITACORA, P.REPORTES_VER_PROPIOS, P.REPORTES_CREAR, P.REPORTES_SEGUIMIENTO],
 };
 
 export const ROL_DESCRIPCIONES: Record<Rol, string> = {

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ArrowRightLeft, CalendarDays, CalendarOff, CalendarRange, HandHelping, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle, Siren } from 'lucide-react';
-import { PERMISOS, ROLES, type FilaAsistencia } from '@platinum/shared';
+import { PERMISOS, ROLES, type FilaAsistencia, type NotaSitioC2 } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
   Badge,
@@ -20,6 +20,7 @@ import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
 import { cambiosService } from '../cambios/cambios.service';
+import { useNotasC2 } from '../c2/notasC2';
 import { casosService } from '../casos/casos.service';
 import { emergenciasService } from '../emergencias/emergencias.service';
 import { solicitudesService } from '../solicitudes/solicitudes.service';
@@ -52,6 +53,15 @@ function moverDia(fecha: string, delta: number) {
 }
 
 const hora = (iso: string | undefined) => (iso ? formatHora(iso) : '—');
+
+/** La última nota que el C2 dejó hoy sobre el sitio (A-82): el supervisor ve qué ya se hizo sin entrar a la pantalla del C2. */
+function NotaDelC2({ nota }: { nota: NotaSitioC2 }) {
+  return (
+    <span className="mt-1 block rounded-md bg-amber-50 px-2 py-1 text-xs font-normal text-amber-900 ring-1 ring-amber-200 ring-inset">
+      <strong>Nota del C2</strong> · {nota.autor} {hora(nota.en)}: {nota.texto}
+    </span>
+  );
+}
 
 const columns: Column<FilaAsistencia>[] = [
   {
@@ -176,6 +186,25 @@ export function AsistenciaPage() {
   const hoy = hoyLocal();
   // Falta o no se presentó: el supervisor o el admin pueden enviar a alguien a cubrir (DA-39).
   const puedeCubrir = useAuthStore((s) => s.user?.rol === ROLES.ADMIN || s.user?.rol === ROLES.SUPERVISOR);
+  // La columna "Sitio" suma la última nota del C2 de hoy sobre ese sitio (A-82).
+  const notasC2 = useNotasC2();
+  const columnas = useMemo(
+    () =>
+      columns.map((c) =>
+        c.key !== 'sitio'
+          ? c
+          : {
+              ...c,
+              render: (f: FilaAsistencia) => (
+                <>
+                  {c.render(f)}
+                  {f.sitio && notasC2.has(f.sitio.id) && <NotaDelC2 nota={notasC2.get(f.sitio.id)!} />}
+                </>
+              ),
+            },
+      ),
+    [notasC2],
+  );
   const [cubrir, setCubrir] = useState<FilaAsistencia | null>(null);
   const [cerrando, setCerrando] = useState<FilaAsistencia | null>(null);
   const [fecha, setFecha] = useState(hoy);
@@ -288,7 +317,7 @@ export function AsistenciaPage() {
           />
         ) : (
           <DataTable
-            columns={columns}
+            columns={columnas}
             rows={lista.data?.items ?? []}
             rowKey={(f) => `${f.guardia.id}-${f.jornada?.entrada.id ?? 'sin'}`}
             loading={lista.isPending}

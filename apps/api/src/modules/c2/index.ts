@@ -42,6 +42,12 @@ class C2Controller extends BaseController {
     return this.ok(res, await this.service.tablero(this.query<C2TableroQuery>(req), user, await this.alcanceDe(user)));
   };
 
+  actividad = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.actividad(await this.alcanceDe(this.currentUser(req))));
+
+  notas = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.notasDelDia(await this.alcanceDe(this.currentUser(req))));
+
   bitacora = async (req: Request, res: Response) =>
     this.ok(res, await this.service.bitacora(this.query<C2BitacoraQuery>(req), await this.alcanceDe(this.currentUser(req))));
 
@@ -103,7 +109,11 @@ export function createC2Module(deps: C2Deps = {}): AppModule {
   const router = Router();
   router.use(authenticate);
   router.get('/tablero', requirePermission(PERMISOS.C2_VER), validate({ query: c2TableroQuerySchema }), c.tablero);
-  router.get('/bitacora', requirePermission(PERMISOS.C2_VER), validate({ query: c2BitacoraQuerySchema }), c.bitacora);
+  // La bitácora y la actividad del C2 también las lee el supervisor (de sus sitios): solo lectura (A-82).
+  const leerBitacora = requirePermission(PERMISOS.C2_BITACORA);
+  router.get('/bitacora', leerBitacora, validate({ query: c2BitacoraQuerySchema }), c.bitacora);
+  router.get('/actividad', leerBitacora, c.actividad);
+  router.get('/notas', leerBitacora, c.notas);
   // Acciones del C2 sobre un sitio: quedan en la bitácora con quién las hizo.
   const actuar = requirePermission(PERMISOS.C2_ACTUAR);
   router.post('/sitios/:sitioId/nota', actuar, validate({ params: sitioC2ParamSchema, body: notaC2Schema }), c.nota);

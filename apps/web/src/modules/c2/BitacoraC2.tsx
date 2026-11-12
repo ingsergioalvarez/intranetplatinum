@@ -8,28 +8,12 @@ import {
   TIPO_EVENTO_C2_LABEL,
   type EventoC2,
   type GrupoEventoC2,
-  type TipoEventoC2,
 } from '@platinum/shared';
 import { Card, EmptyState, Input, Spinner, cn } from '../../components/ui';
 import { hoyLocal } from '../../core/format/fechas';
 import { formatHora } from '../asistencia/formato';
 import { c2Service } from './c2.service';
-
-/** Color de cada evento: rojo lo grave, ámbar lo parcial y los avisos, verde lo resuelto, azul lo que hace el C2. */
-const COLOR: Record<TipoEventoC2, { punto: string; texto: string }> = {
-  sitio_solo: { punto: 'bg-red-500', texto: 'text-red-700' },
-  sitio_parcial: { punto: 'bg-amber-500', texto: 'text-amber-800' },
-  sitio_cubierto: { punto: 'bg-emerald-500', texto: 'text-emerald-700' },
-  sitio_cierre: { punto: 'bg-slate-400', texto: 'text-slate-600' },
-  sos_lanzado: { punto: 'bg-red-600', texto: 'text-red-700' },
-  sos_atendiendo: { punto: 'bg-amber-500', texto: 'text-amber-800' },
-  sos_respuesta: { punto: 'bg-amber-500', texto: 'text-amber-800' },
-  sos_cerrado: { punto: 'bg-emerald-500', texto: 'text-emerald-700' },
-  sos_sin_respuesta: { punto: 'bg-red-600', texto: 'text-red-700' },
-  nota: { punto: 'bg-sky-500', texto: 'text-sky-700' },
-  aviso_supervisor: { punto: 'bg-amber-500', texto: 'text-amber-800' },
-  reporte: { punto: 'bg-brand-500', texto: 'text-brand-700' },
-};
+import { COLOR_EVENTO as COLOR } from './c2.estilos';
 
 const duracion = (min: number) => (min < 60 ? `${min} m` : `${Math.floor(min / 60)} h ${min % 60} m`);
 
