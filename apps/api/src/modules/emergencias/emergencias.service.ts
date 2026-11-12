@@ -14,6 +14,7 @@ import {
 import { AuditLogger, BaseService, HttpError, esSuperAdmin, hoyISO, type AccionCtx, type AuthUser } from '../../core';
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
+import { sinEventosC2, type RegistrarEventoC2 } from '../c2/bitacora';
 import type { EmergenciaRow, EmergenciasRepository } from './emergencias.repository';
 
 const RUTA = '/asistencia/emergencias';
@@ -41,6 +42,8 @@ export class EmergenciasService extends BaseService {
     private readonly avisar: AvisarUsuarios = sinAvisos,
     private readonly atencion: AvisosAtencion = sinAtencion,
     private readonly ahora: () => Date = () => new Date(),
+    /** Bitácora del C2 (A-80): cada paso de la emergencia queda registrado. */
+    private readonly bitacoraC2: RegistrarEventoC2 = sinEventosC2,
   ) {
     super();
   }
@@ -85,6 +88,11 @@ export class EmergenciasService extends BaseService {
     return esSuperAdmin(user) || e.destinatarios.includes(user.id);
   }
 
+  /** Cuánto lleva (o llevó) la emergencia, en minutos. */
+  private minutosDesde(e: EmergenciaRow) {
+    return Math.max(0, Math.round((this.ahora().getTime() - e.createdAt.getTime()) / 60_000));
+  }
+
   private mensaje(e: EmergenciaRow) {
     return `${e.usuario.nombre} pidió ayuda${e.sitio ? ` en ${e.sitio.nombre}` : ''}`;
   }
@@ -112,6 +120,13 @@ export class EmergenciasService extends BaseService {
       ruta: RUTA,
       entidad: { tipo: 'emergencia', id: e.id },
       urgente: true,
+    });
+    await this.bitacoraC2({
+      tipo: 'sos_lanzado',
+      sitioId: e.sitio?.id ?? null,
+      detalle: `${e.usuario.nombre}${e.bateria != null ? ` · batería ${e.bateria}%` : ''}`,
+      usuarioId: user.id,
+      entidad: { tipo: 'emergencia', id: e.id },
     });
     return aEmergencia(e, await this.supervisorDe(user));
   }
@@ -148,6 +163,14 @@ export class EmergenciasService extends BaseService {
     });
     await this.atencion.atender({ tipo: 'emergencia', id }, { porId: user.id, resultado: 'Falsa alarma (sin querer)' });
     await this.audit.registrarAccion(ctx, 'emergencias.cancelar', 'emergencias', id, {});
+    await this.bitacoraC2({
+      tipo: 'sos_cerrado',
+      sitioId: e.sitio?.id ?? null,
+      detalle: 'Falsa alarma: fue sin querer (la canceló quien la lanzó)',
+      usuarioId: user.id,
+      minutos: this.minutosDesde(e),
+      entidad: { tipo: 'emergencia', id },
+    });
     await this.avisar(e.destinatarios, {
       tipo: 'emergencia',
       titulo: 'Falsa alarma',
@@ -221,6 +244,14 @@ export class EmergenciasService extends BaseService {
       await this.atencion.atender({ tipo: 'emergencia', id }, { porId: user.id, resultado: user.rol === ROLES.C2 ? 'Atendiendo' : 'En camino' });
     }
     await this.audit.registrarAccion(ctx, 'emergencias.acusar', 'emergencias', id, { por });
+    await this.bitacoraC2({
+      tipo: 'sos_atendiendo',
+      sitioId: e.sitio?.id ?? null,
+      detalle: `Lo atiende ${por}`,
+      usuarioId: user.id,
+      usuarioNombre: por,
+      entidad: { tipo: 'emergencia', id },
+    });
     await this.avisar([e.usuario.id], {
       tipo: 'emergencia',
       titulo: 'Te están ayudando',
@@ -251,6 +282,15 @@ export class EmergenciasService extends BaseService {
       { porId: user.id, resultado: RESULTADO_EMERGENCIA_LABEL[resultado] },
     );
     await this.audit.registrarAccion(ctx, 'emergencias.cerrar', 'emergencias', id, { resultado, nota: nota ?? null });
+    await this.bitacoraC2({
+      tipo: 'sos_cerrado',
+      sitioId: e.sitio?.id ?? null,
+      detalle: `${RESULTADO_EMERGENCIA_LABEL[resultado]}${nota?.trim() ? ` · ${nota.trim()}` : ''}`,
+      usuarioId: user.id,
+      usuarioNombre: por,
+      minutos: this.minutosDesde(e),
+      entidad: { tipo: 'emergencia', id },
+    });
     await this.avisar([e.usuario.id], {
       tipo: 'emergencia',
       titulo: 'Emergencia cerrada',
@@ -277,6 +317,12 @@ export class EmergenciasService extends BaseService {
       const supers = (await this.repo.superAdmins()).filter((id) => id !== e.usuario.id);
       const todos = [...new Set([...e.destinatarios, ...supers])];
       if (todos.length !== e.destinatarios.length) await this.repo.guardarDestinatarios(e.id, todos);
+      await this.bitacoraC2({
+        tipo: 'sos_sin_respuesta',
+        sitioId: e.sitio?.id ?? null,
+        detalle: `Nadie la ha recibido: se repitió la alerta (${e.escaladas + 1} ${e.escaladas === 0 ? 'vez' : 'veces'})`,
+        entidad: { tipo: 'emergencia', id: e.id },
+      });
       await this.avisar(todos, {
         tipo: 'emergencia',
         titulo: 'SIN RESPUESTA',

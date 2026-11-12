@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { FilaAsistencia, Emergencia, EstadoTurno, Jornada } from '@platinum/shared';
-import { C2Repository, type EpisodioRow } from '../src/modules/c2/c2.repository';
+import type { FilaAsistencia, Emergencia, EstadoTurno, Jornada, TipoEventoC2 } from '@platinum/shared';
+import type { NuevoEventoC2 } from '../src/modules/c2/bitacora';
+import { C2Repository, type EventoRow, type SitioInfo } from '../src/modules/c2/c2.repository';
 import { C2Service } from '../src/modules/c2/c2.service';
 import { agruparPorCliente, calcularSitio, type SitioBase } from '../src/modules/c2/estado';
 import type { AvisoUsuario } from '../src/modules/avisos/avisar';
@@ -13,7 +14,7 @@ const sitio = (id: number, nombre = `Sitio ${id}`, cliente = { id: 1, nombre: 'C
   id,
   nombre,
   cliente,
-  supervisor: { nombre: 'Pedro', telefono: '5500000000', telefonoEtiqueta: 'empresa' },
+  supervisor: { nombre: 'Pedro', telefono: '5500000000', telefonoEtiqueta: 'empresa', telefonos: [{ numero: '5500000000', etiqueta: 'empresa' }] },
 });
 
 const guardia = (id: number) => ({ id, nombre: `Guardia ${id}`, email: `g${id}@x.com`, foto: `/foto/${id}`, fotoAprobada: true });
@@ -108,8 +109,13 @@ describe('agruparPorCliente', () => {
 class MemoriaC2 extends C2Repository {
   abiertos: { id: number; sitioId: number; inicio: Date }[] = [];
   cerrados: { id: number; fin: Date; cubierto: boolean }[] = [];
-  historico: EpisodioRow[] = [];
   siguiente = 1;
+  /** Bitácora: lo que se registra, en orden. */
+  eventos_: (NuevoEventoC2 & { id: number })[] = [];
+  /** Última nota del día por sitio (la devuelve `ultimasNotas`). */
+  notas = new Map<number, { texto: string; autor: string; en: Date }>();
+  /** Quién recibe el aviso al supervisor. */
+  destinatarios = [5, 10];
   constructor(public lista: SitioBase[]) {
     super();
   }
@@ -131,8 +137,43 @@ class MemoriaC2 extends C2Repository {
     this.cerrados.push({ id, fin, cubierto });
     this.abiertos = this.abiertos.filter((a) => a.id !== id);
   }
-  async episodios() {
-    return this.historico;
+  async registrarEvento(e: NuevoEventoC2) {
+    this.eventos_.push({ id: this.eventos_.length + 1, ...e });
+  }
+  async ultimosEstados() {
+    const estados: TipoEventoC2[] = ['sitio_solo', 'sitio_parcial', 'sitio_cubierto', 'sitio_cierre'];
+    const m = new Map<number, { tipo: TipoEventoC2; createdAt: Date }>();
+    for (const e of this.eventos_) if (e.sitioId && estados.includes(e.tipo)) m.set(e.sitioId, { tipo: e.tipo, createdAt: e.ocurrioEn ?? AHORA });
+    return m;
+  }
+  async eventos(desde: Date, hasta: Date, { tipos, q }: { tipos?: readonly TipoEventoC2[]; q?: string }): Promise<EventoRow[]> {
+    return this.eventos_
+      .filter((e) => (!tipos || tipos.includes(e.tipo)) && (!q || `${e.detalle ?? ''}`.toLowerCase().includes(q.toLowerCase())))
+      .map((e) => ({
+        id: e.id,
+        tipo: e.tipo,
+        sitioId: e.sitioId ?? null,
+        sitioNombre: e.sitioId ? (this.lista.find((x) => x.id === e.sitioId)?.nombre ?? null) : null,
+        clienteNombre: e.sitioId ? (this.lista.find((x) => x.id === e.sitioId)?.cliente.nombre ?? null) : null,
+        detalle: e.detalle ?? null,
+        usuarioNombre: e.usuarioNombre ?? (e.usuarioId ? `Usuario ${e.usuarioId}` : null),
+        minutos: e.minutos ?? null,
+        entidad: e.entidad?.tipo ?? null,
+        entidadId: e.entidad?.id ?? null,
+        createdAt: e.ocurrioEn ?? AHORA,
+      }))
+      .filter((e) => e.createdAt >= desde && e.createdAt < hasta)
+      .reverse();
+  }
+  async ultimasNotas() {
+    return this.notas;
+  }
+  async sitioInfo(id: number): Promise<SitioInfo | null> {
+    const b = this.lista.find((x) => x.id === id);
+    return b ? { id: b.id, nombre: b.nombre, cliente: b.cliente, supervisorId: 5 } : null;
+  }
+  async destinatariosDeSitio() {
+    return this.destinatarios;
   }
 }
 
@@ -264,16 +305,118 @@ describe('C2Service.vigilar', () => {
   });
 });
 
-describe('C2Service.historial', () => {
-  it('suma los minutos sin guardia del día, con el episodio abierto hasta ahora', async () => {
-    const repo = new MemoriaC2([]);
-    const base = { sitio: { id: 1, nombre: 'Torre' }, cliente: { id: 1, nombre: 'Cliente' } };
-    repo.historico = [
-      { id: 1, ...base, inicio: new Date(min(-120)), fin: new Date(min(-90)), cubierto: true },
-      { id: 2, ...base, inicio: new Date(min(-40)), fin: null, cubierto: null },
+describe('bitácora del C2 (A-80)', () => {
+  const tipos = (repo: MemoriaC2) => repo.eventos_.map((e) => e.tipo);
+
+  it('registra cuando un sitio queda solo (con la hora del turno) y no repite en la siguiente revisión', async () => {
+    const repo = new MemoriaC2([sitio(1, 'Torre Norte')]);
+    const s = servicio(repo, [sinChecar(1, 1, 37, 'no_se_presento')]);
+    await s.vigilar();
+    await s.vigilar();
+    expect(repo.eventos_).toHaveLength(1);
+    expect(repo.eventos_[0]).toMatchObject({ tipo: 'sitio_solo', sitioId: 1 });
+    expect(repo.eventos_[0].ocurrioEn?.toISOString()).toBe(min(-37));
+    expect(repo.eventos_[0].detalle).toContain('Falta: Guardia 1');
+  });
+
+  it('registra el parcial, y después el cubierto con quién llegó y cuánto duró', async () => {
+    const repo = new MemoriaC2([sitio(1)]);
+    await servicio(repo, [presente(1, 1), sinChecar(2, 1, 40, 'no_se_presento')]).vigilar();
+    expect(tipos(repo)).toEqual(['sitio_parcial']);
+    // Llega el segundo guardia: el sitio queda cubierto.
+    await servicio(repo, [presente(1, 1), presente(2, 1, -2)]).vigilar();
+    expect(tipos(repo)).toEqual(['sitio_parcial', 'sitio_cubierto']);
+    expect(repo.eventos_[1]).toMatchObject({ detalle: 'Llegó Guardia 2' });
+    expect(repo.eventos_[1].minutos).toBe(40);
+  });
+
+  it('de parcial pasa a solo y de solo a cubierto, cada cambio en su línea', async () => {
+    const repo = new MemoriaC2([sitio(1)]);
+    await servicio(repo, [presente(1, 1), sinChecar(2, 1, 40, 'no_se_presento')]).vigilar();
+    await servicio(repo, [sinChecar(2, 1, 40, 'no_se_presento')]).vigilar();
+    await servicio(repo, [presente(2, 1, -1)]).vigilar();
+    expect(tipos(repo)).toEqual(['sitio_parcial', 'sitio_solo', 'sitio_cubierto']);
+  });
+
+  it('si el turno acaba sin que llegue nadie, lo dice', async () => {
+    const repo = new MemoriaC2([sitio(1)]);
+    await servicio(repo, [sinChecar(1, 1, 37, 'no_se_presento')]).vigilar();
+    await servicio(repo, []).vigilar();
+    expect(tipos(repo)).toEqual(['sitio_solo', 'sitio_cierre']);
+    expect(repo.eventos_[1].detalle).toBe('El turno terminó sin que llegara nadie');
+  });
+
+  it('un sitio que siempre estuvo cubierto o sin turno no genera líneas', async () => {
+    const repo = new MemoriaC2([sitio(1), sitio(2)]);
+    await servicio(repo, [presente(1, 1)]).vigilar();
+    expect(repo.eventos_).toEqual([]);
+  });
+
+  it('se lee por día, con filtro de tipo y búsqueda, lo más nuevo primero', async () => {
+    const repo = new MemoriaC2([sitio(1, 'Torre Norte')]);
+    repo.eventos_ = [
+      { id: 1, tipo: 'sitio_solo', sitioId: 1, detalle: 'Falta: Luis' },
+      { id: 2, tipo: 'nota', sitioId: 1, detalle: 'Llamé a Pedro', usuarioId: 90 },
+      { id: 3, tipo: 'sos_lanzado', sitioId: null, detalle: 'Juan Pérez' },
     ];
-    const h = await servicio(repo, []).historial({ fecha: '2026-11-12' });
-    expect(h.items.map((i) => i.minutos)).toEqual([30, 40]);
-    expect(h.totalMinutos).toBe(70);
+    const todo = await servicio(repo, []).bitacora({ fecha: '2026-11-12', grupo: 'todo' });
+    expect(todo.items.map((i) => i.id)).toEqual([3, 2, 1]);
+    expect(todo.items[1]).toMatchObject({ tipo: 'nota', usuario: 'Usuario 90', sitio: { nombre: 'Torre Norte', cliente: 'Cliente 1' } });
+    expect(todo.items[0].sitio).toBeNull();
+    expect((await servicio(repo, []).bitacora({ fecha: '2026-11-12', grupo: 'acciones' })).items.map((i) => i.tipo)).toEqual(['nota']);
+    expect((await servicio(repo, []).bitacora({ fecha: '2026-11-12', grupo: 'sos' })).items.map((i) => i.tipo)).toEqual(['sos_lanzado']);
+    expect((await servicio(repo, []).bitacora({ fecha: '2026-11-12', grupo: 'todo', q: 'pedro' })).items.map((i) => i.id)).toEqual([2]);
+  });
+
+  it('un admin de cartera solo ve lo de sus sitios (y no los eventos sin sitio)', async () => {
+    const repo = new MemoriaC2([sitio(1), sitio(2)]);
+    repo.eventos_ = [
+      { id: 1, tipo: 'sitio_solo', sitioId: 1 },
+      { id: 2, tipo: 'sitio_solo', sitioId: 2 },
+      { id: 3, tipo: 'sos_lanzado', sitioId: null },
+    ];
+    const b = await servicio(repo, []).bitacora({ fecha: '2026-11-12', grupo: 'todo' }, { sitioIds: new Set([2]), guardiaIds: new Set() });
+    expect(b.items.map((i) => i.id)).toEqual([2]);
+  });
+});
+
+describe('acciones del C2 (A-80)', () => {
+  it('la nota queda en la bitácora con quién la escribió', async () => {
+    const repo = new MemoriaC2([sitio(1)]);
+    await servicio(repo, []).nota(1, { texto: 'Llamé a Pedro, viene en camino' }, usuario);
+    expect(repo.eventos_).toEqual([{ id: 1, tipo: 'nota', sitioId: 1, detalle: 'Llamé a Pedro, viene en camino', usuarioId: 900 }]);
+  });
+
+  it('una nota sobre un sitio que no existe o fuera de la cartera es 404', async () => {
+    const repo = new MemoriaC2([sitio(1)]);
+    await expect(servicio(repo, []).nota(99, { texto: 'hola mundo' }, usuario)).rejects.toMatchObject({ status: 404 });
+    await expect(
+      servicio(repo, []).nota(1, { texto: 'hola mundo' }, usuario, { sitioIds: new Set([2]), guardiaIds: new Set() }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(repo.eventos_).toEqual([]);
+  });
+
+  it('avisar al supervisor: llega al supervisor y al admin con la situación del sitio, y queda en la bitácora', async () => {
+    const repo = new MemoriaC2([sitio(1, 'poetas 7', { id: 1, nombre: 'Comunicalo' })]);
+    const avisos: { ids: number[]; aviso: AvisoUsuario }[] = [];
+    const r = await servicio(repo, [sinChecar(1, 1, 40, 'no_se_presento')], avisos).avisarSupervisor(1, { mensaje: 'Sin respuesta en el celular' }, usuario);
+    expect(r).toEqual({ avisados: 2 });
+    expect(avisos[0].ids).toEqual([5, 10]);
+    expect(avisos[0].aviso).toMatchObject({ tipo: 'marca_alerta', titulo: 'Aviso del C2', urgente: true });
+    expect(avisos[0].aviso.mensaje).toBe('El C2 reporta que poetas 7 (Comunicalo) no tiene guardia. Sin respuesta en el celular');
+    expect(repo.eventos_[0]).toMatchObject({ tipo: 'aviso_supervisor', sitioId: 1, usuarioId: 900 });
+  });
+
+  it('no se avisa a sí mismo; sin a quién avisar responde 409', async () => {
+    const repo = new MemoriaC2([sitio(1)]);
+    repo.destinatarios = [900];
+    await expect(servicio(repo, []).avisarSupervisor(1, {}, usuario)).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('la última nota del día se ve en el tablero, bajo el sitio', async () => {
+    const repo = new MemoriaC2([sitio(1)]);
+    repo.notas.set(1, { texto: 'Llamé a Pedro', autor: 'Carla', en: new Date(min(-10)) });
+    const t = await servicio(repo, []).tablero(Q, usuario);
+    expect(t.sitios[0].sitio.ultimaNota).toEqual({ texto: 'Llamé a Pedro', autor: 'Carla', en: min(-10) });
   });
 });

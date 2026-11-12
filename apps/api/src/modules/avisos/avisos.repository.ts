@@ -29,6 +29,8 @@ export abstract class AvisosRepository {
   abstract encolarCorreosCliente(reporteId: number, clienteId: number): Promise<number>;
   /** Usuarios activos con rol cliente asociados a esta empresa. */
   abstract usuariosDelCliente(clienteId: number): Promise<number[]>;
+  /** Admin dueños del sitio (y, si no tiene, los super admin): reciben los reportes internos del C2 (A-80). */
+  abstract administradoresDelSitio(sitioId: number): Promise<number[]>;
 }
 
 export class PrismaAvisosRepository extends AvisosRepository {
@@ -166,6 +168,17 @@ export class PrismaAvisosRepository extends AvisosRepository {
       data: contactos.map((c) => ({ reporteId, contactoId: c.id, canal: 'email' as const })),
     });
     return contactos.length;
+  }
+
+  async administradoresDelSitio(sitioId: number): Promise<number[]> {
+    const duenos = await adminsDe({ sitioId });
+    if (duenos.length > 0) return duenos;
+    // Sin dueño asignado, que no se pierda: les llega a los super admin.
+    const supers = await getPrisma().usuario.findMany({
+      where: { esSuperAdmin: true, activo: true, deletedAt: null },
+      select: { id: true },
+    });
+    return supers.map((u) => u.id);
   }
 
   async usuariosDelCliente(clienteId: number): Promise<number[]> {

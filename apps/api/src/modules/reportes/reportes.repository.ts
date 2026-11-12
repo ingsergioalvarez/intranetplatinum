@@ -10,6 +10,7 @@ import type {
   Rol,
   SitioReportable,
 } from '@platinum/shared';
+import { ROLES } from '@platinum/shared';
 import { fechaADate } from '../../core';
 import { getPrisma } from '../../core/data/prisma';
 import type { Prisma } from '../../generated/prisma/client';
@@ -23,6 +24,8 @@ export type Visibilidad =
   /** Reportes de sus sitios con asignación vigente hoy + los que él creó. */
   | { tipo: 'guardia'; usuarioId: number; hoy: string }
   | { tipo: 'cliente'; clienteId: number }
+  /** Solo los que levantó él (el C2, A-80). */
+  | { tipo: 'propios'; usuarioId: number }
   | { tipo: 'ninguno' };
 
 export type RestriccionSitio =
@@ -148,7 +151,10 @@ const evidenciaSelect = {
   subidaPor: personaSelect,
 } satisfies Prisma.ReporteEvidenciaSelect;
 
-function whereVisibilidad(v: Visibilidad): Prisma.ReporteWhereInput {
+/** Excluye los reportes internos del C2: solo los ven supervisor y admin (y el propio C2). */
+const sinC2: Prisma.ReporteWhereInput = { creadoPor: { rol: { clave: { not: ROLES.C2 } } } };
+
+export function whereVisibilidad(v: Visibilidad): Prisma.ReporteWhereInput {
   switch (v.tipo) {
     case 'todos':
       return {};
@@ -157,9 +163,13 @@ function whereVisibilidad(v: Visibilidad): Prisma.ReporteWhereInput {
     case 'ninguno':
       return { id: -1 };
     case 'cliente':
-      return { clienteId: v.clienteId };
+      // Los reportes que levanta el C2 son internos: el cliente no los ve (A-80).
+      return { clienteId: v.clienteId, ...sinC2 };
+    case 'propios':
+      return { creadoPorId: v.usuarioId };
     case 'guardia':
       return {
+        ...sinC2,
         OR: [
           { creadoPorId: v.usuarioId },
           { sitio: { asignaciones: { some: asignadaA(v.usuarioId, v.hoy) } } },

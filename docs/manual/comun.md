@@ -6,6 +6,8 @@
 
 Es la aplicación de Platinum Agency para el trabajo diario: checar tu entrada y salida, avisar de problemas en tu sitio, pedir ausencias y recibir avisos. Se usa en el **celular** y también en computadora.
 
+**En computadora** tienes una **barra lateral** con tus módulos. Con la pestañita de su borde (la flecha) la **ocultas** y queda solo una columna de iconos, para ver más pantalla; vuelve a tocarla para abrirla. La app recuerda tu elección en ese equipo (en pantallas chicas arranca oculta). Abajo está **tu nombre**: tócalo para abrir **Ayuda, Acceso rápido (PIN), Cambiar contraseña y Cerrar sesión**.
+
 ## 2. Instalar la app en tu celular
 
 **En el celular y la tableta la app se instala: es obligatorio.** Instalada se abre a pantalla completa, los avisos te llegan aunque esté cerrada y puedes checar aunque se vaya la señal. Por eso, **al abrir la página en el navegador del celular, la propia app te lo pide** con una ventana que no se puede cerrar. En computadora no se pide nada.
@@ -129,7 +131,7 @@ Al cambiarla se cierra tu sesión en tus otros dispositivos.
 
 ## 8. Cerrar sesión
 
-Toca el icono de **usuario** (el muñequito) en la parte de arriba y, al final del menú, **"Cerrar sesión"** (en rojo). **Cierra tu sesión al instante, sin preguntar.**
+En el celular, toca el icono de **usuario** (el muñequito) en la parte de arriba y, al final del menú, **"Cerrar sesión"** (en rojo). En computadora, toca **tu nombre** al pie de la barra lateral y elige **"Cerrar sesión"**. **Cierra tu sesión al instante, sin preguntar.**
 
 Cerrar sesión **no borra** tu perfil del celular: en tu siguiente entrada seguirás viendo tu nombre, y **seguirás recibiendo tus avisos** en ese celular. Si no habías guardado tu perfil, al cerrar sesión dejas de recibirlos ahí.
 

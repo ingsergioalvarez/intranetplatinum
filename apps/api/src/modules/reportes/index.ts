@@ -21,6 +21,7 @@ import {
   validate,
   type AppModule,
 } from '../../core';
+import { registrarEventoC2ConPrisma, type RegistrarEventoC2 } from '../c2/bitacora';
 import { PrismaAvisosRepository } from '../avisos/avisos.repository';
 import { NotificadorAvisos, type NotificadorReportes } from '../avisos/notificador';
 import { PrismaReportesRepository, ReportesRepository } from './reportes.repository';
@@ -65,6 +66,8 @@ interface ReportesModuleDeps {
   storage?: StorageService;
   hoy?: () => string;
   avisos?: NotificadorReportes;
+  /** Bitácora del C2 (A-80). */
+  bitacoraC2?: RegistrarEventoC2;
 }
 
 /** Reportes de guardias con fotos y seguimiento (F3-02..F3-06). */
@@ -73,8 +76,9 @@ export function createReportesModule({
   storage = new LocalStorageService(),
   hoy,
   avisos = new NotificadorAvisos(new PrismaAvisosRepository()),
+  bitacoraC2 = registrarEventoC2ConPrisma,
 }: ReportesModuleDeps = {}): AppModule {
-  const c = new ReportesController(new ReportesService(repo, storage, hoy, avisos));
+  const c = new ReportesController(new ReportesService(repo, storage, hoy, avisos, bitacoraC2));
   const fotos = uploadImages.array('fotos', MAX_FOTOS_REPORTE);
   const id = validate({ params: idParamSchema });
 

@@ -169,6 +169,7 @@ let audit: MemoryAuditLogger;
 let ahora: Date;
 let avisos: { usuarioIds: number[]; titulo?: string; mensaje: string; urgente?: boolean }[];
 let atendidos: { entidad: string; resultado: string }[];
+let eventosC2: { tipo: string; sitioId?: number | null; detalle?: string | null; usuarioId?: number | null; usuarioNombre?: string | null; minutos?: number | null }[];
 let app: ReturnType<typeof createApp>;
 let servicio: ReturnType<typeof crearServicioEmergencias>;
 
@@ -176,6 +177,7 @@ const deps = () => ({
   repo,
   audit,
   ahora: () => ahora,
+  bitacoraC2: async (e: (typeof eventosC2)[number]) => void eventosC2.push(e),
   avisar: async (usuarioIds: number[], a: { titulo?: string; mensaje: string; urgente?: boolean }) =>
     void avisos.push({ usuarioIds: [...usuarioIds].sort((x, y) => x - y), titulo: a.titulo, mensaje: a.mensaje, urgente: a.urgente }),
   atencion: {
@@ -207,6 +209,7 @@ beforeEach(() => {
   ahora = new Date('2026-11-03T16:00:00.000Z');
   avisos = [];
   atendidos = [];
+  eventosC2 = [];
   app = createApp([createEmergenciasModule(deps())]);
   servicio = crearServicioEmergencias(deps());
 });
@@ -454,5 +457,38 @@ describe('el C2 en las emergencias (A-61)', () => {
     expect(delC2[2].telefonos).toHaveLength(2);
     // El supervisor sin teléfono personal solo tiene el de la empresa.
     expect(delC2[1].telefonos).toEqual([{ numero: '5505000000', etiqueta: 'empresa' }]);
+  });
+});
+
+describe('bitácora del C2 en las emergencias (A-80)', () => {
+  const c2 = () => como(90, ROLES.C2);
+
+  it('cada paso del SOS queda registrado: lanzado, quién lo atiende y cerrado con resultado y nota', async () => {
+    repo.c2 = [90];
+    const id = (await juan().post('', { bateria: 69 })).body.data.id;
+    expect(eventosC2).toEqual([{ tipo: 'sos_lanzado', sitioId: 3, detalle: 'Juan Pérez · batería 69%', usuarioId: 21, entidad: { tipo: 'emergencia', id } }]);
+    await c2().post(`/${id}/acusar`);
+    await supA().post(`/${id}/acusar`);
+    expect(eventosC2.filter((e) => e.tipo === 'sos_atendiendo').map((e) => e.usuarioNombre)).toEqual(['Carla C2 (C2)', 'Sofía Sup']);
+    ahora = new Date(ahora.getTime() + 8 * 60_000);
+    await adminA().post(`/${id}/cerrar`, { resultado: 'atendida', nota: 'Se habló con el guardia' });
+    expect(eventosC2.at(-1)).toMatchObject({ tipo: 'sos_cerrado', sitioId: 3, detalle: 'Atendida · Se habló con el guardia', usuarioNombre: 'Admin A', minutos: 8 });
+  });
+
+  it('repetir el "estamos atendiendo" de la misma persona no duplica la línea', async () => {
+    repo.c2 = [90];
+    const id = (await juan().post('')).body.data.id;
+    await c2().post(`/${id}/acusar`);
+    await c2().post(`/${id}/acusar`);
+    expect(eventosC2.filter((e) => e.tipo === 'sos_atendiendo')).toHaveLength(1);
+  });
+
+  it('"fue sin querer" y la alerta sin respuesta también quedan', async () => {
+    const id = (await juan().post('')).body.data.id;
+    ahora = new Date(ahora.getTime() + 120_000);
+    await servicio.escalar();
+    expect(eventosC2.at(-1)).toMatchObject({ tipo: 'sos_sin_respuesta', sitioId: 3 });
+    await juan().post(`/${id}/cancelar`);
+    expect(eventosC2.at(-1)).toMatchObject({ tipo: 'sos_cerrado', detalle: 'Falsa alarma: fue sin querer (la canceló quien la lanzó)' });
   });
 });

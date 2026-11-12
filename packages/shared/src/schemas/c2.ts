@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Emergencia } from './emergencias';
-import type { ContactoTelefono } from './usuarios';
+import type { ContactoTelefono, EtiquetaTelefono } from './usuarios';
 
 /**
  * Monitoreo del C2 (A-61): el C2 solo vigila que cada sitio tenga guardia y recibe los SOS; no le importan retardos,
@@ -54,14 +54,6 @@ export const c2TableroQuerySchema = z.object({
 });
 export type C2TableroQuery = z.infer<typeof c2TableroQuerySchema>;
 
-export const c2HistorialQuerySchema = z.object({
-  fecha: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida')
-    .optional(),
-});
-export type C2HistorialQuery = z.infer<typeof c2HistorialQuerySchema>;
-
 /** Un guardia de un sitio: el que está o el que debía estar. */
 export interface GuardiaC2 {
   id: number;
@@ -77,14 +69,19 @@ export interface GuardiaC2 {
   horario: { entrada: string; salida: string } | null;
 }
 
+/** El supervisor del sitio, con todos sus números (el personal y el de la empresa) para el icono "Llamar". */
+export type SupervisorC2 = ContactoTelefono & { telefonos: { numero: string; etiqueta: EtiquetaTelefono }[] };
+
 export interface SitioC2 {
   id: number;
   nombre: string;
   estado: EstadoSitioC2;
   /** Desde cuándo está sin guardia (`solo`), para el "hace 37 m". */
   desde: string | null;
-  supervisor: ContactoTelefono | null;
+  supervisor: SupervisorC2 | null;
   guardias: GuardiaC2[];
+  /** Última nota del C2 de hoy sobre este sitio: así quien relevé el turno sabe qué ya se hizo. */
+  ultimaNota?: { texto: string; autor: string; en: string } | null;
 }
 
 export interface ClienteC2 {
@@ -124,21 +121,95 @@ export interface TableroC2 {
   limit: number;
 }
 
-/** Un periodo en que un sitio estuvo sin guardia (historial). */
-export interface EpisodioSoloC2 {
+// ---------- Bitácora del C2 (A-80) ----------
+
+/** Todo lo que se registra: lo que pasa con los sitios, los SOS y lo que hace el C2. */
+export const TIPOS_EVENTO_C2 = [
+  'sitio_solo',
+  'sitio_parcial',
+  'sitio_cubierto',
+  'sitio_cierre',
+  'sos_lanzado',
+  'sos_atendiendo',
+  'sos_cerrado',
+  'sos_sin_respuesta',
+  'nota',
+  'aviso_supervisor',
+  'reporte',
+] as const;
+export type TipoEventoC2 = (typeof TIPOS_EVENTO_C2)[number];
+
+export const TIPO_EVENTO_C2_LABEL: Record<TipoEventoC2, string> = {
+  sitio_solo: 'Sitio solo',
+  sitio_parcial: 'Sitio parcial',
+  sitio_cubierto: 'Cubierto',
+  sitio_cierre: 'Turno terminó sin cubrirse',
+  sos_lanzado: 'SOS lanzado',
+  sos_atendiendo: 'SOS: lo están atendiendo',
+  sos_cerrado: 'SOS cerrado',
+  sos_sin_respuesta: 'SOS sin respuesta',
+  nota: 'Nota del C2',
+  aviso_supervisor: 'Aviso al supervisor',
+  reporte: 'Reporte levantado',
+};
+
+/** Filtro de la bitácora: lo que pasa con los sitios, los SOS o lo que hizo el C2. */
+export const GRUPOS_EVENTO_C2 = ['todo', 'sitios', 'sos', 'acciones'] as const;
+export type GrupoEventoC2 = (typeof GRUPOS_EVENTO_C2)[number];
+export const GRUPO_EVENTO_C2_LABEL: Record<GrupoEventoC2, string> = {
+  todo: 'Todo',
+  sitios: 'Sitios',
+  sos: 'SOS',
+  acciones: 'Acciones del C2',
+};
+export const TIPOS_DEL_GRUPO: Record<Exclude<GrupoEventoC2, 'todo'>, readonly TipoEventoC2[]> = {
+  sitios: ['sitio_solo', 'sitio_parcial', 'sitio_cubierto', 'sitio_cierre'],
+  sos: ['sos_lanzado', 'sos_atendiendo', 'sos_cerrado', 'sos_sin_respuesta'],
+  acciones: ['nota', 'aviso_supervisor', 'reporte'],
+};
+
+export const c2BitacoraQuerySchema = z.object({
+  fecha: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida')
+    .optional(),
+  grupo: z.enum(GRUPOS_EVENTO_C2).default('todo'),
+  q: z.string().trim().max(100).optional(),
+});
+export type C2BitacoraQuery = z.infer<typeof c2BitacoraQuerySchema>;
+
+export interface EventoC2 {
   id: number;
-  sitio: { id: number; nombre: string };
-  cliente: { id: number; nombre: string };
-  inicio: string;
-  /** null = sigue solo. */
-  fin: string | null;
-  cubierto: boolean | null;
-  minutos: number;
+  tipo: TipoEventoC2;
+  sitio: { id: number | null; nombre: string; cliente: string } | null;
+  detalle: string | null;
+  /** Quién lo hizo (null si lo registró el sistema). */
+  usuario: string | null;
+  minutos: number | null;
+  /** Emergencia o reporte de donde viene. */
+  entidad: { tipo: 'emergencia' | 'reporte'; id: number } | null;
+  createdAt: string;
 }
 
-export interface HistorialC2 {
+export interface BitacoraC2 {
   fecha: string;
-  items: EpisodioSoloC2[];
-  /** Suma de minutos sin guardia de todos los sitios ese día. */
-  totalMinutos: number;
+  items: EventoC2[];
 }
+
+// ---------- Acciones del C2 sobre un sitio ----------
+
+export const NOTA_C2_MAX = 500;
+
+/** Nota libre: se guarda en la bitácora con quién la escribió y la hora. */
+export const notaC2Schema = z.object({
+  texto: z.string().trim().min(3, 'Escribe la nota').max(NOTA_C2_MAX, `Máximo ${NOTA_C2_MAX} caracteres`),
+});
+export type NotaC2Input = z.infer<typeof notaC2Schema>;
+
+/** Aviso al supervisor y al admin del sitio, de parte del C2. El texto extra es opcional. */
+export const avisoSupervisorC2Schema = z.object({
+  mensaje: z.string().trim().max(200, 'Máximo 200 caracteres').optional(),
+});
+export type AvisoSupervisorC2Input = z.infer<typeof avisoSupervisorC2Schema>;
+
+export const sitioC2ParamSchema = z.object({ sitioId: z.coerce.number().int().positive() });

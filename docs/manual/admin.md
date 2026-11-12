@@ -64,7 +64,7 @@ Quien tú das de alta **queda en tu cartera**. Si das de alta a un supervisor, �
 {{captura:A02-nuevo-usuario|Ventana "Nuevo usuario" con sus campos}}
 {{captura:A03-contrasena-temporal|Ventana "Usuario creado" con la contraseña temporal y "Copiar mensaje para enviar"}}
 
-> **Operador C2:** es la cuenta del centro de monitoreo. Entra directo a la pantalla **C2** (que tú también ves en el menú), donde vigila que cada sitio tenga guardia y recibe los SOS. No necesita teléfono. Ve todos los sitios de todos los clientes, así que dale esta cuenta solo a quien opera el C2. Su manual está en la pestaña **C2** de Ayuda.
+> **Operador C2:** es la cuenta del centro de monitoreo. Entra directo a la pantalla **C2** (que tú también ves en el menú), donde vigila que cada sitio tenga guardia y recibe los SOS. No necesita teléfono. Ve todos los sitios de todos los clientes, así que dale esta cuenta solo a quien opera el C2. Su manual está en la pestaña **C2** de Ayuda. Tú ves en **C2 → Bitácora** todo lo que pasó con los sitios y lo que hizo el C2; sus **reportes son internos** (los ven tú y el supervisor, no el cliente ni los guardias).
 
 ## 4. Editar a una persona
 

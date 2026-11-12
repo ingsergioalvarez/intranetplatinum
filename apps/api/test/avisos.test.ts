@@ -45,6 +45,10 @@ class MemoryAvisos extends AvisosRepository {
   async usuariosDelCliente() {
     return this.clientes;
   }
+  admins: number[] = [9];
+  async administradoresDelSitio() {
+    return this.admins;
+  }
   destinatarios() {
     return this.avisos.map((a) => a.usuarioId).sort((a, b) => a - b);
   }
@@ -159,5 +163,36 @@ describe('avisos de seguimiento', () => {
   it('un fallo al avisar no rompe la operación del reporte', async () => {
     repo.falla = true;
     await expect(notificador.reporteCreado(reporte(), 3)).resolves.toBeUndefined();
+  });
+});
+
+describe('reportes internos del C2 (A-80)', () => {
+  const delC2 = () => ({ ...reporte('alta'), creadoPor: { id: 90, nombre: 'Carla C2' }, creadoPorRol: 'c2' as const });
+
+  it('al crearse solo avisa al supervisor y al admin: no a los guardias del sitio ni al cliente, y sin correo', async () => {
+    repo.guardias = [30, 31];
+    repo.clientes = [15];
+    repo.reglas = { porDefecto: 'ambos', porPrioridad: {} };
+    await notificador.reporteCreado(delC2(), 90);
+    expect(repo.destinatarios()).toEqual([1, 2, 9]);
+    expect(repo.correos).toEqual([]);
+    expect(repo.avisos[0].titulo).toContain('Reporte del C2');
+  });
+
+  it('los cambios de estatus y los comentarios tampoco le llegan al cliente', async () => {
+    repo.clientes = [15];
+    repo.guardias = [30];
+    await notificador.estatusCambiado(delC2(), 'resuelto', 2);
+    expect(repo.destinatarios()).toEqual([90]);
+    repo.avisos = [];
+    await notificador.comentarioAgregado(delC2(), 2, 'Supervisor Carlos');
+    expect(repo.destinatarios()).toEqual([1, 90]);
+  });
+
+  it('un reporte normal sigue avisando como siempre', async () => {
+    repo.clientes = [15];
+    repo.reglas = { porDefecto: 'ambos', porPrioridad: {} };
+    await notificador.reporteCreado({ ...reporte(), creadoPorRol: 'guardia' }, 3);
+    expect(repo.destinatarios()).toContain(15);
   });
 });

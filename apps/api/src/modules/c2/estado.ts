@@ -1,7 +1,7 @@
 import {
   GRAVEDAD_SITIO_C2,
   type ClienteC2,
-  type ContactoTelefono,
+  type SupervisorC2,
   type EstadoSitioC2,
   type FilaAsistencia,
   type GuardiaC2,
@@ -13,7 +13,7 @@ export interface SitioBase {
   id: number;
   nombre: string;
   cliente: { id: number; nombre: string };
-  supervisor: ContactoTelefono | null;
+  supervisor: SupervisorC2 | null;
 }
 
 const MIN = 60_000;

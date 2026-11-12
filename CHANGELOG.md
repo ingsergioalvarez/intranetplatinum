@@ -17,6 +17,13 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 - **Todos los teléfonos en el SOS**: quien recibe una emergencia ve a quién llamar con todos sus números (personal y de la empresa), un botón por número: el guardia y el supervisor del sitio, y el C2 también los admin. En la alerta a pantalla completa, la pantalla Emergencias y la del C2.
 - **Manual del C2** (`docs/manual/c2.md`, con pestaña en Ayuda), cuatro tips para el C2 y el aviso de privacidad (sección 6) dice qué ve el C2.
 
+- **Barra lateral de escritorio (A-79)**: se puede ocultar con la pestaña de su borde (queda una columna de iconos con tooltip y las burbujas de avisos); la elección se recuerda por equipo y, sin elección, arranca oculta en pantallas menores de 1280 px. Nombre y rol del usuario son una sola tarjeta con un menú (Ayuda, Acceso rápido, Cambiar contraseña, Cerrar sesión): la lista del menú recupera unos 120 px de alto. Scroll fino dentro de la lista. Manual común actualizado. El celular no cambia.
+
+- **Bitácora del C2 (A-80)**: la pestaña Historial se sustituye por **Bitácora** (solo C2 y admin; el admin de cartera, solo sus sitios): una línea por cada cosa que pasa, con la hora, el sitio y quién la hizo. Se guarda en el momento (tabla `c2_eventos`, migración `20261114000000_c2_bitacora`) y no se edita: sitio solo o parcial (con la hora del turno), cubierto (quién llegó y cuánto duró), SOS (lanzado, cada persona que lo atiende, cerrado con resultado y nota, y cuando se repite sin respuesta) y las acciones del C2. Se consulta por día con filtros Todo / Sitios / SOS / Acciones del C2 y buscador. Sustituye al Historial y a la consulta de episodios.
+- **Acciones del C2 (A-80)**: columna **Acciones** con cuatro iconos en cada sitio (más tenues si no hay problema): **Llamar** (todos los números del supervisor), **Avisar al supervisor** (pide confirmar; llega al supervisor y al admin dueño, con la situación del sitio y un mensaje opcional), **Nota** (texto libre; la última del día se ve bajo "Qué pasa") y **Reporte**. Permiso nuevo `c2.actuar`.
+- **Reportes del C2 (A-80)**: el C2 levanta reportes sobre cualquier sitio desde su icono (sitio fijo, sin GPS ni ubicación, al menos una foto) y ve solo los que levantó. Son **internos**: los ven supervisor y admin, y **no** el cliente ni los guardias del sitio; los avisos (nuevo, estatus, comentarios) tampoco les llegan a ellos ni se manda correo al cliente. Cada reporte queda en la bitácora.
+- **Manual y tips del C2** actualizados con la bitácora y los iconos.
+
 #### Pendiente
 
 - Otras respuestas del C2 a un SOS; ligar sitios con cámaras; revisión del abogado (A-68) sobre el C2.

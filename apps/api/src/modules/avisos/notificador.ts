@@ -1,5 +1,6 @@
 import {
   ESTATUS_REPORTE_LABEL,
+  ROLES,
   PRIORIDAD_REPORTE_LABEL,
   avisaACliente,
   avisaASupervisor,
@@ -10,10 +11,11 @@ import {
 import type { AvisosRepository } from './avisos.repository';
 
 /** Datos del reporte que usan los avisos. */
-type ReporteAviso = Pick<
-  ReporteDetalle,
-  'id' | 'folio' | 'titulo' | 'prioridad' | 'sitio' | 'cliente' | 'creadoPor'
->;
+type ReporteAviso = Pick<ReporteDetalle, 'id' | 'folio' | 'titulo' | 'prioridad' | 'sitio' | 'cliente' | 'creadoPor'> &
+  Partial<Pick<ReporteDetalle, 'creadoPorRol'>>;
+
+/** Lo que levanta el C2 es interno: solo lo ven supervisor y admin. No se avisa a los guardias del sitio ni al cliente. */
+const esInterno = (r: ReporteAviso) => r.creadoPorRol === ROLES.C2;
 
 /**
  * Decide a quién avisar de lo que pasa con un reporte (D-016) y lo registra.
@@ -37,6 +39,19 @@ export class NotificadorAvisos implements NotificadorReportes {
 
   async reporteCreado(r: ReporteAviso, actorId: number) {
     await this.seguro('reporteCreado', async () => {
+      if (esInterno(r)) {
+        const internos = new Set([...(await this.repo.supervisores(r.sitio.id)), ...(await this.repo.administradoresDelSitio(r.sitio.id))]);
+        internos.delete(actorId);
+        if (internos.size > 0) {
+          await this.repo.crear([...internos], {
+            tipo: 'reporte_nuevo',
+            titulo: `Reporte del C2 · ${PRIORIDAD_REPORTE_LABEL[r.prioridad]}`,
+            reporteId: r.id,
+            mensaje: `${r.folio} · ${PRIORIDAD_REPORTE_LABEL[r.prioridad]}: ${r.titulo} (${r.sitio.nombre}, ${r.cliente.nombreComercial})`,
+          });
+        }
+        return;
+      }
       const destino = resolverDestino(await this.repo.reglasDelCliente(r.cliente.id), r.prioridad);
       const hoy = new Date().toISOString().slice(0, 10);
       const guardiasSitio = await this.repo.guardiasDelSitio(r.sitio.id, hoy);
@@ -70,7 +85,7 @@ export class NotificadorAvisos implements NotificadorReportes {
 
   async estatusCambiado(r: ReporteAviso, nuevo: EstatusReporte, actorId: number) {
     await this.seguro('estatusCambiado', async () => {
-      const clientes = await this.repo.usuariosDelCliente(r.cliente.id);
+      const clientes = esInterno(r) ? [] : await this.repo.usuariosDelCliente(r.cliente.id);
       const destinatarios = [...new Set([r.creadoPor.id, ...clientes])];
       await this.repo.crear(this.sin(destinatarios, actorId), {
         tipo: 'reporte_estatus',
@@ -84,9 +99,10 @@ export class NotificadorAvisos implements NotificadorReportes {
   /** Comentario sin cambio de estatus: avisa a supervisores, a quien reportó y a usuarios del cliente (salvo al autor). */
   async comentarioAgregado(r: ReporteAviso, actorId: number, actorNombre: string) {
     await this.seguro('comentarioAgregado', async () => {
+      const interno = esInterno(r);
       const destino = resolverDestino(await this.repo.reglasDelCliente(r.cliente.id), r.prioridad);
-      const supervisores = avisaASupervisor(destino) ? await this.repo.supervisores(r.sitio.id) : [];
-      const clientes = await this.repo.usuariosDelCliente(r.cliente.id);
+      const supervisores = interno || avisaASupervisor(destino) ? await this.repo.supervisores(r.sitio.id) : [];
+      const clientes = interno ? [] : await this.repo.usuariosDelCliente(r.cliente.id);
       const destinatarios = [...new Set([...supervisores, r.creadoPor.id, ...clientes])];
       await this.repo.crear(this.sin(destinatarios, actorId), {
         tipo: 'reporte_comentario',

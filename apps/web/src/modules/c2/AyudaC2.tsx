@@ -1,3 +1,4 @@
+import { ClipboardPlus, Megaphone, NotebookPen, Phone } from 'lucide-react';
 import { Button, Modal, cn } from '../../components/ui';
 import { ESTILO, LEYENDA } from './c2.estilos';
 
@@ -44,6 +45,16 @@ export function AyudaC2({ open, onClose }: { open: boolean; onClose: () => void 
         <section>
           <Titulo>La columna "Qué pasa"</Titulo>
           <p>Dice quién falta y a qué hora debía entrar, y quién sí está, con su foto y la hora a la que entró.</p>
+        </section>
+        <section>
+          <Titulo>Los iconos de la derecha</Titulo>
+          <ul className="mt-1 grid grid-cols-1 gap-1.5">
+            <li className="flex gap-2"><Phone className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden /><span><strong>Llamar:</strong> los números del supervisor del sitio.</span></li>
+            <li className="flex gap-2"><Megaphone className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden /><span><strong>Avisar al supervisor:</strong> le llega un aviso a él y al administrador del sitio.</span></li>
+            <li className="flex gap-2"><NotebookPen className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden /><span><strong>Nota:</strong> anotas lo que pasó o lo que hiciste. La última nota del día se ve en el sitio.</span></li>
+            <li className="flex gap-2"><ClipboardPlus className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden /><span><strong>Reporte:</strong> levantas un reporte sobre ese sitio. Lo ven el supervisor y el administrador.</span></li>
+          </ul>
+          <p className="mt-1">Todo lo que haces queda en la pestaña <strong>Bitácora</strong>, con tu nombre y la hora.</p>
         </section>
         <section>
           <Titulo>Sonido</Titulo>

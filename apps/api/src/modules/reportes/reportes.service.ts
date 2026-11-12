@@ -28,6 +28,7 @@ import {
   type AuthUser,
 } from '../../core';
 import { notificadorNulo, type NotificadorReportes } from '../avisos/notificador';
+import { sinEventosC2, type RegistrarEventoC2 } from '../c2/bitacora';
 import type { EvidenciaRow, FotoNueva, ReportesRepository, RestriccionSitio, Visibilidad } from './reportes.repository';
 
 /** Archivo recibido por multer (en memoria). */
@@ -46,6 +47,8 @@ export class ReportesService extends BaseService {
     private readonly hoy: () => string = () => hoyISO(),
     /** Avisos según la regla del cliente (D-016). */
     private readonly avisos: NotificadorReportes = notificadorNulo,
+    /** Bitácora del C2: lo que el C2 reporta queda registrado (A-80). */
+    private readonly bitacoraC2: RegistrarEventoC2 = sinEventosC2,
   ) {
     super();
   }
@@ -126,6 +129,16 @@ export class ReportesService extends BaseService {
       this.log('reporte creado', { folio, usuarioId: user.id });
       const reporte = await this.detalle(user, id);
       await this.avisos.reporteCreado(reporte, user.id);
+      // Lo que levanta el C2 queda en su bitácora (A-80).
+      if (user.rol === ROLES.C2) {
+        await this.bitacoraC2({
+          tipo: 'reporte',
+          sitioId: data.sitioId,
+          detalle: `${folio} · ${data.titulo}`,
+          usuarioId: user.id,
+          entidad: { tipo: 'reporte', id },
+        });
+      }
       return reporte;
     } catch (err) {
       await this.borrarFotos(guardadas);
@@ -202,11 +215,17 @@ export class ReportesService extends BaseService {
     if (user.rol === ROLES.GUARDIA && tienePermiso(user, PERMISOS.REPORTES_VER_PROPIOS)) {
       return { tipo: 'guardia', usuarioId: user.id, hoy: this.hoy() };
     }
+    // El C2 ve solo los reportes que levantó (A-80).
+    if (user.rol === ROLES.C2 && tienePermiso(user, PERMISOS.REPORTES_VER_PROPIOS)) {
+      return { tipo: 'propios', usuarioId: user.id };
+    }
     return { tipo: 'ninguno' };
   }
 
   /** Sitios que puede consultar/reportar según su rol. */
   private restriccionSitios(user: AuthUser): RestriccionSitio {
+    // El C2 vigila todos los sitios: puede reportar sobre cualquiera (A-80).
+    if (user.rol === ROLES.C2) return null;
     if (tienePermiso(user, PERMISOS.REPORTES_VER_TODOS)) {
       const cartera = carteraDe(user);
       return cartera === undefined ? null : { tipo: 'cartera', propietarioId: cartera };

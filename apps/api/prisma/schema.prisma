@@ -131,6 +131,8 @@ model Usuario {
   @@index([clienteId])
   @@index([activo, deletedAt])
   @@index([propietarioId])
+  c2Eventos            C2Evento[]
+
   @@map("usuarios")
 }
 
@@ -284,6 +286,7 @@ model Sitio {
   solicitudesCobertura SolicitudCobertura[]
   emergencias    Emergencia[]
   episodiosSolo  SitioSoloEpisodio[]
+  c2Eventos      C2Evento[]
   informes       InformeAsistencia[]
   cambiosTurno   CambioTurno[]
   horasExtra     HoraExtra[]
@@ -1440,4 +1443,31 @@ model SitioSoloEpisodio {
   @@index([sitioId, inicio])
   @@index([fin])
   @@map("sitio_solo_episodios")
+}
+
+/// Bitácora del C2 (A-80): una línea por cada cosa que pasa con los sitios y por lo que hace el C2. Se escribe en el
+/// momento y no se edita. Los nombres del sitio y el cliente se copian para que el historial no cambie si se renombran.
+model C2Evento {
+  id            Int      @id @default(autoincrement())
+  sitioId       Int?     @map("sitio_id")
+  sitioNombre   String?  @map("sitio_nombre") @db.VarChar(150)
+  clienteNombre String?  @map("cliente_nombre") @db.VarChar(150)
+  /// Ver `TIPOS_EVENTO_C2` en `@platinum/shared`.
+  tipo          String   @db.VarChar(30)
+  detalle       String?  @db.VarChar(500)
+  usuarioId     Int?     @map("usuario_id")
+  usuarioNombre String?  @map("usuario_nombre") @db.VarChar(120)
+  /// Cuánto duró lo que termina aquí (sitio cubierto, SOS cerrado).
+  minutos       Int?
+  /// De qué emergencia o reporte viene.
+  entidad       String?  @db.VarChar(20)
+  entidadId     Int?     @map("entidad_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  sitio         Sitio?   @relation(fields: [sitioId], references: [id], onDelete: SetNull)
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([sitioId, createdAt])
+  @@index([usuarioId])
+  @@map("c2_eventos")
 }

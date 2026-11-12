@@ -13,8 +13,11 @@ import { PageHeader } from '../../components/layout/AppShell';
 import { Button, Card, EmptyState, Input, Pagination, Spinner, cn } from '../../components/ui';
 import { formatHora } from '../asistencia/formato';
 import { AyudaC2 } from './AyudaC2';
-import { HistorialC2 } from './HistorialC2';
-import { QuePasa, SupervisorLink } from './QuePasa';
+import { AccionesSitio, type AccionC2 } from './AccionesSitio';
+import { BitacoraC2 } from './BitacoraC2';
+import { AvisarModal, NotaModal } from './ModalesC2';
+import { QuePasa } from './QuePasa';
+import { ReporteC2Modal } from './ReporteC2Modal';
 import { SosC2 } from './SosC2';
 import { c2Service } from './c2.service';
 import { ESTILO, LEYENDA, ayudaYaVista, marcarAyudaVista, minutosHace, textoDuracion, useAhora } from './c2.estilos';
@@ -74,15 +77,16 @@ function razon(s: SitioC2, ahora: number) {
   }
 }
 
-/** Una fila de la tabla de escritorio. `cliente` va vacío cuando el cliente ya se muestra arriba (vista agrupada). */
-function FilaSitio({ cliente, sitio, ahora }: { cliente: string; sitio: SitioC2; ahora: number }) {
+type AlAccionar = (accion: AccionC2, sitio: SitioC2, cliente: string) => void;
+
+/** Una fila de la tabla de escritorio. El nombre del cliente se oculta en la vista agrupada (ya sale arriba). */
+function FilaSitio({ cliente, mostrarCliente = true, sitio, ahora, onAccion }: { cliente: string; mostrarCliente?: boolean; sitio: SitioC2; ahora: number; onAccion: AlAccionar }) {
   const e = ESTILO[sitio.estado];
   return (
     <tr className={cn('border-t border-slate-100 align-top', e.fila)}>
-      <td className={cn('border-l-4 py-3 pl-3 pr-2 text-sm font-bold uppercase tracking-wide text-slate-700', e.barra)}>{cliente}</td>
+      <td className={cn('border-l-4 py-3 pl-3 pr-2 text-sm font-bold uppercase tracking-wide text-slate-700', e.barra)}>{mostrarCliente ? cliente : ''}</td>
       <td className="px-2 py-3">
         <p className="text-sm font-semibold text-slate-900">{sitio.nombre}</p>
-        <SupervisorLink s={sitio.supervisor} />
       </td>
       <td className="px-2 py-3">
         <EstadoPunto estado={sitio.estado} />
@@ -90,22 +94,24 @@ function FilaSitio({ cliente, sitio, ahora }: { cliente: string; sitio: SitioC2;
       <td className="px-2 py-3">
         <Hace sitio={sitio} ahora={ahora} />
       </td>
-      <td className="px-2 py-3 pr-4">
+      <td className="px-2 py-3">
         <QuePasa sitio={sitio} />
+      </td>
+      <td className="py-3 pr-3 pl-2">
+        <AccionesSitio sitio={sitio} onAccion={(a) => onAccion(a, sitio, cliente)} />
       </td>
     </tr>
   );
 }
 
-function TarjetaSitio({ cliente, sitio, ahora }: { cliente?: string; sitio: SitioC2; ahora: number }) {
+function TarjetaSitio({ cliente, mostrarCliente = true, sitio, ahora, onAccion }: { cliente: string; mostrarCliente?: boolean; sitio: SitioC2; ahora: number; onAccion: AlAccionar }) {
   const e = ESTILO[sitio.estado];
   return (
     <div className={cn('rounded-xl border border-slate-200 border-l-4 p-3', e.barra, e.fila || 'bg-white')}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          {cliente && <p className="truncate text-xs font-bold uppercase tracking-wide text-slate-500">{cliente}</p>}
+          {mostrarCliente && <p className="truncate text-xs font-bold uppercase tracking-wide text-slate-500">{cliente}</p>}
           <p className="truncate text-sm font-semibold text-slate-900">{sitio.nombre}</p>
-          <SupervisorLink s={sitio.supervisor} />
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5">
           <EstadoPunto estado={sitio.estado} />
@@ -114,6 +120,9 @@ function TarjetaSitio({ cliente, sitio, ahora }: { cliente?: string; sitio: Siti
       </div>
       <div className="mt-3">
         <QuePasa sitio={sitio} />
+      </div>
+      <div className="mt-3 border-t border-slate-200/70 pt-2">
+        <AccionesSitio sitio={sitio} onAccion={(a) => onAccion(a, sitio, cliente)} />
       </div>
     </div>
   );
@@ -150,7 +159,7 @@ function ResumenCliente({ c, ahora }: { c: ClienteC2; ahora: number }) {
   );
 }
 
-const ENCABEZADOS = ['Cliente', 'Sitio', 'Estado', 'Hace', 'Qué pasa'];
+const ENCABEZADOS = ['Cliente', 'Sitio', 'Estado', 'Hace', 'Qué pasa', 'Acciones'];
 
 function EnVivo({ onAyuda }: { onAyuda: () => void }) {
   const [texto, setTexto] = useState('');
@@ -163,6 +172,9 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
   const [manual, setManual] = useState<Record<number, boolean>>({});
   const [verCubiertos, setVerCubiertos] = useState<Record<number, boolean>>({});
   const ahora = useAhora();
+  // Acción del C2 en curso (nota, aviso o reporte) sobre un sitio.
+  const [accion, setAccion] = useState<{ tipo: AccionC2; sitio: SitioC2; cliente: string } | null>(null);
+  const alAccionar: AlAccionar = (tipo, sitio, cliente) => setAccion({ tipo, sitio, cliente });
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -327,16 +339,17 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
             {/* Escritorio: tabla con anchos fijos para que encabezado y filas coincidan */}
             <table className="hidden w-full table-fixed text-left md:table">
               <colgroup>
-                <col className="w-[18%]" />
-                <col className="w-[16%]" />
-                <col className="w-[12%]" />
-                <col className="w-[9%]" />
+                <col className="w-[15%]" />
+                <col className="w-[13%]" />
+                <col className="w-[11%]" />
+                <col className="w-[8%]" />
                 <col />
+                <col className="w-[10.5rem]" />
               </colgroup>
               <thead className="bg-slate-900 text-xs font-semibold uppercase tracking-wide text-white">
                 <tr>
                   {ENCABEZADOS.map((h, i) => (
-                    <th key={h} className={cn('py-3', i === 0 ? 'pl-4 pr-2' : 'px-2')}>
+                    <th key={h} className={cn('py-3', i === 0 ? 'pl-4 pr-2' : 'px-2', i === ENCABEZADOS.length - 1 && 'pr-4 text-right')}>
                       {h}
                     </th>
                   ))}
@@ -344,7 +357,7 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
               </thead>
               <tbody>
                 {!agrupar &&
-                  datos.sitios.map((f: FilaSitioC2) => <FilaSitio key={f.sitio.id} cliente={f.cliente.nombre} sitio={f.sitio} ahora={ahora} />)}
+                  datos.sitios.map((f: FilaSitioC2) => <FilaSitio key={f.sitio.id} cliente={f.cliente.nombre} sitio={f.sitio} ahora={ahora} onAccion={alAccionar} />)}
                 {agrupar &&
                   datos.clientes.map((c) => {
                     const mal = c.sitios.filter((s) => esProblema(s.estado));
@@ -353,7 +366,7 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
                     return (
                       <Fragment key={c.id}>
                         <tr className={cn('border-t border-slate-200', ESTILO[c.estado].fila || 'bg-slate-50')}>
-                          <td colSpan={5} className="p-0">
+                          <td colSpan={6} className="p-0">
                             <button
                               type="button"
                               onClick={() => setManual((m) => ({ ...m, [c.id]: !abierto(c) }))}
@@ -368,14 +381,14 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
                         {abierto(c) && (
                           <>
                             {mal.map((s) => (
-                              <FilaSitio key={s.id} cliente="" sitio={s} ahora={ahora} />
+                              <FilaSitio key={s.id} cliente={c.nombre} mostrarCliente={false} sitio={s} ahora={ahora} onAccion={alAccionar} />
                             ))}
                             {(colapsar ? [] : bien).map((s) => (
-                              <FilaSitio key={s.id} cliente="" sitio={s} ahora={ahora} />
+                              <FilaSitio key={s.id} cliente={c.nombre} mostrarCliente={false} sitio={s} ahora={ahora} onAccion={alAccionar} />
                             ))}
                             {colapsar && (
                               <tr className="border-t border-slate-100">
-                                <td colSpan={5} className="px-4 py-2">
+                                <td colSpan={6} className="px-4 py-2">
                                   <button type="button" onClick={() => setVerCubiertos((v) => ({ ...v, [c.id]: true }))} className="text-sm font-medium text-brand-700 hover:underline">
                                     Ver los {bien.length} sitios cubiertos o sin turno
                                   </button>
@@ -395,7 +408,7 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
               {!agrupar && (
                 <div className="grid grid-cols-1 gap-2 p-3">
                   {datos.sitios.map((f) => (
-                    <TarjetaSitio key={f.sitio.id} cliente={f.cliente.nombre} sitio={f.sitio} ahora={ahora} />
+                    <TarjetaSitio key={f.sitio.id} cliente={f.cliente.nombre} sitio={f.sitio} ahora={ahora} onAccion={alAccionar} />
                   ))}
                 </div>
               )}
@@ -418,7 +431,7 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
                       {abierto(c) && (
                         <div className="grid grid-cols-1 gap-2 p-3">
                           {[...mal, ...(colapsar ? [] : bien)].map((s) => (
-                            <TarjetaSitio key={s.id} sitio={s} ahora={ahora} />
+                            <TarjetaSitio key={s.id} cliente={c.nombre} mostrarCliente={false} sitio={s} ahora={ahora} onAccion={alAccionar} />
                           ))}
                           {colapsar && (
                             <button type="button" onClick={() => setVerCubiertos((v) => ({ ...v, [c.id]: true }))} className="text-left text-sm font-medium text-brand-700">
@@ -453,13 +466,23 @@ function EnVivo({ onAyuda }: { onAyuda: () => void }) {
           Actualizado {formatHora(datos.generadoEn)} · se actualiza solo cada 15 segundos
         </p>
       )}
+      {accion?.tipo === 'nota' && <NotaModal sitio={{ id: accion.sitio.id, nombre: accion.sitio.nombre, cliente: accion.cliente }} onClose={() => setAccion(null)} />}
+      {accion?.tipo === 'avisar' && (
+        <AvisarModal
+          sitio={{ id: accion.sitio.id, nombre: accion.sitio.nombre, cliente: accion.cliente }}
+          estado={accion.sitio.estado}
+          supervisor={accion.sitio.supervisor?.nombre ?? null}
+          onClose={() => setAccion(null)}
+        />
+      )}
+      {accion?.tipo === 'reporte' && <ReporteC2Modal sitio={{ id: accion.sitio.id, nombre: accion.sitio.nombre, cliente: accion.cliente }} onClose={() => setAccion(null)} />}
     </>
   );
 }
 
 /** Monitoreo del C2 (A-61): qué sitios tienen guardia ahora y el historial de los que se quedaron solos. */
 export function C2Page() {
-  const [vista, setVista] = useState<'vivo' | 'historial'>('vivo');
+  const [vista, setVista] = useState<'vivo' | 'bitacora'>('vivo');
   // La ayuda se abre sola la primera vez que se entra.
   const [ayuda, setAyuda] = useState(() => !ayudaYaVista());
   const cerrarAyuda = () => {
@@ -476,7 +499,7 @@ export function C2Page() {
             {(
               [
                 ['vivo', 'En vivo'],
-                ['historial', 'Historial'],
+                ['bitacora', 'Bitácora'],
               ] as const
             ).map(([clave, etiqueta]) => (
               <button
@@ -496,7 +519,7 @@ export function C2Page() {
           </div>
         }
       />
-      {vista === 'vivo' ? <EnVivo onAyuda={() => setAyuda(true)} /> : <HistorialC2 />}
+      {vista === 'vivo' ? <EnVivo onAyuda={() => setAyuda(true)} /> : <BitacoraC2 />}
       <AyudaC2 open={ayuda} onClose={cerrarAyuda} />
     </>
   );

@@ -216,10 +216,17 @@ export const TIPS: readonly Tip[] = [
     roles: [C2],
   },
   {
-    id: 'c2-historial',
-    titulo: 'Mira cuánto estuvo solo cada sitio',
+    id: 'c2-bitacora',
+    titulo: 'Todo queda en la bitácora',
     texto:
-      'En la pestaña Historial ves, por día, cuánto tiempo estuvo sin guardia cada sitio. Lo registra el sistema solo; tú no capturas nada.',
+      'En la pestaña Bitácora ves, por día, lo que pasó con los sitios (solo, parcial, cubierto), los SOS y lo que hiciste tú: notas, avisos y reportes. Lo registra el sistema solo y puedes filtrar por sitio, cliente o tipo.',
+    roles: [C2],
+  },
+  {
+    id: 'c2-iconos',
+    titulo: 'Qué hacen los iconos de cada sitio',
+    texto:
+      'A la derecha de cada sitio tienes cuatro iconos: Llamar (los números del supervisor), Avisar al supervisor, Nota y Reporte. Todo lo que haces con ellos queda en la bitácora con tu nombre y la hora, y la última nota del día se ve en el sitio.',
     roles: [C2],
   },
 ];

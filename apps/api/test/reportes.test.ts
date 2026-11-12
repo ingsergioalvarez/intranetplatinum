@@ -29,6 +29,7 @@ import {
   type ReporteFiltroData,
   type RestriccionSitio,
   type Visibilidad,
+  whereVisibilidad,
 } from '../src/modules/reportes/reportes.repository';
 import { ReportesService } from '../src/modules/reportes/reportes.service';
 
@@ -412,5 +413,58 @@ describe('reportes: cada admin ve los de su cartera (A-66)', () => {
     await service.crear(adminDe(7), datos, [foto()]);
     await service.crear(SUPER_ADMIN, datos, [foto()]);
     expect(restricciones).toEqual([{ tipo: 'cartera', propietarioId: 7 }, null]);
+  });
+});
+
+describe('reportes del C2 (A-80)', () => {
+  const C2 = usuario(90, ROLES.C2);
+  const eventos: Parameters<NonNullable<ConstructorParameters<typeof ReportesService>[4]>>[0][] = [];
+
+  it('puede reportar sobre cualquier sitio (sin límite de asignación) y ve solo los que levantó', async () => {
+    const vistas: unknown[] = [];
+    const restricciones: unknown[] = [];
+    repo.puedeVer = async (_id, v) => (vistas.push(v), true);
+    repo.sitioParaReportar = async (_id, filtro) => (restricciones.push(filtro), { id: 7, clienteId: 1 });
+    const svc = new ReportesService(repo, storage, () => '2026-10-13', undefined, async (e) => void eventos.push(e));
+    const r = await svc.crear(C2, { ...datos, sitioId: 7 }, [foto()]);
+    expect(r.id).toBe(1);
+    expect(restricciones).toEqual([null]);
+    expect(vistas.at(-1)).toEqual({ tipo: 'propios', usuarioId: 90 });
+  });
+
+  it('el reporte queda en la bitácora del C2 con quién lo levantó; el de un guardia no', async () => {
+    eventos.length = 0;
+    repo.puedeVer = async () => true;
+    const svc = new ReportesService(repo, storage, () => '2026-10-13', undefined, async (e) => void eventos.push(e));
+    await svc.crear(C2, { ...datos, sitioId: 7 }, [foto()]);
+    expect(eventos).toEqual([
+      {
+        tipo: 'reporte',
+        sitioId: 7,
+        detalle: 'PLT-2026-000001 · Lámpara fundida',
+        usuarioId: 90,
+        entidad: { tipo: 'reporte', id: 1 },
+      },
+    ]);
+    eventos.length = 0;
+    await svc.crear(GUARDIA, datos, [foto()]);
+    expect(eventos).toEqual([]);
+  });
+
+  it('el C2 necesita poder ver sus reportes: sin ese permiso no ve ninguno', async () => {
+    const vistas: unknown[] = [];
+    repo.puedeVer = async (_id, v) => (vistas.push(v), false);
+    const sinPermiso = { ...C2, permisos: [] };
+    await codigo(service.detalle(sinPermiso, 1));
+    expect(vistas.at(-1)).toEqual({ tipo: 'ninguno' });
+  });
+
+  it('el cliente y los guardias no ven los reportes que levanta el C2; supervisor y admin, sí', () => {
+    const sinC2 = { creadoPor: { rol: { clave: { not: ROLES.C2 } } } };
+    expect(whereVisibilidad({ tipo: 'cliente', clienteId: 1 })).toEqual({ clienteId: 1, ...sinC2 });
+    expect(whereVisibilidad({ tipo: 'guardia', usuarioId: 3, hoy: '2026-10-13' })).toMatchObject(sinC2);
+    expect(whereVisibilidad({ tipo: 'todos' })).toEqual({});
+    expect(whereVisibilidad({ tipo: 'cartera', propietarioId: 7 })).toEqual({ cliente: { propietarioId: 7 } });
+    expect(whereVisibilidad({ tipo: 'propios', usuarioId: 90 })).toEqual({ creadoPorId: 90 });
   });
 });

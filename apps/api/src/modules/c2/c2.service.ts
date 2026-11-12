@@ -1,15 +1,21 @@
 import {
   ESTADOS_CON_PROBLEMA,
   GRAVEDAD_SITIO_C2,
-  type C2HistorialQuery,
+  TIPOS_DEL_GRUPO,
+  type AvisoSupervisorC2Input,
+  type BitacoraC2,
+  type C2BitacoraQuery,
   type C2TableroQuery,
   type EmergenciasLista,
+  type EstadoSitioC2,
   type FilaAsistencia,
-  type HistorialC2,
+  type NotaC2Input,
   type SitioC2,
   type TableroC2,
+  type TipoEventoC2,
 } from '@platinum/shared';
-import { BaseService, hoyISO, inicioDelDia, type AuthUser } from '../../core';
+import { BaseService, HttpError, hoyISO, inicioDelDia, type AuthUser } from '../../core';
+import { env } from '../../config/env';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type { Alcance } from '../sitios/alcance';
 import type { C2Repository } from './c2.repository';
@@ -23,9 +29,26 @@ export type DiaDeAsistencia = (fecha: string) => Promise<FilaAsistencia[]>;
 /** Emergencias activas que le tocan a quien consulta. */
 export type EmergenciasDelC2 = (activas: boolean, user: AuthUser) => Promise<EmergenciasLista>;
 
+const hora = (iso: string) =>
+  new Intl.DateTimeFormat('es-MX', { timeZone: env.APP_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+
+/** "Falta: Luis Gómez (debía entrar 7:00)": lo que dice la bitácora cuando un sitio queda solo o parcial. */
+function detalleFalta(s: SitioC2) {
+  const faltan = s.guardias.filter((g) => !g.presente);
+  return faltan.length ? `Falta: ${faltan.map((g) => `${g.nombre} (debía entrar ${hora(g.horario!.entrada)})`).join(', ')}` : null;
+}
+
+/** Cómo está el sitio, en una frase, para el aviso al supervisor. */
+const SITUACION: Partial<Record<EstadoSitioC2, string>> = {
+  solo: 'no tiene guardia',
+  parcial: 'tiene la guardia incompleta',
+  por_llegar: 'está por recibir a su guardia',
+};
+
 /**
- * Monitoreo del C2 (A-61). Solo lectura para quien mira: el estado de cada sitio sale de la asistencia (quién debe
- * estar y quién ya checó). La vigilancia abre y cierra los episodios de "sitio solo" y avisa al C2.
+ * Monitoreo del C2 (A-61, A-80). El estado de cada sitio sale de la asistencia (quién debe estar y quién ya checó). La
+ * vigilancia abre y cierra los episodios de "sitio solo", avisa al C2 y deja cada cambio en la bitácora. El C2 actúa
+ * con notas y avisos al supervisor; todo queda registrado con quién lo hizo.
  */
 export class C2Service extends BaseService {
   constructor(
@@ -52,12 +75,24 @@ export class C2Service extends BaseService {
   }
 
   async tablero({ q, page, limit, problema, agrupar, estado }: C2TableroQuery, user: AuthUser, alcance: Alcance | null = null): Promise<TableroC2> {
-    const [estados, emergencias] = await Promise.all([this.estados(alcance), this.emergencias(true, user)]);
+    const hoy = hoyISO(undefined, this.ahora());
+    const [estados, emergencias, notas] = await Promise.all([
+      this.estados(alcance),
+      this.emergencias(true, user),
+      this.repo.ultimasNotas(inicioDelDia(hoy)),
+    ]);
     const conSos = new Set(emergencias.items.map((e) => e.sitio?.id).filter((id): id is number => !!id));
-    const items = estados.map(({ base, sitio }) => ({
-      cliente: base.cliente,
-      sitio: conSos.has(sitio.id) ? { ...sitio, estado: 'sos' as const } : sitio,
-    }));
+    const items = estados.map(({ base, sitio }) => {
+      const nota = notas.get(sitio.id);
+      return {
+        cliente: base.cliente,
+        sitio: {
+          ...sitio,
+          ...(conSos.has(sitio.id) && { estado: 'sos' as const }),
+          ultimaNota: nota ? { texto: nota.texto, autor: nota.autor, en: nota.en.toISOString() } : null,
+        },
+      };
+    });
 
     const resumen = {
       sitios: items.length,
@@ -101,17 +136,20 @@ export class C2Service extends BaseService {
   }
 
   /**
-   * Abre el episodio de los sitios que se quedaron solos y cierra los de los que ya tienen guardia (o cuyo turno acabó
-   * sin cubrirse). Avisa al C2 de cada cambio. Lo llama la vigilancia cada minuto.
+   * Cada minuto: abre y cierra los episodios de "sitio solo" y avisa al C2 de cada cambio, y deja en la bitácora cada
+   * cambio de estado de los sitios (solo, parcial, cubierto). Solo registra cuando algo cambia, así que un reinicio no
+   * repite nada.
    */
   async vigilar(): Promise<void> {
     const ahora = this.ahora();
-    const [estados, abiertos] = await Promise.all([this.estados(null), this.repo.episodiosAbiertos()]);
+    const [estados, abiertos, ultimos] = await Promise.all([this.estados(null), this.repo.episodiosAbiertos(), this.repo.ultimosEstados()]);
     const porSitio = new Map(abiertos.map((a) => [a.sitioId, a]));
     const cuentas = await this.repo.usuariosC2();
     const existentes = new Set(estados.map(({ base }) => base.id));
 
     for (const { base, sitio } of estados) {
+      await this.registrarCambio(base, sitio, ultimos.get(base.id), ahora);
+
       const abierto = porSitio.get(base.id);
       if (sitio.estado === 'solo' && !abierto) {
         await this.repo.abrirEpisodio(base.id, sitio.desde ? new Date(sitio.desde) : ahora);
@@ -141,26 +179,79 @@ export class C2Service extends BaseService {
     }
   }
 
-  /** Cuánto tiempo estuvo sin guardia cada sitio en un día (por defecto hoy). */
-  async historial({ fecha }: C2HistorialQuery, alcance: Alcance | null = null): Promise<HistorialC2> {
-    const ahora = this.ahora();
-    const dia = fecha ?? hoyISO(undefined, ahora);
+  /** Deja en la bitácora el cambio de estado de un sitio, comparando con lo último que se registró de él. */
+  private async registrarCambio(
+    base: SitioBase,
+    sitio: SitioC2,
+    ultimo: { tipo: TipoEventoC2; createdAt: Date } | undefined,
+    ahora: Date,
+  ) {
+    const abierto = ultimo?.tipo === 'sitio_solo' || ultimo?.tipo === 'sitio_parcial';
+    const minutos = ultimo ? Math.max(0, Math.round((ahora.getTime() - ultimo.createdAt.getTime()) / 60_000)) : null;
+    if (sitio.estado === 'solo' && ultimo?.tipo !== 'sitio_solo') {
+      await this.repo.registrarEvento({ tipo: 'sitio_solo', sitioId: base.id, detalle: detalleFalta(sitio), ocurrioEn: sitio.desde ? new Date(sitio.desde) : ahora });
+    } else if (sitio.estado === 'parcial' && ultimo?.tipo !== 'sitio_parcial') {
+      await this.repo.registrarEvento({ tipo: 'sitio_parcial', sitioId: base.id, detalle: detalleFalta(sitio), ocurrioEn: sitio.desde ? new Date(sitio.desde) : ahora });
+    } else if (sitio.estado === 'cubierto' && abierto) {
+      const llego = [...sitio.guardias].filter((g) => g.presente).sort((a, b) => (b.entrada ?? '').localeCompare(a.entrada ?? ''))[0];
+      await this.repo.registrarEvento({ tipo: 'sitio_cubierto', sitioId: base.id, detalle: llego ? `Llegó ${llego.nombre}` : 'Ya hay guardia', minutos });
+    } else if ((sitio.estado === 'sin_turno' || sitio.estado === 'por_llegar') && abierto) {
+      await this.repo.registrarEvento({ tipo: 'sitio_cierre', sitioId: base.id, detalle: 'El turno terminó sin que llegara nadie', minutos });
+    }
+  }
+
+  /** Bitácora de un día (por defecto hoy): lo que pasó con los sitios y lo que hizo el C2. Los más nuevos primero. */
+  async bitacora({ fecha, grupo, q }: C2BitacoraQuery, alcance: Alcance | null = null): Promise<BitacoraC2> {
+    const dia = fecha ?? hoyISO(undefined, this.ahora());
     const desde = inicioDelDia(dia);
-    const hasta = new Date(desde.getTime() + DIA_MS);
-    const filas = (await this.repo.episodios(desde, hasta)).filter((e) => !alcance || alcance.sitioIds.has(e.sitio.id));
-    const items = filas.map((e) => {
-      const fin = Math.min((e.fin ?? ahora).getTime(), hasta.getTime());
-      const minutos = Math.max(0, Math.floor((fin - Math.max(e.inicio.getTime(), desde.getTime())) / 60_000));
-      return {
-        id: e.id,
-        sitio: e.sitio,
-        cliente: e.cliente,
-        inicio: e.inicio.toISOString(),
-        fin: e.fin?.toISOString() ?? null,
-        cubierto: e.cubierto,
-        minutos,
-      };
+    const filas = await this.repo.eventos(desde, new Date(desde.getTime() + DIA_MS), {
+      tipos: grupo === 'todo' ? undefined : TIPOS_DEL_GRUPO[grupo],
+      q: q || undefined,
     });
-    return { fecha: dia, items, totalMinutos: items.reduce((n, i) => n + i.minutos, 0) };
+    // Un admin de cartera solo ve lo de sus sitios.
+    const visibles = alcance ? filas.filter((f) => f.sitioId !== null && alcance.sitioIds.has(f.sitioId)) : filas;
+    return {
+      fecha: dia,
+      items: visibles.map((f) => ({
+        id: f.id,
+        tipo: f.tipo,
+        sitio: f.sitioNombre ? { id: f.sitioId, nombre: f.sitioNombre, cliente: f.clienteNombre ?? '' } : null,
+        detalle: f.detalle,
+        usuario: f.usuarioNombre,
+        minutos: f.minutos,
+        entidad: f.entidad === 'emergencia' || f.entidad === 'reporte' ? { tipo: f.entidad, id: f.entidadId ?? 0 } : null,
+        createdAt: f.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  // ---------- Acciones del C2 sobre un sitio ----------
+
+  private async sitioDelAlcance(sitioId: number, alcance: Alcance | null) {
+    const sitio = await this.repo.sitioInfo(sitioId);
+    if (!sitio || (alcance && !alcance.sitioIds.has(sitioId))) throw HttpError.notFound('Sitio no encontrado');
+    return sitio;
+  }
+
+  /** Nota libre sobre un sitio: queda en la bitácora con quién la escribió. */
+  async nota(sitioId: number, { texto }: NotaC2Input, user: AuthUser, alcance: Alcance | null = null) {
+    await this.sitioDelAlcance(sitioId, alcance);
+    await this.repo.registrarEvento({ tipo: 'nota', sitioId, detalle: texto, usuarioId: user.id });
+  }
+
+  /**
+   * "Avisar al supervisor": le manda un aviso al supervisor del sitio y a los admin dueños de parte del C2 (con la
+   * situación actual del sitio y, si quiere, un texto más) y lo deja en la bitácora.
+   */
+  async avisarSupervisor(sitioId: number, { mensaje }: AvisoSupervisorC2Input, user: AuthUser, alcance: Alcance | null = null) {
+    const sitio = await this.sitioDelAlcance(sitioId, alcance);
+    const actual = (await this.estados(alcance)).find((e) => e.base.id === sitioId)?.sitio;
+    const situacion = (actual && SITUACION[actual.estado]) ?? 'necesita atención';
+    const destinatarios = (await this.repo.destinatariosDeSitio(sitioId)).filter((id) => id !== user.id);
+    if (destinatarios.length === 0) throw HttpError.conflict('Este sitio no tiene supervisor ni administrador a quien avisar');
+    const texto = `El C2 reporta que ${sitio.nombre} (${sitio.cliente.nombre}) ${situacion}${mensaje ? `. ${mensaje}` : ''}`;
+    await this.avisar(destinatarios, { tipo: 'marca_alerta', titulo: 'Aviso del C2', mensaje: texto, ruta: '/asistencia', urgente: true });
+    await this.repo.registrarEvento({ tipo: 'aviso_supervisor', sitioId, detalle: texto, usuarioId: user.id });
+    return { avisados: destinatarios.length };
   }
 }

@@ -21,6 +21,7 @@ import {
   validate,
   type AppModule,
 } from '../../core';
+import { registrarEventoC2ConPrisma, type RegistrarEventoC2 } from '../c2/bitacora';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
 import { EmergenciasRepository, PrismaEmergenciasRepository } from './emergencias.repository';
@@ -79,6 +80,8 @@ export interface EmergenciasDeps {
   avisar?: AvisarUsuarios;
   atencion?: AvisosAtencion;
   ahora?: () => Date;
+  /** Bitácora del C2 (A-80). */
+  bitacoraC2?: RegistrarEventoC2;
 }
 
 /** El servicio con sus dependencias reales (lo usan las rutas y la vigilancia, que escala las sin respuesta). */
@@ -88,8 +91,9 @@ export function crearServicioEmergencias({
   avisar = avisarConPrisma,
   atencion = atencionConPrisma,
   ahora,
+  bitacoraC2 = registrarEventoC2ConPrisma,
 }: EmergenciasDeps = {}) {
-  return new EmergenciasService(repo, audit, avisar, atencion, ahora);
+  return new EmergenciasService(repo, audit, avisar, atencion, ahora, bitacoraC2);
 }
 
 /**

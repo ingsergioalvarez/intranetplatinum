@@ -1,4 +1,4 @@
-import { Phone } from 'lucide-react';
+import { NotebookPen } from 'lucide-react';
 import type { GuardiaC2, SitioC2 } from '@platinum/shared';
 import { cn } from '../../components/ui';
 import { formatHora } from '../asistencia/formato';
@@ -30,7 +30,12 @@ function LineaGuardia({ g, estado }: { g: GuardiaC2; estado: SitioC2['estado'] }
 /** La columna "Qué pasa" de un sitio. Los que faltan van primero: es lo que importa. */
 export function QuePasa({ sitio }: { sitio: SitioC2 }) {
   if (sitio.guardias.length === 0) {
-    return <span className="text-sm text-slate-400">Nadie asignado a esta hora</span>;
+    return (
+      <div className="grid grid-cols-1 gap-2">
+        <span className="text-sm text-slate-400">Nadie asignado a esta hora</span>
+        <UltimaNota sitio={sitio} />
+      </div>
+    );
   }
   const orden = [...sitio.guardias].sort((a, b) => Number(a.presente) - Number(b.presente));
   return (
@@ -38,20 +43,21 @@ export function QuePasa({ sitio }: { sitio: SitioC2 }) {
       {orden.map((g) => (
         <LineaGuardia key={`${g.id}:${g.horario?.entrada ?? ''}`} g={g} estado={sitio.estado} />
       ))}
+      <UltimaNota sitio={sitio} />
     </div>
   );
 }
 
-/** Teléfono del supervisor del sitio, para llamarle desde la fila. */
-export function SupervisorLink({ s }: { s: SitioC2['supervisor'] }) {
-  if (!s?.telefono) return null;
+/** La última nota que el C2 dejó hoy sobre el sitio: quien releva el turno sabe qué ya se hizo. */
+function UltimaNota({ sitio }: { sitio: SitioC2 }) {
+  const n = sitio.ultimaNota;
+  if (!n) return null;
   return (
-    <a
-      href={`tel:${s.telefono}`}
-      className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
-      aria-label={`Llamar a ${s.nombre}, supervisor`}
-    >
-      <Phone className="size-3" aria-hidden /> {s.nombre}
-    </a>
+    <p className="flex items-start gap-1.5 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-900 ring-1 ring-amber-200 ring-inset">
+      <NotebookPen className="mt-0.5 size-3 shrink-0" aria-hidden />
+      <span>
+        <strong>{n.autor}</strong> {formatHora(n.en)}: {n.texto}
+      </span>
+    </p>
   );
 }

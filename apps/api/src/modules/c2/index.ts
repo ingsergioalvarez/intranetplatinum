@@ -1,10 +1,15 @@
 import { Router, type Request, type Response } from 'express';
 import {
   PERMISOS,
-  c2HistorialQuerySchema,
+  avisoSupervisorC2Schema,
+  c2BitacoraQuerySchema,
   c2TableroQuerySchema,
-  type C2HistorialQuery,
+  notaC2Schema,
+  sitioC2ParamSchema,
+  type AvisoSupervisorC2Input,
+  type C2BitacoraQuery,
   type C2TableroQuery,
+  type NotaC2Input,
 } from '@platinum/shared';
 import {
   BaseController,
@@ -37,8 +42,25 @@ class C2Controller extends BaseController {
     return this.ok(res, await this.service.tablero(this.query<C2TableroQuery>(req), user, await this.alcanceDe(user)));
   };
 
-  historial = async (req: Request, res: Response) =>
-    this.ok(res, await this.service.historial(this.query<C2HistorialQuery>(req), await this.alcanceDe(this.currentUser(req))));
+  bitacora = async (req: Request, res: Response) =>
+    this.ok(res, await this.service.bitacora(this.query<C2BitacoraQuery>(req), await this.alcanceDe(this.currentUser(req))));
+
+  nota = async (req: Request, res: Response) => {
+    const user = this.currentUser(req);
+    await this.service.nota(this.params<{ sitioId: number }>(req).sitioId, this.body<NotaC2Input>(req), user, await this.alcanceDe(user));
+    return this.created(res, { ok: true });
+  };
+
+  avisar = async (req: Request, res: Response) => {
+    const user = this.currentUser(req);
+    const r = await this.service.avisarSupervisor(
+      this.params<{ sitioId: number }>(req).sitioId,
+      this.body<AvisoSupervisorC2Input>(req),
+      user,
+      await this.alcanceDe(user),
+    );
+    return this.ok(res, r);
+  };
 }
 
 export interface C2Deps {
@@ -81,7 +103,11 @@ export function createC2Module(deps: C2Deps = {}): AppModule {
   const router = Router();
   router.use(authenticate);
   router.get('/tablero', requirePermission(PERMISOS.C2_VER), validate({ query: c2TableroQuerySchema }), c.tablero);
-  router.get('/historial', requirePermission(PERMISOS.C2_VER), validate({ query: c2HistorialQuerySchema }), c.historial);
+  router.get('/bitacora', requirePermission(PERMISOS.C2_VER), validate({ query: c2BitacoraQuerySchema }), c.bitacora);
+  // Acciones del C2 sobre un sitio: quedan en la bitácora con quién las hizo.
+  const actuar = requirePermission(PERMISOS.C2_ACTUAR);
+  router.post('/sitios/:sitioId/nota', actuar, validate({ params: sitioC2ParamSchema, body: notaC2Schema }), c.nota);
+  router.post('/sitios/:sitioId/avisar', actuar, validate({ params: sitioC2ParamSchema, body: avisoSupervisorC2Schema }), c.avisar);
   return { name: 'c2', basePath: 'c2', router };
 }
 
