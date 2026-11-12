@@ -22,7 +22,8 @@ self.addEventListener('push', (event) => {
       renotify: !!datos.urgente,
       tag: datos.urgente ? 'emergencia' : undefined,
       actions: [{ action: 'ver', title: 'Ver' }],
-      data: { ruta: datos.ruta || '/' },
+      // `para`: celular compartido, la cuenta a la que pertenece el aviso (A-77).
+      data: { ruta: datos.ruta || '/', para: datos.para || null },
     }),
   );
 });
@@ -30,7 +31,10 @@ self.addEventListener('push', (event) => {
 // Al tocar la notificación se abre la app en la pantalla del aviso (o se reutiliza la ventana abierta).
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const ruta = (event.notification.data && event.notification.data.ruta) || '/';
+  const datos = event.notification.data || {};
+  let ruta = datos.ruta || '/';
+  // Celular compartido (A-77): la app revisa de quién es el aviso y pide entrar con esa cuenta si hace falta.
+  if (datos.para) ruta += (ruta.includes('?') ? '&' : '?') + 'para=' + datos.para;
   event.waitUntil(
     (async () => {
       const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });

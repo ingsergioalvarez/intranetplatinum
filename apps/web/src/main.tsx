@@ -8,6 +8,8 @@ import { authService } from './core/auth/AuthService';
 import { Toaster } from './components/ui';
 import { ExigirInstalacion } from './components/layout/ExigirInstalacion';
 import { iniciarInstalacion } from './core/pwa/instalacion';
+import { leerTipDelEnlace } from './core/tips/tipPendiente';
+import { TipEmergente } from './components/layout/TipEmergente';
 import { instalarManejoDeFotos } from './core/ui/fotosRotas';
 import './index.css';
 
@@ -20,6 +22,9 @@ instalarManejoDeFotos();
 // La instalación de la app se pide en celulares y tabletas (A-70): se escucha desde ya porque el navegador avisa una sola vez.
 iniciarInstalacion();
 
+// Si la notificación de un tip abrió la app, se guarda cuál antes de que la ruta redirija (A-78).
+leerTipDelEnlace();
+
 // Recupera la sesión con la cookie de refresh antes de decidir si mostrar el login.
 void authService.restore();
 
@@ -28,6 +33,7 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
       <ExigirInstalacion />
+      <TipEmergente />
       <Toaster />
     </QueryClientProvider>
   </StrictMode>,

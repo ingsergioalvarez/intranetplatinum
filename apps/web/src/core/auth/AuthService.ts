@@ -1,6 +1,7 @@
 import type { AuthSession, CambiarPasswordInput, LoginInput } from '@platinum/shared';
 import { ApiError, api, queryClient, type ApiClient } from '../api';
 import { useAuthStore } from './authStore';
+import { registrarEsteCelular, soltarEsteCelularSiNoEstaGuardada } from '../push/vincular';
 import { useOfertaPerfil } from './ofertaPerfil';
 import {
   actualizarPerfil,
@@ -73,6 +74,8 @@ export class AuthService {
       tienePin: false,
       bloqueado: false,
     });
+    // Con el perfil guardado, este celular sigue recibiendo sus avisos aunque cierre sesión (A-77).
+    void registrarEsteCelular().catch(() => undefined);
   }
 
   /** Entra con la tarjeta de un perfil guardado en este celular y su PIN (A-40). */
@@ -148,6 +151,8 @@ export class AuthService {
 
   /** Cierre voluntario: revoca la sesión en el servidor aunque falle la red, y limpia el cliente. */
   async logout() {
+    // Si esta cuenta no tiene su perfil rápido en el celular, deja de recibir avisos aquí (A-77).
+    await soltarEsteCelularSiNoEstaGuardada();
     try {
       await this.http.post('/auth/logout', undefined, { skipAuthRefresh: true });
     } catch {
@@ -160,6 +165,27 @@ export class AuthService {
     }
     reiniciarAvisoPin();
     useAuthStore.getState().logout();
+    queryClient.clear();
+  }
+
+  /**
+   * Otra cuenta quiere ver su aviso en este celular compartido (A-77): se cierra esta sesión, pero la pantalla de entrada
+   * conserva el destino para abrirlo después (a diferencia de `logout`, que lo olvida).
+   */
+  async cambiarDeCuenta() {
+    await soltarEsteCelularSiNoEstaGuardada();
+    try {
+      await this.http.post('/auth/logout', undefined, { skipAuthRefresh: true });
+    } catch {
+      // Sin red: la cookie expira sola; la sesión local se cierra igual.
+    }
+    try {
+      localStorage.removeItem(PERFIL);
+    } catch {
+      // Nada que limpiar.
+    }
+    reiniciarAvisoPin();
+    useAuthStore.getState().clear();
     queryClient.clear();
   }
 

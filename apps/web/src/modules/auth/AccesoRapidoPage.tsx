@@ -22,6 +22,7 @@ import { ApiError, mensajeDeError } from '../../core/api';
 import { authService } from '../../core/auth/AuthService';
 import { useAuthStore } from '../../core/auth/authStore';
 import { actualizarPerfil, perfilDeUsuario, quitarPerfil } from '../../core/auth/perfiles';
+import { registrarEsteCelular } from '../../core/push/vincular';
 import { formatFechaHora } from '../../core/format/fechas';
 import { dispositivosService } from './dispositivos.service';
 
@@ -88,7 +89,11 @@ export function AccesoRapidoPage() {
   const quitar = useMutation({
     mutationFn: (d: DispositivoUsuarioVista) => dispositivosService.quitarMio(d.id),
     onSuccess: (_r, d) => {
-      if (d.id === esteId) quitarPerfil(user.id);
+      if (d.id === esteId) {
+        quitarPerfil(user.id);
+        // Sin su perfil, este celular solo recibe sus avisos mientras tenga la sesión abierta (A-77).
+        void registrarEsteCelular().catch(() => undefined);
+      }
       toast.success(d.id === esteId ? 'Este celular ya no recuerda tu perfil' : 'Celular quitado');
       setQuitando(null);
       refrescar();

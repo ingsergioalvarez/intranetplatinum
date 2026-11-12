@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ClavePush } from '@platinum/shared';
 import { api } from '../api';
+import { registrarEsteCelular } from './vincular';
 
 export type EstadoPush =
   /** Cargando o sin saber todavía. */
@@ -53,8 +54,8 @@ export function usePush() {
     if (Notification.permission === 'denied') return setEstado('bloqueado');
     const sub = await reg.pushManager.getSubscription();
     if (sub && Notification.permission === 'granted') {
-      // Se vuelve a registrar para el usuario actual (no hace nada si ya era suyo).
-      void api.post('/push/suscripciones', sub.toJSON()).catch(() => undefined);
+      // Se vuelve a ligar a la cuenta en sesión, con su perfil rápido si lo tiene (A-77); no quita a las demás cuentas.
+      void registrarEsteCelular(sub).catch(() => undefined);
       return setEstado('activo');
     }
     setEstado('apagado');
@@ -88,7 +89,7 @@ export function usePush() {
       const sub =
         (await reg.pushManager.getSubscription()) ??
         (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: aBytes(publicKey) }));
-      await api.post('/push/suscripciones', sub.toJSON());
+      await registrarEsteCelular(sub);
       setEstado('activo');
       return null;
     } catch {

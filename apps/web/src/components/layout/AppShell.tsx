@@ -15,6 +15,7 @@ import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuard
 import { AlertaEmergencia } from '../../modules/emergencias/AlertaEmergencia';
 import { BotonSOS } from '../../modules/emergencias/BotonSOS';
 import { Campanita } from './Campanita';
+import { AvisoDeOtraCuenta } from './AvisoDeOtraCuenta';
 import { ExigirPush } from './ExigirPush';
 import { useBadgesMenu } from './badgesMenu';
 import { navItems } from './navItems';
@@ -365,6 +366,7 @@ export function AppShell() {
         </main>
       </div>
       <BottomNav />
+      <AvisoDeOtraCuenta />
       <ExigirPush />
       <AvisoPrivacidad />
       <BienvenidaRostro />

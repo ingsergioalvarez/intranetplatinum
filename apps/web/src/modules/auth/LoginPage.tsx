@@ -58,12 +58,27 @@ export function LoginPage() {
   const from = (useLocation().state as { from?: string } | null)?.from ?? '/';
 
   const [perfiles, setPerfiles] = useState<PerfilRapido[]>(() => perfilesGuardados());
-  const [modo, setModo] = useState<Modo>(perfiles.length ? 'tarjetas' : 'formulario');
-  const [elegido, setElegido] = useState<PerfilRapido | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  // Celular compartido (A-77): el aviso que se tocó trae `para=<cuenta>`; si esa cuenta está guardada aquí, se le
+  // pide su PIN directo, y si no, se avisa de quién es.
+  const [paraAviso] = useState(() => {
+    const id = Number(new URL(from, window.location.origin).searchParams.get('para'));
+    return id ? { id, perfil: perfilesGuardados().find((p) => p.usuarioId === id) } : null;
+  });
+  const desdeAviso = paraAviso?.perfil && !user ? paraAviso.perfil : null;
+  const [modo, setModo] = useState<Modo>(
+    desdeAviso ? (desdeAviso.tienePin && !desdeAviso.bloqueado ? 'pin' : 'password') : perfiles.length ? 'tarjetas' : 'formulario',
+  );
+  const [elegido, setElegido] = useState<PerfilRapido | null>(desdeAviso);
+  const [aviso, setAviso] = useState<string | null>(
+    paraAviso && !user
+      ? paraAviso.perfil
+        ? `Este aviso es para ${paraAviso.perfil.nombre}. Entra con su cuenta para verlo.`
+        : 'Este aviso es de otra cuenta. Entra con ella para verlo.'
+      : null,
+  );
   const [quitando, setQuitando] = useState<PerfilRapido | null>(null);
 
-  const [form, setForm] = useState<LoginInput>({ email: '', password: '' });
+  const [form, setForm] = useState<LoginInput>({ email: desdeAviso && !desdeAviso.tienePin ? desdeAviso.email : '', password: '' });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [pin, setPin] = useState('');
   const [errorPin, setErrorPin] = useState<string | null>(null);
@@ -299,6 +314,11 @@ export function LoginPage() {
           </div>
           {errorPin && (
             <FormAlert tone="error">{errorPin}</FormAlert>
+          )}
+          {aviso && !errorPin && (
+            <FormAlert tone="warning" icon={<LockKeyhole className="size-4" />}>
+              {aviso}
+            </FormAlert>
           )}
           <PinPad
             valor={pin}

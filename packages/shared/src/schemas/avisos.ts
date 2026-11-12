@@ -124,6 +124,8 @@ export const suscripcionPushSchema = z.object({
     p256dh: z.string().min(10).max(255),
     auth: z.string().min(8).max(255),
   }),
+  /** Perfil rápido guardado en este celular: mientras exista, este celular recibe los avisos de la cuenta (A-77). */
+  dispositivoId: z.coerce.number().int().positive().optional(),
 });
 export type SuscripcionPushInput = z.infer<typeof suscripcionPushSchema>;
 
@@ -141,7 +143,9 @@ export interface PayloadPush {
   cuerpo: string;
   /** Pantalla a la que lleva al tocar la notificación. */
   ruta: string;
-  tipo: TipoAviso;
+  tipo: TipoAviso | 'tip';
   /** Alerta urgente (A-60): suena, vibra y no se descarta sola. */
   urgente?: boolean;
+  /** Celular compartido (A-77): a qué cuenta pertenece el aviso, para pedir su PIN al tocarlo. */
+  para?: number;
 }

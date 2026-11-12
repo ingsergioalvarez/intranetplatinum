@@ -663,20 +663,37 @@ model Aviso {
 }
 
 /// Celular (navegador) de un usuario suscrito a las notificaciones push (A-20). Un usuario puede tener varios.
+/// Un celular (navegador) puede estar ligado a varias cuentas (A-77): una fila por celular y cuenta.
 model SuscripcionPush {
-  id           Int      @id @default(autoincrement())
-  usuarioId    Int      @map("usuario_id")
-  /// SHA-256 del endpoint: el endpoint es largo y se usa como identidad única de la suscripción.
-  endpointHash String   @unique @map("endpoint_hash") @db.Char(64)
-  endpoint     String   @db.Text
-  p256dh       String   @db.VarChar(255)
-  auth         String   @db.VarChar(255)
-  userAgent    String?  @map("user_agent") @db.VarChar(255)
-  createdAt    DateTime @default(now()) @map("created_at")
-  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  id            Int                  @id @default(autoincrement())
+  usuarioId     Int                  @map("usuario_id")
+  /// SHA-256 del endpoint: el endpoint es largo y se usa como identidad del celular.
+  endpointHash  String               @map("endpoint_hash") @db.Char(64)
+  endpoint      String               @db.Text
+  p256dh        String               @db.VarChar(255)
+  auth          String               @db.VarChar(255)
+  userAgent     String?              @map("user_agent") @db.VarChar(255)
+  /// Perfil rápido de esta cuenta en este celular: mientras no se revoque, el celular sigue recibiendo sus avisos
+  /// aunque cierre sesión. Sin él, la cuenta solo recibe avisos mientras tenga la sesión abierta.
+  dispositivoId Int?                 @map("dispositivo_id")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  usuario       Usuario              @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  dispositivo   DispositivoUsuario?  @relation(fields: [dispositivoId], references: [id], onDelete: SetNull)
 
+  @@unique([endpointHash, usuarioId])
+  @@index([endpointHash])
   @@index([usuarioId])
+  @@index([dispositivoId])
   @@map("suscripciones_push")
+}
+
+/// Tips por notificación ya enviados (A-78): la fecha y el turno del envío (`2026-11-14-viernes`) es la llave, así
+/// un reinicio del servidor no repite el tip.
+model TipEnvio {
+  slot      String   @id @db.VarChar(40)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("tips_enviados")
 }
 
 // ============================================================
@@ -1284,6 +1301,7 @@ model DispositivoUsuario {
   revocadoEn      DateTime? @map("revocado_en")
   createdAt       DateTime  @default(now()) @map("created_at")
   usuario         Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  suscripcionesPush SuscripcionPush[]
 
   @@index([usuarioId, revocadoEn])
   @@map("dispositivos_usuario")

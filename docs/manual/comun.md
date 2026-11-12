@@ -42,6 +42,19 @@ Al entrar verás la ventana **"Activa las notificaciones"**. Toca **"Activar not
 
 {{captura:C02-notificaciones|Ventana "Activa las notificaciones"}}
 
+### Si compartes el celular con otra persona
+
+Si en el mismo celular **guardaron su perfil** (sección 5) dos o más personas, **a cada una le llegan sus avisos**, aunque en ese momento esté abierta la cuenta de otra.
+
+- La notificación dice **"Platinum · para NOMBRE"** y solo **"Tienes un aviso nuevo"**: por privacidad **no enseña el contenido** en la pantalla bloqueada. Las emergencias conservan su título ("EMERGENCIA · para NOMBRE") para que se noten.
+- **Al tocarla**, si la cuenta abierta no es la tuya, la app cierra esa sesión y te pide **tu PIN** (o tu contraseña); después abre tu aviso.
+- Si **quitas tu perfil** de ese celular, dejas de recibir tus avisos ahí. Si **cierras sesión sin haber guardado tu perfil**, también.
+- Cuando el celular lo usa **una sola persona**, nada cambia: la notificación muestra el aviso completo.
+
+### Tips: un recordatorio de vez en cuando
+
+**Dos veces por semana** (martes y viernes por la mañana) llega una notificación **"Platinum · Tip"** con un recordatorio de algo que puedes hacer en la app, según tu cargo. Al tocarla se abre una ventana con la explicación completa y el botón **"Entendido"**. Si el celular tiene varias cuentas, llega **un solo tip** por celular.
+
 ## 4. Entrar a tu cuenta
 
 ### La primera vez: tu contraseña temporal
@@ -118,7 +131,7 @@ Al cambiarla se cierra tu sesión en tus otros dispositivos.
 
 Toca el icono de **usuario** (el muñequito) en la parte de arriba y, al final del menú, **"Cerrar sesión"** (en rojo). **Cierra tu sesión al instante, sin preguntar.**
 
-Cerrar sesión **no borra** tu perfil del celular: en tu siguiente entrada seguirás viendo tu nombre.
+Cerrar sesión **no borra** tu perfil del celular: en tu siguiente entrada seguirás viendo tu nombre, y **seguirás recibiendo tus avisos** en ese celular. Si no habías guardado tu perfil, al cerrar sesión dejas de recibirlos ahí.
 
 ## 9. Aviso de privacidad (guardias)
 
