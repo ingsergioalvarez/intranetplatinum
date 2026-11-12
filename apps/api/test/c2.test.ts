@@ -149,36 +149,75 @@ function servicio(repo: MemoriaC2, filas: FilaAsistencia[], avisos: { ids: numbe
   );
 }
 
+const Q = { page: 1, limit: 25, problema: false, agrupar: false } as const;
+
 describe('C2Service.tablero', () => {
-  it('cuenta, ordena y pagina por cliente; busca por sitio, cliente o guardia', async () => {
-    const repo = new MemoriaC2([sitio(1, 'Torre Norte', { id: 1, nombre: 'Torre' }), sitio(2, 'Plaza', { id: 2, nombre: 'Plaza' })]);
+  const dosClientes = () =>
+    new MemoriaC2([sitio(1, 'Torre Norte', { id: 1, nombre: 'Torre' }), sitio(2, 'Plaza', { id: 2, nombre: 'Plaza' })]);
+
+  it('vista normal: una fila por sitio, lo peor primero, con los conteos de todos los sitios', async () => {
     const filas = [sinChecar(1, 1, 40, 'no_se_presento'), presente(2, 2)];
-    const t = await servicio(repo, filas).tablero({ page: 1, limit: 25 }, usuario);
+    const t = await servicio(dosClientes(), filas).tablero(Q, usuario);
     expect(t.resumen).toMatchObject({ sitios: 2, solos: 1, parciales: 0, sos: 0 });
-    expect(t.clientes.map((c) => c.nombre)).toEqual(['Torre', 'Plaza']);
-    const busca = await servicio(repo, filas).tablero({ q: 'guardia 2', page: 1, limit: 25 }, usuario);
-    expect(busca.clientes.map((c) => c.nombre)).toEqual(['Plaza']);
-    const hoja2 = await servicio(repo, filas).tablero({ page: 2, limit: 25 }, usuario);
-    expect(hoja2.clientes).toEqual([]);
+    expect(t.sitiosSolos).toEqual([1]);
+    expect(t.clientes).toEqual([]);
+    expect(t.sitios.map((f) => `${f.cliente.nombre}/${f.sitio.nombre}/${f.sitio.estado}`)).toEqual(['Torre/Torre Norte/solo', 'Plaza/Plaza/cubierto']);
+    expect(t.total).toBe(2);
+  });
+
+  it('pagina por sitios y busca por sitio, cliente o guardia', async () => {
+    const filas = [sinChecar(1, 1, 40, 'no_se_presento'), presente(2, 2)];
+    const s = () => servicio(dosClientes(), filas);
+    expect((await s().tablero({ ...Q, q: 'guardia 2' }, usuario)).sitios.map((f) => f.sitio.id)).toEqual([2]);
+    expect((await s().tablero({ ...Q, q: 'torre' }, usuario)).sitios.map((f) => f.sitio.id)).toEqual([1]);
+    const hoja1 = await s().tablero({ ...Q, limit: 25 }, usuario);
+    expect(hoja1.sitios).toHaveLength(2);
+    const hoja2 = await s().tablero({ ...Q, page: 2 }, usuario);
+    expect(hoja2.sitios).toEqual([]);
     expect(hoja2.total).toBe(2);
+  });
+
+  it('"Con problema" deja solos, parciales, por llegar y SOS; tocar un estado deja solo ese', async () => {
+    const repo = new MemoriaC2([sitio(1), sitio(2), sitio(3), sitio(4)]);
+    const filas = [sinChecar(1, 1, 40, 'no_se_presento'), presente(2, 2), sinChecar(3, 3, 8, 'por_llegar')];
+    const s = () => servicio(repo, filas);
+    expect((await s().tablero({ ...Q, problema: true }, usuario)).sitios.map((f) => f.sitio.estado)).toEqual(['solo', 'por_llegar']);
+    expect((await s().tablero({ ...Q, estado: 'cubierto' }, usuario)).sitios.map((f) => f.sitio.id)).toEqual([2]);
+    expect((await s().tablero({ ...Q, estado: 'sin_turno' }, usuario)).sitios.map((f) => f.sitio.id)).toEqual([4]);
+    // Los conteos no cambian con el filtro.
+    expect((await s().tablero({ ...Q, problema: true }, usuario)).resumen.sitios).toBe(4);
+  });
+
+  it('agrupado: pagina por clientes, el peor primero, con todos sus sitios', async () => {
+    const repo = new MemoriaC2([
+      sitio(1, 'Norte', { id: 1, nombre: 'Torre' }),
+      sitio(2, 'Sur', { id: 1, nombre: 'Torre' }),
+      sitio(3, 'Matriz', { id: 2, nombre: 'Banco' }),
+    ]);
+    const filas = [sinChecar(1, 1, 40, 'no_se_presento'), presente(2, 2), presente(3, 3)];
+    const t = await servicio(repo, filas).tablero({ ...Q, agrupar: true }, usuario);
+    expect(t.sitios).toEqual([]);
+    expect(t.clientes.map((c) => c.nombre)).toEqual(['Torre', 'Banco']);
+    expect(t.clientes[0].sitios.map((x) => x.estado)).toEqual(['solo', 'cubierto']);
+    expect(t.total).toBe(2);
+    const chica = await servicio(repo, filas).tablero({ ...Q, agrupar: true, limit: 25, page: 2 }, usuario);
+    expect(chica.clientes).toEqual([]);
   });
 
   it('una emergencia activa en un sitio lo pone en SOS y sube arriba', async () => {
     const repo = new MemoriaC2([sitio(1), sitio(2, 'Sitio 2', { id: 2, nombre: 'Cliente 2' })]);
     const sos = { id: 5, sitio: { id: 2, nombre: 'Sitio 2' } } as unknown as Emergencia;
-    const t = await servicio(repo, [presente(1, 1), presente(2, 2)], [], async () => ({ items: [sos], activas: 1 })).tablero(
-      { page: 1, limit: 25 },
-      usuario,
-    );
-    expect(t.clientes[0].sitios[0]).toMatchObject({ id: 2, estado: 'sos' });
+    const t = await servicio(repo, [presente(1, 1), presente(2, 2)], [], async () => ({ items: [sos], activas: 1 })).tablero(Q, usuario);
+    expect(t.sitios[0].sitio).toMatchObject({ id: 2, estado: 'sos' });
     expect(t.resumen.sos).toBe(1);
     expect(t.emergencias).toHaveLength(1);
   });
 
   it('un admin de cartera solo ve los sitios de su alcance', async () => {
     const repo = new MemoriaC2([sitio(1), sitio(2)]);
-    const t = await servicio(repo, []).tablero({ page: 1, limit: 25 }, usuario, { sitioIds: new Set([2]), guardiaIds: new Set() });
+    const t = await servicio(repo, []).tablero(Q, usuario, { sitioIds: new Set([2]), guardiaIds: new Set() });
     expect(t.resumen.sitios).toBe(1);
+    expect(t.sitios.map((f) => f.sitio.id)).toEqual([2]);
   });
 });
 

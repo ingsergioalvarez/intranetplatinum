@@ -45,6 +45,12 @@ export const c2TableroQuerySchema = z.object({
     .int()
     .refine((n) => (C2_CLIENTES_POR_HOJA as readonly number[]).includes(n), 'Hoja inválida')
     .default(25),
+  /** Solo lo que necesita atención: SOS, solos, parciales y por llegar. */
+  problema: z.stringbool().default(false),
+  /** Agrupa por cliente: las hojas son de clientes; sin agrupar, de sitios. */
+  agrupar: z.stringbool().default(false),
+  /** Solo los sitios en ese estado (al tocar un color de la leyenda). */
+  estado: z.enum(ESTADOS_SITIO_C2).optional(),
 });
 export type C2TableroQuery = z.infer<typeof c2TableroQuerySchema>;
 
@@ -91,6 +97,15 @@ export interface ClienteC2 {
   sitios: SitioC2[];
 }
 
+/** Un sitio con su cliente: una fila de la tabla. */
+export interface FilaSitioC2 {
+  cliente: { id: number; nombre: string };
+  sitio: SitioC2;
+}
+
+/** Estados que necesitan atención (el filtro "Con problema"). */
+export const ESTADOS_CON_PROBLEMA: readonly EstadoSitioC2[] = ['sos', 'solo', 'parcial', 'por_llegar'];
+
 export interface TableroC2 {
   generadoEn: string;
   /** Conteos de todos los sitios (no solo de la hoja). */
@@ -99,7 +114,11 @@ export interface TableroC2 {
   sitiosSolos: number[];
   /** Emergencias activas que le tocan a quien consulta. Vacío casi siempre. */
   emergencias: Emergencia[];
+  /** Vista normal: los sitios de la hoja, lo peor primero. Vacío si se agrupa. */
+  sitios: FilaSitioC2[];
+  /** Vista agrupada: los clientes de la hoja con todos sus sitios. Vacío si no se agrupa. */
   clientes: ClienteC2[];
+  /** Sitios (vista normal) o clientes (agrupada) que cumplen el filtro. */
   total: number;
   page: number;
   limit: number;

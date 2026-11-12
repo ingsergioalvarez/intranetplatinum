@@ -205,7 +205,7 @@ export const TIPS: readonly Tip[] = [
     id: 'c2-estados',
     titulo: 'Qué significa cada estado de un sitio',
     texto:
-      '"Solo" quiere decir que pasaron 15 minutos de la hora del turno y nadie ha checado. "Parcial": debían estar dos o más y falta alguno. "Por llegar" todavía no es problema, y "Sin turno" tampoco: a esa hora no debe haber nadie.',
+      '"Solo" quiere decir que pasaron 15 minutos de la hora del turno y nadie ha checado. "Parcial": debían estar dos o más y falta alguno. "Por llegar" todavía no es problema, y "Sin turno" tampoco: a esa hora no debe haber nadie. Con "Con problema" ves solo lo que necesita atención, y al tocar un color ves solo esos sitios.',
     roles: [C2],
   },
   {

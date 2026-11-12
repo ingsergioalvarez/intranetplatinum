@@ -1,4 +1,6 @@
 import {
+  ESTADOS_CON_PROBLEMA,
+  GRAVEDAD_SITIO_C2,
   type C2HistorialQuery,
   type C2TableroQuery,
   type EmergenciasLista,
@@ -49,7 +51,7 @@ export class C2Service extends BaseService {
       .map((base) => ({ base, sitio: calcularSitio(base, filas, ahora) }));
   }
 
-  async tablero({ q, page, limit }: C2TableroQuery, user: AuthUser, alcance: Alcance | null = null): Promise<TableroC2> {
+  async tablero({ q, page, limit, problema, agrupar, estado }: C2TableroQuery, user: AuthUser, alcance: Alcance | null = null): Promise<TableroC2> {
     const [estados, emergencias] = await Promise.all([this.estados(alcance), this.emergencias(true, user)]);
     const conSos = new Set(emergencias.items.map((e) => e.sitio?.id).filter((id): id is number => !!id));
     const items = estados.map(({ base, sitio }) => ({
@@ -65,22 +67,34 @@ export class C2Service extends BaseService {
     };
 
     const texto = q?.toLowerCase();
-    const visibles = texto
-      ? items.filter(
-          (i) =>
-            i.cliente.nombre.toLowerCase().includes(texto) ||
-            i.sitio.nombre.toLowerCase().includes(texto) ||
-            i.sitio.guardias.some((g) => g.nombre.toLowerCase().includes(texto)),
-        )
-      : items;
-    const clientes = agruparPorCliente(visibles);
+    const visibles = items
+      .filter((i) => (estado ? i.sitio.estado === estado : !problema || ESTADOS_CON_PROBLEMA.includes(i.sitio.estado)))
+      .filter(
+        (i) =>
+          !texto ||
+          i.cliente.nombre.toLowerCase().includes(texto) ||
+          i.sitio.nombre.toLowerCase().includes(texto) ||
+          i.sitio.guardias.some((g) => g.nombre.toLowerCase().includes(texto)),
+      );
+    const desde = (page - 1) * limit;
+    const clientes = agrupar ? agruparPorCliente(visibles) : [];
+    // Vista normal: lo peor primero y, a igual gravedad, por cliente y sitio.
+    const sitios = agrupar
+      ? []
+      : visibles.sort(
+          (a, b) =>
+            GRAVEDAD_SITIO_C2[a.sitio.estado] - GRAVEDAD_SITIO_C2[b.sitio.estado] ||
+            a.cliente.nombre.localeCompare(b.cliente.nombre, 'es') ||
+            a.sitio.nombre.localeCompare(b.sitio.nombre, 'es'),
+        );
     return {
       generadoEn: this.ahora().toISOString(),
       resumen,
       sitiosSolos: items.filter((i) => i.sitio.estado === 'solo').map((i) => i.sitio.id),
       emergencias: emergencias.items,
-      clientes: clientes.slice((page - 1) * limit, page * limit),
-      total: clientes.length,
+      sitios: sitios.slice(desde, desde + limit),
+      clientes: clientes.slice(desde, desde + limit),
+      total: agrupar ? clientes.length : sitios.length,
       page,
       limit,
     };
