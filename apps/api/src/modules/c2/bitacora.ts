@@ -1,4 +1,4 @@
-import type { TipoEventoC2 } from '@platinum/shared';
+import type { RespuestaSos, TipoEventoC2 } from '@platinum/shared';
 import { getPrisma } from '../../core/data/prisma';
 
 /** Una línea de la bitácora del C2 (A-80). */
@@ -48,4 +48,29 @@ export const registrarEventoC2ConPrisma: RegistrarEventoC2 = async (e) => {
   } catch (err) {
     console.error('[c2] No se pudo registrar el evento en la bitácora', err);
   }
+};
+
+/** Lo que ya se hizo en cada emergencia (A-81): quién la atiende y lo que registró el C2, en orden. */
+export type RespuestasDe = (emergenciaIds: number[]) => Promise<Map<number, RespuestaSos[]>>;
+
+export const sinRespuestas: RespuestasDe = async () => new Map();
+
+export const respuestasConPrisma: RespuestasDe = async (ids) => {
+  const mapa = new Map<number, RespuestaSos[]>();
+  if (ids.length === 0) return mapa;
+  try {
+    const filas = await getPrisma().c2Evento.findMany({
+      where: { entidad: 'emergencia', entidadId: { in: ids }, tipo: { in: ['sos_atendiendo', 'sos_respuesta'] } },
+      orderBy: { id: 'asc' },
+      select: { id: true, entidadId: true, detalle: true, usuarioNombre: true, createdAt: true },
+    });
+    for (const f of filas) {
+      const lista = mapa.get(f.entidadId!) ?? [];
+      lista.push({ id: f.id, texto: f.detalle ?? '', por: f.usuarioNombre, en: f.createdAt.toISOString() });
+      mapa.set(f.entidadId!, lista);
+    }
+  } catch (err) {
+    console.error('[c2] No se pudieron leer las respuestas de las emergencias', err);
+  }
+  return mapa;
 };

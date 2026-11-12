@@ -3,18 +3,20 @@ import {
   ROLES,
   SEGUNDOS_ESCALAR_EMERGENCIA,
   TIPO_EMERGENCIA_LABEL,
+  textoRespuestaC2,
   type ContactoEmergencia,
   type ContactoTelefono,
   type Emergencia,
   type EmergenciaCerrarInput,
   type EmergenciaCreateInput,
+  type EmergenciaRespuestaInput,
   type EmergenciaTipoInput,
   type EmergenciasLista,
 } from '@platinum/shared';
 import { AuditLogger, BaseService, HttpError, esSuperAdmin, hoyISO, type AccionCtx, type AuthUser } from '../../core';
 import { sinAtencion, type AvisosAtencion } from '../avisos/atencion';
 import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
-import { sinEventosC2, type RegistrarEventoC2 } from '../c2/bitacora';
+import { sinEventosC2, sinRespuestas, type RegistrarEventoC2, type RespuestasDe } from '../c2/bitacora';
 import type { EmergenciaRow, EmergenciasRepository } from './emergencias.repository';
 
 const RUTA = '/asistencia/emergencias';
@@ -44,6 +46,8 @@ export class EmergenciasService extends BaseService {
     private readonly ahora: () => Date = () => new Date(),
     /** Bitácora del C2 (A-80): cada paso de la emergencia queda registrado. */
     private readonly bitacoraC2: RegistrarEventoC2 = sinEventosC2,
+    /** Lo que ya se hizo en cada emergencia, para mostrarlo (A-81). */
+    private readonly respuestasDe: RespuestasDe = sinRespuestas,
   ) {
     super();
   }
@@ -223,8 +227,14 @@ export class EmergenciasService extends BaseService {
   async listar(soloActivas: boolean, user: AuthUser): Promise<EmergenciasLista> {
     const filas = (await this.repo.listar(soloActivas, 100)).filter((f) => this.visibleParaMi(f, user));
     const contactos = await this.contactosDe(filas, user);
+    const respuestas = await this.respuestasDe(filas.map((f) => f.id));
     return {
-      items: filas.map((f) => ({ ...aEmergencia(f), paraMi: f.destinatarios.includes(user.id), contactos: contactos.get(f.id) ?? [] })),
+      items: filas.map((f) => ({
+        ...aEmergencia(f),
+        paraMi: f.destinatarios.includes(user.id),
+        contactos: contactos.get(f.id) ?? [],
+        respuestas: respuestas.get(f.id) ?? [],
+      })),
       activas: filas.filter((f) => f.estado === 'activa').length,
     };
   }
@@ -298,6 +308,47 @@ export class EmergenciasService extends BaseService {
       ruta: null,
     });
     return aEmergencia((await this.repo.findById(id))!);
+  }
+
+  /**
+   * El C2 registra lo que hizo con una emergencia activa (A-81): llamó al guardia, avisó al supervisor, pidió apoyo
+   * externo u otra cosa. Queda en la bitácora con su nombre y la hora. Supervisor y admin (y quien la recibió) se enteran
+   * de todo; quien la lanzó, solo del apoyo externo. No cierra la emergencia.
+   */
+  async responder(id: number, input: EmergenciaRespuestaInput, user: AuthUser, ctx: AccionCtx): Promise<{ texto: string }> {
+    const e = await this.repo.findById(id);
+    if (!e || !this.visibleParaMi(e, user)) throw HttpError.notFound('Emergencia no encontrada');
+    if (e.estado !== 'activa') throw HttpError.conflict('Esta emergencia ya se cerró');
+    const texto = textoRespuestaC2(input);
+    const nombre = (await this.repo.nombreDe(user.id)) ?? 'Alguien';
+    const por = user.rol === ROLES.C2 ? `${nombre} (C2)` : nombre;
+    await this.audit.registrarAccion(ctx, 'emergencias.responder', 'emergencias', id, { tipo: input.tipo, texto });
+    await this.bitacoraC2({
+      tipo: 'sos_respuesta',
+      sitioId: e.sitio?.id ?? null,
+      detalle: texto,
+      usuarioId: user.id,
+      usuarioNombre: por,
+      entidad: { tipo: 'emergencia', id },
+    });
+    const otros = e.destinatarios.filter((d) => d !== user.id && d !== e.usuario.id);
+    await this.avisar(otros, {
+      tipo: 'emergencia',
+      titulo: 'Respuesta del C2',
+      mensaje: `${por}: ${texto} (${e.usuario.nombre}${e.sitio ? `, ${e.sitio.nombre}` : ''})`,
+      ruta: RUTA,
+    });
+    // A quien pidió ayuda solo le sirve saber que ya se pidió apoyo externo.
+    if (input.tipo === 'apoyo_externo') {
+      await this.avisar([e.usuario.id], {
+        tipo: 'emergencia',
+        titulo: 'Pidieron apoyo',
+        mensaje: `Se pidió apoyo externo: ${input.institucion}`,
+        ruta: null,
+        urgente: true,
+      });
+    }
+    return { texto };
   }
 
   /** Cada minuto: repite la alerta (a todos los supervisores y admin) de las que nadie ha recibido. */

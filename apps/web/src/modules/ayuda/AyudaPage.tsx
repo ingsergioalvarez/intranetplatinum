@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { BookOpen, ChevronDown } from 'lucide-react';
 import { PageHeader } from '../../components/layout/AppShell';
@@ -6,6 +6,34 @@ import { EmptyState, cn } from '../../components/ui';
 import { useAuthStore } from '../../core/auth/authStore';
 import { manualDelRolPendiente, manualesDe } from './manuales';
 import { renderizarManual } from './renderManual';
+
+/** Sección del manual en la que va quien lee: la última cuyo título ya pasó por debajo de la barra fija. */
+function useSeccionActual(ids: string[]) {
+  const [actual, setActual] = useState<string | null>(null);
+  useEffect(() => {
+    if (ids.length === 0) return;
+    const calcular = () => {
+      let id: string | null = null;
+      for (const s of ids) {
+        const el = document.getElementById(s);
+        if (el && el.getBoundingClientRect().top <= 150) id = s;
+      }
+      setActual(id);
+    };
+    let pendiente = 0;
+    const alDesplazar = () => {
+      cancelAnimationFrame(pendiente);
+      pendiente = requestAnimationFrame(calcular);
+    };
+    calcular();
+    window.addEventListener('scroll', alDesplazar, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', alDesplazar);
+      cancelAnimationFrame(pendiente);
+    };
+  }, [ids]);
+  return actual;
+}
 
 /**
  * Ayuda (A-69): el manual de usuario dentro de la app, con el que corresponde al rol de cada quien (el
@@ -19,6 +47,10 @@ export function AyudaPage() {
   const [indiceAbierto, setIndiceAbierto] = useState(false);
   const activo = manuales.find((m) => m.clave === clave) ?? manuales[0];
   const contenido = useMemo(() => (activo ? renderizarManual(activo.texto, activo.clave, user.rol === 'admin') : null), [activo, user.rol]);
+
+  const idsSecciones = useMemo(() => contenido?.secciones.map((s) => s.id) ?? [], [contenido]);
+  const seccionActual = useSeccionActual(idsSecciones);
+  const tituloActual = contenido?.secciones.find((s) => s.id === seccionActual)?.titulo;
 
   if (!activo || !contenido) {
     return (
@@ -76,24 +108,39 @@ export function AyudaPage() {
       )}
 
       {contenido.secciones.length > 0 && (
-        <nav aria-label="Contenido" className="mb-5 rounded-2xl bg-white ring-1 ring-slate-200 ring-inset">
-          <button
-            type="button"
-            aria-expanded={indiceAbierto}
-            onClick={() => setIndiceAbierto((a) => !a)}
-            className="flex h-12 w-full items-center justify-between px-4 text-sm font-semibold text-slate-700"
-          >
-            Contenido ({contenido.secciones.length} secciones)
-            <ChevronDown className={cn('size-4 transition-transform', indiceAbierto && 'rotate-180')} />
-          </button>
+        // Fija debajo de la barra superior (en computadora, al borde) mientras se lee: se salta de una sección a otra
+        // sin volver al principio. El índice flota sobre el texto en vez de empujarlo.
+        <nav aria-label="Contenido" className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 mb-5 md:top-0">
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ring-inset">
+            <button
+              type="button"
+              aria-expanded={indiceAbierto}
+              onClick={() => setIndiceAbierto((a) => !a)}
+              className="flex h-12 w-full items-center justify-between gap-3 px-4 text-sm font-semibold text-slate-700"
+            >
+              <span className="truncate">
+                {tituloActual ? (
+                  <>
+                    Contenido <span className="font-normal text-slate-500">· {tituloActual}</span>
+                  </>
+                ) : (
+                  `Contenido (${contenido.secciones.length} secciones)`
+                )}
+              </span>
+              <ChevronDown className={cn('size-4 shrink-0 transition-transform', indiceAbierto && 'rotate-180')} />
+            </button>
+          </div>
           {indiceAbierto && (
-            <ol className="grid grid-cols-1 gap-x-6 gap-y-0.5 border-t border-slate-100 px-4 py-2 sm:grid-cols-2">
+            <ol className="absolute inset-x-0 top-full mt-1 grid max-h-[min(60vh,28rem)] grid-cols-1 gap-x-6 gap-y-0.5 overflow-y-auto rounded-2xl bg-white px-4 py-2 shadow-lg ring-1 ring-slate-200 ring-inset sm:grid-cols-2">
               {contenido.secciones.map((s) => (
                 <li key={s.id}>
                   <button
                     type="button"
                     onClick={() => irA(s.id)}
-                    className="w-full py-1.5 text-left text-sm text-brand-700 active:text-brand-900"
+                    className={cn(
+                      'w-full py-1.5 text-left text-sm active:text-brand-900',
+                      s.id === seccionActual ? 'font-semibold text-brand-900' : 'text-brand-700',
+                    )}
                   >
                     {s.titulo}
                   </button>

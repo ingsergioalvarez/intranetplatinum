@@ -17,7 +17,7 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MANUAL = join(RAIZ, 'docs', 'manual');
 const CAPTURAS = join(MANUAL, 'capturas');
 /** Carpeta de cada manual dentro de `capturas/`, según la letra con que empieza el ID (`G01-checador` va en `guardia/`). */
-const CARPETAS = { C: 'comun', G: 'guardia', S: 'supervisor', A: 'admin', K: 'cliente' };
+const CARPETAS = { C: 'comun', G: 'guardia', S: 'supervisor', A: 'admin', K: 'cliente', O: 'c2' };
 const rutaCaptura = (id) => {
   const enCarpeta = join(CAPTURAS, CARPETAS[id[0]] ?? '', `${id}.png`);
   return existsSync(enCarpeta) ? enCarpeta : join(CAPTURAS, `${id}.png`);
@@ -71,7 +71,33 @@ const MANUALES = [
       { archivo: 'cliente.md', titulo: 'Tu cuenta de cliente' },
     ],
   },
+  {
+    id: 'c2',
+    titulo: 'Manual del Operador C2',
+    subtitulo: 'Cómo vigilar los sitios, atender los SOS y dejar todo registrado',
+    para: 'Operadores del C2',
+    partes: [
+      { archivo: 'comun.md', titulo: 'Parte común: instalar, entrar y usar tu cuenta' },
+      { archivo: 'c2.md', titulo: 'Tu trabajo en el C2' },
+    ],
+  },
 ];
+
+const PUNTOS = { rojo: 'Rojo', naranja: 'Naranja', azul: 'Azul', verde: 'Verde', gris: 'Gris', sos: 'SOS' };
+/** Iconos de la pantalla del C2 (los mismos de la app, lucide) para las tablas del manual. */
+const ICONOS = { llamar: '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>', avisar: '<path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/>', nota: '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>', reporte: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14h6"/><path d="M12 17v-6"/>' };
+
+/** Marcas del manual: `{{punto:rojo}}` y `{{icono:llamar}}` (iguales que en la pantalla de Ayuda de la app). */
+const conMarcas = (md) =>
+  md
+    .replace(/\{\{punto:([a-z]+)\}\}/g, (m, c) =>
+      PUNTOS[c] ? `<span class="punto punto-${c}" role="img" aria-label="${PUNTOS[c]}"></span>` : m,
+    )
+    .replace(/\{\{icono:([a-z]+)\}\}/g, (m, c) =>
+      ICONOS[c]
+        ? `<svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[c]}</svg>`
+        : m,
+    );
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const hoy = () => new Date().toLocaleDateString('sv-SE');
@@ -140,7 +166,7 @@ function crearConversor() {
     });
 
   return (md) => {
-    const tokens = marked.lexer(conCapturas(md));
+    const tokens = marked.lexer(conCapturas(conMarcas(md)));
     const secciones = tokens.filter((t) => t.type === 'heading' && t.depth === 2).map((t) => t.text);
     // El primer título (H1) lo pone la parte; se quita del cuerpo.
     const cuerpo = tokens.filter((t, i) => !(i === tokens.findIndex((x) => x.type === 'heading' && x.depth === 1) && t.type === 'heading'));
@@ -206,7 +232,12 @@ function imprimir(htmlRuta, pdfRuta) {
       { stdio: 'ignore', timeout: 120_000 },
     );
   } finally {
-    rmSync(perfil, { recursive: true, force: true });
+    // Edge a veces tarda en soltar sus archivos: limpiar la carpeta temporal no debe tumbar la generación.
+    try {
+      rmSync(perfil, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+    } catch {
+      // Queda en la carpeta temporal del sistema, que se limpia sola.
+    }
   }
 }
 

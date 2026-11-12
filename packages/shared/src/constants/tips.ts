@@ -212,7 +212,7 @@ export const TIPS: readonly Tip[] = [
     id: 'c2-sos',
     titulo: 'Si hay un SOS, sube arriba de todo',
     texto:
-      'La emergencia aparece arriba, en rojo, con quién la lanzó, el sitio y los teléfonos para llamar. Toca "Estamos atendiendo" para avisar que la atiendes. Se queda en rojo hasta que se cierra, aunque ya la estén atendiendo.',
+      'La emergencia aparece arriba, en rojo, con quién la lanzó, el sitio y los teléfonos para llamar. Toca "Estamos atendiendo" para avisar que la atiendes y "Registrar respuesta" para dejar lo que hiciste (llamaste al guardia, avisaste al supervisor, pediste apoyo externo). Se queda en rojo hasta que se cierra, aunque ya la estén atendiendo.',
     roles: [C2],
   },
   {

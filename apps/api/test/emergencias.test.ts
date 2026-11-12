@@ -178,6 +178,7 @@ const deps = () => ({
   audit,
   ahora: () => ahora,
   bitacoraC2: async (e: (typeof eventosC2)[number]) => void eventosC2.push(e),
+  respuestas: async () => new Map(),
   avisar: async (usuarioIds: number[], a: { titulo?: string; mensaje: string; urgente?: boolean }) =>
     void avisos.push({ usuarioIds: [...usuarioIds].sort((x, y) => x - y), titulo: a.titulo, mensaje: a.mensaje, urgente: a.urgente }),
   atencion: {
@@ -490,5 +491,79 @@ describe('bitácora del C2 en las emergencias (A-80)', () => {
     expect(eventosC2.at(-1)).toMatchObject({ tipo: 'sos_sin_respuesta', sitioId: 3 });
     await juan().post(`/${id}/cancelar`);
     expect(eventosC2.at(-1)).toMatchObject({ tipo: 'sos_cerrado', detalle: 'Falsa alarma: fue sin querer (la canceló quien la lanzó)' });
+  });
+});
+
+describe('respuestas del C2 al SOS (A-81)', () => {
+  const c2 = () => como(90, ROLES.C2);
+  const lanzar = async () => {
+    repo.c2 = [90];
+    const id = (await juan().post('')).body.data.id;
+    avisos.length = 0;
+    eventosC2.length = 0;
+    return id as number;
+  };
+
+  it('"llamamos al guardia": queda en la bitácora con quién y avisa a supervisor y admin, no a quien lanzó el SOS', async () => {
+    const id = await lanzar();
+    const r = await c2().post(`/${id}/respuesta`, { tipo: 'llamamos_sin_respuesta' });
+    expect(r.status).toBe(200);
+    expect(r.body.data.texto).toBe('Llamamos al guardia: no contesta');
+    expect(eventosC2).toEqual([
+      { tipo: 'sos_respuesta', sitioId: 3, detalle: 'Llamamos al guardia: no contesta', usuarioId: 90, usuarioNombre: 'Carla C2 (C2)', entidad: { tipo: 'emergencia', id } },
+    ]);
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0].usuarioIds).toEqual([5, 10]);
+    expect(avisos[0]).toMatchObject({ titulo: 'Respuesta del C2' });
+    expect(avisos[0].mensaje).toBe('Carla C2 (C2): Llamamos al guardia: no contesta (Juan Pérez, POETAS)');
+  });
+
+  it('apoyo externo: pide la institución, el número es opcional, y también le avisa a quien lanzó el SOS', async () => {
+    const id = await lanzar();
+    expect((await c2().post(`/${id}/respuesta`, { tipo: 'apoyo_externo' })).status).toBe(400);
+    expect((await c2().post(`/${id}/respuesta`, { tipo: 'apoyo_externo', institucion: '  ' })).status).toBe(400);
+    const r = await c2().post(`/${id}/respuesta`, { tipo: 'apoyo_externo', institucion: 'Policía municipal', telefono: '911' });
+    expect(r.body.data.texto).toBe('Pedimos apoyo externo: Policía municipal · 911');
+    expect(avisos.map((a) => a.usuarioIds)).toEqual([[5, 10], [21]]);
+    expect(avisos[1]).toMatchObject({ titulo: 'Pidieron apoyo', mensaje: 'Se pidió apoyo externo: Policía municipal', urgente: true });
+    // Sin número también vale.
+    const sin = await c2().post(`/${id}/respuesta`, { tipo: 'apoyo_externo', institucion: 'Ambulancia' });
+    expect(sin.body.data.texto).toBe('Pedimos apoyo externo: Ambulancia');
+  });
+
+  it('"otro" exige el texto', async () => {
+    const id = await lanzar();
+    expect((await c2().post(`/${id}/respuesta`, { tipo: 'otro' })).status).toBe(400);
+    const r = await c2().post(`/${id}/respuesta`, { tipo: 'otro', texto: 'Se pidió revisar las cámaras' });
+    expect(r.body.data.texto).toBe('Se pidió revisar las cámaras');
+  });
+
+  it('se puede responder varias veces y no cierra la emergencia', async () => {
+    const id = await lanzar();
+    await c2().post(`/${id}/respuesta`, { tipo: 'llamamos_ok' });
+    await c2().post(`/${id}/respuesta`, { tipo: 'avisamos_supervisor' });
+    expect(eventosC2.filter((e) => e.tipo === 'sos_respuesta')).toHaveLength(2);
+    expect((await c2().get()).body.data.items[0].estado).toBe('activa');
+  });
+
+  it('ya cerrada: 409; ajena o inexistente: 404; guardia y cliente no pueden responder', async () => {
+    const id = await lanzar();
+    expect((await juan().post(`/${id}/respuesta`, { tipo: 'llamamos_ok' })).status).toBe(403);
+    expect((await supA().post(`/${id}/respuesta`, { tipo: 'llamamos_ok' })).status).toBe(403);
+    expect((await c2().post('/999/respuesta', { tipo: 'llamamos_ok' })).status).toBe(404);
+    await adminA().post(`/${id}/cerrar`, { resultado: 'atendida' });
+    expect((await c2().post(`/${id}/respuesta`, { tipo: 'llamamos_ok' })).status).toBe(409);
+    repo.c2 = [];
+    const ajena = (await luis().post('')).body.data.id;
+    expect((await c2().post(`/${ajena}/respuesta`, { tipo: 'llamamos_ok' })).status).toBe(404);
+  });
+
+  it('las respuestas se devuelven en la lista de emergencias, con la hora', async () => {
+    repo.c2 = [90];
+    const id = (await juan().post('')).body.data.id;
+    const respuestas = new Map([[id, [{ id: 1, texto: 'Lo atiende Carla C2 (C2)', por: 'Carla C2 (C2)', en: ahora.toISOString() }]]]);
+    const app2 = createApp([createEmergenciasModule({ ...deps(), respuestas: async () => respuestas })]);
+    const r = await request(app2).get('/api/emergencias').set('Authorization', token(90, ROLES.C2));
+    expect(r.body.data.items[0].respuestas).toEqual(respuestas.get(id));
   });
 });

@@ -62,7 +62,7 @@ export function AyudaC2({ open, onClose }: { open: boolean; onClose: () => void 
         </section>
         <section>
           <Titulo>Si hay un SOS</Titulo>
-          <p>Sale arriba, en rojo, con los teléfonos para llamar. Toca "Estamos atendiendo" para avisar que lo atiendes. Se queda en rojo hasta que se cierra.</p>
+          <p>Sale arriba, en rojo, con los teléfonos para llamar. Toca "Estamos atendiendo" para avisar que lo atiendes y "Registrar respuesta" para dejar lo que hiciste (llamaste al guardia, avisaste al supervisor, pediste apoyo externo). Se queda en rojo hasta que se cierra.</p>
         </section>
       </div>
     </Modal>

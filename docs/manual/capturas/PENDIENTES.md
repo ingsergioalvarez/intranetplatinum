@@ -63,6 +63,6 @@ Mientras la imagen no exista, el manual muestra un recuadro gris de "Captura pen
 | [ ] | `K04-reporte-detalle.png` | Detalle de un reporte con seguimiento y "Agregar un comentario" | Manual del Cliente |
 | [ ] | `K05-nuevo-reporte.png` | Ventana "Nuevo reporte" del cliente | Manual del Cliente |
 | [ ] | `K06-mis-reportes.png` | "Mis reportes" con estado y respuesta | Manual del Cliente |
-| [ ] | `C2-01-pantalla.png` | Pantalla del C2 con los sitios, la franja de colores y la columna "Qué pasa" | Manual del Operador C2 |
+| [ ] | `O01-pantalla.png` | Pantalla del C2 con los sitios, la franja de colores y la columna "Qué pasa" | Manual del Operador C2 |
 
 Total: 48 capturas.

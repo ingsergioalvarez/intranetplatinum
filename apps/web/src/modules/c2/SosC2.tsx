@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BatteryLow, MapPin, Siren } from 'lucide-react';
 import { TIPO_EMERGENCIA_LABEL, type Emergencia } from '@platinum/shared';
 import { Button, toast } from '../../components/ui';
 import { mensajeDeError } from '../../core/api';
 import { Llamadas } from '../emergencias/Llamadas';
+import { RespuestasSos } from '../emergencias/RespuestasSos';
 import { emergenciasService, enlaceMapa } from '../emergencias/emergencias.service';
+import { RespuestaSosModal } from './RespuestaSosModal';
 import { c2Service } from './c2.service';
 
 const duracion = (desde: string, ahora: number) => {
@@ -18,6 +21,7 @@ const duracion = (desde: string, ahora: number) => {
  */
 export function SosC2({ emergencias, ahora }: { emergencias: Emergencia[]; ahora: number }) {
   const queryClient = useQueryClient();
+  const [respondiendo, setRespondiendo] = useState<Emergencia | null>(null);
   const atender = useMutation({
     mutationFn: (id: number) => emergenciasService.acusar(id),
     onSuccess: () => {
@@ -57,20 +61,27 @@ export function SosC2({ emergencias, ahora }: { emergencias: Emergencia[]; ahora
               )}
             </div>
             <Llamadas contactos={e.contactos} className="mt-3" />
+            <RespuestasSos respuestas={e.respuestas} />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium text-red-900">
                 {e.acusadaEn ? `La atiende ${e.acusadaPor}` : 'Nadie la ha recibido'}
                 {e.escaladas > 0 && ` · se ha repetido ${e.escaladas} ${e.escaladas === 1 ? 'vez' : 'veces'}`}
               </p>
-              {!e.acusadaEn && (
-                <Button variant="danger" onClick={() => atender.mutate(e.id)} loading={atender.isPending}>
-                  Estamos atendiendo
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => setRespondiendo(e)}>
+                  Registrar respuesta
                 </Button>
-              )}
+                {!e.acusadaEn && (
+                  <Button variant="danger" onClick={() => atender.mutate(e.id)} loading={atender.isPending}>
+                    Estamos atendiendo
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         );
       })}
+      {respondiendo && <RespuestaSosModal emergencia={respondiendo} onClose={() => setRespondiendo(null)} />}
     </div>
   );
 }

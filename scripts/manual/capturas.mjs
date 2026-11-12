@@ -20,6 +20,7 @@ const MANUALES = [
   { letra: 'S', carpeta: 'supervisor', nombre: 'Manual del Supervisor' },
   { letra: 'A', carpeta: 'admin', nombre: 'Manual del Administrador' },
   { letra: 'K', carpeta: 'cliente', nombre: 'Manual del Cliente' },
+  { letra: 'O', carpeta: 'c2', nombre: 'Manual del Operador C2' },
 ];
 
 // Marcadores definidos en los textos.

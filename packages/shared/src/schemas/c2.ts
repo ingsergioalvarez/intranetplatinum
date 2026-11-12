@@ -131,6 +131,7 @@ export const TIPOS_EVENTO_C2 = [
   'sitio_cierre',
   'sos_lanzado',
   'sos_atendiendo',
+  'sos_respuesta',
   'sos_cerrado',
   'sos_sin_respuesta',
   'nota',
@@ -146,6 +147,7 @@ export const TIPO_EVENTO_C2_LABEL: Record<TipoEventoC2, string> = {
   sitio_cierre: 'Turno terminó sin cubrirse',
   sos_lanzado: 'SOS lanzado',
   sos_atendiendo: 'SOS: lo están atendiendo',
+  sos_respuesta: 'SOS: respuesta del C2',
   sos_cerrado: 'SOS cerrado',
   sos_sin_respuesta: 'SOS sin respuesta',
   nota: 'Nota del C2',
@@ -164,7 +166,7 @@ export const GRUPO_EVENTO_C2_LABEL: Record<GrupoEventoC2, string> = {
 };
 export const TIPOS_DEL_GRUPO: Record<Exclude<GrupoEventoC2, 'todo'>, readonly TipoEventoC2[]> = {
   sitios: ['sitio_solo', 'sitio_parcial', 'sitio_cubierto', 'sitio_cierre'],
-  sos: ['sos_lanzado', 'sos_atendiendo', 'sos_cerrado', 'sos_sin_respuesta'],
+  sos: ['sos_lanzado', 'sos_atendiendo', 'sos_respuesta', 'sos_cerrado', 'sos_sin_respuesta'],
   acciones: ['nota', 'aviso_supervisor', 'reporte'],
 };
 

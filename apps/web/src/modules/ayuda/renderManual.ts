@@ -45,6 +45,26 @@ function aviso(html: string): { clase: string; etiqueta: string; html: string } 
   return { clase, etiqueta, html };
 }
 
+const PUNTOS: Record<string, string> = { rojo: 'Rojo', naranja: 'Naranja', azul: 'Azul', verde: 'Verde', gris: 'Gris', sos: 'SOS' };
+/** Iconos de la pantalla del C2 (los mismos de la app, lucide) para las tablas del manual. */
+const ICONOS: Record<string, string> = { llamar: '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>', avisar: '<path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/>', nota: '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>', reporte: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14h6"/><path d="M12 17v-6"/>' };
+
+/**
+ * Marcas del manual: `{{punto:rojo}}` dibuja el mismo punto de color que la pantalla del C2 y `{{icono:llamar}}` su icono,
+ * en vez de emojis (que se ven distintos en cada equipo y rompen el estilo). El PDF las dibuja igual.
+ */
+function conMarcas(texto: string): string {
+  return texto
+    .replace(/\{\{punto:([a-z]+)\}\}/g, (m, c: string) =>
+      PUNTOS[c] ? `<span class="manual-punto manual-punto-${c}" role="img" aria-label="${PUNTOS[c]}"></span>` : m,
+    )
+    .replace(/\{\{icono:([a-z]+)\}\}/g, (m, c: string) =>
+      ICONOS[c]
+        ? `<svg class="manual-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[c]}</svg>`
+        : m,
+    );
+}
+
 export interface ManualRenderizado {
   html: string;
   /** Secciones (títulos de nivel 2) para el índice. */
@@ -87,7 +107,7 @@ export function renderizarManual(texto: string, prefijo: string, mostrarIds = fa
     },
   });
 
-  const conCapturas = texto.replace(/^\{\{captura:([^|}]+)\|([^}]+)\}\}\s*$/gm, (_, id: string, desc: string) => {
+  const conCapturas = conMarcas(texto).replace(/^\{\{captura:([^|}]+)\|([^}]+)\}\}\s*$/gm, (_, id: string, desc: string) => {
     const url = capturaPorId(id);
     return url
       ? `\n\n<figure class="manual-captura"><img src="${url}" alt="${esc(desc)}" loading="lazy"><figcaption>${esc(desc)}</figcaption></figure>\n\n`

@@ -23,6 +23,7 @@ const COLOR: Record<TipoEventoC2, { punto: string; texto: string }> = {
   sitio_cierre: { punto: 'bg-slate-400', texto: 'text-slate-600' },
   sos_lanzado: { punto: 'bg-red-600', texto: 'text-red-700' },
   sos_atendiendo: { punto: 'bg-amber-500', texto: 'text-amber-800' },
+  sos_respuesta: { punto: 'bg-amber-500', texto: 'text-amber-800' },
   sos_cerrado: { punto: 'bg-emerald-500', texto: 'text-emerald-700' },
   sos_sin_respuesta: { punto: 'bg-red-600', texto: 'text-red-700' },
   nota: { punto: 'bg-sky-500', texto: 'text-sky-700' },

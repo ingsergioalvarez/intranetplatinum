@@ -1,12 +1,15 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import {
+  PERMISOS,
   ROLES,
   emergenciaCerrarSchema,
+  emergenciaRespuestaSchema,
   emergenciaCreateSchema,
   emergenciaTipoSchema,
   idParamSchema,
   type EmergenciaCerrarInput,
+  type EmergenciaRespuestaInput,
   type EmergenciaCreateInput,
   type EmergenciaTipoInput,
   type IdParam,
@@ -17,11 +20,12 @@ import {
   PrismaAuditLogger,
   authenticate,
   rateLimit,
+  requirePermission,
   requireRoles,
   validate,
   type AppModule,
 } from '../../core';
-import { registrarEventoC2ConPrisma, type RegistrarEventoC2 } from '../c2/bitacora';
+import { registrarEventoC2ConPrisma, respuestasConPrisma, type RegistrarEventoC2, type RespuestasDe } from '../c2/bitacora';
 import { atencionConPrisma, type AvisosAtencion } from '../avisos/atencion';
 import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
 import { EmergenciasRepository, PrismaEmergenciasRepository } from './emergencias.repository';
@@ -62,6 +66,17 @@ class EmergenciasController extends BaseController {
   acusar = async (req: Request, res: Response) =>
     this.ok(res, await this.service.acusar(this.params<IdParam>(req).id, this.currentUser(req), this.accionCtx(req)));
 
+  responder = async (req: Request, res: Response) =>
+    this.ok(
+      res,
+      await this.service.responder(
+        this.params<IdParam>(req).id,
+        this.body<EmergenciaRespuestaInput>(req),
+        this.currentUser(req),
+        this.accionCtx(req),
+      ),
+    );
+
   cerrar = async (req: Request, res: Response) =>
     this.ok(
       res,
@@ -82,6 +97,8 @@ export interface EmergenciasDeps {
   ahora?: () => Date;
   /** Bitácora del C2 (A-80). */
   bitacoraC2?: RegistrarEventoC2;
+  /** Lo que ya se hizo en cada emergencia (A-81). */
+  respuestas?: RespuestasDe;
 }
 
 /** El servicio con sus dependencias reales (lo usan las rutas y la vigilancia, que escala las sin respuesta). */
@@ -92,8 +109,9 @@ export function crearServicioEmergencias({
   atencion = atencionConPrisma,
   ahora,
   bitacoraC2 = registrarEventoC2ConPrisma,
+  respuestas = respuestasConPrisma,
 }: EmergenciasDeps = {}) {
-  return new EmergenciasService(repo, audit, avisar, atencion, ahora, bitacoraC2);
+  return new EmergenciasService(repo, audit, avisar, atencion, ahora, bitacoraC2, respuestas);
 }
 
 /**
@@ -114,6 +132,8 @@ export function createEmergenciasModule(deps: EmergenciasDeps = {}): AppModule {
   router.post('/:id/cancelar', personal, validate({ params: idParamSchema }), c.cancelar);
   router.get('/', atiende, validate({ query: listaQuerySchema }), c.listar);
   router.post('/:id/acusar', atiende, validate({ params: idParamSchema }), c.acusar);
+  // El C2 registra lo que hizo con la emergencia (A-81): permiso de actuar del C2.
+  router.post('/:id/respuesta', requirePermission(PERMISOS.C2_ACTUAR), validate({ params: idParamSchema, body: emergenciaRespuestaSchema }), c.responder);
   router.post('/:id/cerrar', mando, validate({ params: idParamSchema, body: emergenciaCerrarSchema }), c.cerrar);
   return { name: 'emergencias', basePath: 'emergencias', router };
 }

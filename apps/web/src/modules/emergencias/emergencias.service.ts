@@ -2,6 +2,7 @@ import type {
   Emergencia,
   EmergenciaCerrarInput,
   EmergenciaCreateInput,
+  EmergenciaRespuestaInput,
   EmergenciaTipoInput,
   EmergenciasLista,
 } from '@platinum/shared';
@@ -21,6 +22,8 @@ export const emergenciasService = {
   cancelar: (id: number) => api.post<Emergencia>(`/emergencias/${id}/cancelar`, {}),
   lista: (estado: 'activas' | 'todas') => api.get<EmergenciasLista>('/emergencias', { query: { estado } }),
   acusar: (id: number) => api.post<Emergencia>(`/emergencias/${id}/acusar`, {}),
+  /** El C2 registra lo que hizo con la emergencia (A-81). */
+  responder: (id: number, input: EmergenciaRespuestaInput) => api.post<{ texto: string }>(`/emergencias/${id}/respuesta`, input),
   cerrar: (id: number, input: EmergenciaCerrarInput) => api.post<Emergencia>(`/emergencias/${id}/cerrar`, input),
 };
 

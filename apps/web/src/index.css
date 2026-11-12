@@ -77,7 +77,8 @@
     font-weight: 700;
     line-height: 1.3;
     color: var(--color-brand-900);
-    scroll-margin-top: 4.5rem;
+    /* Deja ver el título al saltar a la sección: la barra "Contenido" va fija arriba. */
+    scroll-margin-top: 7.5rem;
   }
   .manual h2:first-child {
     margin-top: 0;
@@ -117,6 +118,30 @@
     margin: 1.5rem 0;
     border-color: var(--color-slate-200);
   }
+  /* Marcas del manual: punto de color e icono de la pantalla del C2 (en vez de emojis). */
+  .manual-punto {
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    margin-right: 0.4rem;
+    border-radius: 999px;
+    vertical-align: baseline;
+  }
+  .manual-punto-rojo { background: #ef4444; }
+  .manual-punto-naranja { background: #f59e0b; }
+  .manual-punto-azul { background: #38bdf8; }
+  .manual-punto-verde { background: #10b981; }
+  .manual-punto-gris { background: #cbd5e1; }
+  .manual-punto-sos { background: #dc2626; }
+  .manual-icono {
+    display: inline-block;
+    width: 1.1em;
+    height: 1.1em;
+    margin-right: 0.4rem;
+    vertical-align: -0.2em;
+    color: var(--color-slate-600);
+  }
+
   .manual-tabla {
     margin: 0.75rem 0 1.25rem;
     overflow-x: auto;

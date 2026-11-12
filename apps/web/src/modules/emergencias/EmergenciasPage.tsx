@@ -18,6 +18,7 @@ import { formatFechaHora } from '../../core/format/fechas';
 import { Chips } from '../asistencia/BitacoraGuardia';
 import { MotivoLista } from '../asistencia/MotivoLista';
 import { Llamadas } from './Llamadas';
+import { RespuestasSos } from './RespuestasSos';
 import { emergenciasService, enlaceMapa } from './emergencias.service';
 import { probarSirena } from './sirena';
 
@@ -149,6 +150,7 @@ function Tarjeta({
         </p>
       )}
       <Llamadas contactos={e.contactos} />
+      <RespuestasSos respuestas={e.respuestas} />
       <div className="flex flex-wrap gap-2 pt-1">
         {mapa && (
           <a
