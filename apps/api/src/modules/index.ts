@@ -18,6 +18,7 @@ import { informesModule } from './informes';
 import { horariosModule } from './horarios';
 import { solicitudesCoberturaModule } from './solicitudes-cobertura';
 import { ausenciasModule } from './ausencias';
+import { c2Module } from './c2';
 import { carterasModule } from './carteras';
 import { emergenciasModule } from './emergencias';
 import { privacidadModule } from './privacidad';
@@ -55,6 +56,7 @@ export const modules: AppModule[] = [
   solicitudesCoberturaModule,
   ausenciasModule,
   emergenciasModule,
+  c2Module,
   carterasModule,
   horasExtraModule,
   adminModule,

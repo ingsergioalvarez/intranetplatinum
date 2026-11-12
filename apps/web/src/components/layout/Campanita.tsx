@@ -12,6 +12,7 @@ import {
   Copy,
   Hand,
   MapPin,
+  MonitorDot,
   MessageSquare,
   UserCheck,
   UserX,
@@ -48,6 +49,8 @@ const TIPO: Record<TipoAviso, { icono: typeof Bell; tono: Tono }> = {
   horas_extra: { icono: Clock, tono: 'ambar' },
   cobertura: { icono: CalendarDays, tono: 'rojo' },
   emergencia: { icono: Siren, tono: 'rojo' },
+  // Monitoreo del C2 (A-61)
+  c2_sitio: { icono: MonitorDot, tono: 'rojo' },
   // Para el guardia (DA-34)
   rostro_aprobado: { icono: UserCheck, tono: 'verde' },
   rostro_rechazado: { icono: UserX, tono: 'rojo' },

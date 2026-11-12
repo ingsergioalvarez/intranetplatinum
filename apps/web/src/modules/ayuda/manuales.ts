@@ -11,6 +11,7 @@ const textos = import.meta.glob(
     '../../../../../docs/manual/supervisor.md',
     '../../../../../docs/manual/admin.md',
     '../../../../../docs/manual/cliente.md',
+    '../../../../../docs/manual/c2.md',
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
@@ -45,6 +46,7 @@ const PARTES: { clave: string; etiqueta: string }[] = [
   { clave: 'supervisor', etiqueta: 'Supervisor' },
   { clave: 'admin', etiqueta: 'Administrador' },
   { clave: 'cliente', etiqueta: 'Cliente' },
+  { clave: 'c2', etiqueta: 'C2' },
 ];
 
 /** Qué ve cada rol: la parte común y lo suyo. El administrador ve todo. */
@@ -52,6 +54,7 @@ const POR_ROL: Record<Rol, string[]> = {
   [ROLES.GUARDIA]: ['comun', 'guardia'],
   [ROLES.SUPERVISOR]: ['comun', 'supervisor'],
   [ROLES.CLIENTE]: ['comun', 'cliente'],
+  [ROLES.C2]: ['comun', 'c2'],
   [ROLES.ADMIN]: PARTES.map((p) => p.clave),
 };
 

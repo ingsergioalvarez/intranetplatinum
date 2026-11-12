@@ -10,6 +10,7 @@ export * from './schemas/clientes';
 export * from './schemas/comunes';
 export * from './schemas/reportes';
 export * from './schemas/avisos';
+export * from './schemas/c2';
 export * from './schemas/asistencia';
 export * from './schemas/turnos';
 export * from './schemas/bitacora';

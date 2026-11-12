@@ -19,6 +19,8 @@ import { TableroPage } from './TableroPage';
 export function InicioPage() {
   const rol = useAuthStore((s) => s.user?.rol);
   if (rol === ROLES.GUARDIA) return <Navigate to="/marcar" replace />;
+  // El C2 entra directo a su pantalla de monitoreo (A-61).
+  if (rol === ROLES.C2) return <Navigate to="/c2" replace />;
   if (rol === ROLES.CLIENTE) return <ResumenCliente />;
   return <TableroPage />;
 }

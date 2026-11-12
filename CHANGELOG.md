@@ -5,6 +5,22 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-12 #51 — Monitoreo del C2 (A-61)
+
+#### Añadido
+
+- **Rol Operador C2 y pantalla de monitoreo (A-61, D-023)**: permiso `c2.ver`, rol `c2` (el admin también la ve, con los sitios de su cartera) y pantalla **C2 · Monitoreo de sitios** de solo lectura: clientes desplegables con sus sitios (lo peor arriba; los clientes con problema se abren solos), contadores, buscador por cliente, sitio o guardia, 25/50/100 clientes por hoja, y para cada guardia su foto de referencia, nombre, hora de entrada y horario. Se actualiza sola cada 15 s; en celular se ve como tarjetas. El C2 entra directo a ella y no tiene botón SOS.
+- **Estado de cada sitio**: SOS, solo (pasados 15 min de la hora del turno sin checar: la regla de asistencia), parcial, por llegar, cubierto y sin turno. Cuenta los turnos de noche que empezaron ayer y no toma como presente a quien se le olvidó checar salida mucho después de su turno.
+- **Episodios de "sitio solo" e historial**: un proceso cada minuto abre y cierra los episodios (tabla `sitio_solo_episodios`, migración `20261113000000_monitoreo_c2`, que también agrega el tipo de aviso `c2_sitio`) y avisa solo al C2 ("Sitio sin guardia" urgente / "Sitio con guardia"). La pestaña Historial muestra por día cuánto estuvo solo cada sitio.
+- **Sonido**: botón "Activar sonido" (los navegadores lo exigen); la sirena suena mientras haya un sitio solo o un SOS y "Silenciar" apaga lo de ahora (algo nuevo vuelve a sonar). Además llega notificación al celular.
+- **SOS con el C2**: el C2 recibe toda emergencia en paralelo con la cadena de supervisor y admin y responde "Estamos atendiendo" (queda como "Nombre (C2)"); eso le avisa a quien la lanzó y a los demás que la recibieron, y lo mismo cuando la atiende un supervisor o admin. La emergencia sigue en rojo hasta cerrarse. Cerrar sigue siendo de admin y supervisor.
+- **Todos los teléfonos en el SOS**: quien recibe una emergencia ve a quién llamar con todos sus números (personal y de la empresa), un botón por número: el guardia y el supervisor del sitio, y el C2 también los admin. En la alerta a pantalla completa, la pantalla Emergencias y la del C2.
+- **Manual del C2** (`docs/manual/c2.md`, con pestaña en Ayuda), cuatro tips para el C2 y el aviso de privacidad (sección 6) dice qué ve el C2.
+
+#### Pendiente
+
+- Otras respuestas del C2 a un SOS; ligar sitios con cámaras; revisión del abogado (A-68) sobre el C2.
+
 ### Sesión 2026-11-11 #50 — Detalles de la app (A-73) y fotos en Asistencia (A-75)
 
 #### Cambiado

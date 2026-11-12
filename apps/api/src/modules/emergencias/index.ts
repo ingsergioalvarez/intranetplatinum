@@ -94,20 +94,22 @@ export function crearServicioEmergencias({
 
 /**
  * Botón de pánico (A-60). Lo lanzan guardia, supervisor y admin (no el cliente); lo reciben, acusan y cierran
- * supervisor y admin. El guardia solo ve y cancela la suya.
+ * supervisor y admin; el C2 también la recibe y responde que la atiende (A-61). El guardia solo ve y cancela la suya.
  */
 export function createEmergenciasModule(deps: EmergenciasDeps = {}): AppModule {
   const c = new EmergenciasController(crearServicioEmergencias(deps));
   const router = Router();
   const personal = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.GUARDIA);
   const mando = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR);
+  // El C2 también responde que la está atendiendo (A-61); cerrarla sigue siendo de admin y supervisor.
+  const atiende = requireRoles(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.C2);
   router.use(authenticate);
   router.post('/', personal, rateLimit({ windowMin: 1, max: 10 }), validate({ body: emergenciaCreateSchema }), c.crear);
   router.get('/mia', personal, c.mia);
   router.post('/:id/tipo', personal, validate({ params: idParamSchema, body: emergenciaTipoSchema }), c.tipo);
   router.post('/:id/cancelar', personal, validate({ params: idParamSchema }), c.cancelar);
-  router.get('/', mando, validate({ query: listaQuerySchema }), c.listar);
-  router.post('/:id/acusar', mando, validate({ params: idParamSchema }), c.acusar);
+  router.get('/', atiende, validate({ query: listaQuerySchema }), c.listar);
+  router.post('/:id/acusar', atiende, validate({ params: idParamSchema }), c.acusar);
   router.post('/:id/cerrar', mando, validate({ params: idParamSchema, body: emergenciaCerrarSchema }), c.cerrar);
   return { name: 'emergencias', basePath: 'emergencias', router };
 }

@@ -30,7 +30,7 @@ En **Asistencia, Inicio, Calendario, Casos, Cambios, Horas extra, Incidencias y 
 Entra a **Usuarios**. Ves las personas de tu cartera y tu propia cuenta.
 
 - **Buscar:** por **nombre, correo o teléfono**.
-- **Filtros:** **"Rol"** (*Administrador, Supervisor, Guardia, Cliente*) y el estado: **"Activos"** (por omisión), **"De baja"** o **"Todos"**.
+- **Filtros:** **"Rol"** (*Administrador, Supervisor, Guardia, Cliente, Operador C2*) y el estado: **"Activos"** (por omisión), **"De baja"** o **"Todos"**.
 - **Columnas:** **Nombre** (con "(tú)" en tu fila), **Correo**, **Rol**, **Estado** y **Último acceso**. En el celular cada persona es una tarjeta.
 - Un guardia o supervisor **sin teléfono** lleva la insignia amarilla **"Sin teléfono"**. Conviene corregirlo: el teléfono se usa en las emergencias.
 
@@ -52,7 +52,7 @@ Entra a **Usuarios**. Ves las personas de tu cartera y tu propia cuenta.
    - **"Nombre completo"** (obligatorio).
    - **"Correo"** (obligatorio). Con ese correo entrará. Si ya existe, la app avisa: *"Ya existe un usuario con este correo"* (aunque esa persona esté de baja).
    - **"Teléfono de contacto"**: es **obligatorio para guardias y supervisores**. Puede ser el de la empresa.
-   - **"Rol"**: *Supervisor, Guardia* o *Cliente*. (*Administrador* solo lo ofrece el super administrador.)
+   - **"Rol"**: *Supervisor, Guardia, Cliente* u *Operador C2*. (*Administrador* solo lo ofrece el super administrador.)
    - **"Teléfono personal (opcional)"**: si lo tiene, es el que se marca primero en una emergencia.
 3. Toca **"Crear usuario"**.
 4. Se abre **"Usuario creado"** con la **"Contraseña temporal"**. Toca **"Copiar mensaje para enviar"**: te deja el texto listo para pegarlo en WhatsApp, con la página, el correo y la contraseña temporal.
@@ -63,6 +63,8 @@ Quien tú das de alta **queda en tu cartera**. Si das de alta a un supervisor, �
 
 {{captura:A02-nuevo-usuario|Ventana "Nuevo usuario" con sus campos}}
 {{captura:A03-contrasena-temporal|Ventana "Usuario creado" con la contraseña temporal y "Copiar mensaje para enviar"}}
+
+> **Operador C2:** es la cuenta del centro de monitoreo. Entra directo a la pantalla **C2** (que tú también ves en el menú), donde vigila que cada sitio tenga guardia y recibe los SOS. No necesita teléfono. Ve todos los sitios de todos los clientes, así que dale esta cuenta solo a quien opera el C2. Su manual está en la pestaña **C2** de Ayuda.
 
 ## 4. Editar a una persona
 

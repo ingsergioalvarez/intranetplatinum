@@ -11,6 +11,7 @@ import {
   ScrollText,
   ShieldCheck,
   MapPin,
+  MonitorDot,
   Tags,
   Timer,
   Users,
@@ -63,6 +64,8 @@ export const navItems: NavItem[] = [
     permiso: PERMISOS.ASISTENCIA_MARCAR,
     roles: [ROLES.GUARDIA],
   },
+  // Monitoreo de sitios para el C2 (A-61).
+  { label: 'C2', to: '/c2', icon: MonitorDot, permiso: PERMISOS.C2_VER },
   { label: 'Reportes', to: '/reportes', icon: ClipboardList, permiso: PERMISOS.REPORTES_VER_PROPIOS },
   // Lo que el cliente reporta del servicio o de un guardia (A-59).
   { label: 'Reportar', to: '/reportes-cliente', icon: MessageSquareWarning, roles: [ROLES.CLIENTE] },

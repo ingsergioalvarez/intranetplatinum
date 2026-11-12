@@ -17,6 +17,7 @@ import { erroresDeCampos } from '../../core/forms/fieldErrors';
 import { formatFechaHora } from '../../core/format/fechas';
 import { Chips } from '../asistencia/BitacoraGuardia';
 import { MotivoLista } from '../asistencia/MotivoLista';
+import { Llamadas } from './Llamadas';
 import { emergenciasService, enlaceMapa } from './emergencias.service';
 import { probarSirena } from './sirena';
 
@@ -147,6 +148,7 @@ function Tarjeta({
           {e.nota && <span className="block">{e.nota}</span>}
         </p>
       )}
+      <Llamadas contactos={e.contactos} />
       <div className="flex flex-wrap gap-2 pt-1">
         {mapa && (
           <a
@@ -158,7 +160,7 @@ function Tarjeta({
             <MapPin className="size-4" /> Ver mapa
           </a>
         )}
-        {e.usuario.telefono && (
+        {!e.contactos?.length && e.usuario.telefono && (
           <a
             href={`tel:${e.usuario.telefono}`}
             className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset"

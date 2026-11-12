@@ -56,6 +56,13 @@ export const emergenciaCerrarSchema = z
   });
 export type EmergenciaCerrarInput = z.infer<typeof emergenciaCerrarSchema>;
 
+/** Una persona a la que se puede llamar por una emergencia, con todos sus números (el de la empresa y el personal). */
+export interface ContactoEmergencia {
+  nombre: string;
+  cargo: 'guardia' | 'supervisor' | 'admin';
+  telefonos: { numero: string; etiqueta: EtiquetaTelefono }[];
+}
+
 export interface Emergencia {
   id: number;
   estado: EstadoEmergencia;
@@ -65,6 +72,11 @@ export interface Emergencia {
   paraMi?: boolean;
   /** Solo en la alerta propia del guardia: a quién llamar (su supervisor del sitio). */
   supervisor?: ContactoTelefono | null;
+  /**
+   * A quién llamar, con todos sus números (A-61): quien la lanzó y el supervisor del sitio; el C2 ve también a los
+   * admin. No incluye a quien consulta. Solo viene en las listas de quien la recibe.
+   */
+  contactos?: ContactoEmergencia[];
   sitio: { id: number; nombre: string } | null;
   tipo: TipoEmergencia | null;
   lat: number | null;

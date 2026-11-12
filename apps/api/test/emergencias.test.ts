@@ -27,6 +27,7 @@ const NOMBRES: Record<number, string> = {
   22: 'Ana Ruiz',
   31: 'Luis Gómez',
   40: 'Nadia Libre',
+  90: 'Carla C2',
 };
 const ROL_DE: Record<number, string> = {
   1: 'admin',
@@ -38,11 +39,21 @@ const ROL_DE: Record<number, string> = {
   22: 'guardia',
   31: 'guardia',
   40: 'guardia',
+  90: 'c2',
 };
 const DUENO: Record<number, number | null> = { 5: 10, 6: 11, 21: 10, 22: 10, 31: 11, 40: null };
 
+/** Teléfonos de la prueba: [de contacto de la empresa, personal]. */
+const TELEFONOS: Record<number, [string | null, string | null]> = {
+  21: ['5521000000', '5521111111'],
+  5: ['5505000000', null],
+  10: ['5510000000', '5510111111'],
+};
+
 class Memoria extends EmergenciasRepository {
   filas: EmergenciaRow[] = [];
+  /** Cuentas del C2 activas. */
+  c2: number[] = [];
   sitios: Record<number, SitioDeGuardia | null> = {
     21: { id: 3, nombre: 'POETAS', supervisorId: 5 },
     31: { id: 4, nombre: 'PLAZA', supervisorId: 6 },
@@ -56,6 +67,7 @@ class Memoria extends EmergenciasRepository {
       destinatarios,
       lanzadaPorSuper: d.usuarioId === 1,
       sitio: sitio ? { id: sitio.id, nombre: sitio.nombre } : null,
+      sitioSupervisorId: sitio?.supervisorId ?? null,
       tipo: null,
       lat: d.lat ?? null,
       lng: d.lng ?? null,
@@ -134,6 +146,18 @@ class Memoria extends EmergenciasRepository {
   }
   async nombreDe(id: number) {
     return NOMBRES[id] ?? null;
+  }
+  async usuariosC2() {
+    return this.c2;
+  }
+  async personasDe(ids: number[]) {
+    return ids.map((id) => ({
+      id,
+      nombre: NOMBRES[id],
+      rol: ROL_DE[id],
+      telefono: TELEFONOS[id]?.[0] ?? null,
+      telefonoPersonal: TELEFONOS[id]?.[1] ?? null,
+    }));
   }
   async contactoDe(id: number) {
     return id === 5 ? { nombre: NOMBRES[5], telefono: '5550001111', telefonoEtiqueta: 'empresa' as const } : null;
@@ -342,5 +366,93 @@ describe('botón de pánico (A-60)', () => {
     await luis().post('');
     expect(avisos[0].usuarioIds).toEqual([6, 11]);
     expect((await adminA().get()).body.data.items).toEqual([]);
+  });
+});
+
+describe('el C2 en las emergencias (A-61)', () => {
+  const c2 = () => como(90, ROLES.C2);
+
+  it('recibe toda emergencia, en paralelo con la cadena de supervisor y admin', async () => {
+    repo.c2 = [90];
+    await juan().post('');
+    expect(avisos[0].usuarioIds).toEqual([5, 10, 90]);
+    expect((await c2().get()).body.data.items).toHaveLength(1);
+    // También las de un supervisor y las de un guardia sin dueño.
+    await supA().post('');
+    expect(avisos.at(-1)!.usuarioIds).toEqual([10, 90]);
+    await nadia().post('');
+    expect(avisos.at(-1)!.usuarioIds).toEqual([1, 90]);
+  });
+
+  it('sin cuentas de C2 todo queda como antes', async () => {
+    await juan().post('');
+    expect(avisos[0].usuarioIds).toEqual([5, 10]);
+  });
+
+  it('"Estamos atendiendo": queda como "Carla C2", avisa a quien la lanzó y a supervisor, admin y demás; sigue activa', async () => {
+    repo.c2 = [90];
+    const id = (await juan().post('')).body.data.id;
+    avisos.length = 0;
+    const r = await c2().post(`/${id}/acusar`);
+    expect(r.status).toBe(200);
+    expect(r.body.data).toMatchObject({ estado: 'activa', acusadaPor: 'Carla C2 (C2)' });
+    expect(avisos[0]).toMatchObject({ usuarioIds: [21], mensaje: 'Carla C2 (C2) recibió tu alerta y la está atendiendo' });
+    expect(avisos[1]).toMatchObject({ usuarioIds: [5, 10], titulo: 'La están atendiendo' });
+    expect(avisos[1].mensaje).toBe('Carla C2 (C2) atiende la emergencia de Juan Pérez en POETAS');
+    expect(atendidos.at(-1)?.resultado).toBe('Atendiendo');
+    // Repetir el toque no vuelve a avisar.
+    avisos.length = 0;
+    await c2().post(`/${id}/acusar`);
+    expect(avisos).toHaveLength(0);
+  });
+
+  it('si el supervisor la atiende primero, el C2 se entera y la emergencia sigue activa', async () => {
+    repo.c2 = [90];
+    const id = (await juan().post('')).body.data.id;
+    avisos.length = 0;
+    await supA().post(`/${id}/acusar`);
+    expect(avisos[1].usuarioIds).toEqual([10, 90]);
+    expect(avisos[1].mensaje).toBe('Sofía Sup atiende la emergencia de Juan Pérez en POETAS');
+    expect((await c2().get()).body.data.items[0].estado).toBe('activa');
+  });
+
+  it('el C2 no cierra emergencias ni las lanza, y solo ve las que le llegaron', async () => {
+    repo.c2 = [90];
+    const id = (await juan().post('')).body.data.id;
+    expect((await c2().post(`/${id}/cerrar`, { resultado: 'atendida' })).status).toBe(403);
+    expect((await c2().post('')).status).toBe(403);
+    repo.c2 = [];
+    const otro = (await luis().post('')).body.data.id;
+    expect((await c2().post(`/${otro}/acusar`)).status).toBe(404);
+  });
+
+  it('el supervisor ve todos los números del guardia y del sitio; el C2 ve además el del admin', async () => {
+    repo.c2 = [90];
+    await juan().post('');
+    // Supervisor 5: el guardia con sus dos números (no se incluye a sí mismo).
+    const delSup = (await supA().get()).body.data.items[0].contactos;
+    expect(delSup).toEqual([
+      {
+        nombre: 'Juan Pérez',
+        cargo: 'guardia',
+        telefonos: [
+          { numero: '5521111111', etiqueta: 'personal' },
+          { numero: '5521000000', etiqueta: 'empresa' },
+        ],
+      },
+    ]);
+    // Admin A: el guardia y el supervisor del sitio.
+    const delAdmin = (await adminA().get()).body.data.items[0].contactos;
+    expect(delAdmin.map((c: { nombre: string }) => c.nombre)).toEqual(['Juan Pérez', 'Sofía Sup']);
+    // C2: guardia, supervisor y admin con todos sus números.
+    const delC2 = (await c2().get()).body.data.items[0].contactos;
+    expect(delC2.map((c: { nombre: string; cargo: string }) => `${c.cargo}:${c.nombre}`)).toEqual([
+      'guardia:Juan Pérez',
+      'supervisor:Sofía Sup',
+      'admin:Admin A',
+    ]);
+    expect(delC2[2].telefonos).toHaveLength(2);
+    // El supervisor sin teléfono personal solo tiene el de la empresa.
+    expect(delC2[1].telefonos).toEqual([{ numero: '5505000000', etiqueta: 'empresa' }]);
   });
 });

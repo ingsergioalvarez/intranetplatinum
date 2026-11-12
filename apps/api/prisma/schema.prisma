@@ -283,6 +283,7 @@ model Sitio {
   coberturas     Cobertura[]
   solicitudesCobertura SolicitudCobertura[]
   emergencias    Emergencia[]
+  episodiosSolo  SitioSoloEpisodio[]
   informes       InformeAsistencia[]
   cambiosTurno   CambioTurno[]
   horasExtra     HoraExtra[]
@@ -630,6 +631,8 @@ enum TipoAviso {
   horas_extra
   cobertura
   emergencia
+  // Monitoreo del C2 (A-61): un sitio se quedó sin guardia o ya tiene uno.
+  c2_sitio
 }
 
 /// Aviso dentro de la app (campanita) para un usuario.
@@ -1420,4 +1423,21 @@ model AceptacionAvisoPrivacidad {
 
   @@unique([usuarioId, version])
   @@map("aceptaciones_aviso_privacidad")
+}
+
+/// Episodios en que un sitio se quedó sin guardia (A-61): empieza a la hora del turno que nadie cubrió y termina cuando
+/// llega alguien o cuando el turno acaba sin cubrirse. Lo abre y cierra la vigilancia; alimenta el historial del C2.
+model SitioSoloEpisodio {
+  id        Int       @id @default(autoincrement())
+  sitioId   Int       @map("sitio_id")
+  inicio    DateTime
+  fin       DateTime?
+  /// true = terminó porque llegó un guardia; false = el turno acabó sin que nadie llegara; null = sigue abierto.
+  cubierto  Boolean?
+  createdAt DateTime  @default(now()) @map("created_at")
+  sitio     Sitio     @relation(fields: [sitioId], references: [id], onDelete: Cascade)
+
+  @@index([sitioId, inicio])
+  @@index([fin])
+  @@map("sitio_solo_episodios")
 }

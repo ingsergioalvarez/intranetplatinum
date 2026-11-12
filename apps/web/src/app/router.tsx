@@ -37,6 +37,7 @@ import { InformeVerPage } from '../modules/informes/InformeVerPage';
 import { ReportesEmitidosPage } from '../modules/informes/ReportesEmitidosPage';
 import { VerificarInformePage } from '../modules/informes/VerificarInformePage';
 import { MisMarcasPage } from '../modules/asistencia/MisMarcasPage';
+import { C2Page } from '../modules/c2/C2Page';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -231,6 +232,15 @@ export const router = createBrowserRouter([
       },
       // El servidor decide si puede verlo (todos / sus sitios).
       { path: 'reportes/:id', element: <ReporteDetallePage /> },
+      // Monitoreo del C2 (A-61).
+      {
+        path: 'c2',
+        element: (
+          <ProtectedRoute permiso={PERMISOS.C2_VER}>
+            <C2Page />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'privacidad',
         element: (

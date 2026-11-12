@@ -16,7 +16,7 @@ export interface Tip {
   roles?: readonly Rol[];
 }
 
-const { GUARDIA, SUPERVISOR, ADMIN, CLIENTE } = ROLES;
+const { GUARDIA, SUPERVISOR, ADMIN, CLIENTE, C2 } = ROLES;
 
 export const TIPS: readonly Tip[] = [
   // ---------- Para todos ----------
@@ -192,6 +192,35 @@ export const TIPS: readonly Tip[] = [
     texto:
       'Cuando tu reporte pasa a revisión o se resuelve te llega un aviso, y en Reportar ves la respuesta. Si el problema sigue, haz un reporte nuevo.',
     roles: [CLIENTE],
+  },
+  // ---------- Operador C2 ----------
+  {
+    id: 'c2-sonido',
+    titulo: 'Activa el sonido de tu pantalla',
+    texto:
+      'Al entrar a tu pantalla toca "Activar sonido". Sin eso el navegador no deja sonar y podrías no enterarte de un sitio solo o de un SOS. Con "Silenciar" apagas lo que hay ahora; si aparece algo nuevo, vuelve a sonar.',
+    roles: [C2],
+  },
+  {
+    id: 'c2-estados',
+    titulo: 'Qué significa cada estado de un sitio',
+    texto:
+      '"Solo" quiere decir que pasaron 15 minutos de la hora del turno y nadie ha checado. "Parcial": debían estar dos o más y falta alguno. "Por llegar" todavía no es problema, y "Sin turno" tampoco: a esa hora no debe haber nadie.',
+    roles: [C2],
+  },
+  {
+    id: 'c2-sos',
+    titulo: 'Si hay un SOS, sube arriba de todo',
+    texto:
+      'La emergencia aparece arriba, en rojo, con quién la lanzó, el sitio y los teléfonos para llamar. Toca "Estamos atendiendo" para avisar que la atiendes. Se queda en rojo hasta que se cierra, aunque ya la estén atendiendo.',
+    roles: [C2],
+  },
+  {
+    id: 'c2-historial',
+    titulo: 'Mira cuánto estuvo solo cada sitio',
+    texto:
+      'En la pestaña Historial ves, por día, cuánto tiempo estuvo sin guardia cada sitio. Lo registra el sistema solo; tú no capturas nada.',
+    roles: [C2],
   },
 ];
 

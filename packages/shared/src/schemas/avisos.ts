@@ -63,6 +63,8 @@ export const TIPOS_AVISO = [
   'horas_extra',
   'cobertura',
   'emergencia',
+  // Monitoreo del C2 (A-61): un sitio se quedó sin guardia o ya tiene uno.
+  'c2_sitio',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 
@@ -113,6 +115,7 @@ export const TITULO_AVISO: Record<TipoAviso, string> = {
   horas_extra: 'Horas extra',
   cobertura: 'Turno sin cubrir',
   emergencia: 'Emergencia',
+  c2_sitio: 'Sitio del C2',
 };
 
 // ---------- Notificaciones push (A-20) ----------

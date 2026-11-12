@@ -20,7 +20,9 @@ export interface NuevaEmergencia {
   bateria?: number;
 }
 
-export type EmergenciaRow = Omit<Emergencia, 'createdAt' | 'acusadaEn' | 'cerradaEn' | 'supervisor' | 'paraMi'> & {
+export type EmergenciaRow = Omit<Emergencia, 'createdAt' | 'acusadaEn' | 'cerradaEn' | 'supervisor' | 'paraMi' | 'contactos'> & {
+  /** Supervisor del sitio donde ocurrió (para mostrar su teléfono). */
+  sitioSupervisorId: number | null;
   /** A quiénes se avisó (A-65). */
   destinatarios: number[];
   /** La lanzó el super admin. */
@@ -29,6 +31,15 @@ export type EmergenciaRow = Omit<Emergencia, 'createdAt' | 'acusadaEn' | 'cerrad
   acusadaEn: Date | null;
   cerradaEn: Date | null;
 };
+
+/** Datos para llamar a una persona. */
+export interface PersonaContacto {
+  id: number;
+  nombre: string;
+  rol: string;
+  telefono: string | null;
+  telefonoPersonal: string | null;
+}
 
 export interface SitioDeGuardia {
   id: number;
@@ -66,6 +77,10 @@ export abstract class EmergenciasRepository {
   abstract nombreDe(usuarioId: number): Promise<string | null>;
   /** Nombre y teléfono al que se le llama (personal, o el de contacto de la empresa). */
   abstract contactoDe(usuarioId: number): Promise<ContactoTelefono | null>;
+  /** Cuentas activas del C2: reciben toda emergencia (A-61). */
+  abstract usuariosC2(): Promise<number[]>;
+  /** Nombre, rol y los dos teléfonos de cada persona. */
+  abstract personasDe(ids: number[]): Promise<PersonaContacto[]>;
 }
 
 const select = {
@@ -88,7 +103,7 @@ const select = {
   usuario: {
     select: { id: true, nombre: true, telefono: true, telefonoPersonal: true, esSuperAdmin: true, rol: { select: { clave: true } } },
   },
-  sitio: { select: { id: true, nombre: true } },
+  sitio: { select: { id: true, nombre: true, supervisorId: true } },
 } as const;
 
 type Fila = {
@@ -116,11 +131,13 @@ type Fila = {
     esSuperAdmin: boolean;
     rol: { clave: string };
   };
-  sitio: { id: number; nombre: string } | null;
+  sitio: { id: number; nombre: string; supervisorId: number | null } | null;
 };
 
-const aRow = ({ usuario, lat, lng, destinatarios, ...r }: Fila): EmergenciaRow => ({
+const aRow = ({ usuario, lat, lng, destinatarios, sitio, ...r }: Fila): EmergenciaRow => ({
   ...r,
+  sitio: sitio && { id: sitio.id, nombre: sitio.nombre },
+  sitioSupervisorId: sitio?.supervisorId ?? null,
   destinatarios: Array.isArray(destinatarios) ? (destinatarios as number[]) : [],
   lanzadaPorSuper: usuario.esSuperAdmin,
   estado: r.estado as EstadoEmergencia,
@@ -248,6 +265,19 @@ export class PrismaEmergenciasRepository extends EmergenciasRepository {
 
   async nombreDe(usuarioId: number) {
     return (await getPrisma().usuario.findUnique({ where: { id: usuarioId }, select: { nombre: true } }))?.nombre ?? null;
+  }
+
+  usuariosC2() {
+    return usuariosDeRol(ROLES.C2);
+  }
+
+  async personasDe(ids: number[]) {
+    if (ids.length === 0) return [];
+    const rows = await getPrisma().usuario.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, nombre: true, telefono: true, telefonoPersonal: true, rol: { select: { clave: true } } },
+    });
+    return rows.map((u) => ({ id: u.id, nombre: u.nombre, rol: u.rol.clave, telefono: u.telefono, telefonoPersonal: u.telefonoPersonal }));
   }
 
   async contactoDe(usuarioId: number) {

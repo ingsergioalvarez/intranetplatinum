@@ -7,6 +7,7 @@ import { TIPO_EMERGENCIA_LABEL, type Emergencia } from '@platinum/shared';
 import { Button, toast } from '../../components/ui';
 import { mensajeDeError } from '../../core/api';
 import { formatFechaHora } from '../../core/format/fechas';
+import { Llamadas } from './Llamadas';
 import { emergenciasService, enlaceMapa } from './emergencias.service';
 import { detenerSirena, iniciarSirena } from './sirena';
 
@@ -94,8 +95,9 @@ function Tarjeta({
         <Button className="h-14 w-full text-lg" loading={acusar.isPending} onClick={() => acusar.mutate()}>
           Voy en camino
         </Button>
+        <Llamadas contactos={e.contactos} />
         <div className="grid grid-cols-2 gap-2">
-          {e.usuario.telefono ? (
+          {e.contactos?.length ? null : e.usuario.telefono ? (
             <a
               href={`tel:${e.usuario.telefono}`}
               className="flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-100 text-sm font-medium text-slate-800"

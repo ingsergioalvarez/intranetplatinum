@@ -3,6 +3,7 @@ import {
   ROLES,
   SEGUNDOS_ESCALAR_EMERGENCIA,
   TIPO_EMERGENCIA_LABEL,
+  type ContactoEmergencia,
   type ContactoTelefono,
   type Emergencia,
   type EmergenciaCerrarInput,
@@ -74,6 +75,8 @@ export class EmergenciasService extends BaseService {
     ids.delete(e.usuario.id);
     // Sin nadie asignado, que no se pierda: le llega al super admin.
     if (ids.size === 0) for (const a of await this.repo.superAdmins()) if (a !== e.usuario.id) ids.add(a);
+    // El C2 recibe toda emergencia, en paralelo con la cadena (A-61).
+    for (const c of await this.repo.usuariosC2()) ids.add(c);
     return [...ids];
   }
 
@@ -161,31 +164,77 @@ export class EmergenciasService extends BaseService {
     return e;
   }
 
+  /**
+   * A quién llamar por cada emergencia, con todos sus números (A-61): quien la lanzó y el supervisor del sitio; el C2 ve
+   * además a los admin a los que se les avisó. Nunca incluye a quien consulta ni a cuentas del C2 o de clientes.
+   */
+  private async contactosDe(filas: EmergenciaRow[], user: AuthUser): Promise<Map<number, ContactoEmergencia[]>> {
+    const esC2 = user.rol === ROLES.C2;
+    const idsDe = (f: EmergenciaRow) =>
+      [f.usuario.id, f.sitioSupervisorId, ...(esC2 ? f.destinatarios : [])].filter((id): id is number => id != null && id !== user.id);
+    const personas = new Map((await this.repo.personasDe([...new Set(filas.flatMap(idsDe))])).map((p) => [p.id, p]));
+    const cargos: Record<string, ContactoEmergencia['cargo']> = {
+      [ROLES.GUARDIA]: 'guardia',
+      [ROLES.SUPERVISOR]: 'supervisor',
+      [ROLES.ADMIN]: 'admin',
+    };
+    const orden = { guardia: 0, supervisor: 1, admin: 2 };
+    return new Map(
+      filas.map((f) => {
+        const lista: ContactoEmergencia[] = [];
+        for (const id of new Set(idsDe(f))) {
+          const p = personas.get(id);
+          const cargo = p && cargos[p.rol];
+          if (!p || !cargo) continue;
+          const telefonos: ContactoEmergencia['telefonos'] = [];
+          if (p.telefonoPersonal) telefonos.push({ numero: p.telefonoPersonal, etiqueta: 'personal' });
+          if (p.telefono && p.telefono !== p.telefonoPersonal) telefonos.push({ numero: p.telefono, etiqueta: 'empresa' });
+          if (telefonos.length) lista.push({ nombre: p.nombre, cargo, telefonos });
+        }
+        return [f.id, lista.sort((a, b) => orden[a.cargo] - orden[b.cargo])] as const;
+      }),
+    );
+  }
+
   /** Admin y supervisor: activas o todas, lo más nuevo arriba. */
   async listar(soloActivas: boolean, user: AuthUser): Promise<EmergenciasLista> {
     const filas = (await this.repo.listar(soloActivas, 100)).filter((f) => this.visibleParaMi(f, user));
+    const contactos = await this.contactosDe(filas, user);
     return {
-      items: filas.map((f) => ({ ...aEmergencia(f), paraMi: f.destinatarios.includes(user.id) })),
+      items: filas.map((f) => ({ ...aEmergencia(f), paraMi: f.destinatarios.includes(user.id), contactos: contactos.get(f.id) ?? [] })),
       activas: filas.filter((f) => f.estado === 'activa').length,
     };
   }
 
-  /** "Voy en camino": queda registrado quién la recibió y se le avisa a quien la lanzó. */
+  /** "Voy en camino" (el C2: "Estamos atendiendo"): queda registrado quién la recibió y se avisa a quien la lanzó y a los demás que la recibieron. */
   async acusar(id: number, user: AuthUser, ctx: AccionCtx): Promise<Emergencia> {
     const e = await this.repo.findById(id);
     if (!e || !this.visibleParaMi(e, user)) throw HttpError.notFound('Emergencia no encontrada');
     if (e.estado !== 'activa') throw HttpError.conflict('Esta emergencia ya se cerró');
-    if (e.acusadaEn) return aEmergencia(e);
-    const por = (await this.repo.nombreDe(user.id)) ?? 'Alguien';
-    await this.repo.acusar(id, user.id, por, this.ahora());
-    await this.atencion.atender({ tipo: 'emergencia', id }, { porId: user.id, resultado: 'En camino' });
+    const nombre = (await this.repo.nombreDe(user.id)) ?? 'Alguien';
+    // El C2 se identifica como tal: "Ana (C2)".
+    const por = user.rol === ROLES.C2 ? `${nombre} (C2)` : nombre;
+    if (e.acusadaPor === por) return aEmergencia(e);
+    // La primera respuesta es la que queda como "quién la recibió"; las siguientes también avisan (A-61).
+    if (!e.acusadaEn) {
+      await this.repo.acusar(id, user.id, por, this.ahora());
+      await this.atencion.atender({ tipo: 'emergencia', id }, { porId: user.id, resultado: user.rol === ROLES.C2 ? 'Atendiendo' : 'En camino' });
+    }
     await this.audit.registrarAccion(ctx, 'emergencias.acusar', 'emergencias', id, { por });
     await this.avisar([e.usuario.id], {
       tipo: 'emergencia',
       titulo: 'Te están ayudando',
-      mensaje: `${por} recibió tu alerta y va en camino`,
+      mensaje: user.rol === ROLES.C2 ? `${por} recibió tu alerta y la está atendiendo` : `${por} recibió tu alerta y va en camino`,
       ruta: null,
       urgente: true,
+    });
+    // Quienes también la recibieron (supervisor, admin, C2) se enteran de quién la atiende; la fila sigue en rojo hasta cerrarse.
+    const otros = e.destinatarios.filter((d) => d !== user.id && d !== e.usuario.id);
+    await this.avisar(otros, {
+      tipo: 'emergencia',
+      titulo: 'La están atendiendo',
+      mensaje: `${por} atiende la emergencia de ${e.usuario.nombre}${e.sitio ? ` en ${e.sitio.nombre}` : ''}`,
+      ruta: RUTA,
     });
     return aEmergencia((await this.repo.findById(id))!);
   }

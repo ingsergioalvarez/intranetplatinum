@@ -99,6 +99,7 @@ export const AVISO_PRIVACIDAD: AvisoPrivacidadTexto = {
       titulo: '6. Quién puede ver tus datos',
       parrafos: [
         'Dentro de la empresa: tu supervisor, los administradores y el personal que autorice el Responsable. Cada persona ve solo lo que su cargo requiere. Tu rostro, tus fotografías y tu ubicación no se publican ni se muestran a otros guardias. Los clientes de seguridad, solo en los sitios donde estás asignado, ven tu nombre y correo, tu foto de referencia, tu horario, la hora a la que checas (con tus retardos y faltas confirmadas) y la foto y la ubicación de cada checada. No ven tu teléfono ni el resultado del reconocimiento facial.',
+        'El centro de monitoreo (C2) vigila que cada sitio tenga guardia y atiende los avisos de emergencia. Para eso ve tu nombre, tu foto de referencia, tu horario y la hora a la que checas en los sitios; y, si pides ayuda con el botón SOS, tu ubicación y tus teléfonos (el de la empresa y el personal). No ve el resultado del reconocimiento facial.',
         'Las fotografías se muestran mediante enlaces temporales firmados, no públicos.',
       ],
     },
@@ -106,7 +107,7 @@ export const AVISO_PRIVACIDAD: AvisoPrivacidadTexto = {
       titulo: '7. Transferencias y encargados',
       parrafos: [
         'El Encargado (Comunicalo de México, S.A. de C.V.) aloja y opera el sistema. Las fotografías y la base de datos se guardan en un servidor del Encargado, con acceso restringido.',
-        '[Por definir con el abogado: si se comparten datos con clientes de seguridad, el centro de monitoreo (C2), otros proveedores o autoridades.] Fuera de lo anterior, no transferimos tus datos personales sin tu consentimiento, salvo los casos que la ley permita.',
+        '[Por definir con el abogado: si el centro de monitoreo (C2) pertenece a una empresa distinta del Responsable y cómo se documenta esa transferencia; y si se comparten datos con clientes de seguridad, otros proveedores o autoridades.] Fuera de lo anterior, no transferimos tus datos personales sin tu consentimiento, salvo los casos que la ley permita.',
       ],
     },
     {
