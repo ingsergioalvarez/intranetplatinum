@@ -156,7 +156,8 @@ export function ClienteDetallePage() {
               {deBaja ? 'Reactivar' : 'Dar de baja'}
             </Button>
           )}
-          {yo?.rol === ROLES.ADMIN && (
+          {/* Eliminar definitivamente: solo el super admin (A-86); el admin normal da de baja. */}
+          {!!yo?.esSuperAdmin && (
             <Button
               variant="ghost"
               className="text-red-700 hover:bg-red-50"

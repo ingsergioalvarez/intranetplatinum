@@ -1,12 +1,14 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Request, type RequestHandler, type Response } from 'express';
 import { ROLES, idParamSchema, type IdParam } from '@platinum/shared';
 import {
   AuditLogger,
   BaseController,
+  HttpError,
   LocalStorageService,
   PrismaAuditLogger,
   StorageService,
   authenticate,
+  esSuperAdmin,
   requireRoles,
   validate,
   type AppModule,
@@ -51,7 +53,18 @@ interface AdminModuleDeps {
   audit?: AuditLogger;
 }
 
-/** Acciones exclusivas del rol admin (no del supervisor): eliminar usuarios, sitios y clientes definitivamente. */
+/** Solo el super admin pasa: borrar de forma definitiva no se delega por defecto (A-86). */
+const soloSuperAdmin: RequestHandler = (req, _res, next) => {
+  if (!esSuperAdmin(req.user!)) {
+    return next(HttpError.forbidden('Solo el super administrador puede eliminar definitivamente. Puedes dar de baja.'));
+  }
+  next();
+};
+
+/**
+ * Eliminar usuarios, sitios y clientes definitivamente: solo el super admin (A-86). Un admin normal da de baja (se puede
+ * revertir). Más adelante, con la pantalla de Roles, se podrá conceder este permiso a alguien más.
+ */
 export function createAdminModule({
   repo = new PrismaAdminRepository(),
   storage = new LocalStorageService(),
@@ -61,7 +74,7 @@ export function createAdminModule({
   const id = validate({ params: idParamSchema });
 
   const router = Router();
-  router.use(authenticate, requireRoles(ROLES.ADMIN));
+  router.use(authenticate, requireRoles(ROLES.ADMIN), soloSuperAdmin);
   router.get('/usuarios/:id/historial', id, c.historial);
   router.delete('/usuarios/:id', id, c.eliminarUsuario);
   // Sitios y clientes: borrado definitivo con su historial (DA-50).

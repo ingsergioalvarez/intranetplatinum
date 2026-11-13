@@ -197,8 +197,9 @@ describe('admin: eliminar sitios y clientes definitivamente (DA-50)', () => {
   });
 });
 
-describe('admin: eliminar definitivamente solo lo de su cartera (A-65)', () => {
-  // Admin A = 10, admin B = 11 (no son super admin). El guardia 20 es de A; el cliente 3 y su sitio 7 también.
+describe('admin: eliminar definitivamente es del super admin (A-86)', () => {
+  // Admin A = 10 y admin B = 11 no son super admin. El guardia 20 es de A; el cliente 3 y su sitio 7 también.
+  // (El servicio sigue limitando por cartera lo que borre quien tenga este permiso, por si luego se concede, A-88.)
   const normal = (id: number) => `Bearer ${signAccessToken({ id, email: `u${id}@x.mx`, rol: 'admin', permisos: PERMISOS_POR_ROL.admin })}`;
   const del = (u: string, t: string) => request(app).delete(`/api/admin${u}`).set('Authorization', t);
   const get = (u: string, t: string) => request(app).get(`/api/admin${u}`).set('Authorization', t);
@@ -212,23 +213,33 @@ describe('admin: eliminar definitivamente solo lo de su cartera (A-65)', () => {
     repo.clientes.set(3, { id: 3, nombre: 'CMC NETWORK', propietarioId: 10 } as never);
   });
 
-  it('un admin elimina lo suyo, no lo de otro admin', async () => {
-    expect((await get('/usuarios/20/historial', normal(11))).status).toBe(404);
-    expect((await del('/usuarios/20', normal(11))).status).toBe(404);
-    expect((await del('/sitios/7', normal(11))).status).toBe(404);
-    expect((await del('/clientes/3', normal(11))).status).toBe(404);
+  it('un admin normal no elimina nada, ni de su propia cartera, y lo que ve del historial tampoco: 403 y no se borra nada', async () => {
+    for (const admin of [normal(10), normal(11)]) {
+      for (const ruta of ['/usuarios/20', '/sitios/7', '/clientes/3']) {
+        const r = await del(ruta, admin);
+        expect(r.status, `DELETE ${ruta}`).toBe(403);
+        expect(r.body.error.message).toContain('super administrador');
+        expect((await get(`${ruta}/historial`, admin)).status, `GET ${ruta}/historial`).toBe(403);
+      }
+    }
     expect(repo.usuarios.has(20)).toBe(true);
-    expect((await del('/usuarios/20', normal(10))).status).toBe(204);
-    expect((await del('/sitios/7', normal(10))).status).toBe(204);
-    expect((await del('/clientes/3', normal(10))).status).toBe(204);
+    expect(repo.sitios.has(7)).toBe(true);
+    expect(repo.clientes.has(3)).toBe(true);
+    expect(audit.acciones()).toEqual([]);
   });
 
-  it('un admin normal no toca a otro admin ni al super admin; el super admin sí a todo menos a sí mismo', async () => {
-    expect((await del('/usuarios/11', normal(10))).status).toBe(404);
-    expect((await del('/usuarios/1', normal(10))).status).toBe(404);
+  it('el super admin elimina usuarios, sitios y clientes de cualquier cartera, menos a sí mismo', async () => {
     const superToken = token(1, 'admin', true);
     expect((await del('/usuarios/1', superToken)).status).toBe(400);
-    expect((await del('/usuarios/11', superToken)).status).toBe(204);
     expect((await del('/usuarios/20', superToken)).status).toBe(204);
+    expect((await del('/usuarios/11', superToken)).status).toBe(204);
+    expect((await del('/sitios/7', superToken)).status).toBe(204);
+    expect((await del('/clientes/3', superToken)).status).toBe(204);
+  });
+
+  it('el supervisor, el guardia y el cliente tampoco (siguen sin poder)', async () => {
+    for (const rol of ['supervisor', 'guardia', 'cliente'] as const) {
+      expect((await del('/usuarios/20', token(2, rol, false))).status, rol).toBe(403);
+    }
   });
 });

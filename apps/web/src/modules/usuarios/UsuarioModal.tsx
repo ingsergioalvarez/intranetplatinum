@@ -57,8 +57,8 @@ export function UsuarioModal({
     hasPermission(yo, esNuevo ? PERMISOS.USUARIOS_CREAR : PERMISOS.USUARIOS_EDITAR) && !deBaja;
   const puedeBaja = hasPermission(yo, PERMISOS.USUARIOS_BAJA) && !esYo && !esNuevo;
   const puedeReset = hasPermission(yo, PERMISOS.USUARIOS_EDITAR) && !esYo && !esNuevo && !deBaja;
-  // Eliminar definitivamente: solo el rol admin (no el supervisor), para limpiar cuentas de prueba.
-  const puedeEliminar = yo?.rol === ROLES.ADMIN && !esYo && !esNuevo;
+  // Eliminar definitivamente: solo el super admin (A-86); el admin normal da de baja.
+  const puedeEliminar = !!yo?.esSuperAdmin && !esYo && !esNuevo;
   const [eliminando, setEliminando] = useState(false);
 
   const inicial: Campos = {
@@ -256,6 +256,12 @@ export function UsuarioModal({
               )}
             </dl>
 
+            {puedeReset && estado?.label === 'Bloqueado' && (
+              <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-200 ring-inset">
+                Esta cuenta está bloqueada por intentos fallidos. {usuario.rol === ROLES.GUARDIA ? 'No se desbloquea sola: ' : ''}al
+                restablecer su contraseña se desbloquea y le das una temporal.
+              </p>
+            )}
             {(puedeReset || puedeBaja || puedeEliminar) && (
               <div className="mt-4 flex flex-col gap-2 md:flex-row">
                 {puedeReset && (

@@ -480,7 +480,7 @@ Toca un cliente para abrirlo. Tiene estas tarjetas:
 - **"Avisos de reportes"**: a quién se avisa cuando un guardia reporta en sus sitios. Tú solo puedes **verlo**; el administrador lo cambia.
 - **"Sitios"**: los inmuebles donde se da el servicio.
 
-Con **"Editar"** cambias los datos. Con **"Dar de baja"** el cliente deja de editarse y sus sitios dejan de aparecerles a los guardias (puedes **"Reactivar"** después). **Eliminar** un cliente lo hace solo el administrador.
+Con **"Editar"** cambias los datos. Con **"Dar de baja"** el cliente deja de editarse y sus sitios dejan de aparecerles a los guardias (puedes **"Reactivar"** después). **Eliminar definitivamente** un cliente lo hace solo el super administrador.
 
 ### Agregar y editar un sitio
 
@@ -581,7 +581,7 @@ Las categorías **no se borran**: se desactivan.
 
 En **Usuarios** ves la lista de personas de tu cartera (y tu propia cuenta), con su correo, rol, estado y último acceso. Puedes buscar por **nombre, correo o teléfono** y filtrar por **rol** y por **activos o de baja**.
 
-**Estados:** **"Activo"**, **"Contraseña temporal"** (aún no la cambia), **"Bloqueado"** y **"De baja"**. Un guardia o supervisor **sin teléfono** lleva la insignia **"Sin teléfono"**.
+**Estados:** **"Activo"**, **"Contraseña temporal"** (aún no la cambia), **"Bloqueado"** y **"De baja"**. Si un **guardia** de tus sitios se bloquea por escribir mal su contraseña, te llega el aviso **"Cuenta bloqueada"** y su cuenta **no se desbloquea sola**: pídele al administrador que **restablezca su contraseña**. Un guardia o supervisor **sin teléfono** lleva la insignia **"Sin teléfono"**.
 
 Al tocar una persona ves sus datos **en solo lectura**. En los guardias tienes el botón **"Rostro"**: ves el estado de su rostro y puedes **"Registrar en persona"** (sección 8).
 

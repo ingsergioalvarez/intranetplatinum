@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Crosshair, MapPinOff, RotateCcw, Trash2 } from 'lucide-react';
-import { RADIO_SITIO_DEFAULT_M, ROLES, sitioSchema, type Sitio } from '@platinum/shared';
+import { RADIO_SITIO_DEFAULT_M, sitioSchema, type Sitio } from '@platinum/shared';
 import { mensajeDeError } from '../../core/api';
 import { useAuthStore } from '../../core/auth/authStore';
 import { useForm } from '../../core/forms/useForm';
@@ -37,8 +37,8 @@ export function SitioModal({
   const deBaja = !!sitio?.deletedAt;
   const [confirmar, setConfirmar] = useState<Accion | null>(null);
   const [ubicando, setUbicando] = useState(false);
-  // Solo el admin puede borrar definitivamente (DA-50).
-  const esAdmin = useAuthStore((s) => s.user?.rol === ROLES.ADMIN);
+  // Solo el super admin puede borrar definitivamente (DA-50, A-86); el admin normal da de baja.
+  const esAdmin = useAuthStore((s) => !!s.user?.esSuperAdmin);
   const [eliminando, setEliminando] = useState(false);
   const form = useForm({
     nombre: sitio?.nombre ?? '',

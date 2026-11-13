@@ -166,6 +166,7 @@ Si el aviso cambia más adelante, te lo mostraremos de nuevo; mientras tanto pue
 |---|---|
 | **Correo o contraseña incorrectos** | Revisa que no haya espacios ni mayúsculas de más. Vuelve a intentar. |
 | **Cuenta bloqueada por intentos fallidos. Intenta de nuevo en N min.** | Escribiste mal la contraseña varias veces. Espera esos minutos. |
+| **Tu cuenta está bloqueada por intentos fallidos. Habla con tu supervisor o con el administrador…** | Es el mensaje de los **guardias**: no se desbloquea con el tiempo. Avisa a tu supervisor o al administrador para que **restablezca tu contraseña** y te dé una temporal. |
 | **PIN incorrecto. Te quedan N intentos.** | Revisa los 4 números. Con 5 errores el PIN se bloquea. |
 | **Tu PIN se bloqueó. Entra con tu contraseña para volver a usarlo.** | Toca **"Entrar con mi contraseña"**. Al entrar, el PIN se libera. |
 | **Este perfil ya no está disponible en este celular. Entra con tu contraseña.** | Alguien quitó tu perfil de ese celular. Entra con correo y contraseña. |

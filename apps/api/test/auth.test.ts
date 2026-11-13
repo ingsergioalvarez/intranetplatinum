@@ -148,9 +148,16 @@ let repo: MemoryAuthRepository;
 let audit: MemoryAuditLogger;
 let app: ReturnType<typeof createApp>;
 
+/** Avisos que salen cuando se bloquea la cuenta de un guardia (A-86). */
+let avisos: { ids: number[]; titulo?: string; mensaje: string; ruta?: string | null }[];
+const avisar = async (ids: number[], a: { titulo?: string; mensaje: string; ruta?: string | null }) => void avisos.push({ ids, ...a });
+/** Supervisor 7 y admin 8 son los responsables de los guardias de estas pruebas. */
+const responsables = async () => [7, 8];
+
 beforeEach(() => {
   repo = new MemoryAuthRepository();
   audit = new MemoryAuditLogger();
+  avisos = [];
   repo.usuarios.push(usuario());
   app = createApp([
     healthModule,
@@ -159,6 +166,8 @@ beforeEach(() => {
       audit,
       policy: { maxIntentos: 5, bloqueoMin: 15, refreshDias: 7 },
       loginRateLimit: 100,
+      avisar,
+      responsables,
     }),
   ]);
 });
@@ -218,6 +227,60 @@ describe('POST /api/auth/login', () => {
     expect(correcta.status).toBe(423);
   });
 
+  describe('bloqueo permanente de guardias (A-86)', () => {
+    const bloquear = async (email?: string) => {
+      for (let i = 0; i < 4; i++) await login(email, 'mala');
+      return login(email, 'mala');
+    };
+
+    it('el guardia se queda bloqueado hasta que el administrador restablezca su contraseña: no se desbloquea solo', async () => {
+      const quinto = await bloquear();
+      expect(quinto.status).toBe(423);
+      expect(quinto.body.error.code).toBe('ACCOUNT_LOCKED');
+      expect(quinto.body.error.message).toContain('Habla con tu supervisor o con el administrador');
+      expect(quinto.body.error.message).not.toMatch(/\d+ min/);
+      expect(quinto.body.error.details).toMatchObject({ permanente: true });
+      expect(repo.usuarios[0].bloqueadoHasta!.getUTCFullYear()).toBeGreaterThanOrEqual(2999);
+      expect(audit.eventos.find((e) => e.accion === 'auth.cuenta_bloqueada')).toMatchObject({ datos: { intentos: 5, permanente: true } });
+      // Ni con la contraseña correcta, ni pasado el tiempo que bloquea a los demás roles (15 min).
+      const despues = await login();
+      expect(despues.status).toBe(423);
+      expect(despues.body.error.message).toContain('Habla con tu supervisor o con el administrador');
+    });
+
+    it('le avisa una sola vez al supervisor y al admin, con el nombre del guardia', async () => {
+      await bloquear();
+      await login(); // los intentos siguientes no repiten el aviso
+      await login(undefined, 'mala');
+      expect(avisos).toHaveLength(1);
+      expect(avisos[0].ids).toEqual([7, 8]);
+      expect(avisos[0]).toMatchObject({ titulo: 'Cuenta bloqueada', ruta: '/usuarios' });
+      expect(avisos[0].mensaje).toContain('Ana');
+      expect(avisos[0].mensaje).toContain('restablecer');
+    });
+
+    it('al restablecer su contraseña el administrador (que limpia el bloqueo) vuelve a entrar', async () => {
+      await bloquear();
+      Object.assign(repo.usuarios[0], { bloqueadoHasta: null, intentosFallidos: 0 });
+      expect((await login()).status).toBe(200);
+    });
+
+    it('supervisor, admin y cliente siguen con el bloqueo de 15 minutos y sin aviso', async () => {
+      for (const rol of [ROLES.SUPERVISOR, ROLES.ADMIN, ROLES.CLIENTE]) {
+        const email = `${rol}@platinum.local`;
+        repo.usuarios.push(usuario({ id: 50 + repo.usuarios.length, email, rol, permisos: PERMISOS_POR_ROL[rol] }));
+        const quinto = await bloquear(email);
+        expect(quinto.status, rol).toBe(423);
+        expect(quinto.body.error.message, rol).toMatch(/Intenta de nuevo en \d+ min/);
+        const u = repo.usuarios.find((x) => x.email === email)!;
+        const minutos = (u.bloqueadoHasta!.getTime() - Date.now()) / 60_000;
+        expect(minutos, rol).toBeLessThanOrEqual(15);
+        expect(minutos, rol).toBeGreaterThan(14);
+      }
+      expect(avisos).toEqual([]);
+    });
+  });
+
   it('un login correcto reinicia los intentos fallidos', async () => {
     await login(undefined, 'mala');
     await login(undefined, 'mala');
@@ -244,7 +307,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('limita los intentos por IP (429)', async () => {
-    app = createApp([createAuthModule({ repo, audit, loginRateLimit: 2 })]);
+    app = createApp([createAuthModule({ repo, audit, loginRateLimit: 2, avisar, responsables })]);
     await login(undefined, 'mala');
     await login(undefined, 'mala');
     const res = await login();

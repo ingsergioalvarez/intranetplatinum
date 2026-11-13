@@ -21,9 +21,11 @@ import {
   validate,
   type AppModule,
 } from '../../core';
+import { avisarConPrisma, type AvisarUsuarios } from '../avisos/avisar';
 import { AuthController } from './auth.controller';
 import { AuthRepository, PrismaAuthRepository } from './auth.repository';
 import { AuthService, type AuthPolicy } from './auth.service';
+import { responsablesDeGuardiaConPrisma, type ResponsablesDeGuardia } from './responsables';
 
 interface AuthModuleDeps {
   repo?: AuthRepository;
@@ -31,6 +33,9 @@ interface AuthModuleDeps {
   policy?: AuthPolicy;
   /** Intentos de login por IP cada 15 min (además del bloqueo por cuenta). */
   loginRateLimit?: number;
+  /** Avisos cuando se bloquea la cuenta de un guardia (A-86). */
+  avisar?: AvisarUsuarios;
+  responsables?: ResponsablesDeGuardia;
 }
 
 /** Fábrica del módulo para poder inyectar repositorios en memoria en las pruebas. */
@@ -39,8 +44,10 @@ export function createAuthModule({
   audit = new PrismaAuditLogger(),
   policy,
   loginRateLimit = env.LOGIN_RATE_LIMIT,
+  avisar = avisarConPrisma,
+  responsables = responsablesDeGuardiaConPrisma,
 }: AuthModuleDeps = {}): AppModule {
-  const controller = new AuthController(new AuthService(repo, audit, policy));
+  const controller = new AuthController(new AuthService(repo, audit, policy, avisar, responsables));
 
   const router = Router();
   router.post(

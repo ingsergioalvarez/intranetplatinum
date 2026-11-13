@@ -5,6 +5,14 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-13 #54 — Seguridad: bloqueo de guardias y eliminar solo el super admin (A-86)
+
+#### Cambiado
+
+- **Bloqueo permanente de guardias (A-86)**: al 5.º intento fallido de contraseña, la cuenta de un **guardia** se queda bloqueada **hasta que el administrador restablezca su contraseña** (antes se desbloqueaba sola a los 15 minutos). El guardia ve *"Tu cuenta está bloqueada… Habla con tu supervisor o con el administrador"* (también al entrar con PIN). Al supervisor de su sitio y a su admin les llega el aviso **"Cuenta bloqueada"** (una sola vez), y la auditoría marca el bloqueo como permanente. El bloqueo se guarda con una fecha lejana (2999) en la misma columna, así que no hay migración; restablecer la contraseña lo limpia, como siempre. En **Usuarios**, la ventana de una cuenta bloqueada explica que restablecer la contraseña la desbloquea. **Supervisor, admin, C2 y cliente** siguen con el bloqueo de 15 minutos y sin aviso; el PIN del celular, con su propio bloqueo.
+- **Eliminar definitivamente, solo el super admin (A-86)**: las rutas de `/admin` (eliminar usuarios, sitios y clientes y ver lo que se perdería) ahora piden ser super admin: un administrador normal recibe 403 aunque sea de su propia cartera, y los botones **Eliminar** de Usuarios, ficha del cliente y ventana del sitio solo salen para el super admin (el admin normal conserva **Dar de baja**). La limitación por cartera del servicio queda lista para cuando el permiso se conceda a alguien más (A-88).
+- Manuales de administrador, supervisor y parte común actualizados.
+
 ### Sesión 2026-11-13 #53 — Menú por rol, acceso rápido al C2 y ajustes de uso (A-83, A-84, A-85)
 
 #### Cambiado

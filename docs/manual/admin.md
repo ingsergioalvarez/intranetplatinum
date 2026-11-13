@@ -10,7 +10,7 @@ Tienes **todos los permisos**. En el celular, la barra de abajo trae **Inicio, A
 |---|---|
 | **Dar de alta, editar, dar de baja y reactivar usuarios**, y restablecer contraseñas | **Usuarios** |
 | **Quitar los celulares guardados** de una persona | **Usuarios → "Celulares"** |
-| **Eliminar definitivamente** usuarios, clientes y sitios | Usuarios y ficha del cliente |
+| **Eliminar definitivamente** usuarios, clientes y sitios (**solo el super administrador**; tú das de baja) | Usuarios y ficha del cliente |
 | **Eliminar una asignación** de guardia en un sitio | Ficha del cliente → "Cobertura" |
 | **Eliminar el rostro** de un guardia | Usuarios → "Rostro" |
 | **Crear el acceso del cliente** a la app | Ficha del cliente |
@@ -87,6 +87,8 @@ Toca la fila de la persona. Se abre su ventana con los mismos campos del alta y 
 
 Al restablecer, **se cierran todas sus sesiones** y **se desbloquea su cuenta** si estaba bloqueada. Al entrar con la temporal, la app le pide crear una nueva.
 
+**Guardias bloqueados.** Si un guardia escribe mal su contraseña **5 veces**, su cuenta se **bloquea y no se desbloquea sola**: él ve *"Tu cuenta está bloqueada. Habla con tu supervisor o con el administrador"*. A ti y al supervisor de su sitio les llega el aviso **"Cuenta bloqueada"**. En **Usuarios** sale con la etiqueta **"Bloqueado"**; para liberarla, **restablece su contraseña** (los pasos de arriba). Los supervisores, administradores y clientes siguen con el bloqueo de 15 minutos.
+
 - **Bloqueo por intentos:** por omisión, **5 intentos fallidos seguidos** bloquean la cuenta durante **15 minutos**. Se desbloquea sola al pasar ese tiempo, o antes con "Restablecer contraseña". No hay un botón de "Desbloquear" aparte.
 - **No puedes restablecer tu propia contraseña** aquí: usa **"Cambiar contraseña"** en tu menú de usuario (sección 19).
 - No puedes restablecer a alguien que esté **de baja**: primero reactívalo.
@@ -128,6 +130,8 @@ Hay dos formas de quitar algo, y no son lo mismo:
 
 > **IMPORTANTE:** "Eliminar definitivamente" **no se puede deshacer** y borra el historial. Para personal o clientes reales usa siempre **"Dar de baja"**.
 
+> **NOTA:** **Solo el super administrador** puede eliminar definitivamente. Si eres administrador, esa opción no te aparece: usa **"Dar de baja"** (se puede revertir con "Reactivar"). Si algo debe borrarse de verdad, pídeselo al super administrador.
+
 **Cómo se hace** (es igual para usuarios, clientes y sitios):
 
 1. Abre la persona (**Usuarios**), el cliente (ficha del cliente, botón **"Eliminar"** rojo) o el sitio (ventana del sitio, botón **"Eliminar"**).
@@ -143,7 +147,7 @@ Hay dos formas de quitar algo, y no son lo mismo:
 
 **Qué no se borra:** al eliminar un cliente, **los usuarios de su portal no se borran**: quedan **sin cliente** y no ven nada. Dalos de baja si ya no deben entrar.
 
-**Reglas:** no puedes eliminar tu propia cuenta, ni al único administrador activo, ni a nadie de otra cartera.
+**Reglas:** no puedes eliminar tu propia cuenta ni al único administrador activo.
 
 {{captura:A04-eliminar-definitivo|Ventana "Eliminar definitivamente" con la lista de lo que se borra}}
 
@@ -340,6 +344,7 @@ Tu menú de usuario (arriba a la derecha en el celular) trae **"Acceso rápido (
 
 El super administrador es un administrador con más alcance. Ves **todo**, de todas las carteras. Además:
 
+- **Solo tú eliminas definitivamente** usuarios, clientes y sitios; los administradores normales solo dan de baja. Se podrá conceder a alguien más cuando exista la pantalla de Roles y permisos.
 - **Solo tú creas o cambias administradores.** En **Usuarios**, el rol *Administrador* solo aparece para ti.
 - **Nadie más puede modificar tu cuenta.** Un administrador normal ni siquiera te ve en la lista.
 - En **Usuarios** y **Clientes** tienes una columna **"Administrador"** (de quién es cada uno, o **"Sin asignar"** en ámbar) y un filtro por administrador.
@@ -383,7 +388,7 @@ Para que no lo busques en vano, hoy **no existen en la app**:
 | Qué pasa | Qué hacer |
 |---|---|
 | **Alguien olvidó su contraseña** | **Usuarios** → la persona → **"Restablecer contraseña"** → mándale la temporal (sección 5). |
-| **Alguien no puede entrar y dice "Cuenta bloqueada"** | Espera 15 minutos, o usa **"Restablecer contraseña"** para desbloquearla al momento. |
+| **Alguien no puede entrar y dice "Cuenta bloqueada"** | Si es un **guardia**, no se desbloquea solo: usa **"Restablecer contraseña"**. Si es otro rol, espera 15 minutos o restablece su contraseña para desbloquearla al momento. |
 | **"Tu usuario está dado de baja"** | Reactívalo en **Usuarios** (filtro **"De baja"**) si debe volver. |
 | **Perdí la contraseña temporal que generé** | Ya no se puede ver. Usa **"Restablecer contraseña"** y genera otra. |
 | **Alguien perdió su celular** | **Usuarios** → **"Celulares"** → **"Quitar todos"** (sección 7). |

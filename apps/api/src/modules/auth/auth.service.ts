@@ -25,7 +25,16 @@ import {
   type AuthUser,
   type RequestContext,
 } from '../../core';
+import { sinAvisos, type AvisarUsuarios } from '../avisos/avisar';
 import type { AuthRepository, DispositivoRow, UsuarioAuth } from './auth.repository';
+import { sinResponsables, type ResponsablesDeGuardia } from './responsables';
+
+/**
+ * Hasta cuándo dura el bloqueo de un guardia: no se desbloquea solo, lo libera el administrador al restablecer su
+ * contraseña (A-86). Es una fecha lejana para no tocar la columna `bloqueado_hasta`.
+ */
+export const BLOQUEO_PERMANENTE = new Date('2999-12-31T00:00:00.000Z');
+const esBloqueoPermanente = (hasta: Date) => hasta.getUTCFullYear() >= 2999;
 
 /** Sesión emitida: lo que va en el body más el refresh token que va en cookie. */
 export interface IssuedSession extends AuthSession {
@@ -81,6 +90,9 @@ export class AuthService extends BaseService {
       bloqueoMin: env.LOGIN_BLOQUEO_MIN,
       refreshDias: env.JWT_REFRESH_EXPIRES_DAYS,
     },
+    /** Avisa al supervisor y al admin de un guardia cuando su cuenta se bloquea (A-86). */
+    private readonly avisar: AvisarUsuarios = sinAvisos,
+    private readonly responsables: ResponsablesDeGuardia = sinResponsables,
   ) {
     super();
   }
@@ -405,14 +417,24 @@ export class AuthService extends BaseService {
   private async registrarFallo(usuario: UsuarioAuth, ctx: RequestContext): Promise<never> {
     const intentos = usuario.intentosFallidos + 1;
     if (intentos >= this.policy.maxIntentos) {
-      const hasta = new Date(Date.now() + this.policy.bloqueoMin * 60_000);
+      // Un guardia se queda bloqueado hasta que el administrador restablezca su contraseña; los demás roles, por un rato.
+      const permanente = usuario.rol === ROLES.GUARDIA;
+      const hasta = permanente ? BLOQUEO_PERMANENTE : new Date(Date.now() + this.policy.bloqueoMin * 60_000);
       await this.repo.registrarIntentoFallido(usuario.id, 0, hasta);
       await this.audit.registrar({
         ...ctx,
         usuarioId: usuario.id,
         accion: 'auth.cuenta_bloqueada',
-        datos: { intentos, hasta: hasta.toISOString() },
+        datos: { intentos, hasta: hasta.toISOString(), permanente },
       });
+      if (permanente) {
+        await this.avisar(await this.responsables(usuario.id), {
+          tipo: 'cuenta_intento',
+          titulo: 'Cuenta bloqueada',
+          mensaje: `La cuenta de ${usuario.nombre} se bloqueó por intentos fallidos. El administrador debe restablecer su contraseña para que vuelva a entrar`,
+          ruta: '/usuarios',
+        });
+      }
       throw this.cuentaBloqueada(hasta);
     }
     await this.repo.registrarIntentoFallido(usuario.id, intentos, null);
@@ -426,6 +448,14 @@ export class AuthService extends BaseService {
   }
 
   private cuentaBloqueada(hasta: Date) {
+    if (esBloqueoPermanente(hasta)) {
+      return new HttpError(
+        423,
+        'ACCOUNT_LOCKED',
+        'Tu cuenta está bloqueada por intentos fallidos. Habla con tu supervisor o con el administrador para que restablezca tu contraseña.',
+        { permanente: true },
+      );
+    }
     const minutos = Math.max(1, Math.ceil((hasta.getTime() - Date.now()) / 60_000));
     return new HttpError(
       423,
