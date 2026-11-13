@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleUser, Ellipsis, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleUser, Ellipsis, KeyRound, LockKeyhole, LogOut } from 'lucide-react';
 import { ROL_DESCRIPCIONES } from '@platinum/shared';
 import { hasPermission, hasRole, useAuthStore } from '../../core/auth/authStore';
 import { authService } from '../../core/auth/AuthService';
@@ -15,6 +15,7 @@ import { VentanaComida, VentanaTurno } from '../../modules/asistencia/TurnoGuard
 import { AlertaEmergencia } from '../../modules/emergencias/AlertaEmergencia';
 import { BotonSOS } from '../../modules/emergencias/BotonSOS';
 import { Campanita } from './Campanita';
+import { Escudo } from './Escudo';
 import { AvisoDeOtraCuenta } from './AvisoDeOtraCuenta';
 import { ExigirPush } from './ExigirPush';
 import { FranjaAvisos } from './FranjaAvisos';
@@ -142,10 +143,10 @@ function MenuCuenta() {
   );
 }
 
-function Brand({ className, icono = 'size-6' }: { className?: string; icono?: string }) {
+function Brand({ className, icono = 'size-8' }: { className?: string; icono?: string }) {
   return (
     <div className={cn('flex items-center gap-2 font-semibold tracking-tight', className)}>
-      <ShieldCheck className={cn(icono, 'text-platinum-300')} />
+      <Escudo className={icono} />
       <span>
         Platinum <span className="font-normal text-platinum-300">Intranet</span>
       </span>
@@ -263,7 +264,7 @@ function Sidebar() {
       )}
     >
       <div className={cn('flex shrink-0 items-center', reducida ? 'h-24 flex-col justify-center gap-1' : 'h-16 justify-between pr-3 pl-5')}>
-        {reducida ? <ShieldCheck className="size-6 text-platinum-300" aria-label="Platinum" /> : <Brand />}
+        {reducida ? <Escudo className="size-9" titulo="Platinum" /> : <Brand />}
         <Campanita />
       </div>
       <nav aria-label="Menú principal" className="scroll-fino min-h-0 flex-1 space-y-1 overflow-y-auto px-2 py-2">
@@ -326,7 +327,7 @@ function Topbar() {
   return (
     <header className="pt-safe sticky top-0 z-30 bg-brand-900 text-white md:hidden">
       <div className="flex h-16 items-center justify-between px-4">
-        <Brand className="text-lg" icono="size-7" />
+        <Brand className="text-lg" icono="size-9" />
         {user && (
           <div className="flex items-center gap-1.5">
             <Campanita />

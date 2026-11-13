@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 20 588 740" role="img" aria-label="Platinum Agency">
+  <path d="M354 38 L80 128 V285 H112 V160 L354 84 L596 160 V285 H628 V128 Z" fill="#143251"/>
+  <path d="M80 340 H112 C112 500 210 625 354 690 C498 625 596 500 596 340 H628 C628 530 520 660 354 735 C188 660 80 530 80 340 Z" fill="#143251"/>
+  <g transform="translate(354 420) scale(1.5) translate(-354 -278)">
+    <path d="M283 232 V200 A70 70 0 0 1 423 200 V232 H388 V200 A35 35 0 0 0 318 200 V232 Z" fill="#9aa0a6"/>
+    <path d="M260 246 Q305 226 352 220 Q405 228 443 248 C448 325 405 380 352 405 C298 380 255 325 260 246 Z" fill="none" stroke="#9aa0a6" stroke-width="24" stroke-linejoin="round"/>
+    <path d="M325 290 H372 A22 22 0 0 1 372 334 H347 V355 H325 Z M347 308 H366 A6 6 0 0 1 366 317 H347 Z" fill="#143251" fill-rule="evenodd"/>
+  </g>
+</svg>

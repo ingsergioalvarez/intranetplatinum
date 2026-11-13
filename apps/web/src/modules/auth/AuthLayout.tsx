@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { AlertCircle, ShieldCheck } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Escudo } from '../../components/layout/Escudo';
 import { cn } from '../../components/ui';
 
 /**
@@ -20,9 +21,7 @@ export function AuthLayout({
   return (
     <div className="pt-safe pb-safe flex min-h-dvh flex-col bg-brand-900 md:items-center md:justify-center md:p-6">
       <div className="flex flex-col items-center gap-3 px-6 pb-8 pt-14 text-center text-white md:pt-0">
-        <div className="flex size-16 items-center justify-center rounded-2xl bg-brand-800 ring-1 ring-brand-700">
-          <ShieldCheck className="size-9 text-platinum-300" />
-        </div>
+        <Escudo className="size-20 rounded-2xl" />
         <div>
           <p className="text-2xl font-bold tracking-tight">
             Platinum <span className="font-normal text-platinum-300">Intranet</span>

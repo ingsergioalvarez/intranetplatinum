@@ -5,6 +5,17 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-15 #56 — Logo oficial como icono de la app (A-89)
+
+#### Cambiado
+
+- **Logo oficial de Platinum (A-89)**: el escudo con el candado y la P, redibujado en **vector** a partir del único JPG que existe (183x193, fondo gris claro), con fondo transparente y los colores del original (azul `#143251`, gris `#9aa0a6`); las letras "Platinum AGENCY" del logo completo están convertidas a trazos, así que no dependen de ninguna fuente. Se aplicó en: icono de la app instalada (192, 512 y versión Android "maskable" con margen para el recorte circular), icono de Apple (180), pestaña del navegador (`favicon.svg`), insignia de las notificaciones (96x96, escudo blanco sobre transparente) y, con una pastilla blanca para que se vea con sus colores sobre el azul, en el **login**, el **menú lateral** (expandido y reducido) y la **barra del celular** (componente `components/layout/Escudo.tsx`). Sin etiqueta de "provisional". Archivos: `public/logo.svg` (completo, para los PDF de A-90), `public/escudo.svg`, `favicon.svg`, `icon-*.png`, `apple-touch-icon.png`, `push-badge.png`.
+
+#### Notas
+
+- El celular que ya tiene la app instalada puede tardar en mostrar el icono nuevo; al reinstalarla se ve de inmediato. Los avisos push usan el icono nuevo desde el siguiente envío.
+- A-90 (membrete en los PDF) y A-91 (documentos membretados con editor) quedan registrados en el PLAN.
+
 ### Sesión 2026-11-15 #55 — Pantalla de correo SMTP (A-87)
 
 #### Añadido
