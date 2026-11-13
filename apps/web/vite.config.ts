@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
       manifest: {
         name: 'Platinum Intranet',
         short_name: 'Platinum',
-        description: 'Intranet de Platinum Agency: checador, reportes y asistencia.',
+        description: 'Intranet de Grupo Platinum · Seguridad Privada: checador, reportes y asistencia.',
         lang: 'es-MX',
         start_url: '/',
         scope: '/',

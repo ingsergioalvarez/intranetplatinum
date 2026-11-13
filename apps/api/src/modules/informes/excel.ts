@@ -27,7 +27,7 @@ function preparar(ws: Hoja, i: Informe, titulo: string, columnas: { h: string; w
   const ancho = columnas.length;
   ws.mergeCells(1, 1, 1, ancho);
   const t = ws.getCell(1, 1);
-  t.value = `PLATINUM AGENCY · ${titulo} · ${i.folio}`;
+  t.value = `GRUPO Platinum · ${titulo} · ${i.folio}`;
   t.font = { bold: true, size: 13, color: { argb: 'FFFFFFFF' } };
   t.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
   t.alignment = { vertical: 'middle' };
@@ -95,7 +95,7 @@ const COLS_RESUMEN = [
 /** Excel de trabajo (no oficial) del reporte congelado: horas en número para poder sumarlas. */
 export async function generarExcel(i: Informe, url: string, hash: string): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Platinum Agency';
+  wb.creator = 'Grupo Platinum';
   wb.created = new Date(i.createdAt);
   wb.title = `Reporte de asistencia ${i.folio} (copia de trabajo)`;
   const d = i.datos;

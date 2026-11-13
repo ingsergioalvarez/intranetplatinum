@@ -148,7 +148,7 @@ function Brand({ className, icono = 'size-8' }: { className?: string; icono?: st
     <div className={cn('flex items-center gap-2 font-semibold tracking-tight', className)}>
       <Escudo className={icono} />
       <span>
-        Platinum <span className="font-normal text-platinum-300">Intranet</span>
+        <span className="font-normal text-platinum-300">Grupo</span> Platinum
       </span>
     </div>
   );

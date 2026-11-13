@@ -1,6 +1,6 @@
-# CLAUDE.md — Intranet Platinum Agency
+# CLAUDE.md — Intranet Grupo Platinum
 
-Intranet para Platinum Agency (seguridad física intramuros). Uso principal en **celular** por guardias; también escritorio para supervisores/administración.
+Intranet para Grupo Platinum (seguridad privada). Uso principal en **celular** por guardias; también escritorio para supervisores/administración.
 
 ## Protocolo de sesión (obligatorio)
 

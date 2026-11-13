@@ -80,7 +80,7 @@ export async function generarHorarioPdf(d: DatosHorario): Promise<Buffer> {
     bufferPages: true,
     info: {
       Title: `Horario de guardias ${d.desde} a ${d.hasta}`,
-      Author: 'Platinum Agency',
+      Author: 'Grupo Platinum',
       Subject: d.alcance,
       Creator: 'Intranet Platinum',
     },
@@ -139,8 +139,8 @@ export async function generarHorarioPdf(d: DatosHorario): Promise<Buffer> {
     margenes.bottom = 0;
     doc.rect(0, 0, W, ALTO_CABECERA).fill(C.navy);
     doc.rect(0, ALTO_CABECERA, W, 3).fill(C.plata);
-    doc.font('Helvetica-Bold').fontSize(16).fillColor(C.blanco).text('PLATINUM AGENCY', MARGEN, 15, { width: W / 2, characterSpacing: 1.5 });
-    doc.font('Helvetica').fontSize(6.5).fillColor('#9fb0d6').text('SEGURIDAD FÍSICA INTRAMUROS', MARGEN, 35, { characterSpacing: 2 });
+    doc.font('Helvetica-Bold').fontSize(16).fillColor(C.blanco).text('GRUPO Platinum', MARGEN, 15, { width: W / 2, characterSpacing: 1.5 });
+    doc.font('Helvetica').fontSize(6.5).fillColor('#9fb0d6').text('SEGURIDAD PRIVADA', MARGEN, 35, { characterSpacing: 2 });
     doc.font('Helvetica-Bold').fontSize(10.5).fillColor(C.blanco).text('HORARIO DE GUARDIAS', MARGEN, 50, { width: W - MARGEN * 2, lineBreak: false });
     doc.font('Helvetica').fontSize(8).fillColor('#c9d3ee').text(d.alcance, MARGEN, 65, { width: W / 2, lineBreak: false, ellipsis: true });
     doc.font('Helvetica-Bold').fontSize(9).fillColor(C.blanco).text(`${fechaLarga(d.desde)} – ${fechaLarga(d.hasta)}`, W / 2, 20, {

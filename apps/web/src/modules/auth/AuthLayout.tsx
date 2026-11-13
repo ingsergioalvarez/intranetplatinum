@@ -24,9 +24,9 @@ export function AuthLayout({
         <Escudo className="size-20 rounded-2xl" />
         <div>
           <p className="text-2xl font-bold tracking-tight">
-            Platinum <span className="font-normal text-platinum-300">Intranet</span>
+            <span className="font-normal text-platinum-300">Grupo</span> Platinum
           </p>
-          <p className="mt-1 text-sm text-brand-200">Seguridad intramuros</p>
+          <p className="mt-1 text-sm text-brand-200">Seguridad Privada</p>
         </div>
       </div>
 

@@ -30,7 +30,7 @@ const config = {
   cifrado: 'starttls',
   usuario: 'notificaciones@platinum.mx',
   password: 'S3cretaLarga',
-  remitenteNombre: 'Platinum Agency',
+  remitenteNombre: 'Grupo Platinum',
   remitenteCorreo: 'no-responder@platinum.mx',
   activo: true,
 };

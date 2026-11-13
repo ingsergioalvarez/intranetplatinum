@@ -45,8 +45,8 @@ export function VerificarInformePage() {
     <div className="min-h-dvh bg-slate-100">
       <header className="bg-brand-900 px-4 py-4 text-white">
         <div className="mx-auto max-w-md">
-          <p className="text-lg font-bold tracking-widest">PLATINUM AGENCY</p>
-          <p className="text-[10px] tracking-[0.25em] text-brand-200">SEGURIDAD FÍSICA INTRAMUROS</p>
+          <p className="text-lg font-bold tracking-widest">GRUPO Platinum</p>
+          <p className="text-[10px] tracking-[0.25em] text-brand-200">SEGURIDAD PRIVADA</p>
         </div>
       </header>
       <main className="mx-auto max-w-md space-y-4 px-4 py-6 pb-safe">
@@ -88,7 +88,7 @@ export function VerificarInformePage() {
           </dl>
         )}
         <p className="text-xs text-slate-500">
-          Esta página solo confirma que el documento fue emitido por Platinum Agency y sus totales. El detalle es de uso interno.
+          Esta página solo confirma que el documento fue emitido por Grupo Platinum y sus totales. El detalle es de uso interno.
         </p>
       </main>
     </div>

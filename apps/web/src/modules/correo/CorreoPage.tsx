@@ -187,7 +187,7 @@ function FormularioCorreo({ config }: { config: CorreoConfig }) {
         <CardHeader title="Remitente" />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Nombre que se verá" error={f.errors.remitenteNombre} required>
-            <Input {...f.bind('remitenteNombre')} placeholder="Platinum Agency" />
+            <Input {...f.bind('remitenteNombre')} placeholder="Grupo Platinum" />
           </FormField>
           <FormField label="Correo del remitente" error={f.errors.remitenteCorreo} required>
             <Input {...f.bind('remitenteCorreo')} type="email" placeholder="no-responder@tuempresa.mx" autoCapitalize="none" />

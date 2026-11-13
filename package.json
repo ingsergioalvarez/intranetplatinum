@@ -2,7 +2,7 @@
   "name": "platinum-intranet",
   "version": "0.1.0",
   "private": true,
-  "description": "Intranet Platinum Agency — monorepo (api, web, shared)",
+  "description": "Intranet Grupo Platinum — monorepo (api, web, shared)",
   "workspaces": [
     "packages/*",
     "apps/*"

@@ -1,6 +1,6 @@
-# Intranet Platinum Agency
+# Intranet Grupo Platinum
 
-Intranet para Platinum Agency (seguridad física intramuros). Uso principal en **celular** por guardias; escritorio para supervisores y administración.
+Intranet para Grupo Platinum (seguridad privada). Uso principal en **celular** por guardias; escritorio para supervisores y administración.
 
 - **Plan y trazabilidad:** [docs/PLAN.md](docs/PLAN.md) · **Estado actual:** [docs/ESTADO.md](docs/ESTADO.md) · **Decisiones:** [docs/DECISIONES.md](docs/DECISIONES.md) · **Historial:** [CHANGELOG.md](CHANGELOG.md)
 

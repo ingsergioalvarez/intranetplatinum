@@ -5,6 +5,16 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-15 #57 — Nombre correcto de la empresa: Grupo Platinum (A-92)
+
+#### Cambiado
+
+- **Nombre (A-92)**: "Platinum Agency" era un nombre que pusimos nosotros; se usa el de la hoja membretada de la empresa, **Grupo Platinum · Seguridad Privada**. **Login:** "Grupo **Platinum**" y debajo "Seguridad Privada" (sustituye a "Seguridad intramuros"). **Menú lateral y barra del celular:** "Grupo **Platinum**". **App instalada y pestaña:** se quedan cortas, "Platinum Intranet" (y "Platinum" bajo el icono); cambia solo su descripción. **PDF de asistencia y de horario, Excel y página pública de verificación:** encabezado "GRUPO Platinum" y "SEGURIDAD PRIVADA", autor y "Elaboró" = Grupo Platinum. **Correo:** remitente de ejemplo y texto de la prueba. Manuales (con PDF regenerados), README, CLAUDE.md y `package.json`. El escudo no cambió.
+
+#### Notas
+
+- Sin tocar: el historial (CHANGELOG, DECISIONES, PLAN) y el **aviso de privacidad** (A-68), que sigue llamando "Platinum Agency" al responsable entre corchetes para que el abogado ponga la razón social. `logo.svg` (el logo completo con la palabra AGENCY) quedó sin uso en la app; se rehace con el membrete en A-90/A-91.
+
 ### Sesión 2026-11-15 #56 — Logo oficial como icono de la app (A-89)
 
 #### Cambiado

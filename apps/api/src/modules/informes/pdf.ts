@@ -473,8 +473,8 @@ function cabeceraYPie(doc: Doc, i: Informe, url: string, qr: Buffer, pagina: num
   doc.rect(0, 0, W, ALTO_CABECERA).fill(C.navy);
   doc.rect(0, ALTO_CABECERA, W, 3).fill(C.plata);
 
-  doc.font('Helvetica-Bold').fontSize(16).fillColor(C.blanco).text('PLATINUM AGENCY', MARGEN, 15, { width: W / 2, characterSpacing: 1.5 });
-  doc.font('Helvetica').fontSize(6.5).fillColor('#9fb0d6').text('SEGURIDAD FÍSICA INTRAMUROS', MARGEN, 35, { characterSpacing: 2 });
+  doc.font('Helvetica-Bold').fontSize(16).fillColor(C.blanco).text('GRUPO Platinum', MARGEN, 15, { width: W / 2, characterSpacing: 1.5 });
+  doc.font('Helvetica').fontSize(6.5).fillColor('#9fb0d6').text('SEGURIDAD PRIVADA', MARGEN, 35, { characterSpacing: 2 });
   doc.font('Helvetica-Bold').fontSize(10.5).fillColor(C.blanco).text(
     `REPORTE OFICIAL DE ASISTENCIA · ${i.tipo === 'personal' ? 'PERSONAL' : 'GENERAL'}`,
     MARGEN,
@@ -508,7 +508,7 @@ function cabeceraYPie(doc: Doc, i: Informe, url: string, qr: Buffer, pagina: num
   doc.moveTo(MARGEN, H - 40).lineTo(W - MARGEN, H - 40).lineWidth(0.6).strokeColor(C.linea).stroke();
   doc.font('Helvetica-Bold').fontSize(7).fillColor(C.navy).text(`${i.folio}  ·  ${i.codigo}`, MARGEN, H - 34, { width: W / 2, lineBreak: false });
   doc.font('Helvetica').fontSize(6.8).fillColor(C.suave);
-  doc.text('Documento interno de Platinum Agency. Las horas las registra el servidor y no son editables.', MARGEN, H - 24, {
+  doc.text('Documento interno de Grupo Platinum. Las horas las registra el servidor y no son editables.', MARGEN, H - 24, {
     width: W - MARGEN * 2,
     lineBreak: false,
   });
@@ -531,7 +531,7 @@ export async function generarPdf(i: Informe, url: string): Promise<Buffer> {
     bufferPages: true,
     info: {
       Title: `Reporte de asistencia ${i.folio}`,
-      Author: 'Platinum Agency',
+      Author: 'Grupo Platinum',
       Subject: `${i.datos.alcance} · ${periodo(i)}`,
       Keywords: `${i.folio}, ${i.codigo}`,
       Creator: 'Intranet Platinum',
@@ -581,7 +581,7 @@ export async function generarPdf(i: Informe, url: string): Promise<Buffer> {
             ['Administración', 'Autorizó'],
           ]
         : [
-            ['Elaboró', 'Platinum Agency'],
+            ['Elaboró', 'Grupo Platinum'],
             ['Supervisor', 'Revisó'],
             ['Administración', 'Autorizó'],
           ],

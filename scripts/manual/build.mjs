@@ -194,7 +194,7 @@ function armarHtml(manual, version) {
 <section class="portada">
   <div class="banda">
     <div class="escudo"><img src="${ICONO}" alt=""></div>
-    <div class="marca">Platinum Intranet<span>Seguridad intramuros</span></div>
+    <div class="marca">Grupo Platinum<span>Seguridad Privada</span></div>
   </div>
   <div class="titulo">
     <h1>${esc(manual.titulo)}</h1>
@@ -206,7 +206,7 @@ function armarHtml(manual, version) {
     <div><b>Versión</b><span>${version}</span></div>
     <div><b>Incluye</b><span>${partes.map((p) => esc(p.titulo.split(':')[0])).join(' + ')}</span></div>
   </div>
-  <div class="pie">Platinum Agency</div>
+  <div class="pie">Grupo Platinum</div>
 </section>
 <section class="indice"><h2>Contenido</h2>${indice}</section>
 ${partes.map((p) => `<section class="parte"><h1>${esc(p.titulo)}</h1>${p.html}</section>`).join('\n')}

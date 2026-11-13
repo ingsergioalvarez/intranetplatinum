@@ -22,7 +22,7 @@ const VACIA: CorreoConfig = {
   cifrado: 'starttls',
   usuario: '',
   tienePassword: false,
-  remitenteNombre: 'Platinum Agency',
+  remitenteNombre: 'Grupo Platinum',
   remitenteCorreo: '',
   activo: false,
   actualizadoEn: null,
@@ -120,8 +120,8 @@ export class CorreoService extends BaseService {
       },
       {
         para: input.para,
-        asunto: 'Prueba de correo · Platinum Agency',
-        texto: 'Si lees esto, el correo de la intranet de Platinum Agency está bien configurado. No tienes que responder.',
+        asunto: 'Prueba de correo · Grupo Platinum',
+        texto: 'Si lees esto, el correo de la intranet de Grupo Platinum está bien configurado. No tienes que responder.',
       },
     );
     await this.audit.registrarAccion(ctx, 'correo.prueba', 'configuracion_correo', 1, {

@@ -4,7 +4,7 @@
 
 ## 1. Qué es Platinum Intranet
 
-Es la aplicación de Platinum Agency para el trabajo diario: checar tu entrada y salida, avisar de problemas en tu sitio, pedir ausencias y recibir avisos. Se usa en el **celular** y también en computadora.
+Es la aplicación de Grupo Platinum para el trabajo diario: checar tu entrada y salida, avisar de problemas en tu sitio, pedir ausencias y recibir avisos. Se usa en el **celular** y también en computadora.
 
 **En computadora** tienes una **barra lateral** con tus módulos. Con la pestañita de su borde (la flecha) la **ocultas** y queda solo una columna de iconos, para ver más pantalla; vuelve a tocarla para abrirla. La app recuerda tu elección en ese equipo (en pantallas chicas arranca oculta). Abajo está **tu nombre**: tócalo para abrir **Ayuda, Acceso rápido (PIN), Cambiar contraseña y Cerrar sesión**.
 
