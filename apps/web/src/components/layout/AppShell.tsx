@@ -17,6 +17,7 @@ import { BotonSOS } from '../../modules/emergencias/BotonSOS';
 import { Campanita } from './Campanita';
 import { AvisoDeOtraCuenta } from './AvisoDeOtraCuenta';
 import { ExigirPush } from './ExigirPush';
+import { FranjaAvisos } from './FranjaAvisos';
 import { useBarraLateral } from './barraLateral';
 import { useBadgesMenu } from './badgesMenu';
 import { navItems, ordenarMenu, type MenuOrdenado } from './navItems';
@@ -464,6 +465,8 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   useSincronizacion(user?.rol === 'guardia' ? user.id : undefined);
   const reducida = useBarraLateral((s) => s.reducida);
+  // Para decir, en cada sección, qué avisos explican su burbuja roja (A-85).
+  const rutasMenu = useMenu().todos.map((i) => i.to);
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
@@ -472,6 +475,7 @@ export function AppShell() {
         <main className="flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-8 md:pt-8">
           <div className="mx-auto max-w-6xl">
             <AvisoPin />
+            <FranjaAvisos rutas={rutasMenu} />
             <Outlet />
           </div>
         </main>

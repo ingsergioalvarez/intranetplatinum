@@ -33,6 +33,12 @@ export const TIPS: readonly Tip[] = [
       'Puedes crear un PIN de 4 dígitos para entrar con un toque, sin escribir tu contraseña. Toca el icono de usuario de arriba y elige "Acceso rápido (PIN)".',
   },
   {
+    id: 'burbujas',
+    titulo: 'La burbuja roja te dice qué es',
+    texto:
+      'Si una opción del menú tiene una burbuja roja con número, entra a esa sección: arriba verás "Nuevo en esta sección" con los avisos que son. "Entendido" los marca como leídos y "Ver" te lleva a lo que cambió.',
+  },
+  {
     id: 'ayuda',
     titulo: 'La app trae su manual',
     texto:

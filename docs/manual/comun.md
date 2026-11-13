@@ -119,6 +119,17 @@ En la parte de arriba hay una **campanita**. Si tiene un número rojo, tienes av
 
 Cuando alguien atiende algo de lo que te avisaron, el aviso se pone **verde** y dice quién lo atendió y qué resultó.
 
+### Las burbujas rojas del menú
+
+Cada opción del menú (Asistencia, Usuarios, Reportes…) lleva una **burbuja roja con un número** cuando tiene avisos sin leer. Al entrar a esa sección, arriba aparece una franja **"Nuevo en esta sección"** que te dice **qué avisos son**, con su título, su mensaje y la hora:
+
+- **"Entendido"** marca ese aviso como leído: la burbuja y el número de la campanita bajan.
+- **"Ver"** (si el aviso se refiere a otra pantalla, por ejemplo la ficha de un guardia o un reporte) te lleva ahí y lo marca como leído.
+- **"Marcar todos como leídos"** limpia los de esa sección de una vez.
+- Entrar a la sección **no** marca nada como leído por sí solo.
+
+La franja sale solo en la pantalla principal de cada sección y desaparece cuando no queda nada nuevo.
+
 {{captura:C08-campanita|Ventana "Avisos" con la lista agrupada}}
 
 ## 7. Cambiar tu contraseña

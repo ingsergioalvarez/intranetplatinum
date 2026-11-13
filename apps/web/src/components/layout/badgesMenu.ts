@@ -1,22 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import type { Aviso, BandejaAvisos } from '@platinum/shared';
+import type { BandejaAvisos } from '@platinum/shared';
 import { api } from '../../core/api';
-
-/**
- * A qué botón del menú pertenece un aviso (A-57): los de un reporte, a "Reportes"; el resto, al botón cuya
- * ruta es el comienzo de la ruta del aviso (p. ej. `/asistencia/guardias/4?...` → Asistencia). Los avisos
- * sin pantalla propia solo cuentan en la campanita.
- */
-export function seccionDeAviso(a: Pick<Aviso, 'reporteId' | 'tipo' | 'ruta'>, rutas: string[]): string | null {
-  if ((a.reporteId != null || a.tipo.startsWith('reporte_')) && rutas.includes('/reportes')) return '/reportes';
-  const base = (a.ruta ?? '').split('?')[0];
-  let mejor: string | null = null;
-  for (const to of rutas) {
-    if (to === '/' || !(base === to || base.startsWith(`${to}/`))) continue;
-    if (!mejor || to.length > mejor.length) mejor = to;
-  }
-  return mejor;
-}
+import { seccionDeAviso } from './avisosSeccion';
 
 /**
  * Avisos sin leer por botón del menú (A-57), para la burbuja roja con número. Usa la misma consulta de la

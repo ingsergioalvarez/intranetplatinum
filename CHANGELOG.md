@@ -5,7 +5,7 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
-### Sesión 2026-11-13 #53 — Menú por rol, acceso rápido al C2 y ajustes de uso (A-83, A-84)
+### Sesión 2026-11-13 #53 — Menú por rol, acceso rápido al C2 y ajustes de uso (A-83, A-84, A-85)
 
 #### Cambiado
 
@@ -24,6 +24,7 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 #### Añadido
 
+- **"Nuevo en esta sección" (A-85)**: al entrar a la pantalla principal de una sección con burbuja roja (Asistencia, Usuarios, Reportes, Mis sitios, C2…), una franja arriba dice **qué avisos son** (título, mensaje y hora; hasta 3 y "y N más"). **"Entendido"** marca el aviso como leído (bajan la burbuja y el contador de la campanita); **"Ver"** abre el lugar del aviso (la ficha del guardia, el reporte…) y lo marca como leído, y solo se ofrece si el destino es otra pantalla; **"Marcar todos como leídos"** limpia los de la sección. Abrir la sección no marca nada como leído por sí solo. Es una sola pieza en el armazón de la app (sirve a todos los roles), con la misma consulta de la campanita. Las piezas puras (qué sección es, qué avisos explican la burbuja, a dónde lleva "Ver") tienen pruebas. Manual común y un tip nuevo. Pendiente, opcional: resaltar con "Nuevo" la fila exacta (A-85b).
 - **Tarjeta "Hoy en el C2" en el Inicio de supervisor y admin (A-83)**: arriba, junto a los otros números, con cuántas cosas registró el C2 hoy en sus sitios y acceso directo a la bitácora (el admin, a C2 → Bitácora; el supervisor, a su Bitácora C2). Usa la misma consulta que la lista de abajo (sin cálculo nuevo en el servidor). En el celular, la lista "Lo que hizo el C2 hoy" sube justo después de "Requiere tu atención".
 - La actividad del C2 trae el **total** del día (`total`), aparte de las últimas entradas.
 - Manuales de supervisor y administrador con el nuevo menú y la tarjeta.
