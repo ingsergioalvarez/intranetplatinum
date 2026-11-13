@@ -33,8 +33,8 @@ function useMenu(): MenuOrdenado {
 /** Icono "?" del celular (A-69): lleva a la Ayuda, el manual de usuario dentro de la app. En escritorio es un enlace abajo de la barra lateral. */
 function BotonAyuda() {
   return (
-    <Link to="/ayuda" className="rounded-lg p-2 text-brand-100 active:bg-brand-800" aria-label="Ayuda: manual de uso">
-      <CircleHelp className="size-5" />
+    <Link to="/ayuda" className="rounded-lg p-2.5 text-brand-100 active:bg-brand-800" aria-label="Ayuda: manual de uso">
+      <CircleHelp className="size-6" />
     </Link>
   );
 }
@@ -83,9 +83,9 @@ function MenuCuenta() {
         aria-label="Mi cuenta"
         aria-haspopup="menu"
         aria-expanded={abierto}
-        className={cn('rounded-lg p-2 text-brand-100 active:bg-brand-800', abierto && 'bg-brand-800')}
+        className={cn('rounded-lg p-2.5 text-brand-100 active:bg-brand-800', abierto && 'bg-brand-800')}
       >
-        <CircleUser className="size-5" />
+        <CircleUser className="size-6" />
       </button>
       {abierto && (
         <div
@@ -141,10 +141,10 @@ function MenuCuenta() {
   );
 }
 
-function Brand({ className }: { className?: string }) {
+function Brand({ className, icono = 'size-6' }: { className?: string; icono?: string }) {
   return (
     <div className={cn('flex items-center gap-2 font-semibold tracking-tight', className)}>
-      <ShieldCheck className="size-6 text-platinum-300" />
+      <ShieldCheck className={cn(icono, 'text-platinum-300')} />
       <span>
         Platinum <span className="font-normal text-platinum-300">Intranet</span>
       </span>
@@ -324,10 +324,10 @@ function Topbar() {
   const user = useAuthStore((s) => s.user);
   return (
     <header className="pt-safe sticky top-0 z-30 bg-brand-900 text-white md:hidden">
-      <div className="flex h-14 items-center justify-between px-4">
-        <Brand className="text-base" />
+      <div className="flex h-16 items-center justify-between px-4">
+        <Brand className="text-lg" icono="size-7" />
         {user && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Campanita />
             <BotonAyuda />
             <MenuCuenta />

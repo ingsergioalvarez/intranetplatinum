@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { bloquearScroll } from './bloqueoScroll';
 import { cn } from './cn';
 
 export interface ModalProps {
@@ -51,8 +52,7 @@ export function Modal({
 
   useEffect(() => {
     if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const liberarScroll = bloquearScroll();
     // Un campo con autoFocus ya tomó el foco: no se lo quitamos.
     if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
 
@@ -62,7 +62,7 @@ export function Modal({
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
+      liberarScroll();
       focoPrevio.current?.focus();
     };
   }, [open, cerrable]);
@@ -72,7 +72,7 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4">
       <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+        className="absolute inset-0 touch-none bg-slate-900/50 backdrop-blur-[1px]"
         onClick={dismissible ? onClose : undefined}
         aria-hidden="true"
       />
@@ -107,7 +107,7 @@ export function Modal({
             </button>
           )}
         </div>
-        <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 md:px-6">{children}</div>
+        <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-4 md:px-6">{children}</div>
         {footer && (
           <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:flex-row md:justify-end md:px-6">
             {footer}

@@ -145,7 +145,7 @@ export function Campanita({ className, tono = 'oscuro' }: { className?: string; 
         type="button"
         onClick={() => setAbierta(true)}
         className={cn(
-          'relative rounded-lg p-2',
+          'relative rounded-lg p-2.5 md:p-2',
           tono === 'oscuro'
             ? 'text-brand-100 hover:text-white active:bg-brand-800'
             : 'text-slate-600 hover:bg-slate-100',
@@ -153,7 +153,7 @@ export function Campanita({ className, tono = 'oscuro' }: { className?: string; 
         )}
         aria-label={noLeidos ? `Avisos: ${noLeidos} sin leer` : 'Avisos'}
       >
-        <Bell className="size-5" />
+        <Bell className="size-6 md:size-5" />
         {noLeidos > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-semibold text-white ring-2 ring-brand-900">
             {noLeidos > 99 ? '99+' : noLeidos}

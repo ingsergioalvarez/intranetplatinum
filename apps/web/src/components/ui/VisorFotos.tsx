@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { bloquearScroll } from './bloqueoScroll';
 import { cn } from './cn';
 
 export interface FotoVisor {
@@ -44,8 +45,7 @@ export function VisorFotos({
 
   useEffect(() => {
     if (!abierto) return;
-    const previo = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const liberarScroll = bloquearScroll();
     // En captura: Esc cierra solo el visor, no el modal que esté debajo.
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -57,7 +57,7 @@ export function VisorFotos({
     window.addEventListener('keydown', onKey, true);
     return () => {
       window.removeEventListener('keydown', onKey, true);
-      document.body.style.overflow = previo;
+      liberarScroll();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierto, onClose, total]);

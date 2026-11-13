@@ -84,7 +84,7 @@ Toca una fila para abrir la **ficha del guardia** (sección 7).
 
 {{captura:S02-asistencia|Pantalla Asistencia con los filtros, la botonera y la lista de guardias}}
 
-Arriba de la lista hay botones a las demás pantallas: **Incidencias**, **Rostros por revisar**, **Cambios de turno**, **Horas extra**, **Casos de cobertura**, **Emergencias**, **Solicitudes de cobertura**, **Ausencias**, **Calendario**, **Horarios (PDF)** y **Reportes**. Cuando algo espera tu decisión, el botón se pone de color y lleva un **globo con el número**. Cada pantalla trae arriba el enlace **"← Asistencia"** para volver.
+Arriba de la lista están las demás pantallas: **Incidencias**, **Rostros por revisar**, **Cambios de turno**, **Horas extra**, **Casos de cobertura**, **Emergencias**, **Solicitudes de cobertura**, **Ausencias**, **Calendario**, **Horarios (PDF)** y **Reportes**. En la **computadora** son una fila de tarjetas; en el **celular** hay un solo botón, **"Secciones"**, con el total de pendientes, que abre una hoja con todas (**Por atender** y **Consultar**). Cuando algo espera tu decisión, esa sección se pone de color y lleva un **globo con el número**. Casos y Solicitudes de cobertura solo aparecen si hay alguno. Cada pantalla trae arriba el enlace **"← Asistencia"** para volver.
 
 ## 4. Un guardia no llegó
 

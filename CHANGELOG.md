@@ -5,11 +5,18 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
-### Sesión 2026-11-13 #53 — Menú por rol y acceso rápido al C2 (A-83)
+### Sesión 2026-11-13 #53 — Menú por rol, acceso rápido al C2 y ajustes de uso (A-83, A-84)
 
 #### Cambiado
 
 - **Orden del menú por rol (A-83)**: la barra de abajo del celular lleva lo de uso diario de cada rol (supervisor: Inicio, Asistencia, Reportes y Quejas; admin: Inicio, Asistencia, Reportes y Clientes; C2: C2 y Reportes; guardia y cliente, como antes) y **"Más"** se ordena de más a menos frecuente, con títulos: Seguimiento, Operación, Administración y Consulta (los que no tengan opciones para ese rol no salen). La barra de escritorio sigue el mismo orden. El plan de cada rol vive en `MENU_POR_ROL` (compartido); una opción nueva que no esté ahí va al final de "Más", y una prueba avisa si alguna opción no tiene lugar.
+
+#### Cambiado
+
+- **Accesos de Asistencia (A-84)**: los botones sueltos y desiguales pasan a una lista única con el número de pendientes de cada sección. En computadora, una fila de tarjetas iguales (con icono, nombre y globo, y más filas si la ventana es angosta); en el celular, un solo botón **"Secciones"** con el total de pendientes que abre una hoja con todas, en **Por atender** y **Consultar**. Usa las mismas consultas y refrescos de antes; "Casos" y "Solicitudes de cobertura" solo salen si hay alguno. Manual del supervisor actualizado.
+
+- **Modales sin deslizar el fondo (A-84)**: al deslizar sobre un modal, un visor de fotos o la cámara, la pantalla de atrás ya no se mueve. El cuerpo de la página se fija (`position: fixed`) mientras hay una ventana abierta y, al cerrarla, la página vuelve al mismo punto; además el contenido del modal no pasa el desplazamiento al fondo. Cuenta las ventanas abiertas a la vez. Antes solo se ponía `overflow: hidden`, que en el celular no basta.
+- **Barra superior del celular más grande (A-84)**: más alta (64 px), con logo y nombre más grandes y los iconos de avisos, ayuda y cuenta de 24 px con áreas de toque de 44 px. La barra "Contenido" de Ayuda se ajustó a la nueva altura.
 
 #### Corregido
 

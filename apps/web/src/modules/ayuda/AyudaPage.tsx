@@ -110,7 +110,7 @@ export function AyudaPage() {
       {contenido.secciones.length > 0 && (
         // Fija debajo de la barra superior (en computadora, al borde) mientras se lee: se salta de una sección a otra
         // sin volver al principio. El índice flota sobre el texto en vez de empujarlo.
-        <nav aria-label="Contenido" className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 mb-5 md:top-0">
+        <nav aria-label="Contenido" className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 mb-5 md:top-0">
           <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ring-inset">
             <button
               type="button"

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRightLeft, CalendarDays, CalendarOff, CalendarRange, HandHelping, ChevronLeft, ChevronRight, FileText, Route, Timer, LogOut, ScanFace, Search, ShieldAlert, Shuffle, Siren } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, Search, Shuffle } from 'lucide-react';
 import { PERMISOS, ROLES, type FilaAsistencia, type NotaSitioC2 } from '@platinum/shared';
 import { PageHeader } from '../../components/layout/AppShell';
 import {
@@ -13,24 +13,16 @@ import {
   EmptyState,
   Input,
   Pagination,
-  cn,
   type Column,
 } from '../../components/ui';
 import { hasPermission, useAuthStore } from '../../core/auth/authStore';
 import { hoyLocal } from '../../core/format/fechas';
 import { useDebounced } from '../../core/hooks/useDebounced';
-import { cambiosService } from '../cambios/cambios.service';
 import { useNotasC2 } from '../c2/notasC2';
-import { casosService } from '../casos/casos.service';
-import { emergenciasService } from '../emergencias/emergencias.service';
-import { solicitudesService } from '../solicitudes/solicitudes.service';
-import { ausenciasService } from '../ausencias/ausencias.service';
-import { coberturaService } from '../cobertura/cobertura.service';
-import { rangoProximos } from '../cobertura/estados';
-import { horasExtraService } from '../horas-extra/horasExtra.service';
 import { asistenciaService } from './asistencia.service';
 import { formatDuracion, formatHora, horasEsperadas } from './formato';
 import { DescargarHorarioModal } from '../horarios/DescargarHorarioModal';
+import { AccesosAsistencia } from './AccesosAsistencia';
 import { CerrarJornadaModal } from './CerrarJornadaModal';
 import { EstadoJornada } from './EstadoJornada';
 import { FotoChecada } from './FotoChecada';
@@ -205,6 +197,7 @@ export function AsistenciaPage() {
       ),
     [notasC2],
   );
+  const [horarioAbierto, setHorarioAbierto] = useState(false);
   const [cubrir, setCubrir] = useState<FilaAsistencia | null>(null);
   const [cerrando, setCerrando] = useState<FilaAsistencia | null>(null);
   const [fecha, setFecha] = useState(hoy);
@@ -231,32 +224,8 @@ export function AsistenciaPage() {
 
   return (
     <>
-      <PageHeader
-        title="Asistencia"
-        subtitle="Una fila por guardia · toca para ver su detalle"
-        actions={
-          puedeRevisar && (
-            <div className="flex flex-wrap gap-2">
-              <BotonIncidencias />
-              <BotonRostrosPendientes />
-              <BotonCambios />
-              <BotonHorasExtra />
-              <BotonCasos />
-              <BotonEmergencias />
-              <BotonSolicitudes />
-              <BotonAusencias />
-              <BotonCalendario />
-              <BotonHorario />
-              <Link
-                to="/asistencia/reportes"
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset hover:bg-slate-50"
-              >
-                <FileText className="size-4" /> Reportes
-              </Link>
-            </div>
-          )
-        }
-      />
+      <PageHeader title="Asistencia" subtitle="Una fila por guardia · toca para ver su detalle" />
+      {puedeRevisar && <AccesosAsistencia alAbrirHorario={() => setHorarioAbierto(true)} />}
 
       <Card>
         <div className="grid gap-3 border-b border-slate-100 p-4 md:grid-cols-[auto_1fr_auto] md:items-center">
@@ -363,6 +332,7 @@ export function AsistenciaPage() {
           <Pagination page={page} limit={LIMIT} total={lista.data.total} onPageChange={setPage} />
         )}
       </Card>
+      {horarioAbierto && <DescargarHorarioModal onClose={() => setHorarioAbierto(false)} />}
       {cerrando?.jornada && (
         <CerrarJornadaModal
           jornada={cerrando.jornada}
@@ -381,230 +351,5 @@ export function AsistenciaPage() {
         />
       )}
     </>
-  );
-}
-
-/** Acceso a "Rostros por revisar" con el número de pendientes. */
-function BotonRostrosPendientes() {
-  const pendientes = useQuery({
-    queryKey: asistenciaService.keys.pendientes,
-    queryFn: asistenciaService.rostrosPendientes,
-    refetchInterval: 60_000,
-  });
-  const n = pendientes.data?.length ?? 0;
-  return (
-    <Link
-      to="/asistencia/rostros"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-amber-50 text-amber-800 ring-amber-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <ScanFace className="size-4" /> Rostros por revisar
-      {n > 0 && (
-        <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
-      )}
-    </Link>
-  );
-}
-
-/** Acceso a "Casos de cobertura" con el número de los que esperan un plan (AS6-05). */
-function BotonCasos() {
-  const casos = useQuery({
-    queryKey: casosService.keys.lista,
-    queryFn: casosService.lista,
-    refetchInterval: 60_000,
-  });
-  const n = casos.data?.pendientes ?? 0;
-  // Sin casos no hace falta el botón: aparece cuando hay un guardia esperando a su relevo.
-  if (!casos.data || casos.data.items.length === 0) return null;
-  return (
-    <Link
-      to="/asistencia/casos"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <Route className="size-4" /> Casos de cobertura
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
-    </Link>
-  );
-}
-
-/** Emergencias (A-60): siempre disponible; se pone roja con el número de alertas activas. */
-function BotonEmergencias() {
-  const lista = useQuery({
-    queryKey: emergenciasService.keys.activas,
-    queryFn: () => emergenciasService.lista('activas'),
-    refetchInterval: 10_000,
-  });
-  const n = lista.data?.activas ?? 0;
-  return (
-    <Link
-      to="/asistencia/emergencias"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <Siren className="size-4" /> Emergencias
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
-    </Link>
-  );
-}
-
-/** Solicitudes de cobertura (A-39): aparece cuando hay alguna y marca las pendientes. */
-function BotonSolicitudes() {
-  const lista = useQuery({
-    queryKey: solicitudesService.keys.lista,
-    queryFn: solicitudesService.lista,
-    refetchInterval: 60_000,
-  });
-  const n = lista.data?.pendientes ?? 0;
-  if (!lista.data || lista.data.items.length === 0) return null;
-  return (
-    <Link
-      to="/asistencia/solicitudes"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <HandHelping className="size-4" /> Solicitudes de cobertura
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
-    </Link>
-  );
-}
-
-/** Ausencias justificadas (A-43): siempre disponible; marca las que esperan aprobación del administrador. */
-function BotonAusencias() {
-  const lista = useQuery({
-    queryKey: ausenciasService.keys.lista,
-    queryFn: ausenciasService.lista,
-    refetchInterval: 60_000,
-  });
-  const n = lista.data?.pendientes ?? 0;
-  return (
-    <Link
-      to="/asistencia/ausencias"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <CalendarOff className="size-4" /> Ausencias
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
-    </Link>
-  );
-}
-
-/** Descargar el horario de guardias en PDF (A-55), como apoyo para recordárselo a los guardias. */
-function BotonHorario() {
-  const [abierto, setAbierto] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-300 ring-inset hover:bg-slate-50"
-      >
-        <CalendarRange className="size-4" /> Horarios (PDF)
-      </button>
-      {abierto && <DescargarHorarioModal onClose={() => setAbierto(false)} />}
-    </>
-  );
-}
-
-/** Acceso al calendario de cobertura con el número de turnos sin cubrir en los próximos días (AS6). */
-function BotonCalendario() {
-  const rango = rangoProximos(hoyLocal());
-  const resumen = useQuery({
-    queryKey: coberturaService.keys.resumen(rango),
-    queryFn: () => coberturaService.resumen(rango),
-    refetchInterval: 60_000,
-  });
-  const n = resumen.data?.sinCubrir ?? 0;
-  return (
-    <Link
-      to="/asistencia/calendario"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <CalendarDays className="size-4" /> Calendario
-      {n > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
-    </Link>
-  );
-}
-
-/** Acceso a "Horas extra" con el número de las que esperan una decisión (AS5). */
-function BotonHorasExtra() {
-  const pendientes = useQuery({
-    queryKey: horasExtraService.keys.list({ estado: 'pendientes', page: 1, limit: 1 }),
-    queryFn: () => horasExtraService.list({ estado: 'pendientes', page: 1, limit: 1 }),
-    refetchInterval: 60_000,
-  });
-  const n = pendientes.data?.pendientes ?? 0;
-  return (
-    <Link
-      to="/asistencia/horas-extra"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-amber-50 text-amber-900 ring-amber-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <Timer className="size-4" /> Horas extra
-      {n > 0 && <span className="rounded-full bg-amber-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
-    </Link>
-  );
-}
-
-/** Acceso a "Cambios de turno" con el número de solicitudes por aprobar (TC-22). */
-function BotonCambios() {
-  const pendientes = useQuery({
-    queryKey: cambiosService.keys.list({ estado: 'pendiente', page: 1, limit: 1 }),
-    queryFn: () => cambiosService.list({ estado: 'pendiente', page: 1, limit: 1 }),
-    refetchInterval: 60_000,
-  });
-  const n = pendientes.data?.pendientes ?? 0;
-  return (
-    <Link
-      to="/asistencia/cambios"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-amber-50 text-amber-900 ring-amber-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <ArrowRightLeft className="size-4" /> Cambios de turno
-      {n > 0 && <span className="rounded-full bg-amber-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>}
-    </Link>
-  );
-}
-
-/** Acceso a "Incidencias" con el número de las del mes sin atender (DA-42). */
-function BotonIncidencias() {
-  // Incidencias del mes sin atender (asistencia y rostro, DA-42).
-  const mes = hoyLocal().slice(0, 7);
-  const porGuardia = useQuery({
-    queryKey: asistenciaService.keys.incidenciasPorGuardia(mes),
-    queryFn: () => asistenciaService.incidenciasPorGuardia(mes),
-    refetchInterval: 60_000,
-  });
-  const n = porGuardia.data?.reduce((t, f) => t + f.pendientes, 0) ?? 0;
-  return (
-    <Link
-      to="/asistencia/incidencias"
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium ring-1 ring-inset',
-        n > 0 ? 'bg-red-50 text-red-800 ring-red-200' : 'bg-white text-slate-700 ring-slate-300',
-      )}
-    >
-      <ShieldAlert className="size-4" /> Incidencias
-      {n > 0 && (
-        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{n}</span>
-      )}
-    </Link>
   );
 }

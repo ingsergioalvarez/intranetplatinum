@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { bloquearScroll } from '../../../components/ui/bloqueoScroll';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -23,11 +24,7 @@ export function PantallaCamara({
   panel: ReactNode;
 }) {
   useEffect(() => {
-    const previo = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previo;
-    };
+    return bloquearScroll();
   }, []);
 
   return createPortal(
