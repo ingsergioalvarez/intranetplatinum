@@ -159,7 +159,7 @@ export async function generarHorarioPdf(d: DatosHorario): Promise<Buffer> {
     const bottom = margenes.bottom;
     margenes.bottom = 0;
     if (p === 0) {
-      const y0 = dibujarEncabezadoOficial(doc) + 8;
+      const y0 = dibujarEncabezadoOficial(doc, MARGEN) + 8;
       doc.font('Helvetica-Bold').fontSize(11).fillColor(MARCA.azul).text('HORARIO DE GUARDIAS', MARGEN, y0, { width: W / 2, lineBreak: false });
       doc.font('Helvetica').fontSize(8.5).fillColor(C.suave).text(d.alcance, MARGEN, y0 + 16, { width: W / 2 - MARGEN, lineBreak: false, ellipsis: true });
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.navy).text(periodoTxt, W / 2, y0, { width: W / 2 - MARGEN, align: 'right', lineBreak: false });

@@ -40,11 +40,20 @@ export const OFICINAS: Oficina[] = [
 
 // Se pasan como ruta (no como Buffer) para que pdfkit guarde cada imagen una sola vez por documento.
 const ruta = (archivo: string) => fileURLToPath(new URL(`../../../assets/marca/${archivo}`, import.meta.url));
-const ENCABEZADO = ruta('membrete-encabezado.png');
+// El encabezado de la hoja membretada viene en una sola imagen; se separó en el icono (escudo y letras grises) y la curva
+// azul para poder mover el icono sin tocar la curva. `membrete-encabezado.png` es la imagen original completa.
+const ICONO = ruta('membrete-icono.png');
+const CURVA = ruta('membrete-curva.png');
 const AGUA = ruta('marca-de-agua.png');
 const ESCUDO = ruta('escudo.png');
 
 const PX_ENCABEZADO = { ancho: 2305, alto: 495 };
+/** Recortes de la imagen original, en píxeles: dónde empieza cada uno y cuánto mide. */
+const PX_ICONO = { x: 0, y: 59, ancho: 300, alto: 436 };
+const PX_CURVA = { x: 500, y: 0, ancho: 1805, alto: 297 };
+/** El icono del membrete se dibuja un poco más pequeño que en la imagen original y separado del borde. */
+const ESCALA_ICONO = 0.88;
+const ARRIBA_ICONO = 10;
 const PX_AGUA = { ancho: 1188, alto: 1472 };
 const PX_ESCUDO = { ancho: 240, alto: 302 };
 
@@ -68,17 +77,25 @@ export function dibujarMarcaDeAgua(doc: Doc) {
   doc.y = y;
 }
 
-/** Encabezado oficial (logo y curva azul) a todo el ancho, pegado arriba. Devuelve su alto. */
-export function dibujarEncabezadoOficial(doc: Doc): number {
+/**
+ * Encabezado oficial: la curva azul arriba a la derecha (tal como viene en la hoja de la empresa) y el icono (escudo y
+ * letras grises) alineado con el margen del documento, un poco más pequeño. Devuelve el alto que se reserva (el del
+ * encabezado original), para que el contenido empiece siempre en el mismo lugar.
+ */
+export function dibujarEncabezadoOficial(doc: Doc, margen = 40): number {
   const W = doc.page.width;
-  const alto = altoEncabezado(W);
+  const k = W / PX_ENCABEZADO.ancho; // puntos por píxel de la imagen original
   const { x, y } = doc;
   doc.save();
-  doc.image(ENCABEZADO, 0, 0, { width: W, height: alto });
+  doc.image(CURVA, PX_CURVA.x * k, PX_CURVA.y * k, { width: PX_CURVA.ancho * k, height: PX_CURVA.alto * k });
+  doc.image(ICONO, margen, ARRIBA_ICONO, {
+    width: PX_ICONO.ancho * k * ESCALA_ICONO,
+    height: PX_ICONO.alto * k * ESCALA_ICONO,
+  });
   doc.restore();
   doc.x = x;
   doc.y = y;
-  return alto;
+  return altoEncabezado(W);
 }
 
 /** Escudo suelto (para encabezados compactos). Se ajusta al alto dado y devuelve el ancho que ocupó. */

@@ -19,6 +19,8 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 #### Notas
 
+- **Icono del membrete (ajuste, A-90)**: en la primera hoja el icono (escudo y letras grises) iba pegado al borde izquierdo y la leyenda "Seguridad Privada" casi tocaba el título. La imagen original del encabezado se separó en el icono y la curva azul (`membrete-icono.png` y `membrete-curva.png`; la original `membrete-encabezado.png` se conserva): el icono se dibuja 12 % más pequeño, alineado con el margen del texto (40 pt) y un poco más arriba; la **curva azul y el contenido no se movieron**. Aplica al informe personal y al horario.
+
 - Un informe muy corto puede pasar a dos hojas porque el membrete de la primera ocupa más espacio; el corte cae entre secciones, nunca a mitad de una tabla pequeña.
 - Pendiente de A-91: elegir/editar la dirección al armar cada documento (hoy van las dos fijas).
 

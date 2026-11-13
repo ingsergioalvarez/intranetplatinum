@@ -601,7 +601,7 @@ function cabeceraYPie(doc: Doc, i: Informe, url: string, qr: Buffer, pagina: num
     pieInfo(doc, H, izquierda, pagina, total);
   } else if (pagina === 1) {
     // Primera hoja: membrete oficial, franja con los datos del documento y pie oficial con las oficinas.
-    const y0 = dibujarEncabezadoOficial(doc) + 8;
+    const y0 = dibujarEncabezadoOficial(doc, MARGEN) + 8;
     doc.font('Helvetica-Bold').fontSize(11).fillColor(MARCA.azul).text(titulo, MARGEN, y0, { width: W - MARGEN * 2 - 270, lineBreak: false });
     doc.font('Helvetica').fontSize(8.5).fillColor(C.suave).text(i.datos.alcance, MARGEN, y0 + 16, {
       width: W - MARGEN * 2 - 270,

@@ -47,7 +47,7 @@ const informe = (tipo: 'personal' | 'general', guardias: InformeGuardia[], extra
 
 describe('marca en los PDF (A-90)', () => {
   it('las piezas de marca existen y dicen lo correcto', () => {
-    for (const f of ['membrete-encabezado.png', 'marca-de-agua.png', 'escudo.png']) {
+    for (const f of ['membrete-encabezado.png', 'membrete-icono.png', 'membrete-curva.png', 'marca-de-agua.png', 'escudo.png']) {
       expect(existsSync(fileURLToPath(new URL(`../assets/marca/${f}`, import.meta.url)))).toBe(true);
     }
     expect(MARCA.nombre).toBe('GRUPO Platinum');
