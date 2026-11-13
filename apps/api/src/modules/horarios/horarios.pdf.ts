@@ -1,17 +1,29 @@
 import PDFDocument from 'pdfkit';
 import { env } from '../../config/env';
 import {
-  ALTO_CABECERA,
+  ALTO_PIE_MEMBRETE,
+  MARCA,
+  dibujarCabeceraLigera,
+  dibujarEncabezadoOficial,
+  dibujarMarcaDeAgua,
+  dibujarPieOficial,
+} from '../../core/marca/marca';
+import {
   BOTTOM,
   COLORES_PDF as C,
   Lienzo,
   MARGEN,
   TOP,
+  disposicionOficial,
   fechaDia,
   fechaLarga,
+  pieInfo,
   type Col,
   type Fila,
 } from '../informes/pdf';
+
+/** Franja bajo el encabezado oficial de la primera hoja: título, alcance y periodo. */
+const ALTO_FRANJA_HORARIO = 38;
 
 /** Lo que trabaja un guardia un día: puede ser en más de un sitio (cobertura). */
 export interface TurnoDelDia {
@@ -92,7 +104,11 @@ export async function generarHorarioPdf(d: DatosHorario): Promise<Buffer> {
     doc.on('error', ko);
   });
 
-  const l = new Lienzo(doc);
+  // Marca de agua en cada hoja, detrás del contenido.
+  dibujarMarcaDeAgua(doc);
+  doc.on('pageAdded', () => dibujarMarcaDeAgua(doc));
+
+  const l = new Lienzo(doc, disposicionOficial(ALTO_FRANJA_HORARIO));
   l.datos(
     [
       ['Periodo', `${fechaLarga(d.desde)} – ${fechaLarga(d.hasta)}`],
@@ -109,6 +125,9 @@ export async function generarHorarioPdf(d: DatosHorario): Promise<Buffer> {
   }
   for (const g of d.guardias) {
     const trabaja = g.dias.filter((x) => x.turnos.length > 0).length;
+    const filas = filasDe(g);
+    // No empezar a un guardia al pie de la hoja: que quepan su título, su resumen, la cabecera y unas filas.
+    if (trabaja > 0) l.asegurar(62 + Math.min(filas.length, 6) * 17.5);
     l.seccion(g.nombre);
     if (trabaja === 0) {
       l.texto('Sin turnos programados en este periodo.', MARGEN, l.y, { size: 9, color: C.suave });
@@ -120,7 +139,7 @@ export async function generarHorarioPdf(d: DatosHorario): Promise<Buffer> {
       color: C.suave,
     });
     l.y += 10;
-    l.tabla(COLS, filasDe(g), { size: 8.5 });
+    l.tabla(COLS, filas, { size: 8.5 });
   }
 
   l.caja('Importante', [
@@ -128,44 +147,33 @@ export async function generarHorarioPdf(d: DatosHorario): Promise<Buffer> {
     'Cualquier cambio de horario se avisa en la app (campanita y notificaciones). Este documento es solo un apoyo.',
   ]);
 
-  // Cabecera y pie, con el total de hojas.
+  // Cabecera y pie, con el total de hojas: membrete oficial en la primera hoja y encabezado ligero en las demás.
   const W = doc.page.width;
   const H = doc.page.height;
+  const periodoTxt = `${fechaLarga(d.desde)} – ${fechaLarga(d.hasta)}`;
+  const aviso = `Horario vigente al ${fechaHora(d.generadoEn)}. El horario válido siempre es el de la app; los cambios se avisan ahí.`;
   const { start, count } = doc.bufferedPageRange();
   for (let p = 0; p < count; p++) {
     doc.switchToPage(start + p);
     const margenes = doc.page.margins;
     const bottom = margenes.bottom;
     margenes.bottom = 0;
-    doc.rect(0, 0, W, ALTO_CABECERA).fill(C.navy);
-    doc.rect(0, ALTO_CABECERA, W, 3).fill(C.plata);
-    doc.font('Helvetica-Bold').fontSize(16).fillColor(C.blanco).text('GRUPO Platinum', MARGEN, 15, { width: W / 2, characterSpacing: 1.5 });
-    doc.font('Helvetica').fontSize(6.5).fillColor('#9fb0d6').text('SEGURIDAD PRIVADA', MARGEN, 35, { characterSpacing: 2 });
-    doc.font('Helvetica-Bold').fontSize(10.5).fillColor(C.blanco).text('HORARIO DE GUARDIAS', MARGEN, 50, { width: W - MARGEN * 2, lineBreak: false });
-    doc.font('Helvetica').fontSize(8).fillColor('#c9d3ee').text(d.alcance, MARGEN, 65, { width: W / 2, lineBreak: false, ellipsis: true });
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(C.blanco).text(`${fechaLarga(d.desde)} – ${fechaLarga(d.hasta)}`, W / 2, 20, {
-      width: W / 2 - MARGEN,
-      align: 'right',
-      lineBreak: false,
-    });
-    doc.font('Helvetica').fontSize(8).fillColor('#c9d3ee').text(`Generado: ${fechaHora(d.generadoEn)}`, W / 2, 35, {
-      width: W / 2 - MARGEN,
-      align: 'right',
-      lineBreak: false,
-    });
-
-    doc.moveTo(MARGEN, H - 40).lineTo(W - MARGEN, H - 40).lineWidth(0.6).strokeColor(C.linea).stroke();
-    doc.font('Helvetica').fontSize(6.8).fillColor(C.suave).text(
-      `Horario vigente al ${fechaHora(d.generadoEn)}. El horario válido siempre es el de la app; los cambios se avisan ahí.`,
-      MARGEN,
-      H - 34,
-      { width: W - MARGEN * 2 - 100, lineBreak: false },
-    );
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(C.navy).text(`Página ${p + 1} de ${count}`, W - MARGEN - 90, H - 34, {
-      width: 90,
-      align: 'right',
-      lineBreak: false,
-    });
+    if (p === 0) {
+      const y0 = dibujarEncabezadoOficial(doc) + 8;
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(MARCA.azul).text('HORARIO DE GUARDIAS', MARGEN, y0, { width: W / 2, lineBreak: false });
+      doc.font('Helvetica').fontSize(8.5).fillColor(C.suave).text(d.alcance, MARGEN, y0 + 16, { width: W / 2 - MARGEN, lineBreak: false, ellipsis: true });
+      doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.navy).text(periodoTxt, W / 2, y0, { width: W / 2 - MARGEN, align: 'right', lineBreak: false });
+      doc.font('Helvetica').fontSize(8).fillColor(C.suave).text(`Generado: ${fechaHora(d.generadoEn)}`, W / 2, y0 + 15, {
+        width: W / 2 - MARGEN,
+        align: 'right',
+        lineBreak: false,
+      });
+      dibujarPieOficial(doc, MARGEN);
+      pieInfo(doc, H - ALTO_PIE_MEMBRETE - 4, { lineas: [aviso] }, p + 1, count);
+    } else {
+      dibujarCabeceraLigera(doc, MARGEN, { negrita: 'HORARIO DE GUARDIAS', lineas: [periodoTxt, d.alcance.slice(0, 60)] });
+      pieInfo(doc, H, { lineas: [aviso] }, p + 1, count);
+    }
     margenes.bottom = bottom;
   }
   doc.end();

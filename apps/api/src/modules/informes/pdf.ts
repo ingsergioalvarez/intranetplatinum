@@ -10,6 +10,17 @@ import {
   type InformeResumen,
 } from '@platinum/shared';
 import { env } from '../../config/env';
+import {
+  ALTO_PIE_MEMBRETE,
+  MARCA,
+  OFICINAS,
+  altoEncabezado,
+  dibujarCabeceraLigera,
+  dibujarEncabezadoOficial,
+  dibujarEscudo,
+  dibujarMarcaDeAgua,
+  dibujarPieOficial,
+} from '../../core/marca/marca';
 
 // ---------- Estilo corporativo ----------
 
@@ -42,6 +53,32 @@ const MARGEN = 40;
 const ALTO_CABECERA = 80;
 const TOP = ALTO_CABECERA + 22;
 const BOTTOM = 52;
+/** Hoja horizontal: reserva un renglón más abajo para las dos oficinas. */
+const BOTTOM_ANCHA = BOTTOM + 24;
+const ANCHO_CARTA = 612;
+/** Desde la segunda hoja del documento vertical: encabezado ligero de 46 pt. */
+const TOP_LIGERA = 62;
+
+/** Cómo se reparte cada hoja: dónde empieza el contenido y cuánto se reserva abajo (A-90). */
+export interface Disposicion {
+  top: (pagina: number) => number;
+  bottom: (pagina: number) => number;
+}
+
+/** Barra azul compacta en todas las hojas (el informe general horizontal). */
+const DISPOSICION_ANCHA: Disposicion = { top: () => TOP, bottom: () => BOTTOM_ANCHA };
+
+/**
+ * Hoja membretada: la primera lleva el encabezado y el pie oficiales (más una franja de `altoFranja` pt con los datos del
+ * documento); las siguientes, un encabezado ligero. Así las tablas conservan su espacio.
+ */
+export const disposicionOficial = (altoFranja: number): Disposicion => {
+  const primera = Math.ceil(altoEncabezado(ANCHO_CARTA) + 8 + altoFranja + 10);
+  return {
+    top: (p) => (p === 1 ? primera : TOP_LIGERA),
+    bottom: (p) => (p === 1 ? BOTTOM + ALTO_PIE_MEMBRETE + 6 : BOTTOM),
+  };
+};
 
 // ---------- Formato ----------
 
@@ -90,24 +127,31 @@ interface Fila {
 }
 
 class Lienzo {
-  y = TOP;
+  y: number;
+  /** Número de la hoja en la que se escribe (1 = la primera). */
+  pagina = 1;
   readonly ancho: number;
   readonly alto: number;
   readonly cw: number;
 
-  constructor(readonly doc: Doc) {
+  constructor(
+    readonly doc: Doc,
+    private readonly disposicion: Disposicion = DISPOSICION_ANCHA,
+  ) {
     this.ancho = doc.page.width;
     this.alto = doc.page.height;
     this.cw = this.ancho - MARGEN * 2;
+    this.y = disposicion.top(1);
   }
 
   get limite() {
-    return this.alto - BOTTOM;
+    return this.alto - this.disposicion.bottom(this.pagina);
   }
 
   nuevaPagina() {
     this.doc.addPage();
-    this.y = TOP;
+    this.pagina += 1;
+    this.y = this.disposicion.top(this.pagina);
   }
 
   /** Pasa a otra hoja si no cabe `h`. */
@@ -463,6 +507,39 @@ function resumenGeneral(l: Lienzo, i: Informe) {
 
 // ---------- Cabecera y pie (se dibujan al final, ya con el total de hojas) ----------
 
+/** Altura de la franja con folio, código y QR que va bajo el encabezado oficial de la primera hoja. */
+export const ALTO_FRANJA_INFORME = 70;
+
+/**
+ * Pie con folio, código, página y avisos. `base` es el borde de abajo del bloque (el de la hoja, o más arriba si encima
+ * va el pie oficial). Compartido con el horario.
+ */
+export function pieInfo(
+  doc: Doc,
+  base: number,
+  izquierda: { negrita?: string; lineas: string[] },
+  pagina: number,
+  total: number,
+) {
+  const W = doc.page.width;
+  doc.moveTo(MARGEN, base - 40).lineTo(W - MARGEN, base - 40).lineWidth(0.6).strokeColor(C.linea).stroke();
+  let y = base - 34;
+  if (izquierda.negrita) {
+    doc.font('Helvetica-Bold').fontSize(7).fillColor(C.navy).text(izquierda.negrita, MARGEN, y, { width: W / 2, lineBreak: false });
+    y += 10;
+  }
+  doc.font('Helvetica').fontSize(6.8).fillColor(C.suave);
+  for (const t of izquierda.lineas) {
+    doc.text(t, MARGEN, y, { width: W - MARGEN * 2 - (izquierda.negrita ? 0 : 100), lineBreak: false });
+    y += 9;
+  }
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(C.navy).text(`Página ${pagina} de ${total}`, W - MARGEN - 90, base - 34, {
+    width: 90,
+    align: 'right',
+    lineBreak: false,
+  });
+}
+
 function cabeceraYPie(doc: Doc, i: Informe, url: string, qr: Buffer, pagina: number, total: number) {
   const W = doc.page.width;
   const H = doc.page.height;
@@ -470,54 +547,96 @@ function cabeceraYPie(doc: Doc, i: Informe, url: string, qr: Buffer, pagina: num
   const bottom = margenes.bottom;
   margenes.bottom = 0; // para escribir en el pie sin que se abra otra hoja
 
-  doc.rect(0, 0, W, ALTO_CABECERA).fill(C.navy);
-  doc.rect(0, ALTO_CABECERA, W, 3).fill(C.plata);
+  const izquierda = {
+    negrita: `${i.folio}  ·  ${i.codigo}`,
+    lineas: [
+      'Documento interno de Grupo Platinum. Las horas las registra el servidor y no son editables.',
+      `Verifica su autenticidad en ${url.split('?')[0]}`,
+    ],
+  };
+  const titulo = `REPORTE OFICIAL DE ASISTENCIA · ${i.tipo === 'personal' ? 'PERSONAL' : 'GENERAL'}`;
 
-  doc.font('Helvetica-Bold').fontSize(16).fillColor(C.blanco).text('GRUPO Platinum', MARGEN, 15, { width: W / 2, characterSpacing: 1.5 });
-  doc.font('Helvetica').fontSize(6.5).fillColor('#9fb0d6').text('SEGURIDAD PRIVADA', MARGEN, 35, { characterSpacing: 2 });
-  doc.font('Helvetica-Bold').fontSize(10.5).fillColor(C.blanco).text(
-    `REPORTE OFICIAL DE ASISTENCIA · ${i.tipo === 'personal' ? 'PERSONAL' : 'GENERAL'}`,
-    MARGEN,
-    50,
-    { width: W - MARGEN * 2 - 230, lineBreak: false },
-  );
-  doc.font('Helvetica').fontSize(8).fillColor('#c9d3ee').text(i.datos.alcance, MARGEN, 65, {
-    width: W - MARGEN * 2 - 230,
-    lineBreak: false,
-    ellipsis: true,
-  });
+  if (i.tipo === 'general') {
+    // Hoja horizontal: la curva del membrete no cabe en una hoja ancha; va la barra azul con el escudo.
+    doc.rect(0, 0, W, ALTO_CABECERA).fill(C.navy);
+    doc.rect(0, ALTO_CABECERA, W, 3).fill(C.plata);
+    doc.roundedRect(MARGEN, 12, 56, 56, 8).fill(C.blanco);
+    dibujarEscudo(doc, MARGEN + 12, 16, 48);
+    const x0 = MARGEN + 70;
+    doc.font('Helvetica-Bold').fontSize(16).fillColor(C.blanco).text(MARCA.nombre, x0, 15, { width: W / 2, characterSpacing: 1.5 });
+    doc.font('Helvetica').fontSize(6.5).fillColor('#9fb0d6').text(MARCA.lema, x0, 35, { characterSpacing: 2 });
+    doc.font('Helvetica-Bold').fontSize(10.5).fillColor(C.blanco).text(titulo, x0, 50, { width: W - x0 - MARGEN - 230, lineBreak: false });
+    doc.font('Helvetica').fontSize(8).fillColor('#c9d3ee').text(i.datos.alcance, x0, 65, {
+      width: W - x0 - MARGEN - 230,
+      lineBreak: false,
+      ellipsis: true,
+    });
 
-  // Folio, periodo y código (derecha) junto al QR.
-  const xq = W - MARGEN - 62;
-  const xt = xq - 8 - 190;
-  doc.font('Helvetica-Bold').fontSize(11.5).fillColor(C.blanco).text(i.folio, xt, 14, { width: 190, align: 'right', lineBreak: false });
-  doc.font('Helvetica').fontSize(8).fillColor('#c9d3ee').text(`Periodo: ${periodo(i)}`, xt, 31, { width: 190, align: 'right', lineBreak: false });
-  doc.text(`Código de verificación: ${i.codigo}`, xt, 43, { width: 190, align: 'right', lineBreak: false });
-  doc.text(`Emitido: ${fechaHora(i.createdAt)}`, xt, 55, { width: 190, align: 'right', lineBreak: false });
-  if (i.reemplaza) {
-    doc.font('Helvetica-Bold').fillColor('#fcd34d').text(`Reemplaza al folio ${i.reemplaza.folio}`, xt, 67, {
-      width: 190,
-      align: 'right',
+    // Folio, periodo y código (derecha) junto al QR.
+    const xq = W - MARGEN - 62;
+    const xt = xq - 8 - 190;
+    doc.font('Helvetica-Bold').fontSize(11.5).fillColor(C.blanco).text(i.folio, xt, 14, { width: 190, align: 'right', lineBreak: false });
+    doc.font('Helvetica').fontSize(8).fillColor('#c9d3ee').text(`Periodo: ${periodo(i)}`, xt, 31, { width: 190, align: 'right', lineBreak: false });
+    doc.text(`Código de verificación: ${i.codigo}`, xt, 43, { width: 190, align: 'right', lineBreak: false });
+    doc.text(`Emitido: ${fechaHora(i.createdAt)}`, xt, 55, { width: 190, align: 'right', lineBreak: false });
+    if (i.reemplaza) {
+      doc.font('Helvetica-Bold').fillColor('#fcd34d').text(`Reemplaza al folio ${i.reemplaza.folio}`, xt, 67, {
+        width: 190,
+        align: 'right',
+        lineBreak: false,
+      });
+    }
+    doc.roundedRect(xq - 2, 8, 66, 66, 3).fill(C.blanco);
+    doc.image(qr, xq + 1, 11, { width: 60, height: 60 });
+
+    // Las dos oficinas, una junto a la otra, sobre el pie.
+    const col = (W - MARGEN * 2) / 2;
+    doc.font('Helvetica').fontSize(6.5).fillColor(C.suave);
+    OFICINAS.forEach((o, k) => {
+      doc.text(`${o.lugar}: ${o.direccion[0]}, ${o.direccion[1]} · Tel. ${o.telefono}`, MARGEN + k * col, H - 62, {
+        width: col - 14,
+        lineGap: 0.5,
+      });
+    });
+    pieInfo(doc, H, izquierda, pagina, total);
+  } else if (pagina === 1) {
+    // Primera hoja: membrete oficial, franja con los datos del documento y pie oficial con las oficinas.
+    const y0 = dibujarEncabezadoOficial(doc) + 8;
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(MARCA.azul).text(titulo, MARGEN, y0, { width: W - MARGEN * 2 - 270, lineBreak: false });
+    doc.font('Helvetica').fontSize(8.5).fillColor(C.suave).text(i.datos.alcance, MARGEN, y0 + 16, {
+      width: W - MARGEN * 2 - 270,
+      lineBreak: false,
+      ellipsis: true,
+    });
+    const xq = W - MARGEN - 58;
+    const xt = xq - 12 - 200;
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.navy).text(i.folio, xt, y0, { width: 200, align: 'right', lineBreak: false });
+    doc.font('Helvetica').fontSize(8).fillColor(C.suave);
+    doc.text(`Periodo: ${periodo(i)}`, xt, y0 + 15, { width: 200, align: 'right', lineBreak: false });
+    doc.text(`Código de verificación: ${i.codigo}`, xt, y0 + 26, { width: 200, align: 'right', lineBreak: false });
+    doc.text(`Emitido: ${fechaHora(i.createdAt)}`, xt, y0 + 37, { width: 200, align: 'right', lineBreak: false });
+    if (i.reemplaza) {
+      doc.font('Helvetica-Bold').fillColor('#b45309').text(`Reemplaza al folio ${i.reemplaza.folio}`, xt, y0 + 48, {
+        width: 200,
+        align: 'right',
+        lineBreak: false,
+      });
+    }
+    doc.image(qr, xq, y0, { width: 58, height: 58 });
+    doc.font('Helvetica').fontSize(5.8).fillColor(C.suave).text('Escanea para verificar', xq - 6, y0 + 60, {
+      width: 70,
+      align: 'center',
       lineBreak: false,
     });
+    dibujarPieOficial(doc, MARGEN);
+    pieInfo(doc, H - ALTO_PIE_MEMBRETE - 4, izquierda, pagina, total);
+  } else {
+    dibujarCabeceraLigera(doc, MARGEN, {
+      negrita: i.folio,
+      lineas: [`Periodo: ${periodo(i)}`, `Código: ${i.codigo}`],
+    });
+    pieInfo(doc, H, izquierda, pagina, total);
   }
-  doc.roundedRect(xq - 2, 8, 66, 66, 3).fill(C.blanco);
-  doc.image(qr, xq + 1, 11, { width: 60, height: 60 });
-
-  // Pie
-  doc.moveTo(MARGEN, H - 40).lineTo(W - MARGEN, H - 40).lineWidth(0.6).strokeColor(C.linea).stroke();
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.navy).text(`${i.folio}  ·  ${i.codigo}`, MARGEN, H - 34, { width: W / 2, lineBreak: false });
-  doc.font('Helvetica').fontSize(6.8).fillColor(C.suave);
-  doc.text('Documento interno de Grupo Platinum. Las horas las registra el servidor y no son editables.', MARGEN, H - 24, {
-    width: W - MARGEN * 2,
-    lineBreak: false,
-  });
-  doc.text(`Verifica su autenticidad en ${url.split('?')[0]}`, MARGEN, H - 15, { width: W - MARGEN * 2, lineBreak: false });
-  doc.font('Helvetica-Bold').fontSize(8).fillColor(C.navy).text(`Página ${pagina} de ${total}`, W - MARGEN - 90, H - 34, {
-    width: 90,
-    align: 'right',
-    lineBreak: false,
-  });
   margenes.bottom = bottom;
 }
 
@@ -544,7 +663,11 @@ export async function generarPdf(i: Informe, url: string): Promise<Buffer> {
     doc.on('error', ko);
   });
 
-  const l = new Lienzo(doc);
+  // Marca de agua en cada hoja, detrás del contenido: la primera ya existe y las demás se dibujan al crearse.
+  dibujarMarcaDeAgua(doc);
+  doc.on('pageAdded', () => dibujarMarcaDeAgua(doc));
+
+  const l = new Lienzo(doc, i.tipo === 'general' ? DISPOSICION_ANCHA : disposicionOficial(ALTO_FRANJA_INFORME));
   const d = i.datos;
 
   // Datos de emisión
@@ -608,4 +731,5 @@ export async function generarPdf(i: Informe, url: string): Promise<Buffer> {
 
 // Para el PDF de horarios (A-55), que usa el mismo estilo y tablas.
 export { ALTO_CABECERA, BOTTOM, C as COLORES_PDF, Lienzo, MARGEN, TOP, fechaDia, fechaLarga };
+export type { Doc };
 export type { Col, Fila };

@@ -5,6 +5,23 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-15 #58 — Membrete y marca de agua en los PDF (A-90)
+
+#### Añadido
+
+- **Membrete oficial en los PDF (A-90)**, con las imágenes de la hoja membretada de la empresa (`apps/api/assets/marca/`). **Informe de asistencia personal y horario de guardias (verticales):** la primera hoja lleva el encabezado oficial (logo y curva azul), una franja con el folio, el periodo, el código y el QR con la leyenda "Escanea para verificar", y el pie oficial (franja azul) con las **dos oficinas** (Naucalpan y Tlalnepantla, con dirección y teléfono); desde la segunda hoja, un encabezado ligero (escudo, "GRUPO Platinum", folio y periodo) para que las tablas conserven su espacio. **Informe general (horizontal):** la curva del membrete no cabe en una hoja ancha, así que conserva la barra azul con el escudo, y las dos oficinas van sobre el pie. **Marca de agua oficial (escudo con "GRUPO Platinum / Seguridad Privada") en todas las hojas**, detrás del contenido (se dibuja al crearse cada hoja y la imagen se guarda una sola vez, así el archivo no crece).
+- **Módulo de marca (`core/marca/marca.ts`)**: nombre, lema, oficinas, azul y dibujo del escudo, la marca de agua, el encabezado oficial, el pie oficial y el encabezado ligero, en un solo lugar para que A-91 (documentos membretados) los reutilice y cambiar una dirección o un teléfono sea editar un archivo.
+- Pruebas (5 nuevas, `marcaPdf.test.ts`): las imágenes existen, el informe personal, el general con anexos y reemplazo y el horario se generan completos y sin inflar el tamaño.
+
+#### Cambiado
+
+- El pie del informe lleva ahora folio y código arriba del pie oficial; la distribución de cada hoja (dónde empieza el contenido y cuánto se reserva abajo) se calcula por hoja (`Disposicion` en el generador). En el horario, un guardia no empieza al pie de la hoja: se reservan su título, su resumen y unas filas.
+
+#### Notas
+
+- Un informe muy corto puede pasar a dos hojas porque el membrete de la primera ocupa más espacio; el corte cae entre secciones, nunca a mitad de una tabla pequeña.
+- Pendiente de A-91: elegir/editar la dirección al armar cada documento (hoy van las dos fijas).
+
 ### Sesión 2026-11-15 #57 — Nombre correcto de la empresa: Grupo Platinum (A-92)
 
 #### Cambiado
