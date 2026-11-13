@@ -8,6 +8,7 @@ import { bitacoraModule } from './bitacora';
 import { cambiosModule } from './cambios';
 import { categoriasModule } from './categorias';
 import { clientesModule } from './clientes';
+import { correoModule } from './correo';
 import { casosCoberturaModule } from './casos-cobertura';
 import { coberturaModule } from './cobertura';
 import { coberturasModule } from './coberturas';
@@ -58,6 +59,7 @@ export const modules: AppModule[] = [
   emergenciasModule,
   c2Module,
   carterasModule,
+  correoModule,
   horasExtraModule,
   adminModule,
 ];

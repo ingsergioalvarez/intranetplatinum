@@ -20,3 +20,4 @@ export * from './storage/StorageService';
 export * from './storage/imagenes';
 export * from './storage/urlFirmada';
 export type * from './types/auth';
+export * from './security/cifrado';

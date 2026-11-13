@@ -30,3 +30,4 @@ export * from './schemas/carteras';
 export * from './schemas/reportesCliente';
 export * from './constants/avisoPrivacidad';
 export * from './schemas/privacidad';
+export * from './schemas/correo';

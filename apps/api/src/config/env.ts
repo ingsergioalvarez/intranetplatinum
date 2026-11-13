@@ -24,6 +24,8 @@ const envSchema = z.object({
   LOGIN_BLOQUEO_MIN: z.coerce.number().int().min(1).default(15),
   // Intentos de login por IP cada 15 min (además del bloqueo por cuenta).
   LOGIN_RATE_LIMIT: z.coerce.number().int().min(1).default(30),
+  // Clave para cifrar secretos guardados en la base (contraseña del correo, A-87). Si falta, se usa JWT_REFRESH_SECRET.
+  CONFIG_SECRET: z.string().min(32).optional(),
   PASSWORD_RESET_EXPIRES_MIN: z.coerce.number().int().default(30),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().default(587),

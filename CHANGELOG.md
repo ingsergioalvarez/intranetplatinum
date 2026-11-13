@@ -5,6 +5,19 @@ Cada entrada referencia las tareas (`Fx-yy`), alcances (`A-xx`) y decisiones (`D
 
 ## [Sin publicar]
 
+### Sesión 2026-11-15 #55 — Pantalla de correo SMTP (A-87)
+
+#### Añadido
+
+- **Pantalla "Correo (SMTP)" (A-87)**, solo super admin (menú "Correo"; en el celular, "Más › Administración"): servidor, puerto, cifrado (STARTTLS / SSL-TLS / ninguno, sugiere el puerto habitual), usuario, contraseña, nombre y correo del remitente, **"Enviar prueba"** (usa lo que hay en pantalla aunque no esté guardado y explica el fallo en palabras claras) y **"Activar correo"**. La contraseña se guarda **cifrada** (AES-256-GCM, clave de `CONFIG_SECRET` o, si falta, derivada de `JWT_REFRESH_SECRET`), nunca se devuelve ni se audita (solo "passwordCambiada"); vacía = conservar la guardada; no se activa con usuario sin contraseña. Guardar y probar quedan en auditoría (`correo.configurar`, `correo.prueba`); la prueba tiene límite de uso. Sin configurar o apagado la app no envía nada y sigue igual.
+- Tabla `configuracion_correo` (una fila; migración `20261115000000_configuracion_correo`, escrita a mano) y paquete `nodemailer`.
+- `correoService.enviarCorreo({ para, asunto, texto })` (módulo `correo`): envío listo para que lo use cualquier función con la configuración guardada; sin activar devuelve `enviado: false` sin error.
+- Pruebas (12 nuevas): cifrado, solo super admin, no devuelve ni audita la contraseña, conservarla, validaciones, prueba con datos sin guardar, errores explicados, envío apagado/activo. Manual del administrador (sección "Correo (SMTP)").
+
+#### Pendiente
+
+- Probar el envío real cuando haya datos del servidor de correo. Conectar el correo a "Olvidé mi contraseña" y al envío de lo encolado en `notificaciones` sigue en A-41.
+
 ### Sesión 2026-11-13 #54 — Seguridad: bloqueo de guardias y eliminar solo el super admin (A-86)
 
 #### Cambiado

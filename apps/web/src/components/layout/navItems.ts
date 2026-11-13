@@ -7,6 +7,7 @@ import {
   Clock,
   History,
   Home,
+  Mail,
   CalendarOff,
   MessageSquareWarning,
   ScrollText,
@@ -80,6 +81,8 @@ export const navItems: NavItem[] = [
   { label: 'Grupos', to: '/grupos', icon: UsersRound, permiso: PERMISOS.GRUPOS_ADMINISTRAR },
   { label: 'Usuarios', to: '/usuarios', icon: Users, permiso: PERMISOS.USUARIOS_VER },
   { label: 'Carteras', to: '/carteras', icon: Briefcase, superAdmin: true },
+  // Datos del servidor de correo (A-87).
+  { label: 'Correo', to: '/correo', icon: Mail, superAdmin: true },
   {
     label: 'Turnos',
     to: '/catalogos/turnos',

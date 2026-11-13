@@ -1471,3 +1471,25 @@ model C2Evento {
   @@index([usuarioId])
   @@map("c2_eventos")
 }
+
+// ============================================================
+// Correo saliente (SMTP) configurable desde la app (A-87): una sola fila (id = 1)
+// ============================================================
+
+model ConfiguracionCorreo {
+  id              Int      @id
+  host            String   @db.VarChar(255)
+  puerto          Int
+  /// starttls | ssl | ninguno
+  cifrado         String   @db.VarChar(10)
+  usuario         String   @db.VarChar(255)
+  /// AES-256-GCM (ver core/security/cifrado.ts); nunca se devuelve a la pantalla.
+  passwordCifrada String?  @map("password_cifrada") @db.Text
+  remitenteNombre String   @map("remitente_nombre") @db.VarChar(100)
+  remitenteCorreo String   @map("remitente_correo") @db.VarChar(255)
+  activo          Boolean  @default(false)
+  actualizadoPor  Int?     @map("actualizado_por")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("configuracion_correo")
+}

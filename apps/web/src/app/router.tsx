@@ -29,6 +29,7 @@ import { CambiosTurnoPage } from '../modules/cambios/CambiosTurnoPage';
 import { CasosPage } from '../modules/casos/CasosPage';
 import { SolicitudesPage } from '../modules/solicitudes/SolicitudesPage';
 import { CarterasPage } from '../modules/carteras/CarterasPage';
+import { CorreoPage } from '../modules/correo/CorreoPage';
 import { EmergenciasPage } from '../modules/emergencias/EmergenciasPage';
 import { AusenciasPage } from '../modules/ausencias/AusenciasPage';
 import { CalendarioPage } from '../modules/cobertura/CalendarioPage';
@@ -312,6 +313,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute superAdmin>
             <CarterasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'correo',
+        element: (
+          <ProtectedRoute superAdmin>
+            <CorreoPage />
           </ProtectedRoute>
         ),
       },

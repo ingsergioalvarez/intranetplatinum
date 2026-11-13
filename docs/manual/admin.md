@@ -349,6 +349,7 @@ El super administrador es un administrador con más alcance. Ves **todo**, de to
 - **Nadie más puede modificar tu cuenta.** Un administrador normal ni siquiera te ve en la lista.
 - En **Usuarios** y **Clientes** tienes una columna **"Administrador"** (de quién es cada uno, o **"Sin asignar"** en ámbar) y un filtro por administrador.
 - Tienes el menú **"Carteras"**.
+- Tienes el menú **"Correo"** (en **"Más › Administración"** en el celular).
 
 ### Carteras
 
@@ -368,6 +369,19 @@ Verás cuántos pasaron. **Es todo o nada.** El administrador que recibe tiene e
 **Al dar de baja a un administrador,** la app primero te pide qué pasa con su cartera (**"Antes de dar de baja a (nombre)"**). Si no la pasas, queda **sin asignar** y solo tú la ves.
 
 > **NOTA:** no existe un selector para asignar a una persona a un administrador. La cartera de cada quien se fija **al crearlo** (quien lo crea es su dueño) y solo cambia con **"Pasar cartera"**.
+
+### Correo (SMTP)
+
+Entra a **Correo** para escribir los datos del servidor de correo de la empresa. Mientras no lo actives, **la app no envía correos y todo lo demás funciona igual**.
+
+1. En **"Servidor de correo"** escribe el **Servidor (host)**, el **Puerto** y el **Cifrado** (al cambiar el cifrado, la app sugiere el puerto habitual: 587 con STARTTLS, 465 con SSL/TLS). Si el servidor pide usuario, escribe el **Usuario** y la **Contraseña**; si no, deja el usuario vacío.
+2. En **"Remitente"** escribe el **nombre que se verá** y el **correo del remitente** (debe ser de un dominio que el servidor permita).
+3. En **"Probar"** escribe tu correo y toca **"Enviar prueba"**. Usa lo que ves en pantalla aunque todavía no lo hayas guardado, y te dice con claridad si algo falla (*usuario o contraseña incorrectos*, *servidor no encontrado*, *no respondió a tiempo*…).
+4. Marca **"Activar correo"** y toca **"Guardar"**.
+
+La **contraseña se guarda cifrada y no se vuelve a mostrar**: después solo dice *"Hay una guardada"*; déjala vacía para no cambiarla. No puedes activar el correo si el servidor pide usuario y aún no hay contraseña. Cada guardado y cada prueba quedan en la auditoría.
+
+> **NOTA:** esta pantalla solo deja listo el servidor de correo. Los correos concretos (por ejemplo, recuperar contraseña) se irán conectando después; hoy las contraseñas olvidadas se siguen resolviendo con **"Restablecer contraseña"**.
 
 ## 21. Lo que la app todavía no tiene
 

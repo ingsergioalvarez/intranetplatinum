@@ -17,7 +17,7 @@ export const MENU_POR_ROL: Record<Rol, MenuRol> = {
     mas: [
       { titulo: 'Seguimiento', rutas: ['/c2', '/reportes-cliente'] },
       { titulo: 'Operación', rutas: ['/grupos', '/catalogos/turnos'] },
-      { titulo: 'Administración', rutas: ['/usuarios', '/carteras', '/catalogos/categorias'] },
+      { titulo: 'Administración', rutas: ['/usuarios', '/carteras', '/correo', '/catalogos/categorias'] },
       { titulo: 'Consulta', rutas: ['/privacidad'] },
     ],
   },
